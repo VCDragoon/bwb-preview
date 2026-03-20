@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MVP RACE</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@300;400;600;700&family=Barlow:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&family=Cinzel:wght@400;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #06060c;
+    color: #e0e0e8;
+    font-family: 'Barlow', sans-serif;
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+  }
+  body::after {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 4px);
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  .page-container {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 30px 24px 60px;
+  }
+
+  /* ---- HEADER ---- */
+  .header { text-align: center; margin-bottom: 8px; }
+  .header::after {
+    content: '';
+    display: block;
+    width: 300px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #E57373, #FFB74D, #81C784, #4A90D9, transparent);
+    margin: 12px auto 0;
+    box-shadow: 0 0 12px rgba(229,115,115,0.4);
+  }
+  .header h1 {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 56px;
+    letter-spacing: 8px;
+    background: linear-gradient(135deg, #E57373, #FFB74D, #81C784, #4A90D9, #BA68C8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 30px rgba(229,115,115,0.4));
+    line-height: 1;
+  }
+  .header .subtitle {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 14px;
+    letter-spacing: 5px;
+    color: #8888a0;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  /* ---- STATS BAR ---- */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin: 20px 0 16px;
+  }
+  .stat-card {
+    background: linear-gradient(135deg, #12121e 0%, #1a1a2e 100%);
+    border: 1px solid #2a2a40;
+    border-radius: 8px;
+    padding: 14px 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent, #4A90D9);
+    box-shadow: 0 0 10px var(--accent, #4A90D9);
+  }
+  .stat-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #7878a0;
+    margin-bottom: 4px;
+  }
+  .stat-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 22px;
+    font-weight: 500;
+    color: #e8e8f0;
+    text-shadow: 0 0 10px rgba(200,200,240,0.2);
+  }
+  .stat-detail {
+    font-family: 'Barlow', sans-serif;
+    font-size: 12px;
+    color: #9898b0;
+    margin-top: 2px;
+  }
+
+  /* ---- CONTROLS ---- */
+  .controls-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .btn-group { display: flex; gap: 4px; }
+  .btn {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 7px 16px;
+    border: 1px solid #3a3a55;
+    border-radius: 4px;
+    background: #14141f;
+    color: #b0b0c8;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn:hover { border-color: #5a5a80; color: #e0e0f0; background: #1c1c2e; }
+  .btn.active {
+    background: linear-gradient(135deg, #2a2a45, #1e1e35);
+    border-color: #E57373;
+    color: #E57373;
+    box-shadow: 0 0 8px rgba(229,115,115,0.2);
+  }
+  .btn-play {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; padding: 0;
+    border: 2px solid #E57373;
+    color: #E57373;
+    background: #14141f;
+    cursor: pointer;
+    transition: all 0.25s;
+  }
+  .btn-play:hover {
+    background: #E57373; color: #06060c;
+    box-shadow: 0 0 16px rgba(229,115,115,0.5);
+  }
+  .btn-play.playing {
+    background: #E57373; color: #06060c;
+    box-shadow: 0 0 16px rgba(229,115,115,0.5);
+    animation: pulse-play 1.5s ease infinite;
+  }
+  @keyframes pulse-play {
+    0%, 100% { box-shadow: 0 0 16px rgba(229,115,115,0.5); }
+    50% { box-shadow: 0 0 28px rgba(229,115,115,0.8); }
+  }
+  .slider-container {
+    flex: 1; min-width: 200px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .slider-container label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px; color: #7878a0;
+    letter-spacing: 1px; text-transform: uppercase; white-space: nowrap;
+  }
+  .slider-container input[type=range] {
+    flex: 1; -webkit-appearance: none; appearance: none;
+    height: 4px; background: #2a2a40; border-radius: 2px; outline: none;
+  }
+  .slider-container input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: #E57373; cursor: pointer;
+    box-shadow: 0 0 8px rgba(229,115,115,0.5);
+  }
+  .session-label-display {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; color: #E57373;
+    min-width: 50px; text-align: right;
+  }
+
+  /* ---- MAIN LAYOUT ---- */
+  .main-layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 16px;
+  }
+  @media (max-width: 1100px) {
+    .main-layout { grid-template-columns: 1fr; }
+  }
+
+  /* ---- CHART ---- */
+  .chart-container {
+    background: linear-gradient(135deg, #0c0c16 0%, #12121e 100%);
+    border: 1px solid #2a2a40;
+    border-radius: 8px;
+    padding: 16px 8px 12px;
+    position: relative;
+    overflow: hidden;
+  }
+  .chart-container::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #E57373, #FFB74D, #81C784, #4A90D9);
+    box-shadow: 0 0 12px rgba(229,115,115,0.3);
+  }
+  #bump-chart { width: 100%; display: block; }
+
+  /* ---- SIDE PANEL ---- */
+  .side-panel { display: flex; flex-direction: column; gap: 12px; }
+  .panel-card {
+    background: linear-gradient(135deg, #12121e 0%, #1a1a2e 100%);
+    border: 1px solid #2a2a40;
+    border-radius: 8px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .panel-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent, #4A90D9);
+    box-shadow: 0 0 10px var(--accent, #4A90D9);
+  }
+  .panel-title {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 18px; letter-spacing: 3px;
+    color: #c8c8e0; margin-bottom: 10px;
+  }
+  .session-info .mvp-winner {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+  }
+  .mvp-winner .crown {
+    font-size: 22px;
+    filter: drop-shadow(0 0 6px rgba(255,183,77,0.6));
+  }
+  .mvp-winner .name {
+    font-family: 'Cinzel', serif;
+    font-size: 18px; font-weight: 600;
+    color: #FFB74D;
+    text-shadow: 0 0 10px rgba(255,183,77,0.3);
+  }
+  .mvp-reason {
+    font-size: 12px; color: #9898b0; line-height: 1.5;
+    margin-bottom: 8px;
+    max-height: 80px; overflow-y: auto;
+  }
+  .mvp-reason::-webkit-scrollbar { width: 4px; }
+  .mvp-reason::-webkit-scrollbar-thumb { background: #3a3a55; border-radius: 2px; }
+
+  .score-list { display: flex; flex-direction: column; gap: 6px; }
+  .score-row {
+    display: grid;
+    grid-template-columns: 20px 80px 1fr 44px;
+    align-items: center; gap: 6px; font-size: 12px;
+  }
+  .score-rank {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: #7878a0; text-align: center;
+  }
+  .score-rank.gold { color: #FFB74D; text-shadow: 0 0 6px rgba(255,183,77,0.4); }
+  .score-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 600; color: #c8c8e0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .score-bar-bg {
+    height: 14px; background: #1a1a2e;
+    border-radius: 2px; overflow: hidden; position: relative;
+  }
+  .score-bar-fill {
+    height: 100%; border-radius: 2px;
+    transition: width 0.6s ease; position: relative;
+  }
+  .score-bar-fill::after {
+    content: '';
+    position: absolute; top: 0; right: 0; bottom: 0;
+    width: 4px;
+    background: rgba(255,255,255,0.3);
+    border-radius: 0 2px 2px 0;
+  }
+  .score-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; text-align: right; color: #b0b0c8;
+  }
+
+  .cat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .cat-item {
+    display: flex; flex-direction: column;
+    padding: 6px 8px; background: #0e0e1a;
+    border-radius: 4px; border: 1px solid #22223a;
+  }
+  .cat-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 9px; letter-spacing: 1.5px;
+    text-transform: uppercase; color: #6868a0; margin-bottom: 2px;
+  }
+  .cat-winner {
+    font-family: 'Cinzel', serif;
+    font-size: 11px; font-weight: 600; color: #c8c8e0;
+  }
+
+  /* ---- LEGEND ---- */
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 6px 16px;
+    justify-content: center; margin-top: 12px;
+    padding: 10px 16px;
+    background: linear-gradient(135deg, #0e0e18, #14141f);
+    border: 1px solid #2a2a40; border-radius: 8px;
+  }
+  .legend-item {
+    display: flex; align-items: center; gap: 6px;
+    cursor: pointer; padding: 4px 8px; border-radius: 4px;
+    transition: all 0.2s; user-select: none;
+  }
+  .legend-item:hover { background: #1c1c2e; }
+  .legend-item.hidden { opacity: 0.3; }
+  .legend-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    box-shadow: 0 0 6px var(--color);
+  }
+  .legend-player {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px; font-weight: 600; color: #c8c8e0; letter-spacing: 0.5px;
+  }
+  .legend-char {
+    font-family: 'Cinzel', serif;
+    font-size: 10px; color: #8888a0;
+  }
+  .legend-mvps {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: #FFB74D;
+  }
+
+  /* ---- MVP WINS BAR ---- */
+  .mvp-wins-panel { margin-top: 12px; }
+  .mvp-wins-row {
+    display: grid;
+    grid-template-columns: 90px 1fr 30px;
+    align-items: center; gap: 8px; margin-bottom: 4px; font-size: 12px;
+  }
+  .mvp-wins-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 600; color: #c8c8e0; text-align: right;
+  }
+  .mvp-wins-bar-bg {
+    height: 12px; background: #1a1a2e; border-radius: 2px; overflow: hidden;
+  }
+  .mvp-wins-bar-fill { height: 100%; border-radius: 2px; }
+  .mvp-wins-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: #b0b0c8;
+  }
+
+  /* ---- TOOLTIP ---- */
+  .chart-tooltip {
+    position: fixed; pointer-events: none;
+    background: linear-gradient(135deg, #16162a, #1e1e34);
+    border: 1px solid #3a3a55; border-radius: 6px;
+    padding: 10px 14px; font-size: 12px; color: #d0d0e0;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+    z-index: 1000; opacity: 0; transition: opacity 0.15s;
+    max-width: 240px;
+  }
+  .chart-tooltip.visible { opacity: 1; }
+  .chart-tooltip .tt-session {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 10px; letter-spacing: 1px;
+    text-transform: uppercase; color: #7878a0; margin-bottom: 4px;
+  }
+  .chart-tooltip .tt-name {
+    font-family: 'Cinzel', serif; font-weight: 600; font-size: 14px; margin-bottom: 2px;
+  }
+  .chart-tooltip .tt-rank {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #b0b0c8;
+  }
+  .chart-tooltip .tt-score {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #FFB74D;
+  }
+
+  /* Crossover flash */
+  @keyframes crossover-flash {
+    0% { r: 8; opacity: 1; }
+    100% { r: 20; opacity: 0; }
+  }
+  .crossover-pulse {
+    animation: crossover-flash 0.8s ease-out forwards;
+  }
+
+  /* Leader glow pulse */
+  @keyframes leader-glow {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+  .leader-crown {
+    animation: leader-glow 2s ease infinite;
+  }
+
+  /* MVP burst */
+  @keyframes star-burst {
+    0% { transform: scale(0.5); opacity: 0; }
+    50% { transform: scale(1.4); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+</style>
+</head>
+<body>
+
+<div class="chart-tooltip" id="tooltip"></div>
+
+<div class="page-container">
+  <div class="header">
+    <h1>MVP RACE</h1>
+    <div class="subtitle">Player Rankings Across 33 Sessions of BWB</div>
+  </div>
+
+  <div class="stats-bar" id="stats-bar"></div>
+
+  <div class="controls-row">
+    <button class="btn-play" id="btn-play" title="Play/Pause">&#9654;</button>
+    <div class="btn-group">
+      <button class="btn active" data-speed="1500">1x</button>
+      <button class="btn" data-speed="800">2x</button>
+      <button class="btn" data-speed="400">4x</button>
+    </div>
+    <div class="slider-container">
+      <label>Session</label>
+      <input type="range" id="session-slider" min="0" max="32" value="32">
+      <span class="session-label-display" id="session-label-display">S033</span>
+    </div>
+  </div>
+
+  <div class="main-layout">
+    <div class="chart-container">
+      <svg id="bump-chart"></svg>
+    </div>
+    <div class="side-panel" id="side-panel"></div>
+  </div>
+
+  <div class="legend" id="legend"></div>
+
+  <div class="mvp-wins-panel" id="mvp-wins-panel">
+    <div class="panel-card" style="--accent: #FFB74D;">
+      <div class="panel-title">MVP WINS LEADERBOARD</div>
+      <div id="mvp-wins-bars"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script>
+// ============================================================
+// EMBEDDED DATA
+// ============================================================
+const RAW_DATA = [{"sid":"S001","label":"Session 1","mvp":"Lilith","reason":"Lilith edges out Corras because she combined the session\u2019s best roleplay score with concrete story leverage: she correctly read Morty, kept Volna\u2019s threat central, and helped convert the Urgle Gurgle scene from chaos into diplomacy.","cats":{"plot_driver":"Corras","combat_champion":"Ash","roleplay_royalty":"Lilith","team_player":"Ash","moment_maker":"Corras"},"scores":[{"p":"Christie","c":"Lilith","r":1,"w":7.45,"pa":7.5,"ce":4.0,"rd":9.5,"tp":7.5,"mm":8.5},{"p":"Gradles","c":"Corras","r":2,"w":7.08,"pa":8.5,"ce":4.0,"rd":7.0,"tp":7.0,"mm":9.0},{"p":"HT","c":"Ash","r":3,"w":6.85,"pa":7.0,"ce":4.5,"rd":7.5,"tp":8.0,"mm":7.5},{"p":"Lucy","c":"Orla","r":4,"w":6.08,"pa":6.5,"ce":4.0,"rd":6.5,"tp":7.5,"mm":6.0},{"p":"Mary","c":"Billabong","r":5,"w":5.1,"pa":4.5,"ce":4.0,"rd":5.5,"tp":6.0,"mm":6.0}]},{"sid":"S002","label":"Session 2","mvp":"Corras","reason":"Corras edges out Orla because his sleight of hand extraction was the single highest-stakes action in the session.","cats":{"plot_driver":"Ash","combat_champion":"Corras","roleplay_royalty":"Orla","team_player":"Lilith","moment_maker":"Orla"},"scores":[{"p":"Gradles","c":"Corras","r":1,"w":7.23,"pa":7.0,"ce":8.0,"rd":6.5,"tp":7.5,"mm":7.5},{"p":"Lucy","c":"Orla","r":2,"w":7.13,"pa":7.5,"ce":5.0,"rd":8.0,"tp":7.0,"mm":8.0},{"p":"HT","c":"Ash","r":3,"w":6.88,"pa":7.5,"ce":6.0,"rd":6.5,"tp":8.0,"mm":6.5},{"p":"Christie","c":"Lilith","r":4,"w":6.7,"pa":7.0,"ce":5.5,"rd":7.0,"tp":8.0,"mm":6.0},{"p":"Meijinx","c":"Ave","r":5,"w":6.48,"pa":6.0,"ce":7.5,"rd":5.5,"tp":7.0,"mm":7.0}]},{"sid":"S003","label":"Session 3","mvp":"Lilith","reason":"Lilith was the only player whose contributions were load-bearing across all three of the session\u2019s critical junctures.","cats":{"plot_driver":"Lilith","combat_champion":"Lilith","roleplay_royalty":"Ave","team_player":"Lilith","moment_maker":"Ave"},"scores":[{"p":"Christie","c":"Lilith","r":1,"w":7.9,"pa":8.5,"ce":7.5,"rd":7.5,"tp":9.0,"mm":7.0},{"p":"Meijinx","c":"Ave","r":2,"w":7.6,"pa":7.0,"ce":6.0,"rd":9.0,"tp":6.5,"mm":9.5},{"p":"HT","c":"Ash","r":3,"w":7.3,"pa":8.0,"ce":6.5,"rd":7.0,"tp":7.5,"mm":7.5},{"p":"Mary","c":"Billabong","r":4,"w":7.23,"pa":7.5,"ce":6.0,"rd":7.0,"tp":7.5,"mm":8.5},{"p":"Lucy","c":"Orla","r":5,"w":7.18,"pa":8.0,"ce":6.0,"rd":7.5,"tp":7.0,"mm":7.0},{"p":"Gradles","c":"Corras","r":6,"w":6.28,"pa":6.5,"ce":6.0,"rd":6.0,"tp":6.5,"mm":6.5}]},{"sid":"S004","label":"Session 4","mvp":"Ash","reason":"Ash shaped the session at every level: her Xalvador false trail plan triggered the fireworks that enabled the entire paladin rescue.","cats":{"plot_driver":"Ash","combat_champion":"Billabong","roleplay_royalty":"Orla","team_player":"Ash","moment_maker":"Billabong"},"scores":[{"p":"HT","c":"Ash","r":1,"w":7.73,"pa":8.5,"ce":7.0,"rd":7.5,"tp":8.5,"mm":7.0},{"p":"Mary","c":"Billabong","r":2,"w":7.63,"pa":6.5,"ce":9.5,"rd":6.5,"tp":7.5,"mm":9.0},{"p":"Gradles","c":"Corras","r":3,"w":7.33,"pa":8.0,"ce":7.0,"rd":7.0,"tp":7.0,"mm":7.5},{"p":"Lucy","c":"Orla","r":4,"w":7.03,"pa":7.5,"ce":5.5,"rd":7.5,"tp":7.0,"mm":7.5},{"p":"Meijinx","c":"Ave","r":5,"w":7.0,"pa":6.0,"ce":8.0,"rd":6.0,"tp":8.0,"mm":8.0}]},{"sid":"S005","label":"Session 6","mvp":"Lilith","reason":"Lilith\u2019s Turn Undead destroying nine zombies was the combat\u2019s single most impactful action.","cats":{"plot_driver":"Corras","combat_champion":"Lilith","roleplay_royalty":"Lilith","team_player":"Ash","moment_maker":"Corras"},"scores":[{"p":"Christie","c":"Lilith","r":1,"w":7.83,"pa":7.5,"ce":9.0,"rd":7.0,"tp":8.0,"mm":8.0},{"p":"Gradles","c":"Corras","r":2,"w":7.75,"pa":8.5,"ce":8.0,"rd":6.5,"tp":7.5,"mm":8.5},{"p":"HT","c":"Ash","r":3,"w":7.45,"pa":8.0,"ce":7.5,"rd":6.5,"tp":8.5,"mm":7.0},{"p":"Mary","c":"Billabong","r":4,"w":6.23,"pa":5.5,"ce":7.0,"rd":6.0,"tp":6.5,"mm":6.5}]},{"sid":"S006","label":"Session 7","mvp":"Corras","reason":"Corras executed every critical objective: instant vault pick on a DC 25, complete castle traversal without detection.","cats":{"plot_driver":"Ash","combat_champion":"Corras","roleplay_royalty":"Lilith","team_player":"Ash","moment_maker":"Lilith"},"scores":[{"p":"Gradles","c":"Corras","r":1,"w":8.3,"pa":8.5,"ce":8.5,"rd":8.0,"tp":7.5,"mm":9.0},{"p":"HT","c":"Ash","r":2,"w":7.8,"pa":9.0,"ce":6.0,"rd":7.5,"tp":9.0,"mm":7.5},{"p":"Christie","c":"Lilith","r":3,"w":7.58,"pa":7.0,"ce":5.5,"rd":9.0,"tp":7.0,"mm":9.5},{"p":"Lucy","c":"Orla","r":4,"w":7.4,"pa":7.5,"ce":7.0,"rd":7.5,"tp":7.0,"mm":8.0},{"p":"Meijinx","c":"Ave","r":5,"w":7.23,"pa":7.0,"ce":7.0,"rd":7.0,"tp":8.0,"mm":7.5},{"p":"Mary","c":"Billabong","r":6,"w":6.33,"pa":5.5,"ce":5.5,"rd":7.0,"tp":7.0,"mm":7.0}]},{"sid":"S007","label":"Session 8","mvp":"Ash","reason":"Ash\u2019s ritual circle revelation connected two campaign-long mysteries in a single inspired moment.","cats":{"plot_driver":"Ash","combat_champion":"Ave","roleplay_royalty":"Ave","team_player":"Ash","moment_maker":"Ave"},"scores":[{"p":"HT","c":"Ash","r":1,"w":8.0,"pa":9.0,"ce":6.0,"rd":8.0,"tp":9.0,"mm":8.0},{"p":"Meijinx","c":"Ave","r":2,"w":7.95,"pa":7.5,"ce":7.0,"rd":8.5,"tp":8.0,"mm":9.0},{"p":"Gradles","c":"Corras","r":3,"w":7.35,"pa":7.5,"ce":6.5,"rd":8.0,"tp":7.0,"mm":7.5},{"p":"Lucy","c":"Orla","r":4,"w":6.65,"pa":7.0,"ce":5.5,"rd":6.5,"tp":8.0,"mm":6.5},{"p":"Christie","c":"Lilith","r":5,"w":6.55,"pa":6.0,"ce":5.0,"rd":7.5,"tp":7.0,"mm":7.5},{"p":"Mary","c":"Billabong","r":6,"w":6.15,"pa":6.0,"ce":5.0,"rd":6.5,"tp":7.5,"mm":6.0}]},{"sid":"S008","label":"Session 9","mvp":"Lilith","reason":"Lilith\u2019s solo guard duty sequence was the session\u2019s defining stretch: the singsong \u2018I see you\u2019 in the rain.","cats":{"plot_driver":"Ash","combat_champion":"Lilith","roleplay_royalty":"Lilith","team_player":"Ash","moment_maker":"Lilith"},"scores":[{"p":"Christie","c":"Lilith","r":1,"w":7.8,"pa":6.5,"ce":8.0,"rd":9.0,"tp":6.0,"mm":9.5},{"p":"HT","c":"Ash","r":2,"w":7.5,"pa":8.0,"ce":6.5,"rd":7.5,"tp":8.5,"mm":7.0},{"p":"Mary","c":"Billabong","r":3,"w":6.75,"pa":6.0,"ce":6.0,"rd":7.5,"tp":7.5,"mm":7.0},{"p":"Lucy","c":"Orla","r":4,"w":6.65,"pa":6.5,"ce":5.5,"rd":7.0,"tp":7.0,"mm":7.5},{"p":"Gradles","c":"Corras","r":5,"w":6.38,"pa":7.5,"ce":5.0,"rd":6.5,"tp":5.5,"mm":7.0},{"p":"Meijinx","c":"Ave","r":6,"w":5.83,"pa":5.5,"ce":6.0,"rd":5.5,"tp":7.0,"mm":5.5}]},{"sid":"S009","label":"Session 10","mvp":"Orla","reason":"Orla\u2019s Wrath of Nature killed 8 enemies and wounded 12, completely reversing the tide of a mass combat encounter.","cats":{"plot_driver":"Ash","combat_champion":"Orla","roleplay_royalty":"Lilith","team_player":"Ash","moment_maker":"Orla"},"scores":[{"p":"Lucy","c":"Orla","r":1,"w":7.8,"pa":7.0,"ce":9.5,"rd":6.5,"tp":7.5,"mm":9.0},{"p":"HT","c":"Ash","r":2,"w":7.75,"pa":7.5,"ce":8.5,"rd":6.5,"tp":9.0,"mm":7.5},{"p":"Gradles","c":"Corras","r":3,"w":6.65,"pa":6.5,"ce":7.0,"rd":6.0,"tp":7.0,"mm":6.5},{"p":"Guest","c":"Drenek","r":4,"w":6.63,"pa":6.0,"ce":7.5,"rd":6.5,"tp":6.5,"mm":7.0},{"p":"Christie","c":"Lilith","r":5,"w":6.6,"pa":7.0,"ce":5.5,"rd":6.5,"tp":8.0,"mm":6.0},{"p":"Mary","c":"Billabong","r":6,"w":5.43,"pa":5.0,"ce":5.5,"rd":5.5,"tp":6.5,"mm":5.0}]},{"sid":"S010","label":"Session 11","mvp":"Ash","reason":"Ash\u2019s Argentus possession was the narrative centerpiece.","cats":{"plot_driver":"Ash","combat_champion":"Orla","roleplay_royalty":"Ash","team_player":"Orla","moment_maker":"Ash"},"scores":[{"p":"HT","c":"Ash","r":1,"w":7.2,"pa":8.0,"ce":4.0,"rd":8.5,"tp":6.5,"mm":8.5},{"p":"Lucy","c":"Orla","r":2,"w":7.13,"pa":7.5,"ce":5.0,"rd":7.0,"tp":8.5,"mm":7.5},{"p":"Christie","c":"Lilith","r":3,"w":6.63,"pa":7.0,"ce":5.5,"rd":6.5,"tp":7.5,"mm":6.5},{"p":"Gradles","c":"Corras","r":4,"w":5.4,"pa":5.0,"ce":4.5,"rd":5.5,"tp":6.5,"mm":6.0},{"p":"Guest","c":"Drenek","r":5,"w":5.4,"pa":5.0,"ce":4.5,"rd":5.5,"tp":7.0,"mm":5.5},{"p":"Mary","c":"Billabong","r":6,"w":4.68,"pa":4.5,"ce":4.0,"rd":4.5,"tp":6.0,"mm":4.5}]},{"sid":"S011","label":"Session 12","mvp":"Orla","reason":"Orla calmly problem-solved through every constraint during Time Stop, transforming a certain TPK into a miraculous escape.","cats":{"plot_driver":"Orla","combat_champion":"Ash","roleplay_royalty":"Orla","team_player":"Orla","moment_maker":"Orla"},"scores":[{"p":"Lucy","c":"Orla","r":1,"w":8.38,"pa":8.5,"ce":7.0,"rd":7.5,"tp":9.5,"mm":10.0},{"p":"HT","c":"Ash","r":2,"w":7.1,"pa":7.0,"ce":6.5,"rd":6.0,"tp":7.0,"mm":9.5},{"p":"Mary","c":"Billabong","r":3,"w":5.13,"pa":5.0,"ce":5.5,"rd":4.5,"tp":6.0,"mm":5.0}]},{"sid":"S012","label":"Session 13","mvp":"Ash","reason":"Ash weaponized absurdity and social manipulation to neutralize a Glabrezu demon, involving Instagram influencers and banana pancakes.","cats":{"plot_driver":"Ash","combat_champion":"Ash","roleplay_royalty":"Ash","team_player":"Orla","moment_maker":"Ash"},"scores":[{"p":"HT","c":"Ash","r":1,"w":8.08,"pa":8.5,"ce":5.0,"rd":9.0,"tp":8.0,"mm":9.5},{"p":"Lucy","c":"Orla","r":2,"w":7.48,"pa":7.0,"ce":4.5,"rd":8.5,"tp":9.0,"mm":8.5},{"p":"Gradles","c":"Corras","r":3,"w":7.25,"pa":8.0,"ce":0.0,"rd":8.0,"tp":7.0,"mm":8.0},{"p":"Christie","c":"Lilith","r":4,"w":7.0,"pa":7.5,"ce":0.0,"rd":7.5,"tp":8.0,"mm":7.0},{"p":"Meijinx","c":"Ave","r":5,"w":6.95,"pa":7.0,"ce":0.0,"rd":7.5,"tp":8.5,"mm":7.0},{"p":"Mary","c":"Billabong","r":6,"w":6.13,"pa":6.0,"ce":4.0,"rd":6.5,"tp":7.5,"mm":7.0}]},{"sid":"S013","label":"Session 14","mvp":"Ash","reason":"Ash signed a blood contract with Malachar the Twisted to secure the party\u2019s escape from Berdusk.","cats":{"plot_driver":"Ash","combat_champion":"N/A","roleplay_royalty":"Ash","team_player":"Orla","moment_maker":"Ash"},"scores":[{"p":"HT","c":"Ash","r":1,"w":8.275,"pa":9.0,"ce":0.0,"rd":8.5,"tp":8.0,"mm":9.0},{"p":"Christie","c":"Lilith","r":2,"w":7.5,"pa":6.5,"ce":0.0,"rd":8.5,"tp":7.0,"mm":8.5},{"p":"Lucy","c":"Orla","r":3,"w":7.425,"pa":7.0,"ce":0.0,"rd":8.0,"tp":8.5,"mm":7.0},{"p":"Gradles","c":"Corras","r":4,"w":7.3,"pa":7.0,"ce":0.0,"rd":7.5,"tp":8.5,"mm":7.0},{"p":"Meijinx","c":"Ave","r":5,"w":7.125,"pa":7.5,"ce":0.0,"rd":7.0,"tp":8.0,"mm":6.5},{"p":"Mary","c":"Billabong","r":6,"w":6.675,"pa":6.5,"ce":0.0,"rd":6.5,"tp":7.5,"mm":6.5}]},{"sid":"S014","label":"Session 15","mvp":"Ash","reason":"Ash used Resilient Sphere to neutralize Darindale, executed the roof infiltration via broom, and pulled off the ultimate temporal heist.","cats":{"plot_driver":"Ash","combat_champion":"Billabong","roleplay_royalty":"Ave","team_player":"Ave","moment_maker":"Billabong"},"scores":[{"p":"HT","c":"Ash","r":1,"w":8.525,"pa":8.5,"ce":8,"rd":8.5,"tp":8.5,"mm":9},{"p":"Meijinx","c":"Ave","r":2,"w":8.2,"pa":8,"ce":8,"rd":8.5,"tp":8.5,"mm":8},{"p":"Mary","c":"Billabong","r":3,"w":7.9,"pa":7,"ce":8.5,"rd":7.5,"tp":8,"mm":9},{"p":"Gradles","c":"Corras","r":4,"w":7.6,"pa":8,"ce":6,"rd":8,"tp":8,"mm":7.5},{"p":"Lucy","c":"Orla","r":5,"w":7.225,"pa":7.5,"ce":6,"rd":7,"tp":8,"mm":7.5},{"p":"Christie","c":"Lilith","r":6,"w":6.825,"pa":7,"ce":6,"rd":7,"tp":7.5,"mm":6.5}]},{"sid":"S015","label":"Session 16","mvp":"Ave","reason":"Ave persuaded the Temporal Sentinel to give the party a chance to seal the rift themselves.","cats":{"plot_driver":"Ave","combat_champion":"N/A","roleplay_royalty":"Ave","team_player":"Ash","moment_maker":"Ave"},"scores":[{"p":"Meijinx","c":"Ave","r":1,"w":7.275,"pa":9.0,"ce":0.0,"rd":8.5,"tp":8.0,"mm":8.5},{"p":"HT","c":"Ash","r":2,"w":6.75,"pa":8.0,"ce":0.0,"rd":7.5,"tp":8.5,"mm":8.0},{"p":"Christie","c":"Lilith","r":3,"w":6.5,"pa":7.5,"ce":0.0,"rd":8.0,"tp":7.5,"mm":7.5},{"p":"Gradles","c":"Corras","r":4,"w":6.45,"pa":8.0,"ce":0.0,"rd":7.0,"tp":8.0,"mm":7.5},{"p":"Lucy","c":"Orla","r":5,"w":6.15,"pa":7.0,"ce":0.0,"rd":7.5,"tp":7.5,"mm":7.0},{"p":"Mary","c":"Billabong","r":6,"w":6.025,"pa":7.0,"ce":0.0,"rd":7.0,"tp":7.5,"mm":7.0}]},{"sid":"S016","label":"Session 17","mvp":"Corras","reason":"Corras activated the Fates card from the Deck of Many Things, undoing the timeline and resetting reality.","cats":{"plot_driver":"Corras","combat_champion":"Billabong","roleplay_royalty":"Ash","team_player":"Lilith","moment_maker":"Corras"},"scores":[{"p":"HT","c":"Ash","r":1,"w":7.975,"pa":7.5,"ce":7.0,"rd":8.5,"tp":7.5,"mm":9.0},{"p":"Mary","c":"Billabong","r":2,"w":7.8,"pa":7.0,"ce":8.5,"rd":7.5,"tp":8.0,"mm":8.5},{"p":"Gradles","c":"Corras","r":3,"w":7.6,"pa":9.5,"ce":0.0,"rd":8.5,"tp":8.0,"mm":9.5},{"p":"Lucy","c":"Orla","r":4,"w":7.575,"pa":7.0,"ce":7.5,"rd":8.0,"tp":8.0,"mm":7.5},{"p":"Christie","c":"Lilith","r":5,"w":7.5,"pa":7.0,"ce":8.0,"rd":7.5,"tp":8.5,"mm":7.0},{"p":"Meijinx","c":"Ave","r":6,"w":7.125,"pa":6.5,"ce":7.5,"rd":7.0,"tp":7.5,"mm":7.5}]},{"sid":"S017","label":"Session 18","mvp":"Corras","reason":"Corras absorbed 17,000 refugees into Castle Corras, formed a kingdom, and navigated complex political rebellion.","cats":{"plot_driver":"Corras","combat_champion":"N/A","roleplay_royalty":"Lilith","team_player":"Corras","moment_maker":"Corras"},"scores":[{"p":"Gradles","c":"Corras","r":1,"w":7.275,"pa":9.0,"ce":0.0,"rd":8.5,"tp":8.0,"mm":8.5},{"p":"Christie","c":"Lilith","r":2,"w":7.125,"pa":8.5,"ce":0.0,"rd":9.0,"tp":7.0,"mm":8.5},{"p":"Mary","c":"Billabong","r":3,"w":6.95,"pa":8.0,"ce":0.0,"rd":8.5,"tp":7.5,"mm":8.5},{"p":"HT","c":"Ash","r":4,"w":6.85,"pa":8.5,"ce":0.0,"rd":8.0,"tp":7.5,"mm":8.0},{"p":"Lucy","c":"Orla","r":5,"w":6.7,"pa":8.0,"ce":0.0,"rd":8.0,"tp":8.0,"mm":7.5}]},{"sid":"S018","label":"Session 19","mvp":"Billabong","reason":"Billabong challenged Foehammer to a bare-knuckle boxing match and overwhelmed his forge with a malfunctioning Snack-O-Matic 3000.","cats":{"plot_driver":"Billabong","combat_champion":"N/A","roleplay_royalty":"Billabong","team_player":"Billabong","moment_maker":"Billabong"},"scores":[{"p":"Mary","c":"Billabong","r":1,"w":7.225,"pa":7.5,"ce":0.0,"rd":9.0,"tp":8.0,"mm":9.5},{"p":"Lucy","c":"Orla","r":2,"w":6.675,"pa":7.5,"ce":0.0,"rd":8.0,"tp":8.0,"mm":8.0},{"p":"Gradles","c":"Corras","r":3,"w":6.45,"pa":7.5,"ce":0.0,"rd":7.5,"tp":8.0,"mm":7.5},{"p":"HT","c":"Ash","r":4,"w":6.15,"pa":7.0,"ce":0.0,"rd":7.5,"tp":7.5,"mm":7.0}]},{"sid":"S019","label":"Session 20","mvp":"Ash","reason":"Ash perfectly executed a quickened Scatter spell to teleport the party away just as the alchemist fire detonated.","cats":{"plot_driver":"Ash","combat_champion":"Billabong","roleplay_royalty":"Orla","team_player":"Ash","moment_maker":"Ash"},"scores":[{"p":"HT","c":"Ash","r":1,"w":8.475,"pa":8.5,"ce":8.0,"rd":8.0,"tp":9.0,"mm":9.0},{"p":"Mary","c":"Billabong","r":2,"w":8.05,"pa":7.5,"ce":8.5,"rd":8.0,"tp":8.0,"mm":8.5},{"p":"Gradles","c":"Corras","r":3,"w":7.925,"pa":8.0,"ce":7.0,"rd":8.0,"tp":8.5,"mm":8.0},{"p":"Lucy","c":"Orla","r":4,"w":7.85,"pa":7.5,"ce":7.0,"rd":8.5,"tp":8.0,"mm":8.0}]},{"sid":"S020","label":"Session 21","mvp":"Billabong","reason":"Billabong survived a brutal subarctic night alone, deciphered cryptic ghost messages, and assembled the Summer Star to resurrect the entire party.","cats":{"plot_driver":"Billabong","combat_champion":"Billabong","roleplay_royalty":"Billabong","team_player":"Billabong","moment_maker":"Billabong"},"scores":[{"p":"Mary","c":"Billabong","r":1,"w":9.075,"pa":9.5,"ce":8.0,"rd":9.0,"tp":9.0,"mm":9.5},{"p":"HT","c":"Ash","r":2,"w":7.7,"pa":7.5,"ce":7.5,"rd":8.0,"tp":8.0,"mm":7.5},{"p":"Gradles","c":"Corras","r":3,"w":6.95,"pa":8.0,"ce":0.0,"rd":8.5,"tp":7.5,"mm":8.5},{"p":"Lucy","c":"Orla","r":4,"w":6.15,"pa":7.0,"ce":0.0,"rd":7.5,"tp":7.5,"mm":7.0}]},{"sid":"S021","label":"Session 22","mvp":"Corras","reason":"Corras found the vital infiltration tactics book and executed a devastating sneak attack against the Umber Hulk.","cats":{"plot_driver":"Corras","combat_champion":"Corras","roleplay_royalty":"Corras","team_player":"Corras","moment_maker":"Corras"},"scores":[{"p":"Gradles","c":"Corras","r":1,"w":8.2,"pa":8.5,"ce":8.5,"rd":8.0,"tp":8.0,"mm":8.0},{"p":"HT","c":"Ash","r":2,"w":7.625,"pa":7.5,"ce":7.0,"rd":8.0,"tp":8.0,"mm":7.5},{"p":"Mary","c":"Billabong","r":3,"w":7.275,"pa":7.0,"ce":7.5,"rd":7.5,"tp":7.5,"mm":7.0}]},{"sid":"S022","label":"Session 23","mvp":"Corras","reason":"Corras discovered the illusion wall, picked the arcane lock, and bypassed the magical threshold into Web Edge.","cats":{"plot_driver":"Corras","combat_champion":"Billabong","roleplay_royalty":"Orla","team_player":"Billabong","moment_maker":"Corras"},"scores":[{"p":"Gradles","c":"Corras","r":1,"w":8.05,"pa":9.0,"ce":7.5,"rd":7.5,"tp":8.0,"mm":8.0},{"p":"Mary","c":"Billabong","r":2,"w":7.6,"pa":7.0,"ce":8.0,"rd":7.5,"tp":8.5,"mm":7.5},{"p":"Lucy","c":"Orla","r":3,"w":6.6,"pa":7.5,"ce":0.0,"rd":8.0,"tp":7.5,"mm":8.0},{"p":"HT","c":"Ash","r":4,"w":6.45,"pa":7.5,"ce":0.0,"rd":7.5,"tp":8.0,"mm":7.5}]},{"sid":"S023","label":"Session 24","mvp":"Orla","reason":"Orla used Charm Monster on the deep gnome demon toad, turning it into an ally and safely escaping by being swallowed whole.","cats":{"plot_driver":"Orla","combat_champion":"Billabong","roleplay_royalty":"Orla","team_player":"Orla","moment_maker":"Orla"},"scores":[{"p":"Lucy","c":"Orla","r":1,"w":8.625,"pa":8.0,"ce":8.5,"rd":9.0,"tp":8.0,"mm":9.5},{"p":"HT","c":"Ash","r":2,"w":8.125,"pa":8.0,"ce":8.0,"rd":8.5,"tp":8.0,"mm":8.0},{"p":"Mary","c":"Billabong","r":3,"w":8.0,"pa":7.5,"ce":9.0,"rd":7.5,"tp":8.0,"mm":8.5},{"p":"Gradles","c":"Corras","r":4,"w":7.325,"pa":7.5,"ce":7.0,"rd":7.5,"tp":7.5,"mm":7.0}]},{"sid":"S024","label":"Escape from Web's Edge","mvp":"Corras","reason":"Corras stole the Rod of Seven Parts and coordinated the party\u2019s escape through clever use of Message and Misty Step.","cats":{"plot_driver":"Corras","combat_champion":"Billabong","roleplay_royalty":"Ash","team_player":"Orla","moment_maker":"Corras"},"scores":[{"p":"Gradles","c":"Corras","r":1,"w":7.15,"pa":9.0,"ce":4.0,"rd":7.0,"tp":6.0,"mm":8.0},{"p":"HT","c":"Ash","r":2,"w":7.0,"pa":8.0,"ce":3.0,"rd":9.0,"tp":7.0,"mm":8.0},{"p":"Christie","c":"Dahlia","r":3,"w":6.35,"pa":6.0,"ce":5.0,"rd":8.0,"tp":5.0,"mm":7.0},{"p":"Lucy","c":"Orla","r":4,"w":6.05,"pa":5.0,"ce":4.0,"rd":8.0,"tp":7.0,"mm":7.0},{"p":"Tenderbittle","c":"SavannahBelle","r":5,"w":4.55,"pa":4.0,"ce":3.0,"rd":6.0,"tp":4.0,"mm":5.0},{"p":"Mary","c":"Billabong","r":6,"w":4.5,"pa":3.0,"ce":6.0,"rd":5.0,"tp":3.0,"mm":6.0}]},{"sid":"S025","label":"Session 27","mvp":"Corras","reason":"Corras took MVP for being the most active participant across the scenes.","cats":{"plot_driver":"Corras","combat_champion":"Corras","roleplay_royalty":"Corras","team_player":"Corras","moment_maker":"Corras"},"scores":[{"p":"Gradles","c":"Corras","r":1,"w":6.0,"pa":6.5,"ce":5.0,"rd":6.5,"tp":6.0,"mm":5.5},{"p":"HT","c":"Ash","r":2,"w":3.0,"pa":3.5,"ce":2.0,"rd":3.5,"tp":3.0,"mm":2.5},{"p":"Lucy","c":"Orla","r":3,"w":1.5,"pa":2.0,"ce":0.5,"rd":2.0,"tp":1.5,"mm":1.0},{"p":"Mary","c":"Billabong","r":4,"w":1.5,"pa":2.0,"ce":0.5,"rd":2.0,"tp":1.5,"mm":1.0},{"p":"Christie","c":"Lilith","r":5,"w":0.0},{"p":"Meijinx","c":"Ave","r":6,"w":0.0}]},{"sid":"S026","label":"Session 28","mvp":"Orla","reason":"Orla took MVP for being the most active participant.","cats":{"plot_driver":"Orla","combat_champion":"Orla","roleplay_royalty":"Orla","team_player":"Orla","moment_maker":"Orla"},"scores":[{"p":"Lucy","c":"Orla","r":1,"w":6.0,"pa":6.5,"ce":5.0,"rd":6.5,"tp":6.0,"mm":5.5},{"p":"Gradles","c":"Corras","r":2,"w":6.0,"pa":6.5,"ce":5.0,"rd":6.5,"tp":6.0,"mm":5.5},{"p":"HT","c":"Ash","r":3,"w":4.5,"pa":5.0,"ce":3.5,"rd":5.0,"tp":4.5,"mm":4.0},{"p":"Mary","c":"Billabong","r":4,"w":4.5,"pa":5.0,"ce":3.5,"rd":5.0,"tp":4.5,"mm":4.0},{"p":"Christie","c":"Lilith","r":5,"w":0.0},{"p":"Meijinx","c":"Ave","r":6,"w":0.0}]},{"sid":"S027","label":"Session 30","mvp":"Corras","reason":"Corras took MVP for being the most active participant.","cats":{"plot_driver":"Corras","combat_champion":"Corras","roleplay_royalty":"Corras","team_player":"Corras","moment_maker":"Corras"},"scores":[{"p":"Gradles","c":"Corras","r":1,"w":6.0,"pa":6.5,"ce":5.0,"rd":6.5,"tp":6.0,"mm":5.5},{"p":"HT","c":"Ash","r":2,"w":4.5,"pa":5.0,"ce":3.5,"rd":5.0,"tp":4.5,"mm":4.0},{"p":"Mary","c":"Billabong","r":3,"w":4.5,"pa":5.0,"ce":3.5,"rd":5.0,"tp":4.5,"mm":4.0},{"p":"Lucy","c":"Orla","r":4,"w":3.0,"pa":3.5,"ce":2.0,"rd":3.5,"tp":3.0,"mm":2.5},{"p":"Christie","c":"Lilith","r":5,"w":0.0},{"p":"Meijinx","c":"Ave","r":6,"w":0.0}]},{"sid":"S028","label":"Session 31","mvp":"Billabong","reason":"Billabong took MVP for being the most active participant.","cats":{"plot_driver":"Billabong","combat_champion":"Billabong","roleplay_royalty":"Billabong","team_player":"Billabong","moment_maker":"Billabong"},"scores":[{"p":"Mary","c":"Billabong","r":1,"w":6.0,"pa":6.5,"ce":5.0,"rd":6.5,"tp":6.0,"mm":5.5},{"p":"HT","c":"Ash","r":2,"w":3.0,"pa":3.5,"ce":2.0,"rd":3.5,"tp":3.0,"mm":2.5},{"p":"Lucy","c":"Orla","r":3,"w":1.5,"pa":2.0,"ce":0.5,"rd":2.0,"tp":1.5,"mm":1.0},{"p":"Christie","c":"Lilith","r":4,"w":0.0},{"p":"Gradles","c":"Corras","r":5,"w":0.0},{"p":"Meijinx","c":"Ave","r":6,"w":0.0}]},{"sid":"S029","label":"Session 32","mvp":"Ash","reason":"Ash took MVP for being the most active participant.","cats":{"plot_driver":"Ash","combat_champion":"Ash","roleplay_royalty":"Ash","team_player":"Ash","moment_maker":"Ash"},"scores":[{"p":"HT","c":"Ash","r":1,"w":6.0,"pa":6.5,"ce":5.0,"rd":6.5,"tp":6.0,"mm":5.5},{"p":"Mary","c":"Billabong","r":2,"w":6.0,"pa":6.5,"ce":5.0,"rd":6.5,"tp":6.0,"mm":5.5},{"p":"Lucy","c":"Orla","r":3,"w":4.5,"pa":5.0,"ce":3.5,"rd":5.0,"tp":4.5,"mm":4.0},{"p":"Gradles","c":"Corras","r":4,"w":4.5,"pa":5.0,"ce":3.5,"rd":5.0,"tp":4.5,"mm":4.0},{"p":"Christie","c":"Lilith","r":5,"w":0.0},{"p":"Meijinx","c":"Ave","r":6,"w":0.0}]},{"sid":"S030","label":"Session 33","mvp":"Orla","reason":"Orla took MVP for being the most active participant.","cats":{"plot_driver":"Orla","combat_champion":"Orla","roleplay_royalty":"Orla","team_player":"Orla","moment_maker":"Orla"},"scores":[{"p":"Lucy","c":"Orla","r":1,"w":7.5,"pa":8.0,"ce":6.5,"rd":8.0,"tp":7.5,"mm":7.0},{"p":"HT","c":"Ash","r":2,"w":6.0,"pa":6.5,"ce":5.0,"rd":6.5,"tp":6.0,"mm":5.5},{"p":"Gradles","c":"Corras","r":3,"w":4.5,"pa":5.0,"ce":3.5,"rd":5.0,"tp":4.5,"mm":4.0},{"p":"Mary","c":"Billabong","r":4,"w":4.5,"pa":5.0,"ce":3.5,"rd":5.0,"tp":4.5,"mm":4.0},{"p":"Christie","c":"Lilith","r":5,"w":0.0},{"p":"Meijinx","c":"Ave","r":6,"w":0.0}]},{"sid":"S031","label":"Session 34","mvp":"Billabong","reason":"Billabong took MVP for being the most active participant.","cats":{"plot_driver":"Billabong","combat_champion":"Billabong","roleplay_royalty":"Billabong","team_player":"Billabong","moment_maker":"Billabong"},"scores":[{"p":"Mary","c":"Billabong","r":1,"w":7.5,"pa":8.0,"ce":6.5,"rd":8.0,"tp":7.5,"mm":7.0},{"p":"Lucy","c":"Orla","r":2,"w":6.0,"pa":6.5,"ce":5.0,"rd":6.5,"tp":6.0,"mm":5.5},{"p":"Gradles","c":"Corras","r":3,"w":6.0,"pa":6.5,"ce":5.0,"rd":6.5,"tp":6.0,"mm":5.5},{"p":"HT","c":"Ash","r":4,"w":4.5,"pa":5.0,"ce":3.5,"rd":5.0,"tp":4.5,"mm":4.0},{"p":"Christie","c":"Lilith","r":5,"w":1.5},{"p":"Meijinx","c":"Ave","r":6,"w":0.0}]},{"sid":"S032","label":"Session 35","mvp":"Orla","reason":"Orla took MVP for being the most active participant.","cats":{"plot_driver":"Orla","combat_champion":"Orla","roleplay_royalty":"Orla","team_player":"Orla","moment_maker":"Orla"},"scores":[{"p":"Lucy","c":"Orla","r":1,"w":6.0,"pa":6.5,"ce":5.0,"rd":6.5,"tp":6.0,"mm":5.5},{"p":"Gradles","c":"Corras","r":2,"w":6.0,"pa":6.5,"ce":5.0,"rd":6.5,"tp":6.0,"mm":5.5},{"p":"HT","c":"Ash","r":3,"w":1.5},{"p":"Mary","c":"Billabong","r":4,"w":1.5},{"p":"Christie","c":"Lilith","r":5,"w":0.0},{"p":"Meijinx","c":"Ave","r":6,"w":0.0}]},{"sid":"S033","label":"Session 36","mvp":"Orla","reason":"Orla took MVP for being the most active participant.","cats":{"plot_driver":"Orla","combat_champion":"Orla","roleplay_royalty":"Orla","team_player":"Orla","moment_maker":"Orla"},"scores":[{"p":"Lucy","c":"Orla","r":1,"w":6.0,"pa":6.5,"ce":5.0,"rd":6.5,"tp":6.0,"mm":5.5},{"p":"Gradles","c":"Corras","r":2,"w":6.0,"pa":6.5,"ce":5.0,"rd":6.5,"tp":6.0,"mm":5.5},{"p":"Mary","c":"Billabong","r":3,"w":6.0,"pa":6.5,"ce":5.0,"rd":6.5,"tp":6.0,"mm":5.5},{"p":"HT","c":"Ash","r":4,"w":0.0},{"p":"Christie","c":"Lilith","r":5,"w":0.0},{"p":"Meijinx","c":"Ave","r":6,"w":0.0}]}];
+
+// ============================================================
+// CONFIG
+// ============================================================
+const PLAYER_COLORS = {
+  Gradles:"#4A90D9", HT:"#E57373", Mary:"#81C784",
+  Christie:"#BA68C8", Lucy:"#FFB74D", Tenderbittle:"#4DB6AC",
+  Meijinx:"#FF8A65", Guest:"#7986CB"
+};
+const PLAYER_CHARS = {
+  Gradles:"Corras", HT:"Ash", Mary:"Billabong",
+  Christie:"Lilith", Lucy:"Orla", Tenderbittle:"SavannahBelle",
+  Meijinx:"Ave", Guest:"Drenek"
+};
+const CAT_LABELS = {
+  plot_driver:"Plot Driver", combat_champion:"Combat Champion",
+  roleplay_royalty:"Roleplay Royalty", team_player:"Team Player",
+  moment_maker:"Moment Maker"
+};
+
+// ============================================================
+// PROCESS DATA
+// ============================================================
+const sessions = RAW_DATA;
+const numSessions = sessions.length;
+const allPlayers = new Set();
+sessions.forEach(s => s.scores.forEach(sc => { if (sc.w > 0) allPlayers.add(sc.p); }));
+
+function getPlayerRank(sIdx, player) {
+  const sc = sessions[sIdx].scores.find(s => s.p === player && s.w > 0);
+  return sc ? sc.r : null;
+}
+function getPlayerScore(sIdx, player) {
+  return sessions[sIdx].scores.find(s => s.p === player) || null;
+}
+
+let maxRank = 0;
+sessions.forEach(s => {
+  const active = s.scores.filter(sc => sc.w > 0);
+  maxRank = Math.max(maxRank, active.length);
+});
+
+// MVP counts
+const mvpWinsByPlayer = {};
+sessions.forEach(s => {
+  const entry = s.scores.find(sc => sc.c === s.mvp);
+  if (entry) mvpWinsByPlayer[entry.p] = (mvpWinsByPlayer[entry.p] || 0) + 1;
+});
+
+// Stats
+let tightestGap = Infinity, tightestSid = '';
+sessions.forEach(s => {
+  const active = s.scores.filter(sc => sc.w > 0).sort((a,b) => a.r - b.r);
+  if (active.length >= 2) {
+    const gap = active[0].w - active[1].w;
+    if (gap < tightestGap && gap >= 0) { tightestGap = gap; tightestSid = s.sid; }
+  }
+});
+const rank1Counts = {};
+sessions.forEach(s => {
+  const r1 = s.scores.find(sc => sc.r === 1 && sc.w > 0);
+  if (r1) rank1Counts[r1.p] = (rank1Counts[r1.p] || 0) + 1;
+});
+const overallLeader = Object.entries(rank1Counts).sort((a,b) => b[1]-a[1])[0];
+const topMvp = Object.entries(mvpWinsByPlayer).sort((a,b) => b[1]-a[1])[0];
+
+const hiddenPlayers = new Set();
+
+// ============================================================
+// STATS BAR
+// ============================================================
+document.getElementById('stats-bar').innerHTML = `
+  <div class="stat-card" style="--accent:#4A90D9"><div class="stat-label">Sessions Tracked</div><div class="stat-value">${numSessions}</div><div class="stat-detail">${sessions[0].sid} \u2013 ${sessions[numSessions-1].sid}</div></div>
+  <div class="stat-card" style="--accent:#FFB74D"><div class="stat-label">Most MVP Wins</div><div class="stat-value">${PLAYER_CHARS[topMvp[0]]}</div><div class="stat-detail">${topMvp[1]} wins (${topMvp[0]})</div></div>
+  <div class="stat-card" style="--accent:#81C784"><div class="stat-label">Tightest Race</div><div class="stat-value">${tightestGap.toFixed(2)} pts</div><div class="stat-detail">${tightestSid} gap #1 vs #2</div></div>
+  <div class="stat-card" style="--accent:#E57373"><div class="stat-label">Most #1 Finishes</div><div class="stat-value">${PLAYER_CHARS[overallLeader[0]]}</div><div class="stat-detail">${overallLeader[1]} session wins (${overallLeader[0]})</div></div>
+`;
+
+// MVP WINS PANEL
+function renderMvpWins() {
+  const sorted = Object.entries(mvpWinsByPlayer).sort((a,b) => b[1]-a[1]);
+  const mx = sorted[0][1];
+  document.getElementById('mvp-wins-bars').innerHTML = sorted.map(([p,w]) => {
+    const c = PLAYER_COLORS[p]||'#888';
+    return `<div class="mvp-wins-row"><div class="mvp-wins-name" style="color:${c}">${PLAYER_CHARS[p]||p}</div><div class="mvp-wins-bar-bg"><div class="mvp-wins-bar-fill" style="width:${(w/mx*100).toFixed(0)}%;background:${c};box-shadow:0 0 8px ${c}44"></div></div><div class="mvp-wins-count">${w}</div></div>`;
+  }).join('');
+}
+renderMvpWins();
+
+// LEGEND
+function renderLegend() {
+  const container = document.getElementById('legend');
+  container.innerHTML = '';
+  [...allPlayers].sort((a,b) => (mvpWinsByPlayer[b]||0)-(mvpWinsByPlayer[a]||0)).forEach(p => {
+    const c = PLAYER_COLORS[p]||'#888';
+    const ch = PLAYER_CHARS[p]||p;
+    const w = mvpWinsByPlayer[p]||0;
+    const item = document.createElement('div');
+    item.className = 'legend-item' + (hiddenPlayers.has(p) ? ' hidden' : '');
+    item.style.setProperty('--color', c);
+    item.innerHTML = `<div class="legend-dot" style="background:${c};--color:${c}"></div><span class="legend-player">${p}</span><span class="legend-char">${ch}</span>${w?`<span class="legend-mvps">${w} MVP${w>1?'s':''}</span>`:''}`;
+    item.onclick = () => {
+      hiddenPlayers.has(p) ? hiddenPlayers.delete(p) : hiddenPlayers.add(p);
+      item.classList.toggle('hidden');
+      renderChart(currentSessionIdx);
+    };
+    container.appendChild(item);
+  });
+}
+renderLegend();
+
+// ============================================================
+// BUMP CHART (D3)
+// ============================================================
+const margin = { top: 36, right: 110, bottom: 44, left: 54 };
+let currentSessionIdx = numSessions - 1;
+
+function getDimensions() {
+  const rect = document.querySelector('.chart-container').getBoundingClientRect();
+  const w = rect.width - 16;
+  const h = Math.max(460, maxRank * 65 + margin.top + margin.bottom);
+  return { w, h, iw: w - margin.left - margin.right, ih: h - margin.top - margin.bottom };
+}
+
+const svg = d3.select('#bump-chart');
+const tooltip = document.getElementById('tooltip');
+
+function renderChart(upToIdx) {
+  const { w, h, iw, ih } = getDimensions();
+  svg.attr('width', w).attr('height', h);
+  svg.selectAll('*').remove();
+
+  const defs = svg.append('defs');
+
+  // Glow filters for each player
+  [...allPlayers].forEach(p => {
+    const c = PLAYER_COLORS[p] || '#888';
+    const filter = defs.append('filter')
+      .attr('id', `glow-${p.replace(/\s/g,'')}`)
+      .attr('x', '-50%').attr('y', '-50%').attr('width', '200%').attr('height', '200%');
+    filter.append('feGaussianBlur').attr('stdDeviation', '3').attr('result', 'blur');
+    filter.append('feFlood').attr('flood-color', c).attr('flood-opacity', '0.6').attr('result', 'color');
+    filter.append('feComposite').attr('in', 'color').attr('in2', 'blur').attr('operator', 'in').attr('result', 'glow');
+    const merge = filter.append('feMerge');
+    merge.append('feMergeNode').attr('in', 'glow');
+    merge.append('feMergeNode').attr('in', 'SourceGraphic');
+  });
+
+  const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+  const visibleSessions = sessions.slice(0, upToIdx + 1);
+  const xScale = d3.scalePoint().domain(visibleSessions.map(s => s.sid)).range([0, iw]).padding(0.12);
+  const yScale = d3.scaleLinear().domain([1, maxRank]).range([0, ih]);
+
+  // Background grid
+  for (let r = 1; r <= maxRank; r++) {
+    g.append('line')
+      .attr('x1', 0).attr('x2', iw)
+      .attr('y1', yScale(r)).attr('y2', yScale(r))
+      .attr('stroke', r === 1 ? '#2a2a48' : '#1a1a2e')
+      .attr('stroke-width', r === 1 ? 1.5 : 0.5);
+  }
+
+  // Session vertical markers + labels
+  visibleSessions.forEach((s, i) => {
+    const x = xScale(s.sid);
+    g.append('line')
+      .attr('x1', x).attr('x2', x).attr('y1', -6).attr('y2', ih + 6)
+      .attr('stroke', '#1a1a30').attr('stroke-width', 0.5).attr('stroke-dasharray', '2,4');
+
+    const showLabel = visibleSessions.length <= 20 || i % Math.ceil(visibleSessions.length / 16) === 0 || i === visibleSessions.length - 1;
+    if (showLabel) {
+      g.append('text')
+        .attr('x', x).attr('y', ih + 26)
+        .attr('text-anchor', 'middle')
+        .attr('font-family', "'Barlow Condensed', sans-serif")
+        .attr('font-size', '10px').attr('fill', '#5858a0')
+        .text(s.sid);
+    }
+  });
+
+  // Rank labels
+  const ordinals = ['','1st','2nd','3rd','4th','5th','6th','7th','8th'];
+  for (let r = 1; r <= maxRank; r++) {
+    const label = ordinals[r] || `${r}th`;
+    g.append('text').attr('x', -10).attr('y', yScale(r) + 4)
+      .attr('text-anchor', 'end')
+      .attr('font-family', "'JetBrains Mono', monospace")
+      .attr('font-size', '11px').attr('fill', r === 1 ? '#FFB74D' : '#4a4a70')
+      .text(label);
+    g.append('text').attr('x', iw + 10).attr('y', yScale(r) + 4)
+      .attr('text-anchor', 'start')
+      .attr('font-family', "'JetBrains Mono', monospace")
+      .attr('font-size', '11px').attr('fill', r === 1 ? '#FFB74D' : '#4a4a70')
+      .text(label);
+  }
+
+  // Current session highlight line
+  const currentSid = visibleSessions[visibleSessions.length - 1].sid;
+  g.append('line')
+    .attr('x1', xScale(currentSid)).attr('x2', xScale(currentSid))
+    .attr('y1', -12).attr('y2', ih + 12)
+    .attr('stroke', '#E57373').attr('stroke-width', 1.5)
+    .attr('stroke-dasharray', '6,4').attr('opacity', 0.5);
+
+  // "1st PLACE" zone glow
+  g.append('rect')
+    .attr('x', 0).attr('y', yScale(1) - 18)
+    .attr('width', iw).attr('height', 36)
+    .attr('fill', 'url(#first-place-gradient)')
+    .attr('opacity', 0.08);
+
+  const firstGrad = defs.append('linearGradient').attr('id', 'first-place-gradient');
+  firstGrad.append('stop').attr('offset', '0%').attr('stop-color', '#FFB74D').attr('stop-opacity', 0);
+  firstGrad.append('stop').attr('offset', '50%').attr('stop-color', '#FFB74D').attr('stop-opacity', 1);
+  firstGrad.append('stop').attr('offset', '100%').attr('stop-color', '#FFB74D').attr('stop-opacity', 0);
+
+  // ---- PLAYER LINES ----
+  const activePlayers = [...allPlayers].filter(p => !hiddenPlayers.has(p));
+
+  // Sort: draw lower-ranked lines first so leaders are on top
+  activePlayers.sort((a, b) => {
+    const ra = getPlayerRank(upToIdx, a) || 99;
+    const rb = getPlayerRank(upToIdx, b) || 99;
+    return rb - ra;
+  });
+
+  activePlayers.forEach(player => {
+    const color = PLAYER_COLORS[player] || '#888';
+    const charName = PLAYER_CHARS[player] || player;
+    const filterId = `glow-${player.replace(/\s/g,'')}`;
+
+    // Build points
+    const points = [];
+    for (let i = 0; i <= upToIdx; i++) {
+      const rank = getPlayerRank(i, player);
+      if (rank !== null) {
+        points.push({ idx: i, sid: sessions[i].sid, rank, x: xScale(sessions[i].sid), y: yScale(rank) });
+      }
+    }
+    if (points.length === 0) return;
+
+    // Split into continuous segments (gap = absent 2+ sessions)
+    const segments = [];
+    let seg = [points[0]];
+    for (let i = 1; i < points.length; i++) {
+      if (points[i].idx - points[i-1].idx <= 2) seg.push(points[i]);
+      else { segments.push(seg); seg = [points[i]]; }
+    }
+    segments.push(seg);
+
+    const lineGen = d3.line().x(d => d.x).y(d => d.y).curve(d3.curveMonotoneX);
+
+    // Draw shadow line (wider, darker, behind)
+    segments.forEach(seg => {
+      if (seg.length >= 2) {
+        g.append('path').datum(seg).attr('d', lineGen)
+          .attr('fill', 'none').attr('stroke', color).attr('stroke-width', 8)
+          .attr('stroke-linecap', 'round').attr('opacity', 0.12);
+      }
+    });
+
+    // Draw main line
+    segments.forEach(seg => {
+      if (seg.length >= 2) {
+        g.append('path').datum(seg).attr('d', lineGen)
+          .attr('fill', 'none').attr('stroke', color).attr('stroke-width', 3.5)
+          .attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round')
+          .attr('opacity', 0.9)
+          .style('filter', `url(#${filterId})`);
+      }
+    });
+
+    // Detect crossovers (rank improved from previous session)
+    for (let i = 1; i < points.length; i++) {
+      if (points[i].rank < points[i-1].rank) {
+        // Crossover! Draw a glowing pulse at the overtake point
+        g.append('circle')
+          .attr('cx', points[i].x).attr('cy', points[i].y)
+          .attr('r', 6).attr('fill', 'none')
+          .attr('stroke', color).attr('stroke-width', 2)
+          .attr('opacity', 0.6)
+          .style('filter', `url(#${filterId})`);
+      }
+    }
+
+    // Draw dots
+    points.forEach(pt => {
+      const scoreEntry = getPlayerScore(pt.idx, player);
+      const isMvp = sessions[pt.idx].mvp === (scoreEntry?.c || '');
+
+      // MVP star glow circle
+      if (isMvp) {
+        g.append('circle')
+          .attr('cx', pt.x).attr('cy', pt.y).attr('r', 10)
+          .attr('fill', 'none').attr('stroke', '#FFB74D')
+          .attr('stroke-width', 1.5).attr('opacity', 0.4)
+          .style('filter', 'drop-shadow(0 0 4px rgba(255,183,77,0.6))');
+      }
+
+      g.append('circle')
+        .attr('cx', pt.x).attr('cy', pt.y)
+        .attr('r', isMvp ? 6 : 3.5)
+        .attr('fill', isMvp ? '#FFB74D' : color)
+        .attr('stroke', isMvp ? '#FFB74D' : '#0c0c18')
+        .attr('stroke-width', isMvp ? 2 : 1.5)
+        .style('filter', isMvp ? 'drop-shadow(0 0 6px rgba(255,183,77,0.8))' : `drop-shadow(0 0 3px ${color}66)`)
+        .style('cursor', 'pointer')
+        .on('mouseenter', function(event) {
+          tooltip.innerHTML = `
+            <div class="tt-session">${sessions[pt.idx].sid} \u2014 ${sessions[pt.idx].label}</div>
+            <div class="tt-name" style="color:${color}">${scoreEntry?.c || charName}</div>
+            <div class="tt-rank">Rank: #${pt.rank}</div>
+            <div class="tt-score">Score: ${scoreEntry?.w?.toFixed(2) || '?'}</div>
+            ${isMvp ? '<div style="color:#FFB74D;font-size:11px;margin-top:3px">\u2605 SESSION MVP</div>' : ''}
+          `;
+          tooltip.classList.add('visible');
+          tooltip.style.left = Math.min(event.clientX + 14, window.innerWidth - 260) + 'px';
+          tooltip.style.top = (event.clientY - 70) + 'px';
+        })
+        .on('mouseleave', () => tooltip.classList.remove('visible'));
+
+      // Star above MVP dot
+      if (isMvp) {
+        g.append('text')
+          .attr('x', pt.x).attr('y', pt.y - 14)
+          .attr('text-anchor', 'middle')
+          .attr('font-size', '13px')
+          .attr('fill', '#FFB74D')
+          .style('filter', 'drop-shadow(0 0 4px rgba(255,183,77,0.8))')
+          .text('\u2605');
+      }
+    });
+
+    // Crown on the #1 player at the current session
+    const lastPt = points[points.length - 1];
+    if (lastPt && lastPt.idx === upToIdx && lastPt.rank === 1) {
+      g.append('text')
+        .attr('x', lastPt.x).attr('y', lastPt.y - 18)
+        .attr('text-anchor', 'middle')
+        .attr('font-size', '16px')
+        .attr('fill', '#FFB74D')
+        .style('filter', 'drop-shadow(0 0 6px rgba(255,183,77,0.8))')
+        .attr('class', 'leader-crown')
+        .text('\u265B');
+    }
+
+    // End label (player name at right edge)
+    if (lastPt && lastPt.idx === upToIdx) {
+      g.append('text')
+        .attr('x', iw + 32).attr('y', lastPt.y + 4)
+        .attr('text-anchor', 'start')
+        .attr('font-family', "'Barlow Condensed', sans-serif")
+        .attr('font-size', '12px').attr('font-weight', '600')
+        .attr('fill', color)
+        .style('filter', `drop-shadow(0 0 4px ${color}44)`)
+        .text(charName.split('/')[0]);
+    }
+  });
+}
+
+// ============================================================
+// SIDE PANEL
+// ============================================================
+function renderSidePanel(sIdx) {
+  const s = sessions[sIdx];
+  const active = s.scores.filter(sc => sc.w > 0).sort((a,b) => a.r - b.r);
+  const mx = active.length > 0 ? Math.max(...active.map(sc => sc.w)) : 10;
+  const mvpEntry = s.scores.find(sc => sc.c === s.mvp);
+  const mvpColor = mvpEntry ? (PLAYER_COLORS[mvpEntry.p] || '#FFB74D') : '#FFB74D';
+
+  const catHtml = Object.entries(s.cats || {}).map(([k,v]) =>
+    `<div class="cat-item"><span class="cat-label">${CAT_LABELS[k]||k}</span><span class="cat-winner">${v}</span></div>`
+  ).join('');
+
+  const scoresHtml = active.map(sc => {
+    const c = PLAYER_COLORS[sc.p]||'#888';
+    const pct = mx > 0 ? (sc.w/mx*100) : 0;
+    return `<div class="score-row"><span class="score-rank ${sc.r===1?'gold':''}">#${sc.r}</span><span class="score-name" style="color:${c}">${sc.c}</span><div class="score-bar-bg"><div class="score-bar-fill" style="width:${pct.toFixed(0)}%;background:${c};box-shadow:0 0 6px ${c}44"></div></div><span class="score-val">${sc.w.toFixed(2)}</span></div>`;
+  }).join('');
+
+  document.getElementById('side-panel').innerHTML = `
+    <div class="panel-card session-info" style="--accent:${mvpColor}">
+      <div class="panel-title">${s.sid} \u2014 ${s.label}</div>
+      <div class="mvp-winner"><span class="crown">\u265B</span><span class="name">${s.mvp}</span></div>
+      <div class="mvp-reason">${s.reason}</div>
+    </div>
+    <div class="panel-card" style="--accent:#4A90D9">
+      <div class="panel-title">SCORE BREAKDOWN</div>
+      <div class="score-list">${scoresHtml}</div>
+    </div>
+    <div class="panel-card" style="--accent:#BA68C8">
+      <div class="panel-title">CATEGORY WINNERS</div>
+      <div class="cat-grid">${catHtml}</div>
+    </div>
+  `;
+}
+
+// ============================================================
+// ANIMATION CONTROLS
+// ============================================================
+let playing = false, animSpeed = 1500, animTimer = null;
+const slider = document.getElementById('session-slider');
+const sliderLabel = document.getElementById('session-label-display');
+const playBtn = document.getElementById('btn-play');
+
+function updateView(idx) {
+  currentSessionIdx = Math.max(0, Math.min(idx, numSessions - 1));
+  slider.value = currentSessionIdx;
+  sliderLabel.textContent = sessions[currentSessionIdx].sid;
+  renderChart(currentSessionIdx);
+  renderSidePanel(currentSessionIdx);
+}
+
+slider.addEventListener('input', () => { stopAnim(); updateView(+slider.value); });
+playBtn.addEventListener('click', () => playing ? stopAnim() : startAnim());
+
+function startAnim() {
+  playing = true;
+  playBtn.innerHTML = '\u275A\u275A';
+  playBtn.classList.add('playing');
+  if (currentSessionIdx >= numSessions - 1) currentSessionIdx = -1;
+  stepAnim();
+}
+function stopAnim() {
+  playing = false;
+  playBtn.innerHTML = '\u25B6';
+  playBtn.classList.remove('playing');
+  if (animTimer) { clearTimeout(animTimer); animTimer = null; }
+}
+function stepAnim() {
+  if (!playing) return;
+  currentSessionIdx++;
+  if (currentSessionIdx >= numSessions) { stopAnim(); currentSessionIdx = numSessions - 1; return; }
+  updateView(currentSessionIdx);
+  animTimer = setTimeout(stepAnim, animSpeed);
+}
+document.querySelectorAll('[data-speed]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-speed]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    animSpeed = +btn.dataset.speed;
+  });
+});
+
+// ============================================================
+// INITIAL RENDER
+// ============================================================
+updateView(numSessions - 1);
+window.addEventListener('resize', () => renderChart(currentSessionIdx));
+</script>
+</body>
+</html>

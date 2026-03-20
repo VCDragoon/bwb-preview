@@ -1,0 +1,1354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>THE CAMPAIGN FILM &mdash; BWB Campaign</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@300;400;600&family=Barlow:wght@300;400;500;600&family=JetBrains+Mono:wght@400;600&family=Cinzel:wght@400;600;700;900&display=swap" rel="stylesheet">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html{height:100%;overflow:hidden}
+body{background:#06060c;color:#c8c8e0;font-family:'Barlow',sans-serif;height:100vh;overflow:hidden;position:relative;cursor:default}
+body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px);pointer-events:none;z-index:9999}
+
+/* ===== TITLE SCREEN ===== */
+#title-screen{position:fixed;inset:0;z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#06060c;transition:opacity 1.4s ease,transform 1.4s ease}
+#title-screen.hidden{opacity:0;pointer-events:none;transform:scale(1.08)}
+#title-screen canvas{position:absolute;inset:0;z-index:0}
+#title-screen .content{position:relative;z-index:1;text-align:center}
+#title-screen h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(52px,12vw,140px);letter-spacing:0.18em;background:linear-gradient(135deg,#fbbf24,#f59e0b,#ef4444,#a855f7,#3b82f6,#22d3ee,#fbbf24);background-size:400% 400%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:prismatic 6s ease infinite;line-height:1;filter:drop-shadow(0 0 40px rgba(251,191,36,0.2))}
+#title-screen .subtitle{font-family:'Barlow Condensed',sans-serif;font-weight:300;font-size:clamp(14px,2.5vw,26px);color:#6b6b8a;letter-spacing:0.5em;margin-top:12px;text-transform:uppercase}
+#title-screen .enter-btn{margin-top:52px;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:16px;letter-spacing:0.35em;text-transform:uppercase;color:#fbbf24;background:transparent;border:1px solid rgba(251,191,36,0.3);padding:14px 52px;cursor:pointer;transition:all 0.4s;border-radius:2px}
+#title-screen .enter-btn:hover{background:rgba(251,191,36,0.08);border-color:#fbbf24;box-shadow:0 0 40px rgba(251,191,36,0.15),inset 0 0 20px rgba(251,191,36,0.05);transform:scale(1.02)}
+#title-screen .stats-line{font-family:'JetBrains Mono',monospace;font-size:12px;color:#444466;margin-top:28px;letter-spacing:0.12em}
+@keyframes prismatic{0%,100%{background-position:0% 50%}25%{background-position:50% 0%}50%{background-position:100% 50%}75%{background-position:50% 100%}}
+
+/* ===== FILM VIEWPORT ===== */
+#film-viewport{position:fixed;inset:0;overflow:hidden}
+#bg-layer{position:absolute;inset:0;z-index:0;transition:background 1.2s ease}
+#dimension-overlay{position:absolute;inset:0;z-index:1;pointer-events:none;transition:all 1.5s ease;opacity:0}
+#dimension-overlay.active{opacity:1}
+.dim-barovia{background:linear-gradient(180deg,rgba(25,5,8,0.7) 0%,rgba(40,10,15,0.4) 50%,rgba(25,5,8,0.7) 100%)}
+.dim-underdark{background:linear-gradient(180deg,rgba(0,8,25,0.8) 0%,rgba(5,12,35,0.4) 50%,rgba(0,5,18,0.6) 100%)}
+.dim-feywild{background:linear-gradient(180deg,rgba(0,35,10,0.4) 0%,rgba(10,45,20,0.2) 50%,rgba(0,25,10,0.4) 100%)}
+.dim-soulforge{background:linear-gradient(180deg,rgba(50,12,0,0.5) 0%,rgba(60,18,0,0.3) 50%,rgba(50,12,0,0.5) 100%)}
+#particle-canvas{position:absolute;inset:0;z-index:2;pointer-events:none}
+#vignette{position:fixed;inset:0;z-index:4;pointer-events:none;background:radial-gradient(ellipse at center,transparent 45%,rgba(6,6,12,0.65) 100%)}
+#gothic-vignette{position:fixed;inset:0;z-index:5;pointer-events:none;opacity:0;transition:opacity 1.5s ease;background:radial-gradient(ellipse at center,transparent 25%,rgba(20,0,5,0.85) 100%)}
+/* Barovia desaturation applied to film strip */
+#film-strip.barovia{filter:saturate(0.45) brightness(0.9)}
+#film-strip.feywild{filter:saturate(1.5) brightness(1.05)}
+/* Underdark cave silhouette */
+#cave-silhouette{position:fixed;top:0;left:0;right:0;height:120px;z-index:6;pointer-events:none;opacity:0;transition:opacity 1.5s ease}
+#cave-silhouette.active{opacity:1}
+/* Soulforge heat shimmer */
+#heat-shimmer{position:fixed;inset:0;z-index:6;pointer-events:none;opacity:0;transition:opacity 1.5s ease;background:linear-gradient(0deg,rgba(255,60,0,0.06) 0%,transparent 30%);animation:shimmer 2s ease-in-out infinite alternate}
+#heat-shimmer.active{opacity:1}
+@keyframes shimmer{0%{transform:scaleY(1)}100%{transform:scaleY(1.002);filter:blur(0.3px)}}
+
+/* ===== FILM STRIP ===== */
+#film-strip{position:absolute;top:0;left:0;height:100vh;z-index:3;display:flex;will-change:transform}
+.session-col{width:320px;height:100vh;position:relative;flex-shrink:0}
+.session-col::after{content:'';position:absolute;top:10%;bottom:10%;right:0;width:1px;background:linear-gradient(180deg,transparent,rgba(200,200,224,0.04) 30%,rgba(200,200,224,0.04) 70%,transparent)}
+
+/* ===== ARC CARDS ===== */
+.arc-card{position:absolute;z-index:20;text-align:center;pointer-events:none;width:650px;opacity:0;transition:opacity 0.8s ease;transform:translate(-50%,-50%)}
+.arc-card.visible{opacity:1}
+.arc-label{font-family:'Barlow Condensed',sans-serif;font-weight:300;font-size:13px;letter-spacing:0.6em;text-transform:uppercase;margin-bottom:6px}
+.arc-title{font-family:'Cinzel',serif;font-weight:700;font-size:46px;line-height:1.15;text-shadow:0 0 50px currentColor,0 0 100px currentColor}
+.arc-sessions-label{font-family:'JetBrains Mono',monospace;font-size:11px;margin-top:14px;opacity:0.4;letter-spacing:0.25em}
+.arc-divider{width:120px;height:1px;margin:10px auto 0;opacity:0.3}
+
+/* ===== BIGGEST MOMENT ===== */
+.moment-box{position:absolute;top:26%;left:16px;right:16px;z-index:10;opacity:0;transform:translateY(12px);transition:opacity 0.7s ease,transform 0.7s ease}
+.moment-box.visible{opacity:1;transform:translateY(0)}
+.moment-title-text{font-family:'Cinzel',serif;font-weight:600;font-size:16px;color:#fff;text-shadow:0 0 24px rgba(255,255,255,0.3),0 2px 8px rgba(0,0,0,0.8);line-height:1.35}
+.moment-desc{font-family:'Barlow',sans-serif;font-weight:300;font-size:11px;color:rgba(200,200,224,0.45);line-height:1.4;margin-top:6px}
+.moment-counter{font-family:'Barlow',sans-serif;font-style:italic;font-weight:300;font-size:10px;color:rgba(200,200,224,0.3);line-height:1.4;margin-top:6px;padding-left:8px;border-left:1px solid rgba(200,200,224,0.1)}
+
+/* ===== ENERGY PEAKS ===== */
+.peak-burst{position:absolute;z-index:15;border-radius:50%;transform:translate(-50%,-50%);cursor:pointer;transition:transform 0.3s ease}
+.peak-burst:hover{transform:translate(-50%,-50%) scale(1.4);z-index:25}
+.peak-ring{position:absolute;inset:0;border-radius:50%;animation:pulse-ring 3s ease-in-out infinite}
+.peak-core{position:absolute;top:50%;left:50%;width:6px;height:6px;border-radius:50%;transform:translate(-50%,-50%)}
+.peak-rays{position:absolute;inset:-4px;border-radius:50%;animation:pulse-glow 2s ease-in-out infinite alternate}
+.p-dice .peak-ring{border:2px solid rgba(251,191,36,0.5);box-shadow:0 0 16px rgba(251,191,36,0.25)}
+.p-dice .peak-core{background:#fbbf24;box-shadow:0 0 10px #fbbf24}
+.p-dice .peak-rays{box-shadow:0 0 25px rgba(251,191,36,0.15)}
+.p-combat .peak-ring{border:2px solid rgba(239,68,68,0.5);box-shadow:0 0 16px rgba(239,68,68,0.25)}
+.p-combat .peak-core{background:#ef4444;box-shadow:0 0 10px #ef4444}
+.p-combat .peak-rays{box-shadow:0 0 25px rgba(239,68,68,0.15)}
+.p-comedy .peak-ring{border:2px solid rgba(251,191,36,0.5);box-shadow:0 0 16px rgba(251,191,36,0.25)}
+.p-comedy .peak-core{background:#fbbf24;box-shadow:0 0 10px #fbbf24}
+.p-comedy .peak-rays{box-shadow:0 0 25px rgba(251,191,36,0.15)}
+.p-dramatic .peak-ring{border:2px solid rgba(168,85,247,0.5);box-shadow:0 0 16px rgba(168,85,247,0.25)}
+.p-dramatic .peak-core{background:#a855f7;box-shadow:0 0 10px #a855f7}
+.p-dramatic .peak-rays{box-shadow:0 0 25px rgba(168,85,247,0.15)}
+.p-energy .peak-ring{border:2px solid rgba(59,130,246,0.5);box-shadow:0 0 16px rgba(59,130,246,0.25)}
+.p-energy .peak-core{background:#3b82f6;box-shadow:0 0 10px #3b82f6}
+.p-energy .peak-rays{box-shadow:0 0 25px rgba(59,130,246,0.15)}
+@keyframes pulse-ring{0%,100%{transform:scale(1);opacity:0.8}50%{transform:scale(1.35);opacity:0.3}}
+@keyframes pulse-glow{0%{opacity:0.3}100%{opacity:0.8}}
+
+/* Peak tooltip */
+.peak-tooltip{position:fixed;z-index:200;background:rgba(6,6,12,0.96);border:1px solid rgba(200,200,224,0.12);border-radius:6px;padding:12px 16px;max-width:300px;pointer-events:none;opacity:0;transition:opacity 0.15s;backdrop-filter:blur(16px);box-shadow:0 8px 32px rgba(0,0,0,0.5)}
+.peak-tooltip.show{opacity:1}
+.tt-title{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:15px;color:#fff;margin-bottom:3px}
+.tt-type{font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.15em;margin-bottom:6px}
+.tt-excerpt{font-family:'Barlow',sans-serif;font-size:12px;font-weight:300;color:rgba(200,200,224,0.65);line-height:1.45}
+.tt-score{font-family:'JetBrains Mono',monospace;font-size:11px;margin-top:6px;color:#fbbf24}
+.tt-players{font-family:'Barlow Condensed',sans-serif;font-size:11px;color:rgba(200,200,224,0.4);margin-top:4px}
+
+/* ===== FLOATING QUOTES ===== */
+.float-quote{position:absolute;z-index:12;max-width:250px;padding:8px 12px;background:rgba(6,6,12,0.75);border-radius:3px;border-left:3px solid;backdrop-filter:blur(6px);opacity:0;transform:translateY(20px);transition:opacity 0.7s ease,transform 0.9s ease}
+.float-quote.visible{opacity:1;transform:translateY(0)}
+.q-text{font-family:'Barlow',sans-serif;font-style:italic;font-weight:300;font-size:12px;color:rgba(255,255,255,0.8);line-height:1.45}
+.q-speaker{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:10px;margin-top:4px;letter-spacing:0.12em;text-transform:uppercase}
+.q-fire{font-size:10px;margin-top:2px;line-height:1}
+
+/* ===== CAST BAR ===== */
+#cast-bar{position:fixed;top:0;left:0;right:0;height:30px;z-index:50;display:flex;align-items:center;background:linear-gradient(180deg,rgba(6,6,12,0.92),rgba(6,6,12,0.7));backdrop-filter:blur(10px);border-bottom:1px solid rgba(200,200,224,0.05);padding:0 16px}
+.cast-label{font-family:'Barlow Condensed',sans-serif;font-weight:300;font-size:10px;letter-spacing:0.25em;text-transform:uppercase;color:#444466;margin-right:14px;flex-shrink:0}
+.cast-dots{display:flex;gap:6px;align-items:center}
+.cast-dot{width:8px;height:8px;border-radius:50%;transition:all 0.6s ease}
+.cast-dot.active{box-shadow:0 0 6px currentColor}
+.cast-dot.inactive{opacity:0.12;transform:scale(0.6)}
+.cast-dot-lbl{font-family:'JetBrains Mono',monospace;font-size:8px;color:rgba(200,200,224,0.3);margin-right:4px}
+
+/* ===== CHAPTER SELECT ===== */
+#chapter-bar{position:fixed;top:30px;left:0;right:0;height:34px;z-index:50;display:flex;align-items:center;background:linear-gradient(180deg,rgba(6,6,12,0.7),rgba(6,6,12,0.4));backdrop-filter:blur(8px);border-bottom:1px solid rgba(200,200,224,0.03);padding:0 16px;gap:4px;overflow-x:auto}
+#chapter-bar::-webkit-scrollbar{display:none}
+.ch-btn{font-family:'Barlow Condensed',sans-serif;font-weight:400;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:rgba(200,200,224,0.35);background:transparent;border:1px solid rgba(200,200,224,0.06);padding:3px 12px;border-radius:2px;cursor:pointer;transition:all 0.3s;white-space:nowrap;flex-shrink:0}
+.ch-btn:hover,.ch-btn.active{color:#fbbf24;border-color:rgba(251,191,36,0.25);background:rgba(251,191,36,0.04)}
+
+/* ===== SESSION MARKERS ===== */
+.sm-bar{position:absolute;bottom:58px;left:0;width:100%;display:flex;flex-direction:column;align-items:center;z-index:10;padding-bottom:4px}
+.sm-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:rgba(200,200,224,0.4)}
+.sm-title{font-family:'Barlow Condensed',sans-serif;font-size:9px;color:rgba(200,200,224,0.2);max-width:90%;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px}
+.sm-pace{font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:0.15em;text-transform:uppercase;color:rgba(200,200,224,0.18);margin-top:1px}
+.scene-bar{display:flex;gap:1px;margin-top:3px;height:4px}
+.scene-bar .sb{height:4px;border-radius:1px;min-width:4px}
+
+/* ===== RECAP HOOK ===== */
+.recap-hook{position:absolute;top:14%;left:12px;right:12px;z-index:9;opacity:0;transform:translateY(8px);transition:opacity 0.6s ease,transform 0.6s ease}
+.recap-hook.visible{opacity:1;transform:translateY(0)}
+.recap-hook .rh-title{font-family:'Cinzel',serif;font-weight:700;font-size:13px;color:rgba(251,191,36,0.7);letter-spacing:0.05em;margin-bottom:3px}
+.recap-hook .rh-line{font-family:'Barlow',sans-serif;font-weight:300;font-size:11px;color:rgba(200,200,224,0.4);line-height:1.4;font-style:italic}
+.emotion-badge{position:absolute;top:8%;right:12px;z-index:9;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:rgba(200,200,224,0.25);padding:2px 8px;border:1px solid rgba(200,200,224,0.06);border-radius:2px;opacity:0;transition:opacity 0.6s ease}
+.emotion-badge.visible{opacity:1}
+
+/* ===== LARGE SESSION INDICATOR ===== */
+#big-session{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);z-index:55;pointer-events:none;text-align:center;opacity:0;transition:opacity 0.4s ease}
+#big-session.show{opacity:1}
+#big-session .bs-num{font-family:'Bebas Neue',sans-serif;font-size:72px;color:rgba(251,191,36,0.12);letter-spacing:0.15em;line-height:1}
+#big-session .bs-emo{font-family:'Barlow Condensed',sans-serif;font-size:13px;color:rgba(200,200,224,0.2);letter-spacing:0.3em;text-transform:uppercase;margin-top:-4px}
+
+/* ===== CONTROLS ===== */
+#controls{position:fixed;bottom:0;left:0;right:0;height:52px;z-index:60;display:flex;align-items:center;justify-content:center;gap:12px;background:linear-gradient(180deg,rgba(6,6,12,0.75),rgba(6,6,12,0.95));backdrop-filter:blur(14px);border-top:1px solid rgba(200,200,224,0.05);padding:0 16px}
+.cb{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:13px;letter-spacing:0.08em;color:#c8c8e0;background:transparent;border:1px solid rgba(200,200,224,0.12);padding:5px 14px;border-radius:3px;cursor:pointer;transition:all 0.2s;user-select:none}
+.cb:hover{background:rgba(200,200,224,0.05);border-color:rgba(200,200,224,0.25)}
+.cb.active{color:#fbbf24;border-color:rgba(251,191,36,0.35);background:rgba(251,191,36,0.06)}
+#play-btn{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;padding:0;border:2px solid rgba(251,191,36,0.4);color:#fbbf24}
+#play-btn:hover{background:rgba(251,191,36,0.1);border-color:#fbbf24;box-shadow:0 0 24px rgba(251,191,36,0.15)}
+#progress-wrap{flex:1;max-width:480px;height:6px;background:rgba(200,200,224,0.06);border-radius:3px;cursor:pointer;position:relative}
+#progress-fill{height:100%;background:linear-gradient(90deg,#fbbf24,#f59e0b);border-radius:3px;width:0%;transition:width 0.08s linear;box-shadow:0 0 6px rgba(251,191,36,0.25)}
+#progress-handle{position:absolute;top:50%;transform:translate(-50%,-50%);width:12px;height:12px;border-radius:50%;background:#fbbf24;box-shadow:0 0 8px rgba(251,191,36,0.4);left:0%;transition:left 0.08s linear;pointer-events:none}
+#cur-sid{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:12px;color:#fbbf24;min-width:36px}
+#cur-label{font-family:'Barlow Condensed',sans-serif;font-weight:300;font-size:12px;color:rgba(200,200,224,0.5);min-width:100px;max-width:200px;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ===== SENTIMENT WAVEFORM ===== */
+#waveform{position:fixed;bottom:82px;left:0;right:0;height:40px;z-index:8;pointer-events:none}
+#waveform svg{width:100%;height:100%}
+
+/* ===== KILL COUNTER (Feature 1) ===== */
+#kill-counter{position:fixed;top:72px;right:18px;z-index:70;text-align:right;pointer-events:none;opacity:0;transition:opacity 0.8s ease}
+#kill-counter.visible{opacity:1}
+#kill-num{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:600;color:#ef4444;text-shadow:0 0 18px rgba(239,68,68,0.5),0 0 40px rgba(239,68,68,0.2);transition:text-shadow 0.15s ease}
+#kill-num.flash{text-shadow:0 0 30px rgba(239,68,68,0.9),0 0 60px rgba(239,68,68,0.5),0 0 90px rgba(239,68,68,0.3)}
+#kill-label{font-family:'Barlow Condensed',sans-serif;font-weight:300;font-size:10px;letter-spacing:0.25em;text-transform:uppercase;color:#6b6b8a;margin-top:2px}
+
+/* ===== DANGER HEARTBEAT (Feature 2) ===== */
+#danger-heartbeat{position:fixed;bottom:52px;left:0;right:0;height:30px;z-index:55;pointer-events:none;background:rgba(6,6,12,0.6);border-top:1px solid rgba(200,200,224,0.04)}
+#danger-heartbeat svg{width:100%;height:100%}
+
+/* ===== WEATHER CANVAS (Feature 3) ===== */
+#weather-canvas{position:fixed;inset:0;z-index:7;pointer-events:none}
+
+/* ===== MINIMAP (Feature 4) ===== */
+#minimap{position:fixed;top:0;left:0;right:0;height:8px;z-index:100;cursor:pointer;background:rgba(6,6,12,0.8)}
+#minimap canvas{width:100%;height:100%;display:block}
+#minimap-indicator{position:absolute;top:0;height:100%;background:rgba(255,255,255,0.85);box-shadow:0 0 6px rgba(255,255,255,0.5);pointer-events:none;min-width:3px;border-radius:1px}
+#cast-bar{top:8px}
+#chapter-bar{top:38px}
+
+/* ===== RELATIONSHIP SPARKS (Feature 5) ===== */
+#spark-canvas{position:fixed;top:8px;left:0;right:0;height:30px;z-index:51;pointer-events:none}
+
+/* ===== PREVIOUSLY ON (Feature 6) ===== */
+#previously-on{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:45;text-align:center;pointer-events:none;opacity:0;transition:opacity 0.6s ease;max-width:500px;padding:20px 30px}
+#previously-on.visible{opacity:1}
+#previously-on .prev-label{font-family:'Barlow Condensed',sans-serif;font-weight:300;font-style:italic;font-size:14px;color:#6b6b8a;letter-spacing:0.15em;margin-bottom:8px}
+#previously-on .prev-hook{font-family:'Barlow',sans-serif;font-weight:300;font-size:13px;color:rgba(200,200,224,0.5);line-height:1.55}
+</style>
+</head>
+<body>
+
+<div id="title-screen">
+  <canvas id="title-particles"></canvas>
+  <div class="content">
+    <h1>THE CAMPAIGN<br>FILM</h1>
+    <div class="subtitle">Brotherhood of the Woven Blade</div>
+    <div class="stats-line">46 SESSIONS &middot; 4 ARCS &middot; 180+ HOURS OF PLAY</div>
+    <button class="enter-btn" onclick="startFilm()">ENTER THE FILM</button>
+  </div>
+</div>
+
+<div id="film-viewport" style="display:none">
+  <div id="bg-layer"></div>
+  <div id="dimension-overlay"></div>
+  <canvas id="particle-canvas"></canvas>
+  <div id="vignette"></div>
+  <div id="gothic-vignette"></div>
+  <div id="cave-silhouette"></div>
+  <div id="heat-shimmer"></div>
+  <div id="film-strip"></div>
+  <div id="waveform"><svg></svg></div>
+
+  <div id="cast-bar">
+    <span class="cast-label">CAST</span>
+    <div class="cast-dots" id="cast-dots"></div>
+  </div>
+
+  <div id="chapter-bar"></div>
+
+  <div id="big-session"><div class="bs-num"></div><div class="bs-emo"></div></div>
+
+  <div id="controls">
+    <span id="cur-sid">S001</span>
+    <span id="cur-label"></span>
+    <div id="progress-wrap" onclick="seekTo(event)">
+      <div id="progress-fill"></div>
+      <div id="progress-handle"></div>
+    </div>
+    <button class="cb" id="speed-btn" onclick="cycleSpeed()">1x</button>
+    <button class="cb" id="play-btn" onclick="togglePlay()">&#9654;</button>
+    <button class="cb" onclick="skipBack()" title="Previous session">&laquo;</button>
+    <button class="cb" onclick="skipForward()" title="Next session">&raquo;</button>
+  </div>
+
+  <div class="peak-tooltip" id="peak-tt">
+    <div class="tt-title"></div>
+    <div class="tt-type"></div>
+    <div class="tt-excerpt"></div>
+    <div class="tt-score"></div>
+    <div class="tt-players"></div>
+  </div>
+
+  <!-- Feature 1: Kill Counter -->
+  <div id="kill-counter">
+    <div id="kill-num"><span style="font-size:22px;margin-right:4px">&#x1F480;</span><span id="kill-val">0</span></div>
+    <div id="kill-label">CAMPAIGN BODY COUNT</div>
+  </div>
+
+  <!-- Feature 2: Danger Heartbeat -->
+  <div id="danger-heartbeat"><svg></svg></div>
+
+  <!-- Feature 3: Weather Canvas -->
+  <canvas id="weather-canvas"></canvas>
+
+  <!-- Feature 5: Relationship Sparks -->
+  <canvas id="spark-canvas"></canvas>
+
+  <!-- Feature 6: Previously On -->
+  <div id="previously-on">
+    <div class="prev-label">Previously...</div>
+    <div class="prev-hook"></div>
+  </div>
+</div>
+
+<!-- Feature 4: Minimap (outside film-viewport, fixed at top) -->
+<div id="minimap" style="display:none">
+  <canvas id="minimap-canvas"></canvas>
+  <div id="minimap-indicator"></div>
+</div>
+
+<script>
+// ================================================================
+// EMBEDDED DATA
+// ================================================================
+const D = {"sessions":{"S001":{"sentiment_windows":[{"pct":0.0,"sent":-1.5,"emo":"Frustration/Irritation"},{"pct":3.33,"sent":3.0,"emo":"Curiosity/Wonder"},{"pct":100.0,"sent":6.0,"emo":"Triumph/Elation"}],"dominant_emotion":"Amusement/Laughter","session_label":"Castle Corras: The Royal Progress","peaks":[{"title":"Corras Nat-20 Recruits the Royal Smasher","score":9.5,"type":"Dice Peak","pct":72,"players":["Corras","Orla"],"excerpt":"Corras delivers a royal decree adopting Urgle Gurgle as the official Royal Smasher of Castle Corras."},{"title":"The Choreographed Letter-Spelling Disaster","score":9.0,"type":"Comedy Peak","pct":65,"players":["Corras","Ash","Billabong","Orla","Lilith"],"excerpt":"The party's rehearsed royal entrance collapses into beautiful chaos as nobody can remember their letter assignments."},{"title":"Facing Down Captain Graymark's Mercenaries","score":8.5,"type":"Dramatic Peak","pct":82,"players":["Corras","Ash","Billabong"],"excerpt":"Captain Graymark stares down the party before turning on his heel: the Brotherhood just made their first enemy."}],"biggest_moment":{"title":"Ash's Communion at the Forbidden Door","desc":"Ash investigates a heavily warded door in the castle's basement, communing with the ancient entity A","counter":"Had Ash failed her saves entirely, she could have suffered a lethal magical backlash; conversely, by"},"quotes":[{"text":"Oh my god we're gonna have a full army, it's gonna be perfect because we're figh","speaker":"Dahlia","fire":5},{"text":"Check the deed, bro. Check the lineage. That shit is mine, dog.","speaker":"Corras","fire":5}],"pacing":{"scene_count":7,"pace":"Late Bloomer","energy_avg":5.9,"scenes":[{"type":"Meta","energy":3},{"type":"Social_Encounter","energy":6},{"type":"Exploration","energy":5},{"type":"Exposition","energy":5},{"type":"Character_Management","energy":6},{"type":"Social_Encounter","energy":9},{"type":"Exploration","energy":4}]},"recap":{"title":"Test Session","hook":"A hook"}},"S002":{"sentiment_windows":[{"pct":0.0,"sent":3.0,"emo":"Curiosity/Wonder"},{"pct":3.33,"sent":2.0,"emo":"Determination/Resolve"},{"pct":6.67,"sent":1.5,"emo":"Anticipation"},{"pct":10.0,"sent":0.5,"emo":"Confusion/Surprise"},{"pct":13.33,"sent":-1.0,"emo":"Frustration/Irritation"},{"pct":16.67,"sent":1.0,"emo":"Curiosity/Wonder"},{"pct":20.0,"sent":-2.0,"emo":"Fear/Dread"},{"pct":23.33,"sent":0.0,"emo":"Determination/Resolve"},{"pct":26.67,"sent":2.5,"emo":"Triumph/Elation"},{"pct":30.0,"sent":-1.5,"emo":"Suspense/Unease"}],"dominant_emotion":"Curiosity/Wonder","session_label":"Castle Corras Management and Mine Exploration","peaks":[{"title":"The Great Troll Loincloth Coin Heist","score":9.5,"type":"Chaos Peak","pct":85,"players":["Corras","Ash","Orla"],"excerpt":"Corras reaches into a sleeping troll's loincloth to steal the shiniest coin while the party holds their breath."},{"title":"Spark Vanishes Into the Bottomless Pit","score":9.0,"type":"Emotional Peak","pct":60,"players":["Ash","Orla"],"excerpt":"The telepathic link snaps. Ash calls out for Spark. Nothing. The summoning ritual fails."},{"title":"Corras Crushed Under a Falling Troll","score":8.5,"type":"Comedy Peak","pct":88,"players":["Corras"],"excerpt":"The troll rolls over in its sleep and pins Corras flat, dealing 12 crushing damage as the party stifles screams."}],"biggest_moment":{"title":"The Loincloth Heist","desc":"To avoid fighting two massive trolls, Ave goes invisible, wades through the water, and successfully ","counter":"If Ave had failed his Sleight of Hand or Stealth checks, the party would have been caught in a deadl"},"quotes":[{"text":"I wish I could just show up to someone's house and they start paying me every mo","speaker":"Dahlia","fire":5},{"text":"There's a troll with beautiful hair, I will say. Long, beautiful green locks, an","speaker":"Dahlia","fire":5}],"pacing":{"scene_count":7,"pace":"Steady Climb","energy_avg":6.0,"scenes":[{"type":"Meta","energy":3},{"type":"Recap","energy":4},{"type":"Character_Management","energy":5},{"type":"Exposition","energy":6},{"type":"Exploration","energy":8},{"type":"Skill_Challenge","energy":9},{"type":"Meta","energy":6}]},"recap":{"title":"Another Session","hook":"A hook line"}},"S003":{"sentiment_windows":[{"pct":0.0,"sent":3.5,"emo":"Curiosity/Wonder"},{"pct":3.45,"sent":1.5,"emo":"Tension/Anxiety"},{"pct":100.0,"sent":-1.5,"emo":"Suspense/Unease"}],"dominant_emotion":"Tension/Anxiety","session_label":"The Beholder's Lair and Castle Upgrades","peaks":[{"title":"Ave's Performance Check Hits 30 for Beholder","score":10.0,"type":"Dice Peak","pct":45,"players":["Ave","Lilith"],"excerpt":"Ave rolls a 30 on performance. Xel'therath weeps a single tear. 'Magnificent,' the beholder whispers."},{"title":"Billabong Seizes the Solarum Bare-Handed","score":9.5,"type":"Dramatic Peak","pct":82,"players":["Billabong"],"excerpt":"Billabong grabs the fading celestial orb. Light erupts. When it clears, the barbarian speaks Celestial."},{"title":"Ash's Legs Dissolve in the Pit","score":9.0,"type":"Combat","pct":58,"players":["Ash","Orla","Lilith"],"excerpt":"Ash's broom disintegrates. Her legs start dissolving. The pit is alive and it is hungry."}],"biggest_moment":{"title":"Billabong's Celestial Ascent","desc":"Just as the trapped celestial light orb begins to fade and fall into the Eldritch ooze to sacrifice ","counter":"If Billabong hadn't grabbed the orb in its final moments, it would have fallen into the ooze and bee"},"quotes":[{"text":"Oh, what beautiful purple. Oh, what beautiful purple irises you have.","speaker":"Dahlia","fire":5},{"text":"Why are you up under our house? Why are you up under our house?","speaker":"Meijinx","fire":5}],"pacing":{"scene_count":8,"pace":"Roller Coaster","energy_avg":7.4,"scenes":[{"type":"Exploration","energy":5},{"type":"Ritual","energy":6},{"type":"Skill_Challenge","energy":7},{"type":"Social_Encounter","energy":8},{"type":"Skill_Challenge","energy":10},{"type":"Combat","energy":8},{"type":"Ritual","energy":9},{"type":"Exposition","energy":6}]},"recap":{"title":"Schema Version Test","hook":"Testing version"}},"S004":{"sentiment_windows":[{"pct":0.0,"sent":3.0,"emo":"Curiosity/Wonder"},{"pct":3.45,"sent":5.0,"emo":"Joy/Excitement"},{"pct":6.9,"sent":-2.0,"emo":"Tension/Anxiety"},{"pct":10.34,"sent":-4.0,"emo":"Fear/Dread"},{"pct":13.79,"sent":-1.0,"emo":"Tension/Anxiety"},{"pct":17.24,"sent":4.0,"emo":"Triumph/Elation"},{"pct":20.69,"sent":-3.0,"emo":"Fear/Dread"},{"pct":24.14,"sent":0.0,"emo":"Neutral"},{"pct":27.59,"sent":2.0,"emo":"Amusement/Laughter"},{"pct":31.03,"sent":6.0,"emo":"Triumph/Elation"},{"pct":34.48,"sent":0.0,"emo":"Curiosity/Wonder"},{"pct":37.93,"sent":2.0,"emo":"Satisfaction/Relief"},{"pct":41.38,"sent":-2.0,"emo":"Tension/Anxiety"},{"pct":44.83,"sent":0.0,"emo":"Neutral"},{"pct":48.28,"sent":-3.0,"emo":"Confusion/Surprise"},{"pct":51.72,"sent":-1.0,"emo":"Suspense/Unease"},{"pct":55.17,"sent":1.0,"emo":"Curiosity/Wonder"},{"pct":58.62,"sent":2.0,"emo":"Compassion/Empathy"},{"pct":62.07,"sent":0.0,"emo":"Determination/Resolve"},{"pct":65.52,"sent":-2.0,"emo":"Suspense/Unease"},{"pct":68.97,"sent":-4.0,"emo":"Fear/Dread"},{"pct":72.41,"sent":-3.0,"emo":"Suspense/Unease"},{"pct":75.86,"sent":0.0,"emo":"Neutral"},{"pct":79.31,"sent":0.0,"emo":"Neutral"},{"pct":82.76,"sent":0.0,"emo":"Neutral"},{"pct":86.21,"sent":0.0,"emo":"Neutral"},{"pct":89.66,"sent":0.0,"emo":"Neutral"},{"pct":93.1,"sent":0.0,"emo":"Neutral"},{"pct":96.55,"sent":0.0,"emo":"Neutral"},{"pct":100.0,"sent":-3.0,"emo":"Suspense/Unease"}],"dominant_emotion":"Tension/Anxiety","session_label":"Goblin Battle and Mysteries","peaks":[{"title":"Ave Polymorphs Into a T-Rex","score":10.0,"type":"Combat","pct":50,"players":["Ave"],"excerpt":"Ave becomes a T-Rex. The goblins scatter. The fomorians pause. A dinosaur-sized path opens to freedom."},{"title":"Sarlumon's Paladin Army Saves the Day","score":9.5,"type":"Dramatic Peak","pct":55,"players":["Corras","Billabong","Ave"],"excerpt":"The sound of warhorns. Sarlumon's paladins crest the hill. The goblins break and flee."},{"title":"Corras Counterspells Niles Bargnot's Lightning","score":9.0,"type":"Combat","pct":35,"players":["Corras"],"excerpt":"Niles Bargnot raises her hands for call lightning. Corras snaps his fingers. 'No.'"}],"biggest_moment":{"title":"The Chronicler's Mark","desc":"Ash opens the ancient tome stolen by Argentus. The magic within the 'Chronicles of the Quill' binds ","counter":"If Ash had not opened the book, the party would not have received the mysterious curse-like mark, re"},"quotes":[{"text":"She came through on tour already, bro. Like, you missed it. Catch her before Wat","speaker":"Corras","fire":5},{"text":"Alright, yeah, we kill him.","speaker":"Ash","fire":5}],"pacing":{"scene_count":9,"pace":"Front-Loaded","energy_avg":6.6,"scenes":[{"type":"Social_Encounter","energy":5},{"type":"Meta","energy":4},{"type":"Recap","energy":5},{"type":"Combat","energy":10},{"type":"Exploration","energy":5},{"type":"Ritual","energy":6},{"type":"Exposition","energy":7},{"type":"Social_Encounter","energy":7},{"type":"Exploration","energy":6}]},"recap":{"title":"The Chronicler's Mark","hook":"A brutal ambush leaves the party battered, but an ancient book leaves a permanent mark."}},"S005":{"sentiment_windows":[{"pct":0.0,"sent":0.5,"emo":"Curiosity/Wonder"},{"pct":3.45,"sent":0.2,"emo":"Satisfaction/Relief"},{"pct":6.9,"sent":-1.0,"emo":"Tension/Anxiety"},{"pct":10.34,"sent":0.5,"emo":"Amusement/Laughter"},{"pct":13.79,"sent":0.3,"emo":"Anticipation"},{"pct":17.24,"sent":1.0,"emo":"Amusement/Laughter"},{"pct":20.69,"sent":0.8,"emo":"Amusement/Laughter"},{"pct":24.14,"sent":0.0,"emo":"Confusion/Surprise"},{"pct":27.59,"sent":-0.5,"emo":"Tension/Anxiety"},{"pct":31.03,"sent":0.2,"emo":"Anticipation"}],"dominant_emotion":"Amusement/Laughter","session_label":"Session with Lilith's followers and burial site encounter","peaks":[{"title":"Corras Leaps Off Billabong to Sever Wing","score":9.5,"type":"Combat","pct":82,"players":["Corras","Billabong"],"excerpt":"Corras vaults off Billabong's shoulders, daggers flashing, and severs the bone devil's wing in a single devastating stri"},{"title":"Billabong Delivers the Killing Blow","score":9.0,"type":"Combat","pct":85,"players":["Billabong"],"excerpt":"Billabong's great axe cleaves through the one-winged bone devil. It crashes to the crypt floor, dead."},{"title":"The Entire Druidic Review Fraud Scheme","score":9.0,"type":"Chaos Peak","pct":28,"players":["Orla","Ash","Lilith","Corras","Billabong","Ave"],"excerpt":"Five adventurers scramble to fake an entire druidic education. The forged notes pass. The cult logs backfire hilariously"}],"biggest_moment":{"title":"Orla's Nat 20 Deception in the Hall of Whispers","desc":"When the magical Hall of Whispers demands a deep truth to pass, Orla attempts to pass a lie as her t","counter":"If Orla had failed the roll, the trap would have recognized the deceit, potentially punishing the pa"},"quotes":[{"text":"one time I ate my Meemaw's muffin and I blamed it on the dog. And then I'm gonna","speaker":"Billabong","fire":5},{"text":"Guys, I found the Airbnb host. He's still here. This is awkward.","speaker":"Ash","fire":5}],"pacing":{"scene_count":6,"pace":"Explosive Finale","energy_avg":6.8,"scenes":[{"type":"Recap","energy":4},{"type":"Social_Encounter","energy":7},{"type":"Skill_Challenge","energy":8},{"type":"Character_Management","energy":5},{"type":"Puzzle","energy":7},{"type":"Combat","energy":9}]},"recap":{"title":"Evaluations, Blights, and the Hall of Whispers","hook":"Orla faces her most terrifying trial yet\u0097a performance review\u0097before the party descends into the trapped ruins beneath Lumin."}},"S006":{"sentiment_windows":[{"pct":0.0,"sent":-1.5,"emo":"Tension/Anxiety"},{"pct":3.45,"sent":-2.5,"emo":"Fear/Dread"},{"pct":6.9,"sent":-3.0,"emo":"Fear/Dread"},{"pct":10.34,"sent":0.5,"emo":"Determination/Resolve"},{"pct":13.79,"sent":2.0,"emo":"Triumph/Elation"},{"pct":17.24,"sent":0.0,"emo":"Curiosity/Wonder"},{"pct":20.69,"sent":1.5,"emo":"Satisfaction/Relief"},{"pct":24.14,"sent":-2.0,"emo":"Frustration/Irritation"},{"pct":27.59,"sent":-5.0,"emo":"Fear/Dread"},{"pct":31.03,"sent":-4.0,"emo":"Fear/Dread"},{"pct":34.48,"sent":-3.0,"emo":"Fear/Dread"},{"pct":37.93,"sent":1.0,"emo":"Triumph/Elation"},{"pct":41.38,"sent":3.0,"emo":"Triumph/Elation"},{"pct":44.83,"sent":4.0,"emo":"Satisfaction/Relief"},{"pct":48.28,"sent":2.0,"emo":"Triumph/Elation"},{"pct":51.72,"sent":3.0,"emo":"Triumph/Elation"},{"pct":55.17,"sent":5.0,"emo":"Triumph/Elation"},{"pct":58.62,"sent":-1.0,"emo":"Confusion/Surprise"},{"pct":62.07,"sent":-2.0,"emo":"Frustration/Irritation"},{"pct":65.52,"sent":0.0,"emo":"Curiosity/Wonder"},{"pct":68.97,"sent":1.0,"emo":"Satisfaction/Relief"},{"pct":72.41,"sent":2.0,"emo":"Excitement"},{"pct":75.86,"sent":0.0,"emo":"Confusion/Surprise"},{"pct":79.31,"sent":-4.0,"emo":"Fear/Dread"},{"pct":82.76,"sent":1.0,"emo":"Determination/Resolve"},{"pct":86.21,"sent":-3.0,"emo":"Frustration/Irritation"},{"pct":89.66,"sent":2.0,"emo":"Relief"},{"pct":93.1,"sent":1.0,"emo":"Curiosity/Wonder"},{"pct":96.55,"sent":0.0,"emo":"Tension/Anxiety"},{"pct":100.0,"sent":1.0,"emo":"Anticipation"}],"dominant_emotion":"Tension/Anxiety","session_label":"The Crypt of the Archmage","peaks":[{"title":"Ave's Tiny Hut Saves Everyone from Collapse","score":9.5,"type":"Dramatic Peak","pct":82,"players":["Ave","Corras","Ash","Billabong","Lilith","Orla"],"excerpt":"He casts the Leomund's Tiny Hut around you all... as it pours rubble up to you and 9 creatures"},{"title":"Skeleton Drops the Thirty-Second Bomb Timer","score":9.5,"type":"Revelation","pct":78,"players":["Ash","Corras","Billabong","Lilith","Orla"],"excerpt":"The skeleton delivered a final warning: the entire tomb had been laced with explosive glyphs set to detonate six minutes"},{"title":"Archmage Casts Time Stop Into Fireball-Cold Combo","score":9.0,"type":"Combat","pct":30,"players":["Ash","Billabong","Lilith","Corras","Ave","Orla"],"excerpt":"Time Stop to unleash a devastating Fireball and Cone of Cold"}],"biggest_moment":{"title":"Orla's Wasps Impale the Archmage","desc":"After a grueling fight where the Archmage used Time Stop, Cone of Cold, and Fireball to devastating ","counter":"Had the Wasp missed, the Archmage would have had another turn to cast high-level area-of-effect spel"},"quotes":[{"text":"I'd say run. But where would be the fun in that? It's already been five and a ha","speaker":"DM","fire":5},{"text":"There's a lot of people that don't like me in the Feywilds. This is deeply incon","speaker":"Ash","fire":4}],"pacing":{"scene_count":7,"pace":"Explosive Finale","energy_avg":6.9,"scenes":[{"type":"Meta","energy":3},{"type":"Combat","energy":9},{"type":"Off_Topic","energy":3},{"type":"Exploration","energy":6},{"type":"Puzzle","energy":8},{"type":"Skill_Challenge","energy":9},{"type":"Character_Management","energy":6}]},"recap":{"title":"Ice, Death, and Illusions","hook":"The party faces their first true arcane threat, dodging devastating cone-of-cold blasts and realizing this tomb holds far more than just angry wraiths."}},"S007":{"sentiment_windows":[{"pct":0.0,"sent":2.5,"emo":"Curiosity/Wonder"},{"pct":3.33,"sent":1.0,"emo":"Frustration/Irritation"},{"pct":6.67,"sent":5.0,"emo":"Joy/Excitement"},{"pct":10.0,"sent":2.0,"emo":"Tension/Anxiety"},{"pct":13.33,"sent":3.5,"emo":"Amusement/Laughter"}],"dominant_emotion":"Joy/Excitement","session_label":"The Time Travel Heist","peaks":[{"title":"Future-Corras vs Past-Corras Initiative Cliffhanger","score":9.5,"type":"Dramatic Peak","pct":90,"players":["Corras"],"excerpt":"The session ended on a cliffhanger with future-Corras and past-Corras about to roll initiative"},{"title":"Temporal Dissonance Table Goes Wild","score":8.5,"type":"Chaos Peak","pct":35,"players":["Ash","Corras","Dahlia","Billabong","Ave","Orla"],"excerpt":"Dahlia shrinking to a child, Ave gaining temporal fading, and Corras suffering vivid dreams"},{"title":"Child-Dahlia Terrorizes Caravan Kids with Toll the Dead","score":8.5,"type":"Comedy Peak","pct":82,"players":["Dahlia","Billabong"],"excerpt":"Child-Dahlia terrorized caravan children by disintegrating a worm with Toll the Dead while Billabong loomed behind her"}],"biggest_moment":{"title":"Corras's Failed Eyelash Heist","desc":"After sneaking into the castle to steal rubies for a Simulacrum, Corras uses a Minor Illusion of a c","counter":"If Corras had managed to get the eyelash without hurting Spark or breaking invisibility, they could "},"quotes":[{"text":"I only get to be a child for a few hours oh my god I gotta travel across country","speaker":"Dahlia","fire":5},{"text":"I'm being a small tyrant in the castle. I'm being a small tyrant in the castle.","speaker":"Dahlia","fire":5}],"pacing":{"scene_count":7,"pace":"Steady Climb","energy_avg":6.6,"scenes":[{"type":"Meta","energy":5},{"type":"Exposition","energy":6},{"type":"Ritual","energy":8},{"type":"Exploration","energy":6},{"type":"Skill_Challenge","energy":7},{"type":"Skill_Challenge","energy":9},{"type":"Meta","energy":4}]},"recap":{"title":"Operation Save Spark","hook":"Trapped in a collapsing cave, the party decides their only escape is a daring heist through time to save a beloved familiar."}},"S008":{"sentiment_windows":[{"pct":0.0,"sent":4.0,"emo":"Curiosity/Wonder"},{"pct":3.45,"sent":4.5,"emo":"Amusement/Laughter"},{"pct":6.9,"sent":-2.0,"emo":"Tension/Anxiety"},{"pct":10.34,"sent":-5.0,"emo":"Fear/Dread"},{"pct":13.79,"sent":2.0,"emo":"Amusement/Laughter"},{"pct":17.24,"sent":1.0,"emo":"Determination/Resolve"},{"pct":20.69,"sent":3.0,"emo":"Amusement/Laughter"},{"pct":24.14,"sent":2.0,"emo":"Determination/Resolve"},{"pct":27.59,"sent":4.0,"emo":"Satisfaction/Relief"},{"pct":31.03,"sent":-1.0,"emo":"Suspense/Unease"}],"dominant_emotion":"Tension/Anxiety","session_label":null,"peaks":[{"title":"Corras Rolls 25 Deception to Fool His Past Self","score":9.5,"type":"Dice Peak","pct":40,"players":["Corras","Ash","Ave"],"excerpt":"He rolled a 25 on deception, withstood Ave's Detect Thoughts probe using Reliable Talent, and convinced the past party h"},{"title":"Spark Rolls Nat 20 Initiative and Incapacitates Corras","score":9.0,"type":"Combat","pct":8,"players":["Corras","Ash"],"excerpt":"Spark won initiative with a natural 20 and hit Corras with Euphoric Breath, incapacitating him"},{"title":"Corras-Meets-Corras Universe Implosion Coin Flip","score":9.0,"type":"Dice Peak","pct":35,"players":["Corras"],"excerpt":"Those are 50-50 odds -- we both faint or the universe implodes"}],"biggest_moment":{"title":"The Self-Fulfilling Lumin Ritual Cultists","desc":"After successfully retrieving Spark's eyelash, the party needs a secure location for Ave to cast the","counter":"If the party hadn't chosen the Lumin site, they might have altered the timeline by eliminating the r"},"quotes":[{"text":"I guess my question is does the universe implode or do we both faint?","speaker":"Corras","fire":5},{"text":"I'm a little girl with very bony, pigeon-like wrists. I need to know whether I n","speaker":"Dahlia","fire":5}],"pacing":{"scene_count":9,"pace":"Roller Coaster","energy_avg":6.4,"scenes":[{"type":"Meta","energy":3},{"type":"Combat","energy":8},{"type":"Social_Encounter","energy":6},{"type":"Social_Encounter","energy":6},{"type":"Social_Encounter","energy":9},{"type":"Skill_Challenge","energy":8},{"type":"Character_Management","energy":5},{"type":"Exposition","energy":7},{"type":"Meta","energy":3}]},"recap":{"title":"The Time Heist and The Lumin Ritual","hook":"The party realizes they are the cause of their own historical rumors as they execute a flawless time-heist."}},"S009":{"sentiment_windows":[{"pct":0.0,"sent":0.5,"emo":"Neutral"},{"pct":11.11,"sent":-1.0,"emo":"Frustration/Irritation"},{"pct":22.22,"sent":0.0,"emo":"Neutral"},{"pct":33.33,"sent":2.0,"emo":"Amusement/Laughter"},{"pct":44.44,"sent":3.0,"emo":"Joy/Excitement"},{"pct":55.56,"sent":1.5,"emo":"Satisfaction/Relief"},{"pct":66.67,"sent":-2.0,"emo":"Tension/Anxiety"},{"pct":77.78,"sent":-3.0,"emo":"Fear/Dread"},{"pct":88.89,"sent":-5.0,"emo":"Anger/Rage"},{"pct":100.0,"sent":0.0,"emo":"Confusion/Surprise"}],"dominant_emotion":"Tension/Anxiety","session_label":"D&D Session: Inventory and Intrigue","peaks":[{"title":"Lilith Annihilates Hooded Figure with 7th-Level Spirit Guardians","score":9.5,"type":"Combat","pct":78,"players":["Lilith","Ave","Ash"],"excerpt":"Let's do 7th level, let's f*** him up... oh my god guys he's not a bad person, oh gosh"},{"title":"Beshaba Answers Lilith's Prayer to Trip a Man","score":9.0,"type":"Comedy Peak","pct":75,"players":["Lilith","Corras"],"excerpt":"The flowing robe suddenly gets caught underfoot and the hooded figure trips and falls face first in the mud"},{"title":"Horse Reveals Itself as a Mimic -- Cliffhanger","score":9.0,"type":"Revelation","pct":95,"players":["Ash","Orla","Billabong"],"excerpt":"Oops, as suddenly the horse transforms into a mimic... Sid is a mimic"}],"biggest_moment":{"title":"Sid the Mimic Revealed","desc":"While the party is attempting to sneak up on the goblin merchant Grimslick's stuck caravan, their st","counter":"If the party had succeeded on their stealth checks, they might have been able to assess the caravan "},"quotes":[{"text":"I'm going to knock some stuff over and be like, screw you guys. I'm out of here.","speaker":"Billabong","fire":5},{"text":"Nobody's ever drawn a picture of me before. Can I take it down and put it in my ","speaker":"Billabong","fire":5}],"pacing":{"scene_count":7,"pace":"Late Bloomer","energy_avg":5.7,"scenes":[{"type":"Recap","energy":3},{"type":"Character_Management","energy":4},{"type":"Meta","energy":4},{"type":"Social_Encounter","energy":7},{"type":"Social_Encounter","energy":9},{"type":"Exposition","energy":7},{"type":"Exploration","energy":7}]},"recap":{"title":"Downtime, Potato Stew, and the Mimic Horse","hook":"While Ave spends hours crafting a Simulacrum and other party members deal with the consequences of their downtime, the hunt for a missing goblin merchant leads to a massive cliffhanger."}},"S010":{"sentiment_windows":[{"pct":0.0,"sent":3.5,"emo":"Amusement/Laughter"},{"pct":3.4,"sent":1.0,"emo":"Curiosity/Wonder"},{"pct":6.9,"sent":2.0,"emo":"Amusement/Laughter"}],"dominant_emotion":"Tension/Anxiety","session_label":"D&D Session: Cave Confrontation and Demon Summoning","peaks":[{"title":"Orla's Wrath of Nature Destroys Six Magmen and Two Orcs","score":9.5,"type":"Combat","pct":55,"players":["Orla"],"excerpt":"Orla unleashed Wrath of Nature... that killed six magmen and two orcs in a single casting as the battlefield's own trees"},{"title":"Ash Counterspells the Priest's Fireball with Critical Success","score":9.5,"type":"Dice Peak","pct":50,"players":["Ash"],"excerpt":"Ash counterspelled the priest's fireball with a critical success, erasing the spell from his memory entirely"},{"title":"Pixies Polymorph the Priest Into a Mouse","score":9.0,"type":"Comedy Peak","pct":70,"players":["Orla"],"excerpt":"Eight pixies who polymorphed the fleeing priest into a mouse"}],"biggest_moment":{"title":"Orla Decimates the Camp with Wrath of Nature","desc":"After Sarlumon and Lilith alert the entire cultist camp by critically failing their stealth checks a","counter":"If Orla had not cast Wrath of Nature, the party would have been quickly overwhelmed by the sheer num"},"quotes":[{"text":"this is for my uncle that you set on fire. The tent can change each time.","speaker":"Orla","fire":5},{"text":"Keep your fires yourself, sir.","speaker":"Ash","fire":5}],"pacing":{"scene_count":6,"pace":"Front-Loaded","energy_avg":6.5,"scenes":[{"type":"Meta","energy":4},{"type":"Exploration","energy":5},{"type":"Skill_Challenge","energy":7},{"type":"Combat","energy":9},{"type":"Exposition","energy":7},{"type":"Meta","energy":3}]},"recap":{"title":"The Wrath of Nature","hook":"A botched stealth mission turns into an all-out assault against a cult summoning a demon."}},"S011":{"sentiment_windows":[{"pct":0.0,"sent":4.5,"emo":"Amusement/Laughter"},{"pct":3.45,"sent":2.0,"emo":"Anticipation"},{"pct":6.9,"sent":6.0,"emo":"Amusement/Laughter"},{"pct":10.34,"sent":3.5,"emo":"Satisfaction/Relief"},{"pct":13.79,"sent":1.0,"emo":"Sadness/Grief"},{"pct":17.24,"sent":2.5,"emo":"Determination/Resolve"},{"pct":20.69,"sent":2.0,"emo":"Neutral"},{"pct":24.14,"sent":3.0,"emo":"Curiosity/Wonder"},{"pct":27.59,"sent":6.5,"emo":"Amusement/Laughter"},{"pct":31.03,"sent":2.5,"emo":"Neutral"},{"pct":34.48,"sent":4.0,"emo":"Excitement"},{"pct":37.93,"sent":-1.0,"emo":"Tension/Anxiety"},{"pct":41.38,"sent":-2.5,"emo":"Fear/Dread"},{"pct":44.83,"sent":-5.0,"emo":"Fear/Dread"},{"pct":48.28,"sent":-6.0,"emo":"Fear/Dread"},{"pct":51.72,"sent":-3.0,"emo":"Tension/Anxiety"},{"pct":55.17,"sent":0.5,"emo":"Relief"},{"pct":58.62,"sent":2.0,"emo":"Satisfaction/Relief"},{"pct":62.07,"sent":4.0,"emo":"Amusement/Laughter"},{"pct":65.52,"sent":2.5,"emo":"Neutral"},{"pct":68.97,"sent":2.0,"emo":"Anticipation"},{"pct":72.41,"sent":1.5,"emo":"Neutral"},{"pct":75.86,"sent":2.0,"emo":"Determination/Resolve"},{"pct":79.31,"sent":3.5,"emo":"Satisfaction/Relief"},{"pct":82.76,"sent":2.5,"emo":"Neutral"},{"pct":86.21,"sent":3.0,"emo":"Neutral"},{"pct":89.66,"sent":2.5,"emo":"Neutral"},{"pct":93.1,"sent":3.5,"emo":"Amusement/Laughter"},{"pct":96.55,"sent":2.0,"emo":"Neutral"},{"pct":100.0,"sent":3.0,"emo":"Satisfaction/Relief"}],"dominant_emotion":"Tension/Anxiety","session_label":"Session with Toll Gate and Earth Elemental Encounter","peaks":[{"title":"Argentus Seizes Ash's Arm and Forces Sarlumon Into the Pit","score":9.0,"type":"Chaos Peak","pct":72,"players":["Ash","Corras"],"excerpt":"Argentus seizes control of Ash's arm and forces Sarlumon via Suggestion to throw Ash into the pit"},{"title":"Ash Negotiates with the Earth Elemental in Terran","score":8.5,"type":"Dramatic Peak","pct":80,"players":["Ash"],"excerpt":"Ash negotiated with the creature in Terran, aided by Argentus's translation, and convinced it to investigate the Cult of"},{"title":"Orla Rolls Natural 20 on Bridge Perception","score":8.0,"type":"Dice Peak","pct":55,"players":["Orla"],"excerpt":"Eagle-form Orla scouted ahead and discovered a wooden bridge designed to appear decrepit while actually being sturdy"}],"biggest_moment":{"title":"Argentus Betrays the Party","desc":"While investigating a magically concealed pit trap, the spirit Argentus takes control of Ash's arm, ","counter":"If Sarlumon had resisted the Suggestion or if Drenek had successfully grabbed Ash, the party could h"},"quotes":[{"text":"This is not me. Stop me. Just so y'all know, this is not me. I don't even know.","speaker":"Ash","fire":5},{"text":"My parents are flowers.","speaker":"Orla","fire":4}],"pacing":{"scene_count":7,"pace":"Slow Burn","energy_avg":5.6,"scenes":[{"type":"Off_Topic","energy":2},{"type":"Recap","energy":4},{"type":"Social_Encounter","energy":7},{"type":"Social_Encounter","energy":7},{"type":"Character_Management","energy":4},{"type":"Skill_Challenge","energy":9},{"type":"Off_Topic","energy":2}]},"recap":{"title":"The Decoy Bridge and the Earth Elemental","hook":"A simple pit trap turns deadly when Argentus takes control, throwing Ash into the clutches of an angry Earth Elemental."}},"S012":{"sentiment_windows":[{"pct":0.0,"sent":3.0,"emo":"Amusement/Laughter"},{"pct":3.33,"sent":2.5,"emo":"Curiosity/Wonder"},{"pct":6.67,"sent":0.5,"emo":"Confusion/Surprise"},{"pct":10.0,"sent":6.0,"emo":"Joy/Excitement"},{"pct":13.33,"sent":2.0,"emo":"Curiosity/Wonder"},{"pct":16.67,"sent":1.0,"emo":"Tension/Anxiety"},{"pct":20.0,"sent":-2.0,"emo":"Fear/Dread"},{"pct":23.33,"sent":-3.0,"emo":"Frustration/Irritation"},{"pct":26.67,"sent":1.0,"emo":"Curiosity/Wonder"},{"pct":30.0,"sent":-1.0,"emo":"Determination/Resolve"},{"pct":33.33,"sent":-4.0,"emo":"Frustration/Irritation"},{"pct":36.67,"sent":0.0,"emo":"Determination/Resolve"},{"pct":40.0,"sent":5.0,"emo":"Excitement"},{"pct":43.33,"sent":-8.0,"emo":"Fear/Dread"},{"pct":46.67,"sent":-5.0,"emo":"Confusion/Surprise"},{"pct":50.0,"sent":2.0,"emo":"Hope"},{"pct":53.33,"sent":3.0,"emo":"Relief"},{"pct":56.67,"sent":-6.0,"emo":"Surprise"},{"pct":60.0,"sent":-7.0,"emo":"Frustration/Irritation"},{"pct":63.33,"sent":1.0,"emo":"Neutral"},{"pct":66.67,"sent":4.0,"emo":"Amusement/Laughter"},{"pct":70.0,"sent":3.0,"emo":"Satisfaction/Relief"},{"pct":73.33,"sent":2.0,"emo":"Relief"},{"pct":76.67,"sent":5.0,"emo":"Accomplishment"},{"pct":80.0,"sent":0.0,"emo":"Concern"},{"pct":83.33,"sent":2.0,"emo":"Curiosity/Wonder"},{"pct":86.67,"sent":4.0,"emo":"Intrigue"},{"pct":90.0,"sent":3.0,"emo":"Determination/Resolve"},{"pct":93.33,"sent":1.0,"emo":"Surprise"},{"pct":100.0,"sent":2.0,"emo":"Mixed"}],"dominant_emotion":"Tension/Anxiety","session_label":"The Explosive Caravan Encounter","peaks":[{"title":"Ash Casts Shatter on the Explosive Wagon","score":10.0,"type":"Chaos Peak","pct":25,"players":["Ash","Orla","Billabong"],"excerpt":"The DM calculated the staggering explosive yield at 454d6 plus 20d4, totaling 1,657 damage with a blast radius exceeding"},{"title":"Orla Uses Time Stop Potion and Conjures Giant Eagles","score":9.5,"type":"Dramatic Peak","pct":40,"players":["Orla","Ash","Billabong"],"excerpt":"Orla used a Time Stop potion and conjured giant eagles to carry the party away"},{"title":"The Book's Curse Grants Immortality","score":9.0,"type":"Revelation","pct":95,"players":["Ash","Orla","Billabong","Lilith","Ave","Corras"],"excerpt":"They gained immortality, ceasing to age naturally. However, the curse's price was steep: all magical potions, elixirs, a"}],"biggest_moment":{"title":"A Great Challenge","desc":"The group overcomes a major obstacle.","counter":"If they had failed, the consequences would be dire."},"quotes":[{"text":"Guys, it's important that we don't learn any lessons at all throughout this camp","speaker":"Dahlia","fire":5},{"text":"I was actually trying to aim for the contraption that is a shield to be honest b","speaker":"Ash","fire":5}],"pacing":{"scene_count":8,"pace":"Front-Loaded","energy_avg":6.8,"scenes":[{"type":"Off_Topic","energy":2},{"type":"Recap","energy":5},{"type":"Combat","energy":8},{"type":"Skill_Challenge","energy":10},{"type":"Social_Encounter","energy":5},{"type":"Exposition","energy":6},{"type":"Exploration","energy":7},{"type":"Exposition","energy":8}]},"recap":{"title":"The Group Continues","hook":"The party faces new challenges."}},"S013":{"sentiment_windows":[{"pct":0.0,"sent":0.5,"emo":"Neutral"},{"pct":3.45,"sent":0.3,"emo":"Neutral"},{"pct":6.9,"sent":0.1,"emo":"Neutral"},{"pct":10.34,"sent":1.5,"emo":"Amusement/Laughter"},{"pct":13.79,"sent":1.8,"emo":"Amusement/Laughter"},{"pct":17.24,"sent":-0.5,"emo":"Tension/Anxiety"},{"pct":20.69,"sent":-0.3,"emo":"Determination/Resolve"},{"pct":24.14,"sent":1.0,"emo":"Curiosity/Wonder"},{"pct":27.59,"sent":2.0,"emo":"Triumph/Elation"},{"pct":31.03,"sent":-1.0,"emo":"Tension/Anxiety"},{"pct":34.48,"sent":0.5,"emo":"Determination/Resolve"},{"pct":37.93,"sent":1.2,"emo":"Amusement/Laughter"},{"pct":41.38,"sent":1.5,"emo":"Amusement/Laughter"},{"pct":44.83,"sent":1.8,"emo":"Compassion/Empathy"},{"pct":48.28,"sent":2.0,"emo":"Triumph/Elation"},{"pct":51.72,"sent":2.5,"emo":"Curiosity/Wonder"},{"pct":55.17,"sent":-2.0,"emo":"Fear/Dread"},{"pct":58.62,"sent":1.0,"emo":"Suspense/Unease"},{"pct":62.07,"sent":3.0,"emo":"Triumph/Elation"},{"pct":65.52,"sent":1.5,"emo":"Suspense/Unease"},{"pct":68.97,"sent":0.5,"emo":"Determination/Resolve"},{"pct":72.41,"sent":2.5,"emo":"Satisfaction/Relief"},{"pct":75.86,"sent":3.5,"emo":"Triumph/Elation"},{"pct":79.31,"sent":2.0,"emo":"Joy/Excitement"},{"pct":82.76,"sent":1.8,"emo":"Curiosity/Wonder"},{"pct":86.21,"sent":-1.5,"emo":"Fear/Dread"},{"pct":89.66,"sent":1.0,"emo":"Determination/Resolve"},{"pct":93.1,"sent":1.5,"emo":"Determination/Resolve"},{"pct":96.55,"sent":1.2,"emo":"Anticipation"},{"pct":100.0,"sent":1.5,"emo":"Satisfaction/Relief"}],"dominant_emotion":"Suspense/Unease","session_label":"Jailbreak and Demon Pact","peaks":[{"title":"Signing the Blood Pact with Malachar the Twisted","score":9.5,"type":"Dramatic Peak","pct":55,"players":["Ash","Orla","Billabong"],"excerpt":"Malachar offered a demonic pact: freedom and teleportation in exchange for four future favors. After tense deliberation,"},{"title":"Malachar the Glabrezu Arrives in the Dungeon","score":9.0,"type":"Revelation","pct":40,"players":["Ash","Orla","Billabong"],"excerpt":"A Glabrezu demon named Malachar the Twisted arrived as translator, scanned the prisoners with his third eye"},{"title":"Prince Derendil Devours the Ritual Corpse","score":8.5,"type":"Chaos Peak","pct":70,"players":["Lilith","Ash","Orla","Billabong"],"excerpt":"Prince Derendil immediately devoured the preserved corpse in the tent, horrifying Lilith"}],"biggest_moment":{"title":"The Blood Pact with Malachar","desc":"Trapped in the anti-magic cells of the Berdusk Dungeons, the party had mere hours before their past ","counter":"Without signing the pact, the group would have been stuck in an anti-magic zone in Berdusk. The five"},"quotes":[{"text":"Well, you see, I make the best banana pancakes, and I thunk rats. I'm the villag","speaker":"Corras","fire":5},{"text":"None of us have newborns, so I don't know what we could possibly give you. You'r","speaker":"Ash","fire":4}],"pacing":{"scene_count":7,"pace":"Steady Climb","energy_avg":6.1,"scenes":[{"type":"Off_Topic","energy":2},{"type":"Recap","energy":5},{"type":"Character_Management","energy":4},{"type":"Social_Encounter","energy":9},{"type":"Social_Encounter","energy":7},{"type":"Exploration","energy":6},{"type":"Meta","energy":3}]},"recap":{"title":"The Demonic Escape from Berdusk","hook":"Faced with anti-magic prisons and a ticking clock, the party makes a dangerous blood pact to save a familiar."}},"S014":{"sentiment_windows":[{"pct":0.0,"sent":2.5,"emo":"Joy/Excitement"},{"pct":3.33,"sent":1.0,"emo":"Anticipation"}],"dominant_emotion":"Tension/Anxiety","session_label":"Session 1: Castle Corras Heist Planning and Chaos","peaks":[{"title":"Billabong Catches the Resilient Sphere Hamster Ball","score":9.5,"type":"Comedy Peak","pct":55,"players":["Billabong","Ash"],"excerpt":"Billabong caught the rolling hamster ball and squatted it overhead"},{"title":"Ave Sings Darindale to Sleep with a Lullaby","score":9.0,"type":"Emotional Peak","pct":58,"players":["Ave"],"excerpt":"Ave sang a lullaby that finally put the raging prince to sleep"},{"title":"Darindale Rolls Natural 20 to Resist Calm Emotions","score":9.0,"type":"Dice Peak","pct":50,"players":["Ave"],"excerpt":"Ave attempted Calm Emotions but Darindale rolled a natural 20 to resist"}],"biggest_moment":{"title":"The Quaggoth Hamster Ball","desc":"After a scholar insults Prince Darindale, the massive Quaggoth flies into a blind rage. Billabong ac","counter":"If Ash hadn't trapped him in the sphere, the party would have been forced to fight and potentially k"},"quotes":[{"text":"Banana pancakes! Banana pancakes!","speaker":"Corras","fire":5},{"text":"I'm going to pick up a rock and I'm going to cast light on it. And I'm going to ","speaker":"Dahlia","fire":5}],"pacing":{"scene_count":9,"pace":"Roller Coaster","energy_avg":5.7,"scenes":[{"type":"Off_Topic","energy":2},{"type":"Recap","energy":4},{"type":"Social_Encounter","energy":6},{"type":"Social_Encounter","energy":7},{"type":"Combat","energy":9},{"type":"Off_Topic","energy":2},{"type":"Social_Encounter","energy":5},{"type":"Exploration","energy":8},{"type":"Meta","energy":5}]},"recap":{"title":"The Heist, The Scholar, and The Hamster Ball","hook":"The party finally reunites to plan a delicate heist, but a scholar's insult turns their new royal friend into a raging hazard."}},"S015":{"sentiment_windows":[{"pct":0.0,"sent":3.0,"emo":"Curiosity/Wonder"},{"pct":3.45,"sent":2.5,"emo":"Compassion/Empathy"},{"pct":6.9,"sent":4.0,"emo":"Amusement/Laughter"},{"pct":10.34,"sent":5.0,"emo":"Joy/Excitement"},{"pct":13.79,"sent":3.5,"emo":"Anticipation"},{"pct":17.24,"sent":3.0,"emo":"Curiosity/Wonder"},{"pct":20.69,"sent":2.0,"emo":"Determination/Resolve"},{"pct":24.14,"sent":1.5,"emo":"Tension/Anxiety"},{"pct":27.59,"sent":0.5,"emo":"Confusion/Surprise"},{"pct":31.03,"sent":1.0,"emo":"Determination/Resolve"},{"pct":34.48,"sent":0.0,"emo":"Suspense/Unease"},{"pct":37.93,"sent":-1.0,"emo":"Tension/Anxiety"},{"pct":41.38,"sent":-0.5,"emo":"Determination/Resolve"},{"pct":44.83,"sent":-2.0,"emo":"Frustration/Irritation"},{"pct":48.28,"sent":0.0,"emo":"Neutral"},{"pct":51.72,"sent":-3.0,"emo":"Fear/Dread"},{"pct":55.17,"sent":-4.0,"emo":"Confusion/Surprise"},{"pct":58.62,"sent":-5.0,"emo":"Fear/Dread"},{"pct":62.07,"sent":-4.5,"emo":"Determination/Resolve"},{"pct":65.52,"sent":-3.0,"emo":"Hope"},{"pct":68.97,"sent":-2.0,"emo":"Determination/Resolve"},{"pct":72.41,"sent":-1.5,"emo":"Determination/Resolve"},{"pct":75.86,"sent":-1.0,"emo":"Hope"},{"pct":79.31,"sent":-2.5,"emo":"Fear/Dread"},{"pct":82.76,"sent":-3.5,"emo":"Fear/Dread"},{"pct":86.21,"sent":-2.0,"emo":"Determination/Resolve"},{"pct":89.66,"sent":-2.5,"emo":"Tension/Anxiety"},{"pct":93.1,"sent":-3.0,"emo":"Fear/Dread"},{"pct":96.55,"sent":-1.5,"emo":"Determination/Resolve"},{"pct":100.0,"sent":-2.0,"emo":"Suspense/Unease"}],"dominant_emotion":"Tension/Anxiety","session_label":"Temporal Swap and Rift Crisis","peaks":[{"title":"The Temporal Sentinel Freezes All of Time","score":10.0,"type":"Revelation","pct":68,"players":["Ash","Orla","Corras","Billabong","Lilith","Ave"],"excerpt":"A being called the Temporal Sentinel materialized above the clearing in a crack of prismatic light, freezing all of time"},{"title":"Ave Persuades the Sentinel to Give Them a Chance","score":9.5,"type":"Dramatic Peak","pct":72,"players":["Ave"],"excerpt":"Ave stepped forward and persuaded her to give them a chance to seal the rift themselves"},{"title":"A Remorhaz Erupts From the Temporal Rift","score":9.0,"type":"Combat","pct":97,"players":["Billabong","Lilith","Ave"],"excerpt":"A remorhaz burst from the vortex as the session ended on a cliffhanger"}],"biggest_moment":{"title":"The Spark Swap Heist","desc":"The party successfully pulls off an elaborate heist within Castle Corras, distracting their past sel","counter":"If the party had failed to distract past Ash or failed their deception checks against past Lilith, t"},"quotes":[{"text":"My plan is to give him a little kiss on the nose and he'll say yes immediately. ","speaker":"Dahlia","fire":5},{"text":"Plan B is Billabong runs in the front door and starts killing everyone.","speaker":"Dahlia","fire":4}],"pacing":{"scene_count":8,"pace":"Explosive Finale","energy_avg":6.4,"scenes":[{"type":"Off_Topic","energy":2},{"type":"Recap","energy":6},{"type":"Social_Encounter","energy":5},{"type":"Skill_Challenge","energy":7},{"type":"Skill_Challenge","energy":8},{"type":"Exposition","energy":10},{"type":"Off_Topic","energy":2},{"type":"Exploration","energy":8}]},"recap":{"title":"The Temporal Heist","hook":"With time unraveling around them, the party stages an elaborate heist within their own castle to save a familiar friend."}},"S016":{"sentiment_windows":[{"pct":0.0,"sent":1.5,"emo":"Neutral"},{"pct":3.45,"sent":-3.0,"emo":"Tension/Anxiety"},{"pct":6.9,"sent":0.5,"emo":"Determination/Resolve"},{"pct":10.34,"sent":-1.0,"emo":"Tension/Anxiety"},{"pct":13.79,"sent":-4.0,"emo":"Frustration/Irritation"},{"pct":17.24,"sent":2.0,"emo":"Satisfaction/Relief"},{"pct":20.69,"sent":1.0,"emo":"Curiosity/Wonder"},{"pct":24.14,"sent":-5.0,"emo":"Fear/Dread"},{"pct":27.59,"sent":-4.5,"emo":"Fear/Dread"},{"pct":31.03,"sent":1.0,"emo":"Triumph/Elation"},{"pct":34.48,"sent":0.0,"emo":"Confusion/Surprise"},{"pct":37.93,"sent":3.0,"emo":"Satisfaction/Relief"},{"pct":41.38,"sent":6.0,"emo":"Triumph/Elation"},{"pct":44.83,"sent":4.0,"emo":"Curiosity/Wonder"},{"pct":48.28,"sent":5.0,"emo":"Satisfaction/Relief"},{"pct":51.72,"sent":0.0,"emo":"Neutral"},{"pct":55.17,"sent":0.0,"emo":"Neutral"},{"pct":58.62,"sent":0.0,"emo":"Neutral"},{"pct":62.07,"sent":0.0,"emo":"Neutral"},{"pct":65.52,"sent":0.0,"emo":"Neutral"},{"pct":68.97,"sent":0.0,"emo":"Neutral"},{"pct":72.41,"sent":0.0,"emo":"Neutral"},{"pct":75.86,"sent":0.0,"emo":"Neutral"},{"pct":79.31,"sent":0.0,"emo":"Neutral"},{"pct":82.76,"sent":0.0,"emo":"Neutral"},{"pct":86.21,"sent":0.0,"emo":"Neutral"},{"pct":89.66,"sent":0.0,"emo":"Neutral"},{"pct":93.1,"sent":0.0,"emo":"Neutral"},{"pct":96.55,"sent":0.0,"emo":"Neutral"},{"pct":100.0,"sent":3.0,"emo":"Satisfaction/Relief"}],"dominant_emotion":"Tension/Anxiety","session_label":"Temporal Rift Crisis","peaks":[{"title":"Corras Activates the Fates Card","score":9.5,"type":"Dramatic Peak","pct":88,"players":["Corras","Ash","Orla","Billabong","Dahlia"],"excerpt":"Corras on his turn enacts the fates card... the threads of fate unwind and undo and you all slowly fade to darkness as y"},{"title":"Ash Sacrifices Her Metal Arm to Escape","score":9.0,"type":"Dramatic Peak","pct":72,"players":["Ash"],"excerpt":"You hear them saying and murmuring about a great sacrifice and that you must be a celestial being and you see them all k"},{"title":"Ave Polymorphs into T-Rex Mid-Air","score":8.5,"type":"Chaos Peak","pct":25,"players":["Ave"],"excerpt":"The dragon's actually considering flying away with its meal... it's 40 feet above the ground when it can normally fly up"}],"biggest_moment":{"title":"Corras Uses the Fates Card","desc":"Facing the end of the universe and insurmountable odds against the Time Warden and monsters, Corras ","counter":"If Corras hadn't used the Fates card, the Time Warden would have completely reset the universe, or t"},"quotes":[{"text":"I'm going to try to use my persuasion to persuade myself to not go into portals ","speaker":"Corras","fire":5},{"text":"Also, the irony of sending back the one person who actually likes time travel to","speaker":"Ash","fire":5}],"pacing":{"scene_count":7,"pace":"Explosive Finale","energy_avg":6.9,"scenes":[{"type":"Off_Topic","energy":2},{"type":"Exposition","energy":5},{"type":"Combat","energy":8},{"type":"Skill_Challenge","energy":7},{"type":"Combat","energy":9},{"type":"Social_Encounter","energy":8.5},{"type":"Exposition","energy":7}]},"recap":{"title":"The End of Time and a Fate Rewritten","hook":"Faced with the Time Warden's universal reset, the party makes a desperate stand across fragmented realities until a single drawn card changes their history forever."}},"S017":{"sentiment_windows":[{"pct":0.0,"sent":2.5,"emo":"Curiosity/Wonder"},{"pct":3.448,"sent":3.0,"emo":"Curiosity/Wonder"},{"pct":6.897,"sent":3.5,"emo":"Determination/Resolve"},{"pct":10.345,"sent":2.0,"emo":"Curiosity/Wonder"},{"pct":13.793,"sent":1.0,"emo":"Reflective"},{"pct":17.241,"sent":3.0,"emo":"Satisfaction/Relief"},{"pct":20.69,"sent":6.0,"emo":"Joy/Excitement"},{"pct":24.138,"sent":4.0,"emo":"Curiosity/Wonder"},{"pct":27.586,"sent":5.0,"emo":"Determination/Resolve"},{"pct":31.034,"sent":5.0,"emo":"Surprise"},{"pct":34.483,"sent":6.0,"emo":"Amusement/Laughter"},{"pct":37.931,"sent":5.0,"emo":"Determination/Resolve"},{"pct":41.379,"sent":6.0,"emo":"Triumph/Elation"},{"pct":44.828,"sent":4.0,"emo":"Determination/Resolve"},{"pct":48.276,"sent":5.0,"emo":"Determination/Resolve"},{"pct":51.724,"sent":6.0,"emo":"Joy/Excitement"},{"pct":55.172,"sent":5.0,"emo":"Determination/Resolve"},{"pct":58.621,"sent":3.0,"emo":"Tension/Anxiety"},{"pct":62.069,"sent":7.0,"emo":"Triumph/Elation"},{"pct":65.517,"sent":6.0,"emo":"Anticipation"},{"pct":68.966,"sent":4.0,"emo":"Neutral"},{"pct":72.414,"sent":3.0,"emo":"Neutral"},{"pct":75.862,"sent":3.0,"emo":"Neutral"},{"pct":79.31,"sent":3.0,"emo":"Neutral"},{"pct":82.759,"sent":3.0,"emo":"Neutral"},{"pct":86.207,"sent":0.0,"emo":"Neutral"},{"pct":89.655,"sent":0.0,"emo":"Neutral"},{"pct":93.103,"sent":0.0,"emo":"Neutral"},{"pct":96.552,"sent":0.0,"emo":"Neutral"},{"pct":100.0,"sent":0.0,"emo":"Neutral"}],"dominant_emotion":"Curiosity/Wonder","session_label":"D&D Session: Character Decisions and World Building","peaks":[{"title":"Lilith Pledges Loyalty to Myrkul","score":9.0,"type":"Dramatic Peak","pct":78,"players":["Dahlia"],"excerpt":"500 seems a little steep... changing deity doesn't seem like that big of a deal... this was always the plan. I'm going t"},{"title":"Corras Becomes King of an Empire","score":8.5,"type":"Dramatic Peak","pct":70,"players":["Corras"],"excerpt":"This is so deep... I'm making it too deep... I just like the sound of King Corras. We're going with King Corras."},{"title":"Celestials Destroy the Defectors of Jalanthar","score":8.5,"type":"Revelation","pct":72,"players":["Corras"],"excerpt":"Jalanthar and Hilltop, which are the two towns that were part of that there, were destroyed by the Celestials. They came"}],"biggest_moment":{"title":"King Corras Declares War on the Celestials","desc":"Faced with an ultimatum from the Celestials demanding control over a key commerce road to EvOrland, ","counter":"If Corras had appeased the Celestials, his empire might have avoided immediate war but would have lo"},"quotes":[{"text":"I'm just taking some notes here... Lilith just wants to become a child again so ","speaker":"Dahlia","fire":5},{"text":"I just like the sound of King Corras. We're gonna go with King Corras.","speaker":"Corras","fire":4}],"pacing":{"scene_count":7,"pace":"Steady Climb","energy_avg":6.1,"scenes":[{"type":"Meta","energy":4},{"type":"Meta","energy":3},{"type":"Off_Topic","energy":3},{"type":"Exposition","energy":7},{"type":"Character_Management","energy":7},{"type":"Character_Management","energy":9},{"type":"Exposition","energy":6}]},"recap":{"title":"A New World Order","hook":"With the timeline reset, the party must forge their new destinies as leaders, prophets, and sorcerers in a world at war with the Celestials."}},"S018":{"sentiment_windows":[{"pct":0.0,"sent":2.5,"emo":"Amusement/Laughter"},{"pct":3.45,"sent":1.5,"emo":"Curiosity/Wonder"},{"pct":6.9,"sent":0.5,"emo":"Confusion/Surprise"},{"pct":10.34,"sent":-1.0,"emo":"Tension/Anxiety"},{"pct":13.79,"sent":-3.0,"emo":"Tension/Anxiety"},{"pct":17.24,"sent":-5.0,"emo":"Frustration/Irritation"},{"pct":20.69,"sent":7.5,"emo":"Joy/Excitement"},{"pct":24.14,"sent":3.0,"emo":"Satisfaction/Relief"},{"pct":27.59,"sent":1.0,"emo":"Determination/Resolve"},{"pct":31.03,"sent":-1.0,"emo":"Frustration/Irritation"}],"dominant_emotion":"Tension/Anxiety","session_label":"D&D Session: Inventory and Perils in the Storm Mountains","peaks":[{"title":"Ancient White Dragon Snatches the Axe Beak","score":9.5,"type":"Dramatic Peak","pct":82,"players":["Dahlia","Corras","Ash","Billabong","Orla"],"excerpt":"A massive ancient white dragon burst from beneath the ice, snatched Dahlia's axe beak, and dove back for fish before fly"},{"title":"Devastating Avalanche Buries the Party","score":9.0,"type":"Chaos Peak","pct":65,"players":["Orla","Corras","Ash","Billabong","Dahlia"],"excerpt":"You're in the avalanche you're not going to get out... you're just going to take it... Billabong taking a critical hit"},{"title":"Billabong Loses Boxing Match to Foehammer","score":8.5,"type":"Comedy Peak","pct":38,"players":["Billabong","Corras","Ash","Dahlia"],"excerpt":"Do you want to settle this with some bare-knuckle boxing... Is that all you got, you sissy?"}],"biggest_moment":{"title":"Dahlia Denies the Dragon","desc":"While crossing a fragile frozen lake, Dahlia's summoned Axe Beak falls through the ice. As an ancien","counter":"If Dahlia hadn't dismissed her mount, the ancient white dragon would have eaten the Axe Beak and pot"},"quotes":[{"text":"Sometimes you go home and your dad is dead.","speaker":"Dahlia","fire":5},{"text":"I got 10 fingers and 10 toes, so I could wear 20 rings, right? There's no issue.","speaker":"Billabong","fire":4}],"pacing":{"scene_count":7,"pace":"Late Bloomer","energy_avg":6.4,"scenes":[{"type":"Character_Management","energy":3},{"type":"Exposition","energy":5},{"type":"Social_Encounter","energy":8},{"type":"Exploration","energy":5},{"type":"Skill_Challenge","energy":8.5},{"type":"Skill_Challenge","energy":9.5},{"type":"Meta","energy":6}]},"recap":{"title":"Mince Pies and Blizzards","hook":"The party gears up in Triboar and faces an ancient white dragon and massive avalanches in the brutal Storm Mountains."}},"S019":{"sentiment_windows":[{"pct":0.0,"sent":0.0,"emo":"Neutral"},{"pct":3.448,"sent":0.5,"emo":"Anticipation"}],"dominant_emotion":"Tension/Anxiety","session_label":null,"peaks":[{"title":"Alchemist Fire Keg Obliterates Everything","score":10.0,"type":"Chaos Peak","pct":78,"players":["Ash","Corras","Billabong","Orla","Dahlia"],"excerpt":"The resulting explosion obliterated the frost giant, the yeti, and an acre of forest, leaving behind only the giant's ch"},{"title":"Frost Giant Grabs Billabong from the Ice","score":9.0,"type":"Combat","pct":50,"players":["Billabong"],"excerpt":"A frost giant burst through the ice tunnel wall and grabbed Billabong, hurling a javelin and then raging with devastatin"},{"title":"Billabong's Illusory Yeti Hand Gesture Backfires","score":8.5,"type":"Comedy Peak","pct":55,"players":["Billabong"],"excerpt":"Billabong attempted diplomacy with an illusory yeti hand gesture but the giant perceived it as a challenge"}],"biggest_moment":{"title":"The Keg of Alchemist's Fire","desc":"Trapped in Leomund's Tiny Hut by yetis and a frost giant, the party decides against complex magical ","counter":"If the party had tried to emerge and fight the frost giant and yetis conventionally or attempted the"},"quotes":[{"text":"My children. Yes, this is the greatest moment of my life. Your names.","speaker":"Dahlia","fire":5},{"text":"I am become a dome.","speaker":"Ash","fire":5}],"pacing":{"scene_count":7,"pace":"Roller Coaster","energy_avg":6.7,"scenes":[{"type":"Recap","energy":4},{"type":"Exposition","energy":5},{"type":"Exploration","energy":6},{"type":"Combat","energy":9},{"type":"Skill_Challenge","energy":10},{"type":"Exploration","energy":7},{"type":"Exploration","energy":6}]},"recap":{"title":"The Big Bang and the Baby Yetis","hook":"Stuck in a snowy hut surrounded by monsters, the party resorts to the most rational solution: a colossal explosive diversion."}},"S020":{"sentiment_windows":[{"pct":0.0,"sent":2.5,"emo":"Amusement/Laughter"},{"pct":3.448,"sent":0.5,"emo":"Curiosity/Wonder"},{"pct":6.896,"sent":-1.0,"emo":"Tension/Anxiety"},{"pct":10.344,"sent":-2.0,"emo":"Suspense/Unease"},{"pct":13.793,"sent":-1.0,"emo":"Determination/Resolve"},{"pct":17.241,"sent":-3.0,"emo":"Fear/Dread"},{"pct":20.689,"sent":1.5,"emo":"Curiosity/Wonder"},{"pct":24.137,"sent":-5.0,"emo":"Confusion/Surprise"},{"pct":27.586,"sent":-3.5,"emo":"Tension/Anxiety"},{"pct":31.034,"sent":-1.0,"emo":"Determination/Resolve"},{"pct":34.482,"sent":-6.0,"emo":"Fear/Dread"},{"pct":37.931,"sent":-4.5,"emo":"Determination/Resolve"},{"pct":41.379,"sent":-9.0,"emo":"Sadness/Grief"},{"pct":44.827,"sent":-2.0,"emo":"Confusion/Surprise"},{"pct":48.276,"sent":0.5,"emo":"Determination/Resolve"},{"pct":51.724,"sent":1.0,"emo":"Amusement/Laughter"},{"pct":55.172,"sent":3.0,"emo":"Amusement/Laughter"},{"pct":58.621,"sent":1.5,"emo":"Determination/Resolve"},{"pct":62.069,"sent":2.0,"emo":"Determination/Resolve"},{"pct":65.517,"sent":8.0,"emo":"Triumph/Elation"},{"pct":68.965,"sent":3.0,"emo":"Satisfaction/Relief"},{"pct":72.414,"sent":2.5,"emo":"Curiosity/Wonder"},{"pct":75.862,"sent":2.0,"emo":"Anticipation"},{"pct":79.31,"sent":0.0,"emo":"Tension/Anxiety"},{"pct":82.759,"sent":1.5,"emo":"Anticipation"},{"pct":86.207,"sent":0.5,"emo":"Curiosity/Wonder"},{"pct":89.655,"sent":2.0,"emo":"Satisfaction/Relief"},{"pct":93.103,"sent":1.0,"emo":"Determination/Resolve"},{"pct":96.552,"sent":1.5,"emo":"Satisfaction/Relief"},{"pct":100.0,"sent":2.0,"emo":"Anticipation"}],"dominant_emotion":"Curiosity/Wonder","session_label":"The Cabin and the Summer Star","peaks":[{"title":"Summer Star Kills the Entire Party","score":10.0,"type":"Chaos Peak","pct":55,"players":["Corras","Ash","Orla","Dahlia"],"excerpt":"Corras grabbed the glowing orb mid-escape, which detonated in a catastrophic radiant explosion dealing 118 damage to eve"},{"title":"Lathander Resurrects the Party and Blesses Billabong","score":9.5,"type":"Dramatic Peak","pct":88,"players":["Billabong","Ash","Corras","Orla","Dahlia"],"excerpt":"A large glow comes across this whole area here... it's Lathander, the god Lathander, who appears and explains that you'v"},{"title":"Drink Holy Pee Star Ghost Message Debacle","score":9.5,"type":"Comedy Peak","pct":68,"players":["Ash","Corras","Orla","Billabong"],"excerpt":"drink holy pee star... your directions were very unclear"}],"biggest_moment":{"title":"The Summer Star TPK","desc":"Corras touches the glowing, warm artifact known as the Summer Star in the suspended cabin. The artif","counter":"If Corras had not touched the glowing orb, or if the party had prioritized fleeing the hostile clay "},"quotes":[{"text":"Corras is like, oh no, I fucked around, I guess I'm finding out?","speaker":"Ash","fire":5},{"text":"I picked something up, and this thing came down. A little clay thing. I might ha","speaker":"Corras","fire":5}],"pacing":{"scene_count":7,"pace":"Front-Loaded","energy_avg":7.4,"scenes":[{"type":"Exploration","energy":5},{"type":"Skill_Challenge","energy":7},{"type":"Exploration","energy":6},{"type":"Combat","energy":10},{"type":"Social_Encounter","energy":8},{"type":"Puzzle","energy":9},{"type":"Exploration","energy":6}]},"recap":{"title":"The Exploding Summer Star","hook":"The party navigates a treacherous, frozen scaffolding, only to encounter a catastrophic explosive trap."}},"S021":{"sentiment_windows":[{"pct":0.0,"sent":4.5,"emo":"Anticipation"},{"pct":3.448,"sent":5.0,"emo":"Joy/Excitement"},{"pct":6.897,"sent":4.0,"emo":"Curiosity/Wonder"},{"pct":10.345,"sent":3.5,"emo":"Determination/Resolve"},{"pct":13.793,"sent":4.0,"emo":"Anticipation"},{"pct":17.241,"sent":5.5,"emo":"Amusement/Laughter"},{"pct":20.69,"sent":3.0,"emo":"Tension/Anxiety"},{"pct":24.138,"sent":2.5,"emo":"Suspense/Unease"},{"pct":27.586,"sent":2.0,"emo":"Fear/Dread"},{"pct":31.034,"sent":1.5,"emo":"Suspense/Unease"},{"pct":34.483,"sent":1.0,"emo":"Tension/Anxiety"},{"pct":37.931,"sent":0.5,"emo":"Determination/Resolve"},{"pct":41.379,"sent":-1.0,"emo":"Fear/Dread"},{"pct":44.828,"sent":-2.0,"emo":"Fear/Dread"},{"pct":48.276,"sent":-1.5,"emo":"Tension/Anxiety"},{"pct":51.724,"sent":-1.0,"emo":"Determination/Resolve"},{"pct":55.172,"sent":1.0,"emo":"Satisfaction/Relief"},{"pct":58.621,"sent":-3.0,"emo":"Frustration/Irritation"},{"pct":62.069,"sent":-2.5,"emo":"Tension/Anxiety"},{"pct":65.517,"sent":-1.0,"emo":"Determination/Resolve"},{"pct":68.966,"sent":0.5,"emo":"Satisfaction/Relief"},{"pct":72.414,"sent":1.0,"emo":"Determination/Resolve"},{"pct":75.862,"sent":1.5,"emo":"Determination/Resolve"},{"pct":79.31,"sent":2.0,"emo":"Determination/Resolve"},{"pct":82.759,"sent":-2.0,"emo":"Fear/Dread"},{"pct":86.207,"sent":-1.5,"emo":"Frustration/Irritation"},{"pct":89.655,"sent":-1.0,"emo":"Confusion/Surprise"},{"pct":93.103,"sent":0.5,"emo":"Determination/Resolve"},{"pct":96.552,"sent":2.0,"emo":"Satisfaction/Relief"},{"pct":100.0,"sent":3.0,"emo":"Joy/Excitement"}],"dominant_emotion":"Tension/Anxiety","session_label":"Session 2: Underdark Infiltration","peaks":[{"title":"SavannahBelle Casts Tentacles the Wrong Direction","score":9.5,"type":"Comedy Peak","pct":68,"players":["SavannahBelle","Corras","Ash","Dahlia"],"excerpt":"SavannahBelle, you're facing the wrong direction. / Well, it's dark in here. I can't see. I'm from the south, okay? / Ea"},{"title":"Dahlia's Flaming Greatsword Divine Smite","score":9.0,"type":"Combat","pct":88,"players":["Dahlia"],"excerpt":"26 does hit you smash this thing with your greatsword / Whoa, that's so much / you slice off one of the umber hulk's leg"},{"title":"SavannahBelle Claws at Webs and Gets Cocooned","score":8.5,"type":"Chaos Peak","pct":73,"players":["SavannahBelle","Dahlia","Billabong"],"excerpt":"Oh, kitty, kitty, come back! / Now, let her learn this lesson the hard way. / SavannahBelle the webs engulf you and you "}],"biggest_moment":{"title":"Ending's Aftermath Wild Magic","desc":"Before venturing into the deadly Underdark, Ash casts a shadow magic ritual called 'Ending's Afterma","counter":"If Ash hadn't suggested casting the ritual, the party would have walked straight into the Underdark "},"quotes":[{"text":"It's totally safe. It will not kill you, I can promise you that, certainly.","speaker":"Ash","fire":5},{"text":"Can I ask any of these Arch-Mages if they can read it to me because I'm just an ","speaker":"Corras","fire":5}],"pacing":{"scene_count":5,"pace":"Steady Climb","energy_avg":6.4,"scenes":[{"type":"Character_Management","energy":4},{"type":"Exposition","energy":5},{"type":"Exploration","energy":6},{"type":"Social_Encounter","energy":8},{"type":"Combat","energy":9}]},"recap":{"title":"Into Webb's Edge","hook":"Granted mysterious boons by arch-mages, the party ventures into the Underdark's treacherous depths to infiltrate a secret sanctuary of Lolth."}},"S022":{"sentiment_windows":[{"pct":0.0,"sent":2.0,"emo":"Curiosity/Wonder"},{"pct":3.45,"sent":3.0,"emo":"Amusement/Laughter"}],"dominant_emotion":"Tension/Anxiety","session_label":"Underdark Infiltration Session","peaks":[{"title":"SavannahBelle Twin Wall of Fire Incinerates Everything","score":9.5,"type":"Combat","pct":30,"players":["SavannahBelle"],"excerpt":"SavannahBelle, unaffected, twin-cast Wall of Fire on both the Drow Mage and the Umber Hulk, incinerating them both"},{"title":"Orla Recruits Nine Spiders as Disguises","score":8.5,"type":"Comedy Peak","pct":72,"players":["Orla","Corras","Dahlia","Billabong"],"excerpt":"They have chosen to be here with us. They've sacrificed much, left their families behind, their millions of children, so"},{"title":"SavannahBelle Nat 20 Sneaks Through the Webs","score":8.0,"type":"Dice Peak","pct":66,"players":["SavannahBelle","Dahlia"],"excerpt":"with a nat 20 you're not only able to slip through you're able to guide one other person through without them touching t"}],"biggest_moment":{"title":"The Living Spider Disguises","desc":"Realizing they need spider paraphernalia to convince the inhabitants of Web's Edge that they are Lol","counter":"If the party hadn't improvised these 'disguises', they would have walked into the heart of a Lolth c"},"quotes":[{"text":"They have chosen to be here with us. They've sacrificed much, left their familie","speaker":"Orla","fire":5},{"text":"I'll just hold the spider up to my face and have it crawl right onto my face. Go","speaker":"Corras","fire":4}],"pacing":{"scene_count":6,"pace":"Front-Loaded","energy_avg":5.8,"scenes":[{"type":"Meta","energy":2},{"type":"Recap","energy":5},{"type":"Combat","energy":9},{"type":"Character_Management","energy":5},{"type":"Exploration","energy":7},{"type":"Meta","energy":2}]},"recap":{"title":"Entering Web's Edge","hook":"The party navigates chaotic magic and creepy disguises to infiltrate Lolth's secret hideout."}},"S023":{"sentiment_windows":[{"pct":0.0,"sent":3.5,"emo":"Amusement/Laughter"},{"pct":3.45,"sent":2.0,"emo":"Curiosity/Wonder"},{"pct":6.9,"sent":1.0,"emo":"Tension/Anxiety"},{"pct":10.34,"sent":2.5,"emo":"Determination/Resolve"},{"pct":13.79,"sent":3.0,"emo":"Suspense/Unease"},{"pct":17.24,"sent":5.0,"emo":"Triumph/Elation"},{"pct":20.69,"sent":-2.0,"emo":"Fear/Dread"},{"pct":24.14,"sent":2.0,"emo":"Determination/Resolve"},{"pct":27.59,"sent":1.5,"emo":"Suspense/Unease"},{"pct":31.03,"sent":1.0,"emo":"Tension/Anxiety"},{"pct":34.48,"sent":3.0,"emo":"Suspense/Unease"},{"pct":37.93,"sent":-1.0,"emo":"Fear/Dread"},{"pct":41.38,"sent":2.0,"emo":"Satisfaction/Relief"},{"pct":44.83,"sent":6.0,"emo":"Triumph/Elation"},{"pct":48.28,"sent":3.0,"emo":"Satisfaction/Relief"},{"pct":51.72,"sent":4.0,"emo":"Curiosity/Wonder"},{"pct":55.17,"sent":2.0,"emo":"Curiosity/Wonder"},{"pct":58.62,"sent":4.0,"emo":"Determination/Resolve"},{"pct":62.07,"sent":3.0,"emo":"Determination/Resolve"},{"pct":65.52,"sent":-2.0,"emo":"Fear/Dread"},{"pct":68.97,"sent":-1.0,"emo":"Frustration/Irritation"},{"pct":72.41,"sent":2.0,"emo":"Determination/Resolve"},{"pct":75.86,"sent":5.0,"emo":"Joy/Excitement"},{"pct":79.31,"sent":-1.0,"emo":"Frustration/Irritation"},{"pct":82.76,"sent":8.0,"emo":"Triumph/Elation"},{"pct":86.21,"sent":-3.0,"emo":"Fear/Dread"},{"pct":89.66,"sent":1.0,"emo":"Determination/Resolve"},{"pct":93.1,"sent":-2.0,"emo":"Suspense/Unease"},{"pct":96.55,"sent":2.0,"emo":"Satisfaction/Relief"},{"pct":100.0,"sent":-1.0,"emo":"Tension/Anxiety"}],"dominant_emotion":"Tension/Anxiety","session_label":"Web's Edge Combat Session","peaks":[{"title":"Dahlia Nat 20 Decapitates the Nalfeshnee","score":10.0,"type":"Combat","pct":97,"players":["Dahlia"],"excerpt":"I got a nat 20 because I'm really determined to kill you, buddy / you spin around whip the sword above your head and bri"},{"title":"Billabong Hurls the Lolth Mage Into Wall of Fire","score":9.5,"type":"Combat","pct":22,"players":["Billabong"],"excerpt":"Billabong grabbed the Lolth mage and hurled him bodily into the wall of fire, incinerating him instantly"},{"title":"Demon Toad Swallows Orla Out of Love","score":9.5,"type":"Chaos Peak","pct":85,"players":["Orla"],"excerpt":"it's gonna open its entire mouth and its mouth is about twice the size of you and it's gonna eat you / we live together "}],"biggest_moment":{"title":"Dahlia Unlocks the Currency of Secrets","desc":"Using her Aura of Secrets, Dahlia inadvertently forced the cyclops Gertrude to reveal a dark truth a","counter":"If Dahlia hadn't used her Aura of Secrets, the party wouldn't have learned about Roxana's murder or "},"quotes":[{"text":"Hey, buddy. You don't want to be here, right? I don't want to be here. Maybe we ","speaker":"Orla","fire":5},{"text":"He triggered me with his wings. I kept thinking of celestials and so I had to ki","speaker":"Dahlia","fire":5}],"pacing":{"scene_count":7,"pace":"Roller Coaster","energy_avg":7.0,"scenes":[{"type":"Recap","energy":3},{"type":"Combat","energy":8},{"type":"Combat","energy":8},{"type":"Meta","energy":3},{"type":"Combat","energy":7},{"type":"Combat","energy":9},{"type":"Combat","energy":10}]},"recap":{"title":"Into the Fire","hook":"The party continues their chaotic brawl in Web's Edge, ending one demon but alerting an entire army."}},"S024":{"sentiment_windows":[{"pct":0.0,"sent":2.5,"emo":"Curiosity/Wonder"},{"pct":3.4482758620689653,"sent":1.0,"emo":"Confusion/Surprise"}],"dominant_emotion":"Tension/Anxiety","session_label":null,"peaks":[{"title":"Ash Teleports Everyone Out via Scroll","score":10.0,"type":"Energy Peak","pct":89,"players":["Ash","Corras","Dahlia","Billabong","SavannahBelle","Orla"],"excerpt":"everybody gather real close we're gonna try something and I don't know where we're gonna exactly end up / poof you all d"},{"title":"Lolth Whispers in Corras's Mind","score":9.5,"type":"Revelation","pct":97,"players":["Corras"],"excerpt":"he hears a voice that could not be mistaken for anyone but Lolth as it speaks to him and says where are my servants"},{"title":"Ash Dimension Doors Onto the Spider Dragon","score":9.5,"type":"Chaos Peak","pct":42,"players":["Ash"],"excerpt":"Ash dimension-doored directly into the chamber of a massive spider dragon, crash-landing on the creature"}],"biggest_moment":{"title":"Ash Tricks the Spider Dragon","desc":"Ash accidentally Dimension Doors directly underneath a massive Spider Dragon guarding the Rod of Sev","counter":"If Ash hadn't successfully lied and name-dropped the High Summoner, the Spider Dragon would have eat"},"quotes":[{"text":"Can't you see we don't want you anymore?","speaker":"Billabong","fire":5},{"text":"Sometimes I feel bad when I kill the cute celestials I summon, and I pretend I d","speaker":"Dahlia","fire":5}],"pacing":{"scene_count":8,"pace":"Explosive Finale","energy_avg":6.8,"scenes":[{"type":"Meta","energy":2},{"type":"Recap","energy":4},{"type":"Social_Encounter","energy":6},{"type":"Exploration","energy":9},{"type":"Skill_Challenge","energy":8},{"type":"Skill_Challenge","energy":9},{"type":"Skill_Challenge","energy":10},{"type":"Exposition","energy":8}]},"recap":{"title":"The Spider Dragon and the Escape from Web's Edge","hook":"As the party grabs a piece of the Rod of Seven Parts, Web's Edge begins to collapse around them."}},"S025":{"sentiment_windows":[{"pct":0.0,"sent":3.5,"emo":"Amusement/Laughter"},{"pct":3.45,"sent":1.0,"emo":"Tension/Anxiety"},{"pct":100.0,"sent":4.0,"emo":"Satisfaction/Relief"}],"dominant_emotion":"Curiosity/Wonder","session_label":null,"peaks":[{"title":"Dahlia Claims Guantanamo as Her Bastion","score":8.5,"type":"Comedy Peak","pct":55,"players":["Dahlia","Ash","Corras","Orla"],"excerpt":"We're very transparent about what we do. We publish monthly reports / you're an accountable government agency / This is "},{"title":"BWB Government Structure Becomes Real Agencies","score":8.5,"type":"Comedy Peak","pct":60,"players":["Ash","Orla","Dahlia","Corras"],"excerpt":"ASH is the NSA / I'm the EPA / we've got intelligence we've got all these we do we have we have an amazing government st"},{"title":"Let's Bring Vecna to the Celestial Plane","score":8.0,"type":"Comedy Peak","pct":85,"players":["Ash","Corras","Dahlia"],"excerpt":"We befriend Vecna / first Vecna and the celestial plane or we bring Vecna to the celestial plane and just let them / pre"}],"biggest_moment":{"title":"Assigning the BWB Bastions","desc":"The players outline their roles within the newly formed BWB Federation, comically translating fantas","counter":"If the players hadn't formalized their roles and bastions, the BWB Federation would lack clear leade"},"quotes":[{"text":"Bring people in, bring them to our nice basement, give them hot chocolate. It's ","speaker":"Dahlia","fire":5},{"text":"We are not the good guys in this equation.","speaker":"Ash","fire":5}],"pacing":{"scene_count":5,"pace":"Slow Burn","energy_avg":5.6,"scenes":[{"type":"Off_Topic","energy":3},{"type":"Exposition","energy":5},{"type":"Exposition","energy":6},{"type":"Character_Management","energy":7},{"type":"Meta","energy":7}]},"recap":{"title":"The BWB Federation Takes Shape","hook":"As the dust settles from the celestial war, the BWB Federation carves up its new empire and prepares for the looming threat of the Lord of Terror."}},"S026":{"sentiment_windows":[{"pct":0.0,"sent":2.5,"emo":"Curiosity/Wonder"},{"pct":3.33,"sent":2.0,"emo":"Curiosity/Wonder"},{"pct":6.67,"sent":1.5,"emo":"Frustration/Irritation"},{"pct":10.0,"sent":2.5,"emo":"Anticipation"},{"pct":13.33,"sent":3.0,"emo":"Determination/Resolve"},{"pct":16.67,"sent":1.0,"emo":"Confusion/Surprise"},{"pct":20.0,"sent":2.5,"emo":"Amusement/Laughter"},{"pct":23.33,"sent":1.5,"emo":"Satisfaction/Relief"},{"pct":26.67,"sent":2.0,"emo":"Determination/Resolve"},{"pct":30.0,"sent":-1.0,"emo":"Tension/Anxiety"},{"pct":33.33,"sent":-2.5,"emo":"Fear/Dread"},{"pct":36.67,"sent":-1.5,"emo":"Frustration/Irritation"},{"pct":40.0,"sent":0.5,"emo":"Determination/Resolve"},{"pct":43.33,"sent":-3.0,"emo":"Fear/Dread"},{"pct":46.67,"sent":-4.0,"emo":"Fear/Dread"},{"pct":50.0,"sent":1.0,"emo":"Satisfaction/Relief"},{"pct":53.33,"sent":-1.0,"emo":"Tension/Anxiety"},{"pct":56.67,"sent":3.0,"emo":"Triumph/Elation"},{"pct":60.0,"sent":-2.0,"emo":"Fear/Dread"},{"pct":63.33,"sent":-3.5,"emo":"Fear/Dread"},{"pct":66.67,"sent":2.0,"emo":"Satisfaction/Relief"},{"pct":70.0,"sent":4.0,"emo":"Triumph/Elation"},{"pct":73.33,"sent":2.5,"emo":"Satisfaction/Relief"},{"pct":76.67,"sent":-1.0,"emo":"Suspense/Unease"},{"pct":80.0,"sent":1.0,"emo":"Satisfaction/Relief"},{"pct":83.33,"sent":0.0,"emo":"Neutral"},{"pct":86.67,"sent":0.0,"emo":"Neutral"},{"pct":90.0,"sent":0.0,"emo":"Neutral"},{"pct":93.33,"sent":0.0,"emo":"Neutral"},{"pct":100.0,"sent":-0.5,"emo":"Suspense/Unease"}],"dominant_emotion":"Tension/Anxiety","session_label":null,"peaks":[{"title":"Ash Bluffs the Spider Dragon Solo","score":9.5,"type":"Dramatic Peak","pct":42,"players":["Ash"],"excerpt":"Ash landed on the spider dragon, took force damage, then name-dropped Grotonel Stonecutter and played on the dragon's ri"},{"title":"Scroll of Planar Alignment Emergency Teleport","score":9.5,"type":"Energy Peak","pct":90,"players":["Ash","Corras","Dahlia","Billabong","SavannahBelle","Orla"],"excerpt":"Ash activated the Scroll of Planar Alignment, teleporting the entire party and the Hezrou toad through a portal as Web's"},{"title":"Gertrude's Heartbreaking Sacrifice","score":9.0,"type":"Emotional Peak","pct":70,"players":["Billabong","SavannahBelle","Dahlia"],"excerpt":"You're ugly, get out of here! ... She stomps through and you see two assassins jump onto her and start stabbing at her s"}],"biggest_moment":{"title":"Crash Landing at Castle Corras","desc":"Cornered by a massive army, crushed under collapsing cavern boulders, and facing a terrifying Spider","counter":"If Ash hadn't used the scroll of planar alignment, the entire party would have been crushed by falli"},"quotes":[{"text":"I'm going to take my smoke grenade out of my inventory and just throw it at them","speaker":"Orla","fire":5},{"text":"I'm not frightened. I just don't like living.","speaker":"SavannahBelle","fire":5}],"pacing":{"scene_count":8,"pace":"Steady Climb","energy_avg":6.5,"scenes":[{"type":"Meta","energy":2},{"type":"Recap","energy":4},{"type":"Social_Encounter","energy":7},{"type":"Exploration","energy":9},{"type":"Skill_Challenge","energy":6},{"type":"Skill_Challenge","energy":8.5},{"type":"Skill_Challenge","energy":9},{"type":"Social_Encounter","energy":7}]},"recap":{"title":"The Escape from Web's Edge","hook":"As a terrifying Spider Dragon awakens and a cavern collapses, the party must make a desperate interdimensional escape!"}},"S027":{"sentiment_windows":[{"pct":0.0,"sent":0.5,"emo":"Amusement/Laughter"},{"pct":3.45,"sent":1.0,"emo":"Curiosity/Wonder"},{"pct":6.9,"sent":1.5,"emo":"Determination/Resolve"},{"pct":10.34,"sent":1.0,"emo":"Anticipation"},{"pct":13.79,"sent":2.0,"emo":"Determination/Resolve"},{"pct":17.24,"sent":0.5,"emo":"Tension/Anxiety"},{"pct":20.69,"sent":-1.0,"emo":"Fear/Dread"},{"pct":24.14,"sent":-3.0,"emo":"Tension/Anxiety"},{"pct":27.59,"sent":-2.0,"emo":"Tension/Anxiety"},{"pct":31.03,"sent":-5.0,"emo":"Frustration/Irritation"},{"pct":34.48,"sent":1.0,"emo":"Satisfaction/Relief"},{"pct":37.93,"sent":3.0,"emo":"Triumph/Elation"},{"pct":41.38,"sent":4.0,"emo":"Triumph/Elation"},{"pct":44.83,"sent":-4.0,"emo":"Fear/Dread"},{"pct":48.28,"sent":-3.0,"emo":"Tension/Anxiety"},{"pct":51.72,"sent":-2.0,"emo":"Frustration/Irritation"},{"pct":55.17,"sent":-6.0,"emo":"Fear/Dread"},{"pct":58.62,"sent":2.0,"emo":"Triumph/Elation"},{"pct":62.07,"sent":5.0,"emo":"Triumph/Elation"},{"pct":65.52,"sent":4.0,"emo":"Triumph/Elation"},{"pct":68.97,"sent":3.0,"emo":"Satisfaction/Relief"},{"pct":72.41,"sent":-2.0,"emo":"Frustration/Irritation"},{"pct":75.86,"sent":-3.0,"emo":"Frustration/Irritation"},{"pct":79.31,"sent":-7.0,"emo":"Fear/Dread"},{"pct":82.76,"sent":2.0,"emo":"Satisfaction/Relief"},{"pct":86.21,"sent":1.0,"emo":"Curiosity/Wonder"},{"pct":89.66,"sent":-1.0,"emo":"Tension/Anxiety"},{"pct":93.1,"sent":0.5,"emo":"Satisfaction/Relief"},{"pct":96.55,"sent":1.0,"emo":"Satisfaction/Relief"},{"pct":100.0,"sent":0.0,"emo":"Neutral"}],"dominant_emotion":"Tension/Anxiety","session_label":null,"peaks":[{"title":"Dahlia Impales Revenant on Dead Man's Plate","score":9.5,"type":"Combat","pct":82,"players":["Dahlia"],"excerpt":"It bounces against the wall, comes back onto your Dead Man's Plate and takes another five damage as it impales itself on"},{"title":"Billabong's Relentless Endurance at One HP","score":9.0,"type":"Dramatic Peak","pct":90,"players":["Billabong"],"excerpt":"Billabong is down and will be rolling death saving throws ... She got Relentless Endurance ... Billy you are back up at "},{"title":"Billabong Back-to-Back Natural Ones Off Cliff","score":8.5,"type":"Dice Peak","pct":45,"players":["Billabong"],"excerpt":"Billabong suffered back-to-back natural ones, tumbling off the cliff during the bridge combat."}],"biggest_moment":{"title":"Friendly Fireball","desc":"While Billabong is paralyzed and being swarmed by Revenants at the bottom of the ravine, Orla uses h","counter":"If Orla hadn't caught Billabong in the Fireball blast, Billabong might not have been knocked down by"},"quotes":[{"text":"I'm glad we have evidence of all of our choices. Oh, that's right, it was me, it","speaker":"Orla","fire":5},{"text":"If you like being dead so much, I'm going to kill you. That's what I'm going to ","speaker":"Dahlia","fire":5}],"pacing":{"scene_count":6,"pace":"Late Bloomer","energy_avg":5.8,"scenes":[{"type":"Off_Topic","energy":2},{"type":"Recap","energy":5},{"type":"Character_Management","energy":2},{"type":"Exploration","energy":6},{"type":"Combat","energy":9},{"type":"Meta","energy":4}]},"recap":{"title":"The Descent into the Soulforge","hook":"The party delves into the dark depths of the Soulforge, only to be immediately ambushed by deadly undead guardians."}},"S028":{"sentiment_windows":[{"pct":0.0,"sent":3.5,"emo":"Amusement/Laughter"},{"pct":3.45,"sent":4.0,"emo":"Amusement/Laughter"},{"pct":6.9,"sent":0.5,"emo":"Tension/Anxiety"},{"pct":10.34,"sent":-1.0,"emo":"Tension/Anxiety"},{"pct":13.79,"sent":-2.0,"emo":"Fear/Dread"},{"pct":17.24,"sent":-1.5,"emo":"Curiosity/Wonder"},{"pct":20.69,"sent":1.0,"emo":"Amusement/Laughter"},{"pct":24.14,"sent":-2.5,"emo":"Fear/Dread"},{"pct":27.59,"sent":2.0,"emo":"Amusement/Laughter"},{"pct":31.03,"sent":3.5,"emo":"Amusement/Laughter"},{"pct":34.48,"sent":4.0,"emo":"Triumph/Elation"},{"pct":37.93,"sent":1.5,"emo":"Satisfaction/Relief"},{"pct":41.38,"sent":0.0,"emo":"Curiosity/Wonder"},{"pct":44.83,"sent":-3.0,"emo":"Frustration/Irritation"},{"pct":48.28,"sent":-1.0,"emo":"Tension/Anxiety"},{"pct":51.72,"sent":-2.0,"emo":"Tension/Anxiety"},{"pct":55.17,"sent":0.5,"emo":"Curiosity/Wonder"},{"pct":58.62,"sent":2.0,"emo":"Anticipation"},{"pct":62.07,"sent":-3.5,"emo":"Fear/Dread"},{"pct":65.52,"sent":-1.0,"emo":"Suspense/Unease"},{"pct":68.97,"sent":1.0,"emo":"Satisfaction/Relief"},{"pct":72.41,"sent":0.5,"emo":"Curiosity/Wonder"},{"pct":75.86,"sent":-2.0,"emo":"Fear/Dread"},{"pct":79.31,"sent":-1.5,"emo":"Confusion/Surprise"},{"pct":82.76,"sent":0.0,"emo":"Curiosity/Wonder"},{"pct":86.21,"sent":-0.5,"emo":"Tension/Anxiety"},{"pct":89.66,"sent":1.5,"emo":"Curiosity/Wonder"},{"pct":93.1,"sent":-4.0,"emo":"Frustration/Irritation"},{"pct":96.55,"sent":0.5,"emo":"Neutral"},{"pct":100.0,"sent":-1.5,"emo":"Suspense/Unease"}],"dominant_emotion":"Tension/Anxiety","session_label":"Bastion Planning and Cavern Dangers","peaks":[{"title":"Orla Gorilla-Slams Billabong for Pack Dominance","score":9.5,"type":"Comedy Peak","pct":40,"players":["Orla","Billabong"],"excerpt":"Orla wild-shaped into a silverback gorilla and staged a wrestling match against Billabong, eventually beating her uncons"},{"title":"Billabong's Malchor Curse Spreads to Dahlia","score":9.0,"type":"Comedy Peak","pct":80,"players":["Billabong","Dahlia"],"excerpt":"Through your hands as you touch her you feel the curse of Malchor leap to Dahlia as well ... Misery loves company. Prais"},{"title":"Mincemeat Pies Tame Shadow Mastiff Pack","score":8.0,"type":"Comedy Peak","pct":30,"players":["Orla","Dahlia"],"excerpt":"I have two things in this world: infinite steeds and infinite pies. ... Orla drew fifteen shadow mastiffs out of the sha"}],"biggest_moment":{"title":"Feeding the Shadow Mastiffs","desc":"Faced with a pack of shadowy monstrosities, the party avoids combat by feeding them magical mincemea","counter":"If the party had attacked the mastiffs, they would have been overwhelmed by the pack and the giant r"},"quotes":[{"text":"I must. Malchor demands it.","speaker":"Billabong","fire":5},{"text":"This message brought to you by Malchor.","speaker":"Billabong","fire":5}],"pacing":{"scene_count":6,"pace":"Roller Coaster","energy_avg":5.8,"scenes":[{"type":"Meta","energy":3},{"type":"Combat","energy":7},{"type":"Social_Encounter","energy":9},{"type":"Off_Topic","energy":2},{"type":"Exploration","energy":7},{"type":"Meta","energy":2}]},"recap":{"title":"The Pie-Eating Shadow Mastiffs","hook":"When running from a wraith, the party discovers that the best defense against shadow monstrosities is... mincemeat pies."}},"S029":{"sentiment_windows":[{"pct":0.0,"sent":2.0,"emo":"Joy/Excitement"},{"pct":3.45,"sent":0.5,"emo":"Neutral"}],"dominant_emotion":"Tension/Anxiety","session_label":"Infernal Shrine Ritual","peaks":[{"title":"Billabong Nat 20 Breaks the Infernal Contract","score":9.5,"type":"Dice Peak","pct":65,"players":["Billabong"],"excerpt":"Billabong rolled a natural 20 reading the infernal contract, breaking her own Malchor curse and discovering the coin bou"},{"title":"Malchor Possesses Ash - 'I Am Here'","score":9.5,"type":"Dramatic Peak","pct":40,"players":["Ash","Corras"],"excerpt":"Malchor fully possessed Ash, turning her eyes dead and her smile predatory. She declared 'I am here' and began casting h"},{"title":"Billabong Recites the Pact of Avarice","score":9.0,"type":"Dramatic Peak","pct":90,"players":["Billabong"],"excerpt":"Billabong recited the Pact of Avarice, sacrificing her ability to aid allies in exchange for the power to bind fiends to"}],"biggest_moment":{"title":"Billabong Accepts the Pact of Avarice","desc":"After teleporting to the heart of the Infernal Node, the party learns someone must sacrifice their a","counter":"If Billabong hadn't stepped up, another party member would have had to make the sacrifice, fundament"},"quotes":[{"text":"So we should do this ritual. Not die to Ash. Not die to the Revenants. Get Zimba","speaker":"Corras","fire":5},{"text":"Am I stuck on infernal settings?","speaker":"Ash","fire":5}],"pacing":{"scene_count":8,"pace":"Slow Burn","energy_avg":6.1,"scenes":[{"type":"Off_Topic","energy":3},{"type":"Recap","energy":4},{"type":"Exploration","energy":6},{"type":"Combat","energy":9},{"type":"Meta","energy":3},{"type":"Skill_Challenge","energy":9},{"type":"Ritual","energy":8},{"type":"Meta","energy":5}]},"recap":{"title":"The Infernal Node and the Pact of Avarice","hook":"The party navigates curses and possessions to unlock the Infernal Node, leading to a permanent sacrifice."}},"S030":{"sentiment_windows":[{"pct":0.0,"sent":-2.0,"emo":"Tension/Anxiety"},{"pct":3.33,"sent":1.5,"emo":"Joy/Excitement"},{"pct":6.67,"sent":0.5,"emo":"Curiosity/Wonder"},{"pct":10.0,"sent":0.0,"emo":"Confusion/Surprise"},{"pct":13.33,"sent":2.0,"emo":"Curiosity/Wonder"},{"pct":16.67,"sent":2.5,"emo":"Anticipation"},{"pct":20.0,"sent":3.0,"emo":"Excitement"},{"pct":23.33,"sent":4.0,"emo":"Triumph/Elation"},{"pct":26.67,"sent":4.0,"emo":"Triumph/Elation"},{"pct":30.0,"sent":4.0,"emo":"Triumph/Elation"},{"pct":33.33,"sent":4.0,"emo":"Triumph/Elation"},{"pct":36.67,"sent":4.0,"emo":"Triumph/Elation"},{"pct":40.0,"sent":4.0,"emo":"Triumph/Elation"},{"pct":43.33,"sent":3.5,"emo":"Joy/Excitement"},{"pct":46.67,"sent":-3.0,"emo":"Fear/Dread"},{"pct":50.0,"sent":0.0,"emo":"Determination/Resolve"},{"pct":53.33,"sent":2.0,"emo":"Triumph/Elation"},{"pct":56.67,"sent":1.0,"emo":"Tension/Anxiety"},{"pct":60.0,"sent":-2.0,"emo":"Fear/Dread"},{"pct":63.33,"sent":-4.0,"emo":"Fear/Dread"},{"pct":66.67,"sent":-5.0,"emo":"Fear/Dread"},{"pct":70.0,"sent":-2.0,"emo":"Frustration/Irritation"},{"pct":73.33,"sent":1.0,"emo":"Determination/Resolve"},{"pct":76.67,"sent":0.5,"emo":"Determination/Resolve"},{"pct":80.0,"sent":2.0,"emo":"Triumph/Elation"},{"pct":83.33,"sent":1.0,"emo":"Satisfaction/Relief"},{"pct":86.67,"sent":0.0,"emo":"Determination/Resolve"},{"pct":90.0,"sent":5.0,"emo":"Triumph/Elation"},{"pct":93.33,"sent":6.0,"emo":"Triumph/Elation"},{"pct":96.67,"sent":7.0,"emo":"Triumph/Elation"},{"pct":100.0,"sent":5.0,"emo":"Satisfaction/Relief"}],"dominant_emotion":"Tension/Anxiety","session_label":"Training in the Bastion and Battle with the Maw","peaks":[{"title":"Corras Crits the Paralyzed Maw's Blinded Eye","score":10.0,"type":"Combat","pct":93,"players":["Corras"],"excerpt":"Corras Misty Stepped right up to its eye ... automatic crit ... 56 from the sneak attack, 11 on the weapon damage ... 67"},{"title":"Orla Sunbeams the Maw's Eye for 64 Damage","score":9.5,"type":"Combat","pct":87,"players":["Orla"],"excerpt":"I'm gonna cast Sunbeam in its eye ... 32 radiant base damage ... it actually takes 64 damage ... it's blinded and loses "},{"title":"SavannahBelle Paralyzes Maw - Nat 1 Save","score":9.5,"type":"Dice Peak","pct":90,"players":["SavannahBelle"],"excerpt":"Hold Monster ... it fails because it needs a 20 ... nat one ... it can't use its legendary resistance to undo the failed"}],"biggest_moment":{"title":"Hold Monster and the Critical Sneak Attack","desc":"During the climactic battle against the apocalyptic Ceaseless Maw, SavannahBelle successfully casts ","counter":"If SavannahBelle's Hold Monster had failed, the party would have been at the mercy of the behemoth's"},"quotes":[{"text":"You're ugly and I hate you. I take it back if you want to be friends, but for no","speaker":"Dahlia","fire":5},{"text":"I'm a Dementor now, so I'm just gonna... It's awesome.","speaker":"Dahlia","fire":5}],"pacing":{"scene_count":7,"pace":"Explosive Finale","energy_avg":7.0,"scenes":[{"type":"Ritual","energy":8},{"type":"Skill_Challenge","energy":7},{"type":"Exploration","energy":6},{"type":"Off_Topic","energy":2},{"type":"Exploration","energy":6},{"type":"Combat","energy":8.5},{"type":"Combat","energy":10}]},"recap":{"title":"The Shadow Powers","hook":"The Harbinger takes the party to a mysterious bastion to unlock powerful new abilities, but an apocalyptic threat known as the Ceaseless Maw forces them back into action."}},"S031":{"sentiment_windows":[{"pct":0.0,"sent":-4.0,"emo":"Tension/Anxiety"},{"pct":3.33,"sent":1.0,"emo":"Satisfaction/Relief"},{"pct":6.67,"sent":5.0,"emo":"Triumph/Elation"},{"pct":10.0,"sent":-2.0,"emo":"Tension/Anxiety"},{"pct":13.33,"sent":0.0,"emo":"Neutral"},{"pct":16.67,"sent":-3.0,"emo":"Tension/Anxiety"},{"pct":20.0,"sent":3.0,"emo":"Satisfaction/Relief"},{"pct":23.33,"sent":1.0,"emo":"Anticipation"}],"dominant_emotion":"Tension/Anxiety","session_label":"Battle for Fertility and Aftermath","peaks":[{"title":"SavannahBelle Explodes the Maw From Inside","score":9.5,"type":"Combat","pct":28,"players":["SavannahBelle","Corras","Billabong","Orla"],"excerpt":"SavannahBelle's thunder wall exploded the Maw from the inside out"},{"title":"Ezrella Decapitates a Vrock Mid-Teleport","score":9.0,"type":"Combat","pct":82,"players":["Ash","Dahlia","SavannahBelle"],"excerpt":"Ezrella teleported between both Vrocks and decapitated the first with Steel Wind Strike"},{"title":"Billabong Summons Vrocks Against the Maw","score":8.5,"type":"Chaos Peak","pct":20,"players":["Billabong","Corras","Orla","SavannahBelle"],"excerpt":"Billabong summoned two Vrock demons to attack the Maw's face and claws while standing in acid at 1 HP"}],"biggest_moment":{"title":"The 'Harm or No Harm' Poll","desc":"When Billabong summoned two Vrocks to attack the Maw, she explicitly ordered them not to harm her fr","counter":"If the poll had determined that stunning was 'harm', the Vrocks would have been unable to use their "},"quotes":[{"text":"Murderer! You killed my best friend! I'm not making you shoes ever again.","speaker":"SavannahBelle","fire":5},{"text":"All I know is I stared into your eyes while you smashed her head in with a hamme","speaker":"Dahlia","fire":5}],"pacing":{"scene_count":8,"pace":"Front-Loaded","energy_avg":6.5,"scenes":[{"type":"Recap","energy":5},{"type":"Combat","energy":9},{"type":"Skill_Challenge","energy":8},{"type":"Exploration","energy":5},{"type":"Social_Encounter","energy":6},{"type":"Exposition","energy":6},{"type":"Combat","energy":8},{"type":"Meta","energy":4}]},"recap":{"title":"Harm or No Harm","hook":"In the aftermath of Ash's death, the party must finish off the Maw and escape a collapsing cavern."}},"S032":{"sentiment_windows":[{"pct":0.0,"sent":1.5,"emo":"Amusement/Laughter"},{"pct":3.45,"sent":1.0,"emo":"Curiosity/Wonder"},{"pct":6.9,"sent":2.0,"emo":"Determination/Resolve"},{"pct":10.34,"sent":1.5,"emo":"Anticipation"},{"pct":13.79,"sent":-0.5,"emo":"Tension/Anxiety"},{"pct":17.24,"sent":0.5,"emo":"Anticipation"},{"pct":20.69,"sent":0.0,"emo":"Curiosity/Wonder"},{"pct":24.14,"sent":2.5,"emo":"Amusement/Laughter"},{"pct":27.59,"sent":-1.0,"emo":"Tension/Anxiety"},{"pct":31.03,"sent":-2.0,"emo":"Fear/Dread"},{"pct":34.48,"sent":0.0,"emo":"Curiosity/Wonder"},{"pct":37.93,"sent":-0.5,"emo":"Tension/Anxiety"},{"pct":41.38,"sent":-1.5,"emo":"Fear/Dread"},{"pct":44.83,"sent":-3.0,"emo":"Fear/Dread"},{"pct":48.28,"sent":0.5,"emo":"Amusement/Laughter"},{"pct":51.72,"sent":-4.0,"emo":"Fear/Dread"},{"pct":55.17,"sent":-5.0,"emo":"Fear/Dread"},{"pct":58.62,"sent":-4.5,"emo":"Fear/Dread"},{"pct":62.07,"sent":-3.0,"emo":"Fear/Dread"},{"pct":65.52,"sent":-2.0,"emo":"Determination/Resolve"},{"pct":68.97,"sent":-5.5,"emo":"Fear/Dread"},{"pct":72.41,"sent":-4.0,"emo":"Frustration/Irritation"},{"pct":75.86,"sent":-2.0,"emo":"Determination/Resolve"},{"pct":79.31,"sent":-2.5,"emo":"Tension/Anxiety"},{"pct":82.76,"sent":-3.5,"emo":"Fear/Dread"},{"pct":86.21,"sent":-5.0,"emo":"Fear/Dread"},{"pct":89.66,"sent":-4.5,"emo":"Suspense/Unease"},{"pct":93.1,"sent":-3.0,"emo":"Tension/Anxiety"},{"pct":96.55,"sent":-1.0,"emo":"Neutral"},{"pct":100.0,"sent":-2.0,"emo":"Suspense/Unease"}],"dominant_emotion":"Fear/Dread","session_label":null,"peaks":[{"title":"SavannahBelle Disintegrates the Lich's Disguise","score":9.5,"type":"Combat","pct":82,"players":["SavannahBelle"],"excerpt":"SavannahBelle's Disintegrate burned away his humanoid mask to reveal his undead lich form"},{"title":"True Polymorph Fails on a Changeling","score":9.0,"type":"Revelation","pct":75,"players":["Corras"],"excerpt":"True Polymorph failed because Corras was a changeling"},{"title":"Corras Is the Last Changeling of His Tribe","score":9.0,"type":"Revelation","pct":90,"players":["Orla","Corras"],"excerpt":"The lich sought Corras as the last changeling of his tribe, with other changelings still held captive"}],"biggest_moment":{"title":"The Mask Burns Away","desc":"During the confrontation in Warehouse 17, SavannahBelle hits the enemy with a Disintegrate spell. In","counter":"If SavannahBelle hadn't cast Disintegrate, the party might not have realized the true, terrifying na"},"quotes":[{"text":"Good afternoon, sir. My name is Dahlia Aurelius, and I am of Castle Corras, here","speaker":"Dahlia","fire":5},{"text":"Why are you shushing me?","speaker":"SavannahBelle","fire":5}],"pacing":{"scene_count":7,"pace":"Explosive Finale","energy_avg":6.6,"scenes":[{"type":"Recap","energy":4},{"type":"Character_Management","energy":4},{"type":"Social_Encounter","energy":7},{"type":"Exploration","energy":6},{"type":"Social_Encounter","energy":7},{"type":"Combat","energy":9},{"type":"Meta","energy":7}]},"recap":{"title":"The Warehouse Reveal","hook":"A simple scouting mission on the docks turns deadly when the party uncovers a terrifying enemy."}},"S033":{"sentiment_windows":[{"pct":0.0,"sent":-1.0,"emo":"Frustration/Irritation"},{"pct":3.448,"sent":1.5,"emo":"Amusement/Laughter"},{"pct":6.897,"sent":0.0,"emo":"Curiosity/Wonder"},{"pct":10.345,"sent":-1.5,"emo":"Tension/Anxiety"},{"pct":13.793,"sent":-2.0,"emo":"Frustration/Irritation"},{"pct":17.241,"sent":1.0,"emo":"Anticipation"},{"pct":20.69,"sent":0.5,"emo":"Determination/Resolve"},{"pct":24.138,"sent":-1.0,"emo":"Frustration/Irritation"},{"pct":27.586,"sent":0.0,"emo":"Suspense/Unease"},{"pct":31.034,"sent":-2.5,"emo":"Fear/Dread"},{"pct":34.483,"sent":2.5,"emo":"Triumph/Elation"},{"pct":37.931,"sent":-3.0,"emo":"Fear/Dread"},{"pct":41.379,"sent":1.5,"emo":"Satisfaction/Relief"},{"pct":44.828,"sent":-2.0,"emo":"Anger/Rage"},{"pct":48.276,"sent":-4.0,"emo":"Despair"},{"pct":51.724,"sent":-1.0,"emo":"Determination/Resolve"},{"pct":55.172,"sent":-3.5,"emo":"Sadness/Grief"},{"pct":58.621,"sent":-4.5,"emo":"Despair"},{"pct":62.069,"sent":-5.0,"emo":"Despair"},{"pct":65.517,"sent":-2.0,"emo":"Determination/Resolve"},{"pct":68.966,"sent":0.0,"emo":"Neutral"},{"pct":72.414,"sent":0.0,"emo":"Neutral"},{"pct":75.862,"sent":0.0,"emo":"Neutral"},{"pct":79.31,"sent":0.0,"emo":"Neutral"},{"pct":82.759,"sent":0.0,"emo":"Neutral"},{"pct":86.207,"sent":0.0,"emo":"Neutral"},{"pct":89.655,"sent":0.0,"emo":"Neutral"},{"pct":93.103,"sent":0.0,"emo":"Neutral"},{"pct":96.552,"sent":0.0,"emo":"Neutral"},{"pct":100.0,"sent":0.0,"emo":"Neutral"}],"dominant_emotion":"Tension/Anxiety","session_label":null,"peaks":[{"title":"Corras Surrenders Himself to Save Everyone","score":9.5,"type":"Emotional Peak","pct":80,"players":["Corras","Orla","Billabong","Dahlia"],"excerpt":"Corras handed his belongings to Orla and submitted to the shackles"},{"title":"Corras Stabs the Lich Mid-Negotiation","score":9.0,"type":"Dramatic Peak","pct":60,"players":["Corras"],"excerpt":"Corras stabbed the lich when Asnar attempted to restrain him with anti-magic manacles"},{"title":"Dahlia Crits and Decapitates a Wizard","score":9.0,"type":"Dice Peak","pct":35,"players":["Dahlia"],"excerpt":"Dahlia saved against Finger of Death then decapitated the wizard with a critical hit"}],"biggest_moment":{"title":"Corras's Surrender","desc":"Faced with his friends burning to death in a forcecage and SavannahBelle imprisoned by the lich Asna","counter":"If Corras had refused, Dahlia, Billabong, and SavannahBelle likely would have burned to death in the"},"quotes":[{"text":"It's a test. We got bamboozled and then we went straight to beat senselessly.","speaker":"Corras","fire":5},{"text":"Sometimes a girl's got to do some therapeutic thunking. I want to smash his skul","speaker":"Billabong","fire":5}],"pacing":{"scene_count":7,"pace":"Steady Climb","energy_avg":6.7,"scenes":[{"type":"Recap","energy":5},{"type":"Meta","energy":3},{"type":"Combat","energy":8},{"type":"Meta","energy":4},{"type":"Combat","energy":9},{"type":"Social_Encounter","energy":9},{"type":"Exposition","energy":7}]},"recap":{"title":"The Price of Surrender","hook":"Trapped by a lich and watching their friends burn, Corras is forced into an impossible choice."}},"S034":{"sentiment_windows":[{"pct":0.0,"sent":1.5,"emo":"Amusement/Laughter"},{"pct":3.45,"sent":-0.5,"emo":"Tension/Anxiety"},{"pct":6.9,"sent":-1.0,"emo":"Tension/Anxiety"},{"pct":10.34,"sent":-2.0,"emo":"Fear/Dread"},{"pct":13.79,"sent":1.0,"emo":"Curiosity/Wonder"},{"pct":17.24,"sent":-2.5,"emo":"Frustration/Irritation"},{"pct":20.69,"sent":3.0,"emo":"Amusement/Laughter"},{"pct":24.14,"sent":-3.0,"emo":"Fear/Dread"},{"pct":27.59,"sent":-4.0,"emo":"Tension/Anxiety"},{"pct":31.03,"sent":6.0,"emo":"Triumph/Elation"},{"pct":34.48,"sent":4.0,"emo":"Determination/Resolve"},{"pct":37.93,"sent":7.0,"emo":"Triumph/Elation"},{"pct":41.38,"sent":8.0,"emo":"Joy/Excitement"}],"dominant_emotion":"Tension/Anxiety","session_label":"Prison Break and Lich Confrontation","peaks":[{"title":"Knight's Nat-1 Crossbow Kills the Lich","score":10.0,"type":"Dice Peak","pct":85,"players":["SavannahBelle","Corras","Dahlia","Ash"],"excerpt":"A knight's stray crossbow bolt on a natural one finished Asnar off"},{"title":"Corras Crits the Twin Formation Roll","score":9.5,"type":"Dice Peak","pct":92,"players":["Corras","SavannahBelle","Ash"],"excerpt":"The dice are telling the story -- that's crazy!"},{"title":"SavannahBelle Disintegrates the Lich for 78 Damage","score":9.5,"type":"Combat","pct":82,"players":["SavannahBelle"],"excerpt":"78 damage! He's still up! Oh my god!"}],"biggest_moment":{"title":"Corras Absorbs His Twin Sarek","desc":"After the battle with Asnar, Sarek attempts to assassinate Corras. Corras rolls a natural 20 on his ","counter":"If Corras had failed the save, Sarek might have killed him, completely reversing their roles and lea"},"quotes":[{"text":"I'm just gonna go rescue my boy. I hate your brother. He's evil. I don't know. I","speaker":"Dahlia","fire":5},{"text":"I already inside the lobby. The jar doesn't move. The brain has not twitched at ","speaker":"DM","fire":5}],"pacing":{"scene_count":8,"pace":"Roller Coaster","energy_avg":6.9,"scenes":[{"type":"Off_Topic","energy":3},{"type":"Recap","energy":5},{"type":"Exploration","energy":7},{"type":"Exploration","energy":8},{"type":"Social_Encounter","energy":7},{"type":"Social_Encounter","energy":9},{"type":"Combat","energy":10},{"type":"Character_Management","energy":8}]},"recap":{"title":"The Prison of Thay and the Twin's Fate","hook":"Captured and stripped of their gear, the party must escape a Thay prison and stop a dark ritual."}},"S035":{"sentiment_windows":[{"pct":0.0,"sent":6.5,"emo":"Triumph/Elation"},{"pct":3.4,"sent":5.0,"emo":"Anticipation"},{"pct":6.9,"sent":4.5,"emo":"Amusement/Laughter"},{"pct":10.3,"sent":0.5,"emo":"Frustration/Irritation"},{"pct":13.8,"sent":-1.5,"emo":"Tension/Anxiety"},{"pct":17.2,"sent":0.0,"emo":"Determination/Resolve"},{"pct":20.7,"sent":2.0,"emo":"Anticipation"},{"pct":24.1,"sent":-3.0,"emo":"Fear/Dread"},{"pct":27.6,"sent":-2.5,"emo":"Suspense/Unease"},{"pct":31.0,"sent":-3.5,"emo":"Tension/Anxiety"},{"pct":34.5,"sent":-2.0,"emo":"Curiosity/Wonder"},{"pct":37.9,"sent":-4.0,"emo":"Fear/Dread"},{"pct":41.4,"sent":-5.0,"emo":"Suspense/Unease"},{"pct":44.8,"sent":-7.0,"emo":"Fear/Dread"},{"pct":48.3,"sent":-8.0,"emo":"Fear/Dread"},{"pct":51.7,"sent":-5.5,"emo":"Suspense/Unease"},{"pct":55.2,"sent":-3.0,"emo":"Determination/Resolve"},{"pct":58.6,"sent":-6.0,"emo":"Fear/Dread"},{"pct":62.1,"sent":-2.5,"emo":"Determination/Resolve"},{"pct":65.5,"sent":-7.5,"emo":"Fear/Dread"},{"pct":69.0,"sent":-1.0,"emo":"Frustration/Irritation"},{"pct":72.4,"sent":3.0,"emo":"Amusement/Laughter"},{"pct":75.9,"sent":2.5,"emo":"Determination/Resolve"},{"pct":79.3,"sent":4.0,"emo":"Nostalgia/Compassion"},{"pct":82.8,"sent":6.0,"emo":"Joy/Excitement"},{"pct":86.2,"sent":-4.5,"emo":"Suspense/Unease"},{"pct":89.7,"sent":-6.5,"emo":"Fear/Dread"},{"pct":93.1,"sent":-3.0,"emo":"Determination/Resolve"},{"pct":96.6,"sent":-8.5,"emo":"Fear/Dread"},{"pct":100.0,"sent":-9.0,"emo":"Fear/Dread"}],"dominant_emotion":"Fear/Dread","session_label":"BWB Session - Barovia Entry","peaks":[{"title":"Portal Vanishes and Party Trapped in Barovia","score":9.0,"type":"Dramatic Peak","pct":60,"players":["Corras","Ash","SavannahBelle","Orla"],"excerpt":"The portal vanished and all teleportation magic crumbled to dust, trapping the party in Barovia"},{"title":"BWB Characters Trapped With Strahd Characters","score":9.0,"type":"Revelation","pct":95,"players":["Ash","Corras","Orla","SavannahBelle"],"excerpt":"How wild would that be to be playing two characters at once! We are the cleanup crew!"},{"title":"Corras Pickpockets Tasha's Rejected Scrolls","score":8.5,"type":"Comedy Peak","pct":50,"players":["Corras","Ash"],"excerpt":"Corras pickpocketed the rejected scrolls from Tasha"}],"biggest_moment":{"title":"The BWB Characters Enter Death House","desc":"Mordenkainen opens a portal to track the next piece of the Rod of Seven Parts, instantly transportin","counter":"If the party hadn't handed over the piece of the Rod or if the wizards couldn't trace the next piece"},"quotes":[{"text":"INTO THE MINE.","speaker":"SavannahBelle","fire":5},{"text":"There is wizard shit everywhere we go. Always a damn wizard.","speaker":"Ash","fire":4}],"pacing":{"scene_count":8,"pace":"Late Bloomer","energy_avg":5.9,"scenes":[{"type":"Meta","energy":4},{"type":"Character_Management","energy":4},{"type":"Social_Encounter","energy":7},{"type":"Exposition","energy":7},{"type":"Character_Management","energy":5},{"type":"Social_Encounter","energy":7},{"type":"Exploration","energy":8},{"type":"Meta","energy":8}]},"recap":{"title":"Crossover to Barovia: The Death House","hook":"The BWB characters return to Sigil, only to be thrown straight into the mists of Barovia."}},"S036":{"sentiment_windows":[{"pct":0.0,"sent":2.5,"emo":"Anticipation"},{"pct":3.4482758620689653,"sent":-1.0,"emo":"Tension/Anxiety"},{"pct":6.896551724137931,"sent":-3.0,"emo":"Fear/Dread"},{"pct":10.344827586206897,"sent":-4.0,"emo":"Tension/Anxiety"},{"pct":13.793103448275861,"sent":-5.0,"emo":"Fear/Dread"},{"pct":17.24137931034483,"sent":-2.0,"emo":"Neutral"},{"pct":20.689655172413794,"sent":1.0,"emo":"Determination/Resolve"},{"pct":24.137931034482758,"sent":3.0,"emo":"Determination/Resolve"},{"pct":27.586206896551722,"sent":-1.0,"emo":"Tension/Anxiety"},{"pct":31.03448275862069,"sent":-3.0,"emo":"Frustration/Irritation"},{"pct":34.48275862068966,"sent":-4.0,"emo":"Fear/Dread"},{"pct":37.93103448275862,"sent":-2.0,"emo":"Determination/Resolve"},{"pct":41.37931034482759,"sent":0.0,"emo":"Neutral"},{"pct":44.827586206896555,"sent":-2.5,"emo":"Tension/Anxiety"},{"pct":48.27586206896552,"sent":-3.5,"emo":"Fear/Dread"},{"pct":51.724137931034484,"sent":-1.5,"emo":"Determination/Resolve"},{"pct":55.172413793103445,"sent":-2.0,"emo":"Frustration/Irritation"},{"pct":58.62068965517241,"sent":-4.5,"emo":"Fear/Dread"},{"pct":62.06896551724138,"sent":-1.0,"emo":"Determination/Resolve"},{"pct":65.51724137931035,"sent":-0.5,"emo":"Neutral"},{"pct":68.96551724137932,"sent":0.5,"emo":"Satisfaction/Relief"},{"pct":72.41379310344827,"sent":1.0,"emo":"Satisfaction/Relief"},{"pct":75.86206896551724,"sent":0.0,"emo":"Neutral"},{"pct":79.3103448275862,"sent":-0.5,"emo":"Neutral"},{"pct":82.75862068965517,"sent":0.5,"emo":"Neutral"},{"pct":86.20689655172414,"sent":-1.0,"emo":"Neutral"},{"pct":89.65517241379311,"sent":1.5,"emo":"Satisfaction/Relief"},{"pct":93.10344827586206,"sent":0.0,"emo":"Neutral"},{"pct":96.55172413793103,"sent":-0.5,"emo":"Neutral"},{"pct":100.0,"sent":2.0,"emo":"Satisfaction/Relief"}],"dominant_emotion":"Tension/Anxiety","session_label":"Death House Session - Barovia Encounter","peaks":[{"title":"Marilith Hatches and Grapples SavannahBelle","score":9.0,"type":"Combat","pct":55,"players":["SavannahBelle","Corras","Dahlia"],"excerpt":"One cocoon hatched a marilith, a six-armed serpent demon dripping with spidery silk, which immediately grappled Savannah"},{"title":"SavannahBelle Whisked Away to Meet Strahd","score":8.5,"type":"Revelation","pct":20,"players":["SavannahBelle"],"excerpt":"Welcome, my guest. You may find the eternal hospitality of Strahd von Zarovich to your liking."},{"title":"Priests of Osibus Refuse to Stay Dead","score":8.5,"type":"Combat","pct":85,"players":["Corras","Dahlia","SavannahBelle"],"excerpt":"Every time a priest was reduced to zero hit points, it tapped a skull tattoo on its hand and was reborn with a new boon "}],"biggest_moment":{"title":"SavannahBelle's Bloody Toast with Strahd","desc":"While attempting to reason with the Death House, SavannahBelle is pulled into a terrifying illusion.","counter":"If SavannahBelle had refused to drink the blood or successfully resisted the house's pull, she might"},"quotes":[{"text":"You guys, they're gonna kidnap me! You have to protect me! There's this dude wit","speaker":"SavannahBelle","fire":5},{"text":"Wizards, wizards everywhere.","speaker":"SavannahBelle","fire":5}],"pacing":{"scene_count":7,"pace":"Front-Loaded","energy_avg":6.4,"scenes":[{"type":"Recap","energy":4},{"type":"Combat","energy":8},{"type":"Combat","energy":9},{"type":"Social_Encounter","energy":6},{"type":"Exploration","energy":5},{"type":"Combat","energy":8},{"type":"Meta","energy":3}]},"recap":{"title":"The Death House Ritual","hook":"The Brotherhood Without Banners enters the cursed Death House, where every corner holds a deadly surprise."}},"S037":{"sentiment_windows":[{"pct":0.0,"sent":3.0,"emo":"Amusement/Laughter"},{"pct":3.448,"sent":2.0,"emo":"Curiosity/Wonder"},{"pct":6.896,"sent":1.0,"emo":"Tension/Anxiety"},{"pct":10.344,"sent":2.0,"emo":"Determination/Resolve"},{"pct":13.792,"sent":4.0,"emo":"Satisfaction/Relief"},{"pct":17.24,"sent":5.0,"emo":"Triumph/Elation"},{"pct":20.688,"sent":4.0,"emo":"Amusement/Laughter"},{"pct":24.136,"sent":6.0,"emo":"Triumph/Elation"},{"pct":27.584,"sent":2.0,"emo":"Curiosity/Wonder"},{"pct":31.032,"sent":-1.0,"emo":"Fear/Dread"},{"pct":34.48,"sent":-3.0,"emo":"Fear/Dread"},{"pct":37.928,"sent":-2.0,"emo":"Frustration/Irritation"},{"pct":41.376,"sent":3.0,"emo":"Determination/Resolve"},{"pct":44.824,"sent":4.0,"emo":"Triumph/Elation"},{"pct":48.272,"sent":-4.0,"emo":"Fear/Dread"},{"pct":51.72,"sent":5.0,"emo":"Triumph/Elation"},{"pct":55.168,"sent":-2.0,"emo":"Fear/Dread"},{"pct":58.616,"sent":7.0,"emo":"Triumph/Elation"},{"pct":62.064,"sent":-5.0,"emo":"Fear/Dread"},{"pct":65.512,"sent":3.0,"emo":"Determination/Resolve"},{"pct":68.96,"sent":8.0,"emo":"Triumph/Elation"},{"pct":72.408,"sent":4.0,"emo":"Satisfaction/Relief"},{"pct":75.856,"sent":6.0,"emo":"Awe/Wonder"},{"pct":79.304,"sent":4.0,"emo":"Curiosity/Wonder"},{"pct":82.752,"sent":5.0,"emo":"Satisfaction/Relief"},{"pct":86.2,"sent":-3.0,"emo":"Tension/Anxiety"},{"pct":89.648,"sent":-2.0,"emo":"Frustration/Irritation"},{"pct":93.096,"sent":3.0,"emo":"Satisfaction/Relief"},{"pct":96.544,"sent":1.0,"emo":"Tension/Anxiety"},{"pct":100.0,"sent":2.0,"emo":"Anticipation"}],"dominant_emotion":"Tension/Anxiety","session_label":null,"peaks":[{"title":"SavannahBelle Disintegrates the Crimson Abbot","score":9.5,"type":"Combat","pct":72,"players":["SavannahBelle","Corras","Dahlia","Orla"],"excerpt":"SavannahBelle ultimately disintegrated the Abbot with a Heightened 8th-level Disintegrate, but his blood began reconstit"},{"title":"Strahd Kills Sarusanda as Punishment","score":9.5,"type":"Dramatic Peak","pct":88,"players":["Corras","Dahlia","SavannahBelle","Orla"],"excerpt":"Strahd killed the Inquisitor Sarusanda as punishment for their insulting counter-offers."},{"title":"Strahd von Zarovich Materializes from Smoke","score":9.0,"type":"Revelation","pct":82,"players":["SavannahBelle","Corras","Dahlia","Orla"],"excerpt":"Strahd von Zarovich materialized from crimson smoke and bats, charming SavannahBelle with his vampiric gaze."}],"biggest_moment":{"title":"Corras Resists the Master of the Realm","desc":"Corras interacts with an ominous black orb held by a regal statue. He succeeds on a massive DC 23 Wi","counter":"If Corras had failed the saving throw, he would have been compelled to take the orb and likely falle"},"quotes":[{"text":"Before you judge us, the smart one in our group died, and that's not our fault.","speaker":"Dahlia","fire":5},{"text":"I haven't even met this Juan yet.","speaker":"SavannahBelle","fire":5}],"pacing":{"scene_count":8,"pace":"Explosive Finale","energy_avg":7.1,"scenes":[{"type":"Recap","energy":4},{"type":"Combat","energy":8},{"type":"Social_Encounter","energy":7},{"type":"Exploration","energy":7},{"type":"Exploration","energy":7},{"type":"Combat","energy":9},{"type":"Social_Encounter","energy":9.5},{"type":"Skill_Challenge","energy":7}]},"recap":{"title":"The Root of the Problem","hook":"Deep in the basement of the Death House, the party cleans up the Cult of Osibis and faces the true evil lurking in the reliquary."}},"S038":{"sentiment_windows":[{"pct":0.0,"sent":0.0,"emo":"Neutral"},{"pct":3.45,"sent":2.0,"emo":"Joy/Excitement"},{"pct":6.9,"sent":1.0,"emo":"Curiosity/Wonder"},{"pct":10.34,"sent":3.0,"emo":"Joy/Excitement"},{"pct":13.79,"sent":1.0,"emo":"Curiosity/Wonder"},{"pct":17.24,"sent":-1.0,"emo":"Tension/Anxiety"},{"pct":20.69,"sent":-3.0,"emo":"Frustration/Irritation"},{"pct":24.14,"sent":-1.0,"emo":"Fear/Dread"},{"pct":27.59,"sent":2.0,"emo":"Amusement/Laughter"},{"pct":31.03,"sent":0.0,"emo":"Neutral"},{"pct":34.48,"sent":-2.0,"emo":"Fear/Dread"},{"pct":37.93,"sent":-1.0,"emo":"Confusion/Surprise"},{"pct":41.38,"sent":0.0,"emo":"Determination/Resolve"},{"pct":44.83,"sent":-2.0,"emo":"Fear/Dread"},{"pct":48.28,"sent":-4.0,"emo":"Fear/Dread"},{"pct":51.72,"sent":1.0,"emo":"Curiosity/Wonder"},{"pct":55.17,"sent":0.0,"emo":"Neutral"},{"pct":58.62,"sent":-1.0,"emo":"Tension/Anxiety"},{"pct":62.07,"sent":-3.0,"emo":"Fear/Dread"},{"pct":65.52,"sent":0.0,"emo":"Determination/Resolve"},{"pct":68.97,"sent":2.0,"emo":"Satisfaction/Relief"},{"pct":72.41,"sent":5.0,"emo":"Triumph/Elation"},{"pct":75.86,"sent":6.0,"emo":"Joy/Excitement"},{"pct":79.31,"sent":4.0,"emo":"Satisfaction/Relief"},{"pct":82.76,"sent":2.0,"emo":"Amusement/Laughter"},{"pct":86.21,"sent":1.0,"emo":"Curiosity/Wonder"},{"pct":89.66,"sent":0.0,"emo":"Neutral"},{"pct":93.1,"sent":1.0,"emo":"Satisfaction/Relief"},{"pct":96.55,"sent":0.0,"emo":"Neutral"},{"pct":100.0,"sent":0.0,"emo":"Neutral"}],"dominant_emotion":"Tension/Anxiety","session_label":"Death House Escape","peaks":[{"title":"Corras Backflips Through Scythe Blades During Birth","score":9.0,"type":"Chaos Peak","pct":65,"players":["Corras"],"excerpt":"Corras backflipped through scythe blades timed to a ghostly birth scene."},{"title":"Party Fireballs Death House into Ash","score":8.5,"type":"Energy Peak","pct":82,"players":["SavannahBelle","Corras","Dahlia","Orla","Ash"],"excerpt":"They celebrated by fireballing the house into ash, though the mimic's organic core began regenerating."},{"title":"Ezrella Distracts Animated Armor with Performance","score":8.0,"type":"Dice Peak","pct":55,"players":["Ash"],"excerpt":"Oof, I rolled so badly. 17 though. Holy cow -- all four are distracted."}],"biggest_moment":{"title":"Burning the Death House","desc":"After barely surviving the horrific traps of the Death House and watching some party members fall to","counter":"If SavannahBelle hadn't burned the house, it would have stood fully formed and mocked them, leaving "},"quotes":[{"text":"I drip on all of you.","speaker":"SavannahBelle","fire":5},{"text":"Someone needs to do a medicine check to see if those spinning bloodblades have H","speaker":"Orla","fire":5}],"pacing":{"scene_count":6,"pace":"Roller Coaster","energy_avg":6.5,"scenes":[{"type":"Off_Topic","energy":3},{"type":"Skill_Challenge","energy":5},{"type":"Skill_Challenge","energy":8},{"type":"Off_Topic","energy":3},{"type":"Skill_Challenge","energy":9},{"type":"Exposition","energy":6}]},"recap":{"title":"Escape from the Death House","hook":"\"We will scare this mimic.\""}},"S039":{"sentiment_windows":[{"pct":0.0,"sent":2.5,"emo":"Joy/Excitement"},{"pct":3.33,"sent":3.0,"emo":"Amusement/Laughter"}],"dominant_emotion":"Anticipation","session_label":"Barovia Adventure: Rescue and Rest","peaks":[{"title":"Aboleth Rises from Tser Pool Lake","score":8.5,"type":"Chaos Peak","pct":72,"players":["Orla","SavannahBelle","Corras"],"excerpt":"The cursed goat's screaming intensified as the brand burned brighter, drawing a massive tentacled aboleth from the lake."},{"title":"SavannahBelle Wall of Stones the Dire Wolves","score":8.0,"type":"Energy Peak","pct":42,"players":["SavannahBelle","Ash"],"excerpt":"Ezrella sprinted for the sack while SavannahBelle trapped the wolves behind a Wall of Stone."},{"title":"Corras Nat 1 Minor Illusion Attracts Zombies","score":7.5,"type":"Comedy Peak","pct":95,"players":["Corras"],"excerpt":"His attempt to create a decoy with Minor Illusion backfired spectacularly with a natural one, attracting the undead inst"}],"biggest_moment":{"title":"Removing the Demon Goat's Curse","desc":"After rescuing a goat intended as an animal sacrifice from the Village of Barovia, the party inadver","counter":"If the party had chosen to abandon or sacrifice the goat as suggested, the horror might have consume"},"quotes":[{"text":"It was meant to be. He was meant to be mine. I will take him everywhere with me.","speaker":"Orla","fire":5},{"text":"The only thing I've been cursed with is two left feet and some angry wizards.","speaker":"SavannahBelle","fire":5}],"pacing":{"scene_count":8,"pace":"Late Bloomer","energy_avg":5.4,"scenes":[{"type":"Off_Topic","energy":2},{"type":"Meta","energy":4},{"type":"Exposition","energy":6},{"type":"Skill_Challenge","energy":7},{"type":"Exploration","energy":6},{"type":"Social_Encounter","energy":8},{"type":"Social_Encounter","energy":5},{"type":"Exploration","energy":6}]},"recap":{"title":"The Cursed Kid and the Tser Pool","hook":"Escaping the grim Village of Barovia, the party rescues a doomed goat, evades dire wolves on a flying carpet, and seeks shelter among hostile Vistani at the Tser Pool encampment."}},"S040":{"sentiment_windows":[{"pct":0.0,"sent":0.0,"emo":"Neutral"},{"pct":3.45,"sent":3.5,"emo":"Amusement/Laughter"},{"pct":6.9,"sent":4.0,"emo":"Anticipation"},{"pct":10.34,"sent":5.0,"emo":"Joy/Excitement"},{"pct":13.79,"sent":2.0,"emo":"Tension/Anxiety"},{"pct":17.24,"sent":3.0,"emo":"Curiosity/Wonder"},{"pct":20.69,"sent":2.5,"emo":"Confusion/Surprise"},{"pct":24.14,"sent":6.0,"emo":"Amusement/Laughter"},{"pct":27.59,"sent":-3.0,"emo":"Tension/Anxiety"},{"pct":31.03,"sent":4.0,"emo":"Determination/Resolve"},{"pct":34.48,"sent":1.0,"emo":"Confusion/Surprise"},{"pct":37.93,"sent":5.0,"emo":"Triumph/Elation"},{"pct":41.38,"sent":3.0,"emo":"Anticipation"},{"pct":44.83,"sent":2.5,"emo":"Tension/Anxiety"},{"pct":48.28,"sent":1.0,"emo":"Suspense/Unease"},{"pct":51.72,"sent":2.0,"emo":"Curiosity/Wonder"},{"pct":55.17,"sent":6.0,"emo":"Triumph/Elation"},{"pct":58.62,"sent":-4.0,"emo":"Confusion/Surprise"},{"pct":62.07,"sent":-1.0,"emo":"Tension/Anxiety"},{"pct":65.52,"sent":-3.0,"emo":"Frustration/Irritation"},{"pct":68.97,"sent":4.0,"emo":"Joy/Excitement"},{"pct":72.41,"sent":-5.0,"emo":"Anger/Rage"},{"pct":75.86,"sent":0.0,"emo":"Neutral"},{"pct":79.31,"sent":-3.0,"emo":"Frustration/Irritation"},{"pct":82.76,"sent":-2.0,"emo":"Tension/Anxiety"},{"pct":86.21,"sent":1.0,"emo":"Determination/Resolve"},{"pct":89.66,"sent":2.0,"emo":"Suspense/Unease"},{"pct":93.1,"sent":3.0,"emo":"Anticipation"},{"pct":96.55,"sent":4.0,"emo":"Satisfaction/Relief"},{"pct":100.0,"sent":4.5,"emo":"Satisfaction/Relief"}],"dominant_emotion":"Tension/Anxiety","session_label":"Curse of Strahd Session - Tser Pool Camp","peaks":[{"title":"Madame Eva Casts Time Stop on the Party","score":9.5,"type":"Dramatic Peak","pct":92,"players":["Corras","Dahlia","SavannahBelle","Orla"],"excerpt":"Eva cast Time Stop and cornered Corras with an ultimatum: play her card game or watch his friends become toads."},{"title":"Corras Nat 20 Steals Deck of Many Things","score":9.0,"type":"Dice Peak","pct":50,"players":["Corras"],"excerpt":"He spotted the Deck of Many Things and snatched it with a natural 20, but triggered a magical ward."},{"title":"Corras Draws the Donjon Card","score":9.0,"type":"Chaos Peak","pct":55,"players":["Corras"],"excerpt":"Corras drew the Donjon card. Through exceptional luck he retained the deck and reappeared two hours later in a camp latr"}],"biggest_moment":{"title":"The Deck and the Demiplane","desc":"Corras attempts to steal Madam Eva's Deck of Many Things. Despite rolling a natural 20 on Sleight of","counter":"If Corras hadn't rolled a natural 20, he might have dropped the deck or been permanently trapped wit"},"quotes":[{"text":"I bested you at your own game, at the deck's own game. It's mine now. I've earne","speaker":"Corras","fire":5},{"text":"Maybe Strahd will help us defeat Vecna. We haven't even asked. Does Strahd have ","speaker":"Dahlia","fire":5}],"pacing":{"scene_count":7,"pace":"Steady Climb","energy_avg":6.6,"scenes":[{"type":"Recap","energy":4},{"type":"Meta","energy":6},{"type":"Combat","energy":7},{"type":"Exploration","energy":5},{"type":"Skill_Challenge","energy":8},{"type":"Exploration","energy":7},{"type":"Social_Encounter","energy":9}]},"recap":{"title":"The Heist at Tser Pool","hook":"A daring stealth mission into Madam Eva's tent ends in magical traps, stolen artifacts, and a high-stakes gamble with fate."}},"S041":{"sentiment_windows":[{"pct":0.0,"sent":2.5,"emo":"Joy/Excitement"},{"pct":3.33,"sent":2.0,"emo":"Neutral"},{"pct":6.67,"sent":3.0,"emo":"Curiosity/Wonder"},{"pct":10.0,"sent":-1.0,"emo":"Tension/Anxiety"},{"pct":13.33,"sent":-2.0,"emo":"Fear/Dread"},{"pct":16.67,"sent":-3.0,"emo":"Tension/Anxiety"},{"pct":20.0,"sent":-4.0,"emo":"Confusion/Surprise"},{"pct":23.33,"sent":-5.0,"emo":"Frustration/Irritation"},{"pct":26.67,"sent":2.0,"emo":"Joy/Excitement"},{"pct":30.0,"sent":0.0,"emo":"Determination/Resolve"},{"pct":33.33,"sent":1.0,"emo":"Anticipation"},{"pct":36.67,"sent":-4.0,"emo":"Fear/Dread"},{"pct":40.0,"sent":-5.0,"emo":"Anger/Rage"},{"pct":43.33,"sent":-3.0,"emo":"Tension/Anxiety"},{"pct":46.67,"sent":-6.0,"emo":"Fear/Dread"},{"pct":50.0,"sent":-8.0,"emo":"Sadness/Grief"},{"pct":53.33,"sent":-7.0,"emo":"Despair"},{"pct":56.67,"sent":-2.0,"emo":"Reflection"}],"dominant_emotion":"Tension/Anxiety","session_label":"Session with Madam Eva and Strahd","peaks":[{"title":"Strahd Bites SavannahBelle Into a Vampire","score":9.5,"type":"Dramatic Peak","pct":96,"players":["SavannahBelle","Corras","Dahlia"],"excerpt":"Strahd bit the paralyzed SavannahBelle on her final death save, converting her into a dhampir vampire spawn"},{"title":"Madam Eva's Curse Weaver Triple Curse","score":9.0,"type":"Dramatic Peak","pct":30,"players":["Corras","Orla","Ash"],"excerpt":"Eva cast Curse Weaver on Corras, Ezrella, and Orla before vanishing in a cloud of dust, leaving each cursed with unique "},{"title":"SavannahBelle Drinks the Blood Chalice","score":9.0,"type":"Chaos Peak","pct":88,"players":["SavannahBelle"],"excerpt":"SavannahBelle drank the blood from the final coffin's chalice and was paralyzed, becoming the living vessel for the last"}],"biggest_moment":{"title":"A Tragic Betrayal and a New Vampire Spawn","desc":"During the intense battle with Strahd at the Crystalline Heart, Ezrella is charmed by Strahd after p","counter":"If SavannahBelle hadn't drunk from the chalice, she wouldn't have been paralyzed, or if Ezrella had "},"quotes":[{"text":"We used some goo to trap a hoe, right?","speaker":"Corras","fire":5},{"text":"can i use my i think i had a loot or something... can i morph her into a spider ","speaker":"SavannahBelle","fire":5}],"pacing":{"scene_count":8,"pace":"Steady Climb","energy_avg":6.6,"scenes":[{"type":"Off_Topic","energy":3},{"type":"Recap","energy":5},{"type":"Combat","energy":8},{"type":"Exploration","energy":6},{"type":"Social_Encounter","energy":8},{"type":"Exploration","energy":7},{"type":"Combat","energy":9},{"type":"Meta","energy":8}]},"recap":{"title":"The Heart of Sorrow","hook":"A simple recon mission goes horribly wrong as the party is thrown into a deadly confrontation with Strahd."}},"S042":{"sentiment_windows":[{"pct":0.0,"sent":3.5,"emo":"Amusement/Laughter"},{"pct":3.45,"sent":2.5,"emo":"Curiosity/Wonder"},{"pct":6.9,"sent":4.0,"emo":"Amusement/Laughter"},{"pct":10.34,"sent":3.0,"emo":"Curiosity/Wonder"},{"pct":13.79,"sent":6.5,"emo":"Joy/Excitement"},{"pct":17.24,"sent":7.0,"emo":"Amusement/Laughter"},{"pct":20.69,"sent":5.0,"emo":"Anticipation"},{"pct":24.14,"sent":2.5,"emo":"Tension/Anxiety"},{"pct":27.59,"sent":1.5,"emo":"Tension/Anxiety"},{"pct":31.03,"sent":0.5,"emo":"Fear/Dread"},{"pct":34.48,"sent":4.5,"emo":"Determination/Resolve"},{"pct":37.93,"sent":3.0,"emo":"Suspense/Unease"},{"pct":41.38,"sent":8.0,"emo":"Triumph/Elation"},{"pct":44.83,"sent":4.0,"emo":"Anticipation"},{"pct":48.28,"sent":5.5,"emo":"Determination/Resolve"},{"pct":51.72,"sent":-1.0,"emo":"Fear/Dread"},{"pct":55.17,"sent":2.5,"emo":"Determination/Resolve"},{"pct":58.62,"sent":4.0,"emo":"Determination/Resolve"},{"pct":62.07,"sent":6.5,"emo":"Triumph/Elation"},{"pct":65.52,"sent":3.0,"emo":"Suspense/Unease"},{"pct":68.97,"sent":5.0,"emo":"Confusion/Surprise"},{"pct":72.41,"sent":1.0,"emo":"Fear/Dread"},{"pct":75.86,"sent":2.5,"emo":"Compassion/Empathy"},{"pct":79.31,"sent":6.0,"emo":"Triumph/Elation"},{"pct":82.76,"sent":4.5,"emo":"Anticipation"},{"pct":86.21,"sent":3.0,"emo":"Neutral"},{"pct":89.66,"sent":2.5,"emo":"Neutral"},{"pct":93.1,"sent":3.5,"emo":"Neutral"},{"pct":96.55,"sent":4.0,"emo":"Neutral"},{"pct":100.0,"sent":5.0,"emo":"Anticipation"}],"dominant_emotion":"Determination/Resolve","session_label":"Curse of Strahd: Rahadin and Strahd Confrontation","peaks":[{"title":"Izzy Crushes Rahadin's Skull With Necrotic Fists","score":10.0,"type":"Combat","pct":52,"players":["Corras","Dahlia","SavannahBelle"],"excerpt":"Izzy crushed Rahadin's skull with necrotic fists, avenging the slaughtered dusk elves, then destroyed his soul-trapping "},{"title":"Van Richten Dives in Front of Power Word Kill","score":9.5,"type":"Dramatic Peak","pct":90,"players":["Orla"],"excerpt":"Van Richten dove in front of a Power Word Kill aimed at Zal and was stabilized by Orla"},{"title":"Dahlia Shatters the Heart of Sorrow","score":9.5,"type":"Combat","pct":72,"players":["Dahlia"],"excerpt":"Dahlia cast remove curse on the blood grail and sacrificed half her maximum HP to shatter the Heart of Sorrow"}],"biggest_moment":{"title":"Shrum's Mirror Restored and Ludmilla Shattered","desc":"In the midst of the chaotic battle against Strahd, the shards of Shrum's broken mirror magically fus","counter":"If Shrum had failed to stabilize the mirror or failed the Charisma contest, Ludmilla would have surv"},"quotes":[{"text":"know your true form, hag.","speaker":"SavannahBelle","fire":5},{"text":"I'm going to run up and just straight punch him in the face.","speaker":"Corras","fire":4}],"pacing":{"scene_count":6,"pace":"Explosive Finale","energy_avg":7.2,"scenes":[{"type":"Off_Topic","energy":3},{"type":"Meta","energy":6},{"type":"Recap","energy":5},{"type":"Combat","energy":9},{"type":"Combat","energy":9},{"type":"Combat","energy":10}]},"recap":{"title":"The Battle of Ravenloft Begins","hook":"Rahadin falls, the Heart of Sorrow shatters, and the final battle against Strahd von Zarovich begins."}},"S043":{"sentiment_windows":[{"pct":0.0,"sent":2.5,"emo":"Amusement/Laughter"},{"pct":3.45,"sent":-1.0,"emo":"Tension/Anxiety"},{"pct":6.9,"sent":4.0,"emo":"Joy/Excitement"},{"pct":10.34,"sent":1.5,"emo":"Curiosity/Wonder"},{"pct":13.79,"sent":-0.5,"emo":"Tension/Anxiety"},{"pct":17.24,"sent":-3.0,"emo":"Fear/Dread"},{"pct":20.69,"sent":-4.0,"emo":"Frustration/Irritation"},{"pct":24.14,"sent":-1.5,"emo":"Tension/Anxiety"}],"dominant_emotion":"Tension/Anxiety","session_label":"BWB Campaign Return Session","peaks":[{"title":"SavannahBelle Mass Suggestions the Council Room","score":9.5,"type":"Chaos Peak","pct":58,"players":["SavannahBelle","Ash","Corras","Dahlia"],"excerpt":"SavannahBelle cast Mass Suggestion to compel the room's political leaders into volunteering for the Matron's coma ritual"},{"title":"Isteval Denounces BWB as Tyrants and Leaves","score":9.0,"type":"Dramatic Peak","pct":65,"players":["Corras","Ash","Dahlia"],"excerpt":"Isteval denounced the party as tyrants: 'better to die free amongst the faith and live as puppets in the dreadful court "},{"title":"The Party Debates Mass Murder Methods","score":9.0,"type":"Comedy Peak","pct":80,"players":["Dahlia","SavannahBelle","Corras","Orla","Ash"],"excerpt":"Should we just get some pillows and hold them over? / Yo, wait, they don't need to breathe"}],"biggest_moment":{"title":"Draining Lord Neverember","desc":"After the Matron of Ravens places Lord Neverember and his lackeys into a magical coma and flees, the","counter":"If the party had chosen to wake Neverember instead of murdering him, they would have had to deal wit"},"quotes":[{"text":"My soul has already been completely destroyed Based on something that somebody F","speaker":"Dahlia","fire":5},{"text":"We're back and committing war crimes like it should be.","speaker":"Orla","fire":5}],"pacing":{"scene_count":8,"pace":"Late Bloomer","energy_avg":6.1,"scenes":[{"type":"Off_Topic","energy":3},{"type":"Recap","energy":5},{"type":"Meta","energy":4},{"type":"Exposition","energy":6},{"type":"Social_Encounter","energy":7},{"type":"Social_Encounter","energy":9},{"type":"Social_Encounter","energy":8},{"type":"Exploration","energy":6}]},"recap":{"title":"Returns, Refugees, and Ruthless Decisions","hook":"The party returns to Castle Corras to find it besieged by the Gloaming Court, but the true threats lie within its crowded walls."}},"S044":{"sentiment_windows":[{"pct":0.0,"sent":1.5,"emo":"Amusement/Laughter"},{"pct":3.45,"sent":-2.0,"emo":"Frustration/Irritation"},{"pct":6.9,"sent":-3.0,"emo":"Tension/Anxiety"},{"pct":10.34,"sent":-1.5,"emo":"Determination/Resolve"},{"pct":13.79,"sent":-2.5,"emo":"Curiosity/Wonder"},{"pct":17.24,"sent":-4.0,"emo":"Tension/Anxiety"},{"pct":20.69,"sent":-5.0,"emo":"Fear/Dread"},{"pct":24.14,"sent":-3.5,"emo":"Tension/Anxiety"},{"pct":27.59,"sent":-6.0,"emo":"Surprise/Confusion"},{"pct":31.03,"sent":-4.5,"emo":"Curiosity/Wonder"},{"pct":34.48,"sent":-3.0,"emo":"Fear/Dread"},{"pct":37.93,"sent":-1.0,"emo":"Relief/Satisfaction"},{"pct":41.38,"sent":-2.0,"emo":"Determination/Resolve"},{"pct":44.83,"sent":-4.0,"emo":"Anger/Rage"},{"pct":48.28,"sent":-5.0,"emo":"Tension/Anxiety"},{"pct":51.72,"sent":-4.5,"emo":"Suspense/Unease"},{"pct":55.17,"sent":-2.0,"emo":"Determination/Resolve"},{"pct":58.62,"sent":-1.5,"emo":"Neutral"},{"pct":62.07,"sent":-0.5,"emo":"Neutral"},{"pct":65.52,"sent":0.0,"emo":"Neutral"},{"pct":68.97,"sent":-2.0,"emo":"Tension/Anxiety"},{"pct":72.41,"sent":-1.5,"emo":"Determination/Resolve"},{"pct":75.86,"sent":-0.5,"emo":"Neutral"},{"pct":79.31,"sent":-3.0,"emo":"Tension/Anxiety"},{"pct":82.76,"sent":-4.5,"emo":"Fear/Dread"},{"pct":86.21,"sent":-5.0,"emo":"Anger/Rage"},{"pct":89.66,"sent":-3.5,"emo":"Suspense/Unease"},{"pct":93.1,"sent":-2.0,"emo":"Determination/Resolve"},{"pct":96.55,"sent":-1.0,"emo":"Neutral"},{"pct":100.0,"sent":0.5,"emo":"Satisfaction/Relief"}],"dominant_emotion":"Tension/Anxiety","session_label":null,"peaks":[{"title":"Dahlia Severs the Master of Whispers' Leg","score":9.5,"type":"Chaos Peak","pct":32,"players":["Dahlia","Corras"],"excerpt":"Dahlia severed his leg with her flame-tongued greatsword, destroying the rune and freeing him from the Matron's control"},{"title":"SavannahBelle Banishes Ash to Save Their Secrets","score":9.0,"type":"Chaos Peak","pct":45,"players":["SavannahBelle","Ash"],"excerpt":"SavannahBelle used subtle spell banishment to send Ash to the Feywild before she could expose their secrets"},{"title":"Isteval Demands Trial in Zone of Truth","score":9.0,"type":"Dramatic Peak","pct":88,"players":["Corras","SavannahBelle","Dahlia","Ash","Orla"],"excerpt":"Isteval plunged his greatsword into the ground, casting Zone of Truth, and demanded SavannahBelle's arrest"}],"biggest_moment":{"title":"Dahlia Amputates the Master of Whispers' Leg","desc":"Corras and Dahlia attempt to peacefully wake the captured Master of Whispers by providing a spa-like","counter":"If Dahlia hadn't reacted so drastically by severing his limb, the Master of Whispers would have succ"},"quotes":[{"text":"It's not my fault that your feeble old mind is weak and easily controlled. I did","speaker":"SavannahBelle","fire":5},{"text":"What a nice place to lose my leg.","speaker":"DM","fire":5}],"pacing":{"scene_count":10,"pace":"Roller Coaster","energy_avg":6.5,"scenes":[{"type":"Recap","energy":4},{"type":"Social_Encounter","energy":7},{"type":"Exposition","energy":6},{"type":"Social_Encounter","energy":9},{"type":"Social_Encounter","energy":8},{"type":"Character_Management","energy":5},{"type":"Exploration","energy":8},{"type":"Exploration","energy":7},{"type":"Character_Management","energy":5},{"type":"Social_Encounter","energy":9}]},"recap":{"title":"The Trial and the Amputation","hook":"A relaxing 'spa day' interrogation takes a sharp turn when the captive tries a blood magic trick."}},"S045":{"sentiment_windows":[{"pct":0.0,"sent":3.0,"emo":"Amusement/Laughter"},{"pct":3.45,"sent":2.0,"emo":"Curiosity/Wonder"}],"dominant_emotion":"Tension/Anxiety","session_label":"The Red Council Aftermath","peaks":[{"title":"Reverse Gravity Launches Hundreds Into the Sky","score":10.0,"type":"Chaos Peak","pct":38,"players":["SavannahBelle"],"excerpt":"SavannahBelle cast Reverse Gravity to hurl hundreds into the sky; Isteval's failed dispel sent peasants plummeting to th"},{"title":"Dahlia Cleaves Isteval and Triggers Divine Rapture","score":9.5,"type":"Combat","pct":55,"players":["Dahlia"],"excerpt":"Dahlia cleaved Isteval in two, triggering his divine intervention that raptured the faithful paladins in a beam of golde"},{"title":"Orla Triceratops Charge Gores Isteval","score":9.0,"type":"Combat","pct":50,"players":["Orla"],"excerpt":"Orla wild-shaped into a triceratops and trampled through the Lord's Alliance ranks to gore Isteval"}],"biggest_moment":{"title":"The Butcher's Skin Suit","desc":"While preparing to interrogate the captured Lieutenant Vane (the Butcher), Dahlia strips away his ar","counter":"If Dahlia hadn't inspected him closely or removed his clothing before trying to torture him, they mi"},"quotes":[{"text":"Congratulations on the massive slaughter. I think this is probably the most peop","speaker":null,"fire":5},{"text":"I just get some of the SavannahBelle beef to grease themselves up and pull this ","speaker":"SavannahBelle","fire":5}],"pacing":{"scene_count":8,"pace":"Front-Loaded","energy_avg":6.8,"scenes":[{"type":"Off_Topic","energy":3},{"type":"Recap","energy":5},{"type":"Social_Encounter","energy":7},{"type":"Combat","energy":10},{"type":"Character_Management","energy":6},{"type":"Exploration","energy":8},{"type":"Exploration","energy":5},{"type":"Social_Encounter","energy":7}]},"recap":{"title":"A Butcher, a Bot, and a Box","hook":"The BWB faces a massive riot, slaughters thousands, and discovers that the Butcher is more machine than man."}},"S046":{"sentiment_windows":[{"pct":0.0,"sent":-3.5,"emo":"Tension/Anxiety"},{"pct":3.45,"sent":6.0,"emo":"Amusement/Laughter"},{"pct":100.0,"sent":-8.0,"emo":"Fear/Dread"}],"dominant_emotion":"Tension/Anxiety","session_label":null,"peaks":[{"title":"Cernunnos Catches the Party -- Someone Must Join","score":9.5,"type":"Dramatic Peak","pct":96,"players":["Orla","Ash","Corras","SavannahBelle"],"excerpt":"One of your characters must now volunteer to join him in the wild hunt for the rest of eternity"},{"title":"Orla's Failed Roll Despite Last-Minute Advantage","score":9.0,"type":"Dice Peak","pct":94,"players":["Orla","Ash","Corras","SavannahBelle"],"excerpt":"She needed an 11 or higher with advantage and gnome cunning. A three and then a two. That is brutal."},{"title":"The Matron Reveals the Heartstone's True Purpose","score":8.5,"type":"Revelation","pct":30,"players":["Ash","Corras","SavannahBelle","Orla"],"excerpt":"The Butcher had been trying to neutralize the heartstone. The Matron offered modified obsidian shards to mask their pres"}],"biggest_moment":{"title":"Caught by the Wild Hunt","desc":"The party fails their evasion skill challenge against Cernunnos's shadow hounds, meaning one player ","counter":"If Orla had succeeded on her crucial final Insight check (or if Ash had passed her History check), t"},"quotes":[{"text":"So he has an entire strategy but it seems the fae have intercepted and this guy ","speaker":null,"fire":5},{"text":"I want a ruling society, whatever that may be, that is ruled by the Magigarchs \u0097","speaker":null,"fire":5}],"pacing":{"scene_count":8,"pace":"Slow Burn","energy_avg":6.0,"scenes":[{"type":"Off_Topic","energy":3},{"type":"Recap","energy":5},{"type":"Social_Encounter","energy":7},{"type":"Off_Topic","energy":3},{"type":"Social_Encounter","energy":7},{"type":"Exposition","energy":7},{"type":"Exploration","energy":7},{"type":"Skill_Challenge","energy":9}]},"recap":{"title":"The Matron's Bargain and the Wild Hunt","hook":"With the riot quelled, the party strikes a devil's bargain with the Matron to protect their city\u0097before stepping blindly into a deadly hunt in the Feywild."}}},"arcs":{"S004":{"arc_id":"arc_01_intro_and_early_quests","arc_name":"Chronicler's Mark and Early Adventures"},"S005":{"arc_id":"arc_01_intro_and_early_quests","arc_name":"Chronicler's Mark and Early Adventures"},"S006":{"arc_id":"arc_01_intro_and_early_quests","arc_name":"Chronicler's Mark and Early Adventures"},"S007":{"arc_id":"arc_01_intro_and_early_quests","arc_name":"Chronicler's Mark and Early Adventures"},"S008":{"arc_id":"arc_01_intro_and_early_quests","arc_name":"Chronicler's Mark and Early Adventures"},"S009":{"arc_id":"arc_01_intro_and_early_quests","arc_name":"Chronicler's Mark and Early Adventures"},"S010":{"arc_id":"arc_01_intro_and_early_quests","arc_name":"Chronicler's Mark and Early Adventures"},"S011":{"arc_id":"arc_01_intro_and_early_quests","arc_name":"Chronicler's Mark and Early Adventures"},"S013":{"arc_id":"arc_02_demonic_pacts_and_escapes","arc_name":"Demonic Pacts and Prison Escapes"},"S014":{"arc_id":"arc_02_demonic_pacts_and_escapes","arc_name":"Demonic Pacts and Prison Escapes"},"S015":{"arc_id":"arc_02_demonic_pacts_and_escapes","arc_name":"Demonic Pacts and Prison Escapes"},"S016":{"arc_id":"arc_02_demonic_pacts_and_escapes","arc_name":"Demonic Pacts and Prison Escapes"},"S017":{"arc_id":"arc_02_demonic_pacts_and_escapes","arc_name":"Demonic Pacts and Prison Escapes"},"S018":{"arc_id":"arc_02_demonic_pacts_and_escapes","arc_name":"Demonic Pacts and Prison Escapes"},"S019":{"arc_id":"arc_02_demonic_pacts_and_escapes","arc_name":"Demonic Pacts and Prison Escapes"},"S020":{"arc_id":"arc_02_demonic_pacts_and_escapes","arc_name":"Demonic Pacts and Prison Escapes"},"S021":{"arc_id":"arc_03_underdark_and_webbs_edge","arc_name":"Underdark and Webb's Edge"},"S022":{"arc_id":"arc_03_underdark_and_webbs_edge","arc_name":"Underdark and Webb's Edge"},"S023":{"arc_id":"arc_03_underdark_and_webbs_edge","arc_name":"Underdark and Webb's Edge"},"S024":{"arc_id":"arc_03_underdark_and_webbs_edge","arc_name":"Underdark and Webb's Edge"},"S025":{"arc_id":"arc_03_underdark_and_webbs_edge","arc_name":"Underdark and Webb's Edge"},"S026":{"arc_id":"arc_03_underdark_and_webbs_edge","arc_name":"Underdark and Webb's Edge"},"S027":{"arc_id":"arc_03_underdark_and_webbs_edge","arc_name":"Underdark and Webb's Edge"},"S028":{"arc_id":"arc_03_underdark_and_webbs_edge","arc_name":"Underdark and Webb's Edge"},"S029":{"arc_id":"arc_04_shadow_powers_and_infernal_node","arc_name":"Shadow Powers and Infernal Node"},"S030":{"arc_id":"arc_04_shadow_powers_and_infernal_node","arc_name":"Shadow Powers and Infernal Node"},"S031":{"arc_id":"arc_04_shadow_powers_and_infernal_node","arc_name":"Shadow Powers and Infernal Node"},"S032":{"arc_id":"arc_04_shadow_powers_and_infernal_node","arc_name":"Shadow Powers and Infernal Node"},"S033":{"arc_id":"arc_04_shadow_powers_and_infernal_node","arc_name":"Shadow Powers and Infernal Node"},"S034":{"arc_id":"arc_04_shadow_powers_and_infernal_node","arc_name":"Shadow Powers and Infernal Node"},"S035":{"arc_id":"arc_04_shadow_powers_and_infernal_node","arc_name":"Shadow Powers and Infernal Node"},"S036":{"arc_id":"arc_04_shadow_powers_and_infernal_node","arc_name":"Shadow Powers and Infernal Node"},"S037":{"arc_id":"arc_04_shadow_powers_and_infernal_node","arc_name":"Shadow Powers and Infernal Node"},"S038":{"arc_id":"arc_04_shadow_powers_and_infernal_node","arc_name":"Shadow Powers and Infernal Node"},"S039":{"arc_id":"arc_04_shadow_powers_and_infernal_node","arc_name":"Shadow Powers and Infernal Node"},"S040":{"arc_id":"arc_04_shadow_powers_and_infernal_node","arc_name":"Shadow Powers and Infernal Node"},"S041":{"arc_id":"arc_04_shadow_powers_and_infernal_node","arc_name":"Shadow Powers and Infernal Node"},"S042":{"arc_id":"arc_04_shadow_powers_and_infernal_node","arc_name":"Shadow Powers and Infernal Node"},"S043":{"arc_id":"arc_04_shadow_powers_and_infernal_node","arc_name":"Shadow Powers and Infernal Node"},"S044":{"arc_id":"arc_04_shadow_powers_and_infernal_node","arc_name":"Shadow Powers and Infernal Node"},"S045":{"arc_id":"arc_04_shadow_powers_and_infernal_node","arc_name":"Shadow Powers and Infernal Node"},"S046":{"arc_id":"arc_04_shadow_powers_and_infernal_node","arc_name":"Shadow Powers and Infernal Node"}}};
+
+// ================================================================
+// CONFIG
+// ================================================================
+const PC = {
+  Corras:"#4A90D9",Ash:"#E57373",Orla:"#81C784",
+  Dahlia:"#BA68C8",Lilith:"#BA68C8",Billabong:"#FFB74D",
+  SavannahBelle:"#4DB6AC",Sarlumon:"#4A90D9",Ezrella:"#FF8A65",
+  Ave:"#7986CB",DM:"#666680"
+};
+const SW = 320; // session width px
+const NS = 46;
+const TW = SW * (NS + 2);
+const BASE_MS = 6000;
+
+const ARCS = [
+  {id:'a1',label:'ACT I',name:"THE CHRONICLER'S MARK",color:'#fbbf24',s:[1,12]},
+  {id:'a2',label:'ACT II',name:'DEMONIC PACTS',color:'#ef4444',s:[13,20]},
+  {id:'a3',label:'ACT III',name:'THE UNDERDARK',color:'#2dd4bf',s:[21,26]},
+  {id:'a4',label:'ACT IV',name:'SHADOW POWERS',color:'#a855f7',s:[27,34]},
+  {id:'a5',label:'INTERLUDE',name:'CURSE OF STRAHD',color:'#991b1b',s:[35,42]},
+  {id:'a6',label:'ACT V',name:'THE RECKONING',color:'#22d3ee',s:[43,46]}
+];
+
+const SCENE_C = {
+  Combat:'#ef4444',Social_Encounter:'#fbbf24',Exploration:'#22d3ee',
+  Exposition:'#a855f7',Meta:'#444466',Character_Management:'#81C784',
+  Puzzle_Encounter:'#f97316',Travel:'#6366f1',Downtime:'#14b8a6',
+  Rest:'#334155',Climax:'#dc2626',Boss_Fight:'#b91c1c',
+  Ritual:'#7c3aed',Investigation:'#0ea5e9',Stealth:'#1e293b'
+};
+
+const CAST_MAP = [
+  {n:'Corras',range:[1,46]},{n:'Ash',range:[1,46]},{n:'Billabong',range:[1,46]},
+  {n:'Orla',range:[1,46]},{n:'Dahlia',range:[1,46]},
+  {n:'Ave',range:[7,16]},{n:'Sarlumon',range:[10,16]},
+  {n:'SavannahBelle',range:[21,46]},{n:'Ezrella',range:[32,46]}
+];
+
+// ================================================================
+// STATE
+// ================================================================
+let sx = 0, playing = false, speed = 1, started = false, lastT = 0;
+
+// ================================================================
+// TITLE SCREEN PARTICLES
+// ================================================================
+(function initTitleParticles(){
+  const c = document.getElementById('title-particles');
+  if(!c) return;
+  const ctx = c.getContext('2d');
+  let pts = [];
+  function resize(){ c.width = window.innerWidth; c.height = window.innerHeight; }
+  resize();
+  window.addEventListener('resize', resize);
+  for(let i=0;i<60;i++) pts.push({x:Math.random()*c.width,y:Math.random()*c.height,vx:(Math.random()-0.5)*0.2,vy:(Math.random()-0.5)*0.2,s:Math.random()*1.5+0.5,a:Math.random()*0.15+0.02});
+  function draw(){
+    if(started) return;
+    ctx.clearRect(0,0,c.width,c.height);
+    pts.forEach(p=>{
+      p.x+=p.vx; p.y+=p.vy;
+      if(p.x<0)p.x=c.width; if(p.x>c.width)p.x=0;
+      if(p.y<0)p.y=c.height; if(p.y>c.height)p.y=0;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.s,0,Math.PI*2);
+      ctx.fillStyle=`rgba(251,191,36,${p.a})`; ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ================================================================
+// START FILM
+// ================================================================
+function startFilm(){
+  document.getElementById('title-screen').classList.add('hidden');
+  document.getElementById('film-viewport').style.display='block';
+  setTimeout(()=>{
+    started=true;
+    buildStrip();
+    buildChapters();
+    buildCast();
+    buildWaveform();
+    initParticles();
+    buildHeartbeat();
+    buildMinimap();
+    initWeather();
+    initSparkCanvas();
+    updateView();
+    requestAnimationFrame(loop);
+  },400);
+}
+
+// ================================================================
+// BUILD FILM STRIP
+// ================================================================
+function sid(i){ return 'S'+String(i).padStart(3,'0'); }
+function esc(s){ return s?s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'):''; }
+function getS(i){ return D.sessions[sid(i)] || {}; }
+
+function buildStrip(){
+  const strip = document.getElementById('film-strip');
+  strip.style.width = TW+'px';
+
+  for(let i=1;i<=NS;i++){
+    const s = getS(i);
+    const col = document.createElement('div');
+    col.className='session-col';
+    col.dataset.s=i;
+
+    // Recap hook line
+    if(s.recap && s.recap.title && s.recap.title !== 'Test Session'){
+      const rh = document.createElement('div');
+      rh.className='recap-hook';
+      rh.innerHTML=`<div class="rh-title">${esc(s.recap.title)}</div>${s.recap.hook?'<div class="rh-line">'+esc(s.recap.hook)+'</div>':''}`;
+      col.appendChild(rh);
+    }
+
+    // Dominant emotion badge
+    if(s.dominant_emotion){
+      const eb = document.createElement('div');
+      eb.className='emotion-badge';
+      eb.textContent=s.dominant_emotion;
+      col.appendChild(eb);
+    }
+
+    // Biggest moment
+    const bm = s.biggest_moment;
+    if(bm && bm.title){
+      const box = document.createElement('div');
+      box.className='moment-box';
+      let html = `<div class="moment-title-text">${esc(bm.title)}</div>`;
+      if(bm.desc) html += `<div class="moment-desc">${esc(bm.desc)}</div>`;
+      if(bm.counter) html += `<div class="moment-counter">${esc(bm.counter)}</div>`;
+      box.innerHTML = html;
+      col.appendChild(box);
+    }
+
+    // Energy peaks
+    (s.peaks||[]).forEach((pk,pi)=>{
+      const t = (pk.type||'').toLowerCase();
+      let cls = 'p-energy';
+      if(t.includes('dice')) cls='p-dice';
+      else if(t.includes('combat')) cls='p-combat';
+      else if(t.includes('comedy')) cls='p-comedy';
+      else if(t.includes('dramatic')) cls='p-dramatic';
+
+      const sz = 28 + (pk.score/10)*50;
+      const xPct = (pk.pct||50)/100;
+      const yBase = 46 + pi*14;
+
+      const el = document.createElement('div');
+      el.className=`peak-burst ${cls}`;
+      el.style.cssText=`left:${xPct*SW}px;top:${yBase}%;width:${sz}px;height:${sz}px`;
+      el.innerHTML='<div class="peak-rays"></div><div class="peak-ring"></div><div class="peak-core"></div>';
+      el.addEventListener('mouseenter', e=>showTT(e,pk,cls));
+      el.addEventListener('mouseleave', hideTT);
+      el.addEventListener('mousemove', moveTT);
+      col.appendChild(el);
+    });
+
+    // Floating quotes
+    (s.quotes||[]).forEach((q,qi)=>{
+      const c = PC[q.speaker]||'#888899';
+      const el = document.createElement('div');
+      el.className='float-quote';
+      el.style.borderLeftColor=c;
+      el.style.left=(30+qi*90)+'px';
+      el.style.top=(64+qi*12)+'%';
+      const fire = '\uD83D\uDD25'.repeat(Math.min(q.fire||0,5));
+      el.innerHTML=`<div class="q-text">\u201C${esc(q.text)}\u201D</div><div class="q-speaker" style="color:${c}">${esc(q.speaker)}</div><div class="q-fire">${fire}</div>`;
+      col.appendChild(el);
+    });
+
+    // Session marker
+    const pacing = s.pacing||{};
+    let sceneHtml='';
+    if(pacing.scenes && pacing.scenes.length){
+      sceneHtml='<div class="scene-bar">';
+      pacing.scenes.forEach(sc=>{
+        const c=SCENE_C[sc.type]||'#444466';
+        sceneHtml+=`<div class="sb" style="background:${c};width:${Math.max(5,sc.energy*2.5)}px" title="${sc.type} (${sc.energy})"></div>`;
+      });
+      sceneHtml+='</div>';
+    }
+    const recapTitle = (s.recap&&s.recap.title)?s.recap.title:(s.session_label||'');
+    const marker = document.createElement('div');
+    marker.className='sm-bar';
+    marker.innerHTML=`<div class="sm-num">${sid(i)}</div><div class="sm-title">${esc(recapTitle)}</div><div class="sm-pace">${esc(pacing.pace||'')}</div>${sceneHtml}`;
+    col.appendChild(marker);
+
+    strip.appendChild(col);
+  }
+
+  // Arc chapter cards
+  ARCS.forEach(arc=>{
+    const card = document.createElement('div');
+    card.className='arc-card';
+    card.dataset.ss=arc.s[0];
+    card.style.color=arc.color;
+    card.style.left=((arc.s[0]-1)*SW + SW/2)+'px';
+    card.style.top='50%';
+    card.innerHTML=`
+      <div class="arc-label" style="color:${arc.color}99">${arc.label}</div>
+      <div class="arc-title">${arc.name}</div>
+      <div class="arc-divider" style="background:${arc.color}"></div>
+      <div class="arc-sessions-label">SESSIONS ${arc.s[0]}\u2013${arc.s[1]}</div>
+    `;
+    strip.appendChild(card);
+  });
+}
+
+// ================================================================
+// CHAPTERS & CAST
+// ================================================================
+function buildChapters(){
+  const bar=document.getElementById('chapter-bar');
+  ARCS.forEach(arc=>{
+    const btn=document.createElement('button');
+    btn.className='ch-btn';
+    btn.textContent=`${arc.label}: ${arc.name}`;
+    btn.style.borderColor=arc.color+'22';
+    btn.dataset.ss=arc.s[0];
+    btn.addEventListener('click',()=>scrollToSession(arc.s[0]));
+    bar.appendChild(btn);
+  });
+}
+
+function buildCast(){
+  const box=document.getElementById('cast-dots');
+  CAST_MAP.forEach(ch=>{
+    const dot=document.createElement('div');
+    dot.className='cast-dot active';
+    dot.style.backgroundColor=PC[ch.n]||'#888';
+    dot.style.color=PC[ch.n]||'#888';
+    dot.id='cd-'+ch.n;
+    dot.title=ch.n;
+    box.appendChild(dot);
+    const lbl=document.createElement('span');
+    lbl.className='cast-dot-lbl';
+    lbl.textContent=ch.n.substring(0,3).toUpperCase();
+    box.appendChild(lbl);
+  });
+}
+
+// ================================================================
+// SENTIMENT WAVEFORM
+// ================================================================
+function buildWaveform(){
+  // Collect average sentiment per session
+  const vals=[];
+  for(let i=1;i<=NS;i++){
+    const s=getS(i);
+    const w=s.sentiment_windows||[];
+    if(w.length===0){ vals.push(0); continue; }
+    vals.push(w.reduce((a,v)=>a+(v.sent||0),0)/w.length);
+  }
+
+  const svg=d3.select('#waveform svg');
+  const W=window.innerWidth;
+  const H=40;
+  svg.attr('viewBox',`0 0 ${W} ${H}`).attr('preserveAspectRatio','none');
+
+  const x=d3.scaleLinear().domain([0,NS-1]).range([0,W]);
+  const y=d3.scaleLinear().domain([-8,8]).range([H,0]).clamp(true);
+
+  const area=d3.area()
+    .x((_,i)=>x(i))
+    .y0(y(0))
+    .y1(d=>y(d))
+    .curve(d3.curveBasis);
+
+  const line=d3.line()
+    .x((_,i)=>x(i))
+    .y(d=>y(d))
+    .curve(d3.curveBasis);
+
+  // Gradient
+  const defs=svg.append('defs');
+  const grad=defs.append('linearGradient').attr('id','wg').attr('x1','0%').attr('x2','100%');
+  vals.forEach((v,i)=>{
+    const pct=(i/(NS-1)*100).toFixed(1);
+    let col='#1a1a2e';
+    if(v>3) col='#fbbf2466';
+    else if(v>0) col='#1a1a2e66';
+    else if(v>-2) col='#1a1a2e66';
+    else if(v>-6) col='#2a0a0a66';
+    else col='#1a000066';
+    grad.append('stop').attr('offset',pct+'%').attr('stop-color',col);
+  });
+
+  svg.append('path').datum(vals).attr('d',area).attr('fill','url(#wg)').attr('opacity',0.5);
+  svg.append('path').datum(vals).attr('d',line).attr('fill','none').attr('stroke','rgba(200,200,224,0.15)').attr('stroke-width',1);
+
+  // Zero line
+  svg.append('line').attr('x1',0).attr('x2',W).attr('y1',y(0)).attr('y2',y(0)).attr('stroke','rgba(200,200,224,0.06)').attr('stroke-width',0.5);
+}
+
+// ================================================================
+// SENTIMENT BACKGROUND
+// ================================================================
+function sentColor(v){
+  if(v==null) return [6,6,12];
+  if(v<-6) return [30,4,4];
+  if(v<-2){ const t=(v+6)/4; return [Math.round(30+t*0),Math.round(4+t*8),Math.round(4+t*14)]; }
+  if(v<3){ const t=(v+2)/5; return [Math.round(22+t*4),Math.round(12+t*14),Math.round(18+t*28)]; }
+  const t=Math.min((v-3)/5,1);
+  return [Math.round(26+t*40),Math.round(26+t*22),Math.round(46-t*24)];
+}
+
+function avgSent(i){
+  const s=getS(i);
+  const w=s.sentiment_windows||[];
+  if(!w.length) return 0;
+  return w.reduce((a,v)=>a+(v.sent||0),0)/w.length;
+}
+
+function interpSent(px){
+  const frac=px/SW+1;
+  const s1=Math.max(1,Math.min(NS,Math.floor(frac)));
+  const s2=Math.min(NS,s1+1);
+  const t=frac-s1;
+  return avgSent(s1)+(avgSent(s2)-avgSent(s1))*t;
+}
+
+function updateBg(){
+  const center=sx+window.innerWidth/2;
+  const l=sentColor(interpSent(sx));
+  const m=sentColor(interpSent(center));
+  const r=sentColor(interpSent(sx+window.innerWidth));
+  document.getElementById('bg-layer').style.background=
+    `linear-gradient(90deg,rgb(${l}),rgb(${m}),rgb(${r}))`;
+}
+
+// ================================================================
+// DIMENSIONS
+// ================================================================
+function updateDim(){
+  const cur=curSession();
+  const ov=document.getElementById('dimension-overlay');
+  const gv=document.getElementById('gothic-vignette');
+  const strip=document.getElementById('film-strip');
+  const cave=document.getElementById('cave-silhouette');
+  const heat=document.getElementById('heat-shimmer');
+
+  ov.className='';
+  gv.style.opacity='0';
+  strip.className='';
+  cave.classList.remove('active');
+  heat.classList.remove('active');
+
+  if(cur>=35&&cur<=42){
+    ov.className='active dim-barovia';
+    gv.style.opacity='1';
+    strip.className='barovia';
+  } else if(cur>=21&&cur<=26){
+    ov.className='active dim-underdark';
+    cave.classList.add('active');
+    drawCaveSilhouette();
+  } else if(cur===46){
+    ov.className='active dim-feywild';
+    strip.className='feywild';
+  } else if(cur>=27&&cur<=30){
+    ov.className='active dim-soulforge';
+    heat.classList.add('active');
+  }
+}
+
+function drawCaveSilhouette(){
+  const cave=document.getElementById('cave-silhouette');
+  if(cave.querySelector('svg')) return; // already drawn
+  const w=window.innerWidth, h=120;
+  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('width',w);
+  svg.setAttribute('height',h);
+  svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
+  svg.style.width='100%';svg.style.height='100%';
+  // Generate stalactite path
+  let d=`M0,0 L0,${h*0.3}`;
+  for(let x=0;x<w;x+=30+Math.random()*40){
+    const stalH=20+Math.random()*60;
+    const tipX=x+10+Math.random()*15;
+    d+=` L${x},${h*0.15+Math.random()*15} L${tipX},${stalH+h*0.15} L${x+25+Math.random()*15},${h*0.12+Math.random()*15}`;
+  }
+  d+=` L${w},${h*0.2} L${w},0 Z`;
+  const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+  path.setAttribute('d',d);
+  path.setAttribute('fill','#06060c');
+  path.setAttribute('opacity','0.85');
+  svg.appendChild(path);
+  cave.appendChild(svg);
+}
+
+function curSession(){
+  return Math.max(1,Math.min(NS,Math.round((sx+window.innerWidth/2)/SW+1)));
+}
+
+// ================================================================
+// VISIBILITY
+// ================================================================
+function updateVis(){
+  const vl=sx-200, vr=sx+window.innerWidth+200;
+  document.querySelectorAll('.session-col').forEach(col=>{
+    const sn=parseInt(col.dataset.s);
+    const cl=(sn-1)*SW, cr=cl+SW;
+    if(cr>vl && cl<vr){
+      col.querySelectorAll('.moment-box,.float-quote,.recap-hook,.emotion-badge').forEach(e=>e.classList.add('visible'));
+    }
+  });
+  // Arc cards
+  const vc=sx+window.innerWidth/2;
+  document.querySelectorAll('.arc-card').forEach(card=>{
+    const ss=parseInt(card.dataset.ss);
+    const cx=(ss-1)*SW+SW/2;
+    card.classList.toggle('visible',Math.abs(cx-vc)<SW*2);
+  });
+}
+
+// ================================================================
+// CAST BAR
+// ================================================================
+function updateCast(){
+  const cur=curSession();
+  CAST_MAP.forEach(ch=>{
+    const dot=document.getElementById('cd-'+ch.n);
+    if(!dot) return;
+    const active=cur>=ch.range[0]&&cur<=ch.range[1];
+    dot.classList.toggle('active',active);
+    dot.classList.toggle('inactive',!active);
+  });
+}
+
+// ================================================================
+// PROGRESS & LABELS
+// ================================================================
+function updateProgress(){
+  const mx=TW-window.innerWidth;
+  const pct=Math.max(0,Math.min(100,(sx/mx)*100));
+  document.getElementById('progress-fill').style.width=pct+'%';
+  document.getElementById('progress-handle').style.left=pct+'%';
+
+  const cur=curSession();
+  const s=getS(cur);
+  document.getElementById('cur-sid').textContent=sid(cur);
+  const title=(s.recap&&s.recap.title)?s.recap.title:(s.session_label||'');
+  document.getElementById('cur-label').textContent=title;
+
+  // Chapter highlight
+  document.querySelectorAll('.ch-btn').forEach((btn,i)=>{
+    const arc=ARCS[i];
+    btn.classList.toggle('active',arc&&cur>=arc.s[0]&&cur<=arc.s[1]);
+  });
+
+  // Big session indicator
+  const bs=document.getElementById('big-session');
+  if(bs){
+    bs.querySelector('.bs-num').textContent=sid(cur);
+    bs.querySelector('.bs-emo').textContent=s.dominant_emotion||'';
+    // Show briefly when session changes
+    if(window._lastBigSession!==cur){
+      window._lastBigSession=cur;
+      bs.classList.add('show');
+      clearTimeout(window._bsTimeout);
+      window._bsTimeout=setTimeout(()=>bs.classList.remove('show'),2000);
+    }
+  }
+}
+
+// ================================================================
+// CONTROLS
+// ================================================================
+function seekTo(e){
+  const r=document.getElementById('progress-wrap').getBoundingClientRect();
+  const pct=(e.clientX-r.left)/r.width;
+  sx=pct*(TW-window.innerWidth);
+  updateView();
+}
+function togglePlay(){
+  playing=!playing;
+  document.getElementById('play-btn').innerHTML=playing?'\u23F8':'\u25B6';
+  document.getElementById('play-btn').classList.toggle('active',playing);
+  if(playing) lastT=performance.now();
+}
+function cycleSpeed(){
+  const sp=[0.5,1,2,4];
+  speed=sp[(sp.indexOf(speed)+1)%sp.length];
+  document.getElementById('speed-btn').textContent=speed+'x';
+}
+function skipBack(){ scrollToSession(Math.max(1,curSession()-1)); }
+function skipForward(){ scrollToSession(Math.min(NS,curSession()+1)); }
+function scrollToSession(n){
+  sx=Math.max(0,Math.min(TW-window.innerWidth,(n-1)*SW-window.innerWidth/2+SW/2));
+  playing=false;
+  document.getElementById('play-btn').innerHTML='\u25B6';
+  document.getElementById('play-btn').classList.remove('active');
+  updateView();
+}
+
+// ================================================================
+// TOOLTIPS
+// ================================================================
+const typeCol={dice:'#fbbf24',combat:'#ef4444',comedy:'#fbbf24',dramatic:'#a855f7',energy:'#3b82f6'};
+function showTT(e,pk,cls){
+  const tt=document.getElementById('peak-tt');
+  tt.querySelector('.tt-title').textContent=pk.title;
+  const t=cls.replace('p-','');
+  tt.querySelector('.tt-type').textContent=pk.type;
+  tt.querySelector('.tt-type').style.color=typeCol[t]||'#888';
+  tt.querySelector('.tt-excerpt').textContent=pk.excerpt;
+  tt.querySelector('.tt-score').textContent='Energy: '+pk.score+'/10';
+  tt.querySelector('.tt-players').textContent=(pk.players||[]).join(', ');
+  tt.classList.add('show');
+  moveTT(e);
+}
+function moveTT(e){
+  const tt=document.getElementById('peak-tt');
+  tt.style.left=Math.min(e.clientX+16,window.innerWidth-320)+'px';
+  tt.style.top=Math.min(e.clientY-10,window.innerHeight-160)+'px';
+}
+function hideTT(){ document.getElementById('peak-tt').classList.remove('show'); }
+
+// ================================================================
+// PARTICLES
+// ================================================================
+let particles=[];
+function initParticles(){
+  const c=document.getElementById('particle-canvas');
+  c.width=window.innerWidth; c.height=window.innerHeight;
+  particles=[];
+  for(let i=0;i<90;i++) particles.push({
+    x:Math.random()*c.width,y:Math.random()*c.height,
+    vx:(Math.random()-0.5)*0.25,vy:-Math.random()*0.4-0.08,
+    s:Math.random()*2+0.4,a:Math.random()*0.2+0.03,life:Math.random()
+  });
+}
+
+function drawParticles(){
+  const c=document.getElementById('particle-canvas');
+  const ctx=c.getContext('2d');
+  ctx.clearRect(0,0,c.width,c.height);
+
+  const cur=curSession();
+  let pc=[200,200,224],mode='default';
+  if(cur>=35&&cur<=42){ pc=[140,110,120]; mode='fog'; }
+  else if(cur===46){ pc=[80,255,140]; mode='sparkle'; }
+  else if(cur>=27&&cur<=30){ pc=[255,110,40]; mode='ember'; }
+  else if(cur>=21&&cur<=26){ pc=[60,130,210]; mode='mote'; }
+
+  const now=Date.now();
+  particles.forEach(p=>{
+    p.life+=0.0015;
+    if(p.life>1) p.life=0;
+    const la=Math.sin(p.life*Math.PI);
+
+    if(mode==='fog'){
+      p.x+=Math.sin(now*0.0004+p.y*0.008)*0.6;
+      p.y+=p.vy*0.2;
+      p.s=3+la*4;
+    } else if(mode==='sparkle'){
+      p.x+=p.vx;
+      p.y-=Math.abs(p.vy)*1.8;
+      p.s=0.8+la*2.5;
+    } else if(mode==='ember'){
+      p.x+=p.vx+Math.sin(now*0.0008+p.x*0.01)*0.4;
+      p.y-=Math.abs(p.vy)*0.9;
+      p.s=1+la*1.8;
+    } else {
+      p.x+=p.vx; p.y+=p.vy;
+    }
+
+    if(p.y<-10){p.y=c.height+10;p.x=Math.random()*c.width;}
+    if(p.y>c.height+10){p.y=-10;p.x=Math.random()*c.width;}
+    if(p.x<-10)p.x=c.width+10;
+    if(p.x>c.width+10)p.x=-10;
+
+    const alpha=p.a*la;
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,p.s,0,Math.PI*2);
+    ctx.fillStyle=`rgba(${pc[0]},${pc[1]},${pc[2]},${alpha})`;
+    ctx.fill();
+
+    if(mode==='sparkle'||mode==='ember'){
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,p.s*3,0,Math.PI*2);
+      ctx.fillStyle=`rgba(${pc[0]},${pc[1]},${pc[2]},${alpha*0.1})`;
+      ctx.fill();
+    }
+  });
+}
+
+// ================================================================
+// UPDATE & LOOP
+// ================================================================
+function updateView(){
+  document.getElementById('film-strip').style.transform=`translateX(${-sx}px)`;
+  updateBg();
+  updateDim();
+  updateVis();
+  updateCast();
+  updateProgress();
+  updateKillCounter();
+  updateHeartbeat();
+  updateMinimap();
+  updatePreviouslyOn();
+}
+
+function loop(t){
+  if(!started) return;
+  if(playing){
+    const dt=t-lastT;
+    sx+=dt*(SW/BASE_MS)*speed;
+    const mx=TW-window.innerWidth;
+    if(sx>=mx){sx=mx;playing=false;document.getElementById('play-btn').innerHTML='\u25B6';document.getElementById('play-btn').classList.remove('active');}
+    sx=Math.max(0,sx);
+    updateView();
+  }
+  lastT=t;
+  drawParticles();
+  drawWeather();
+  updateSparks();
+  requestAnimationFrame(loop);
+}
+
+// ================================================================
+// INPUT
+// ================================================================
+document.addEventListener('keydown',e=>{
+  if(!started){if(e.key==='Enter'||e.key===' '){e.preventDefault();startFilm();}return;}
+  switch(e.key){
+    case ' ':e.preventDefault();togglePlay();break;
+    case 'ArrowRight':e.preventDefault();if(e.shiftKey)skipForward();else{sx=Math.min(TW-window.innerWidth,sx+120);updateView();}break;
+    case 'ArrowLeft':e.preventDefault();if(e.shiftKey)skipBack();else{sx=Math.max(0,sx-120);updateView();}break;
+    case 'ArrowUp':e.preventDefault();cycleSpeed();break;
+  }
+});
+
+document.addEventListener('wheel',e=>{
+  if(!started)return;
+  e.preventDefault();
+  sx+=e.deltaY*2;
+  sx=Math.max(0,Math.min(TW-window.innerWidth,sx));
+  updateView();
+},{passive:false});
+
+let touchX=0,touchSX=0;
+document.addEventListener('touchstart',e=>{if(!started)return;touchX=e.touches[0].clientX;touchSX=sx;});
+document.addEventListener('touchmove',e=>{if(!started)return;e.preventDefault();sx=Math.max(0,Math.min(TW-window.innerWidth,touchSX+(touchX-e.touches[0].clientX)));updateView();},{passive:false});
+
+// ================================================================
+// FEATURE 1: KILL COUNTER
+// ================================================================
+const KILLS={S001:0,S002:0,S003:2,S004:8,S005:3,S006:1,S007:0,S008:0,S009:0,S010:14,S011:1,S012:3,S013:0,S014:1,S015:0,S016:5,S017:0,S018:0,S019:4,S020:0,S021:3,S022:4,S023:6,S024:3,S025:0,S026:2,S027:5,S028:3,S029:0,S030:1,S031:4,S032:2,S033:3,S034:4,S035:0,S036:6,S037:8,S038:0,S039:2,S040:3,S041:2,S042:7,S043:0,S044:1,S045:9,S046:0};
+let _killDisplayed=0, _killTarget=0, _killLastSession=0;
+
+function updateKillCounter(){
+  const cur=curSession();
+  const el=document.getElementById('kill-counter');
+  const valEl=document.getElementById('kill-val');
+  const numEl=document.getElementById('kill-num');
+  if(!el||!valEl) return;
+  el.classList.add('visible');
+
+  // Calculate cumulative kills up to current session
+  let total=0;
+  for(let i=1;i<=cur;i++) total+=(KILLS[sid(i)]||0);
+  _killTarget=total;
+
+  // Animate increment
+  if(_killDisplayed<_killTarget){
+    _killDisplayed=Math.min(_killTarget,_killDisplayed+Math.max(1,Math.ceil((_killTarget-_killDisplayed)*0.3)));
+    valEl.textContent=_killDisplayed;
+    // Flash effect on change
+    if(numEl) numEl.classList.add('flash');
+    clearTimeout(window._killFlashTO);
+    window._killFlashTO=setTimeout(()=>{if(numEl)numEl.classList.remove('flash');},200);
+  } else if(_killDisplayed>_killTarget){
+    _killDisplayed=_killTarget;
+    valEl.textContent=_killDisplayed;
+  }
+}
+
+// ================================================================
+// FEATURE 2: DANGER HEARTBEAT
+// ================================================================
+function buildHeartbeat(){
+  const svg=d3.select('#danger-heartbeat svg');
+  const W=window.innerWidth, H=30;
+  svg.attr('viewBox',`0 0 ${W} ${H}`).attr('preserveAspectRatio','none');
+  svg.selectAll('*').remove();
+
+  // Collect energy averages per session
+  const energies=[];
+  for(let i=1;i<=NS;i++){
+    const s=getS(i);
+    const e=(s.pacing&&s.pacing.energy_avg)||5;
+    energies.push(e);
+  }
+
+  // Build EKG-style path with spikes at high-energy sessions
+  const segW=W/NS;
+  let pathD='M0,'+H/2;
+  for(let i=0;i<NS;i++){
+    const baseX=i*segW;
+    const e=energies[i];
+    const norm=(e-4)/5; // normalize 4-9 range to 0-1
+    const spikeH=Math.max(2,norm*H*0.8);
+    // Flat approach
+    pathD+=` L${baseX+segW*0.3},${H/2}`;
+    // Spike up
+    pathD+=` L${baseX+segW*0.4},${H/2-spikeH}`;
+    // Spike down below baseline
+    pathD+=` L${baseX+segW*0.5},${H/2+spikeH*0.3}`;
+    // Recovery
+    pathD+=` L${baseX+segW*0.6},${H/2}`;
+    // Flat exit
+    pathD+=` L${baseX+segW},${H/2}`;
+  }
+
+  // Color gradient based on energy
+  const defs=svg.append('defs');
+  const grad=defs.append('linearGradient').attr('id','hb-grad').attr('x1','0%').attr('x2','100%');
+  energies.forEach((e,i)=>{
+    const pct=(i/(NS-1)*100).toFixed(1);
+    let col='#44ff88'; // low danger
+    if(e>7) col='#ef4444'; // high
+    else if(e>6) col='#fbbf24'; // medium
+    grad.append('stop').attr('offset',pct+'%').attr('stop-color',col);
+  });
+
+  // Glow filter
+  const filter=defs.append('filter').attr('id','hb-glow');
+  filter.append('feGaussianBlur').attr('stdDeviation','2').attr('result','blur');
+  filter.append('feMerge').selectAll('feMergeNode').data(['blur','SourceGraphic']).join('feMergeNode').attr('in',d=>d);
+
+  // Baseline
+  svg.append('line').attr('x1',0).attr('x2',W).attr('y1',H/2).attr('y2',H/2).attr('stroke','rgba(200,200,224,0.06)').attr('stroke-width',0.5);
+
+  // Glow path (behind)
+  svg.append('path').attr('d',pathD).attr('fill','none').attr('stroke','url(#hb-grad)').attr('stroke-width',2).attr('opacity',0.3).attr('filter','url(#hb-glow)');
+  // Main path
+  svg.append('path').attr('d',pathD).attr('fill','none').attr('stroke','url(#hb-grad)').attr('stroke-width',1.2).attr('opacity',0.8);
+
+  // Store for scrolling offset
+  window._hbSvg=svg;
+  window._hbW=W;
+}
+
+function updateHeartbeat(){
+  if(!window._hbSvg) return;
+  const mx=TW-window.innerWidth;
+  const scrollPct=sx/mx;
+  // Shift the viewBox to follow the scroll position
+  const totalPathW=window._hbW;
+  const offset=scrollPct*(totalPathW-window.innerWidth);
+  window._hbSvg.attr('viewBox',`${offset} 0 ${window.innerWidth} 30`);
+}
+
+// ================================================================
+// FEATURE 3: WEATHER PARTICLES
+// ================================================================
+let weatherParticles=[];
+const MAX_WEATHER=50;
+
+function initWeather(){
+  const c=document.getElementById('weather-canvas');
+  if(!c) return;
+  c.width=window.innerWidth;
+  c.height=window.innerHeight;
+  weatherParticles=[];
+}
+
+function getWeatherMode(sessionNum){
+  const s=getS(sessionNum);
+  const pacing=s.pacing||{};
+  const scenes=pacing.scenes||[];
+  const hasCombat=scenes.some(sc=>sc.type&&(sc.type.includes('Combat')||sc.type.includes('Boss_Fight')||sc.type.includes('Climax')));
+  const sentW=s.sentiment_windows||[];
+  const mean=sentW.length?sentW.reduce((a,v)=>a+(v.sent||0),0)/sentW.length:0;
+
+  // Priority order: location-based first, then sentiment/combat
+  if(sessionNum>=35&&sessionNum<=42) return 'snow';
+  if(sessionNum>=21&&sessionNum<=26) return 'spores';
+  if(hasCombat) return 'embers';
+  if(mean<-2) return 'rain';
+  if(mean>4) return 'golden';
+  return null;
+}
+
+function spawnWeatherParticle(mode, w, h){
+  const p={life:0,maxLife:200+Math.random()*300};
+  switch(mode){
+    case 'snow':
+      p.x=Math.random()*w; p.y=-5;
+      p.vx=(Math.random()-0.5)*0.3; p.vy=0.4+Math.random()*0.6;
+      p.s=1+Math.random()*2.5; p.color='rgba(255,255,255,';
+      break;
+    case 'embers':
+      p.x=Math.random()*w; p.y=h+5;
+      p.vx=(Math.random()-0.5)*0.8; p.vy=-(0.5+Math.random()*1.2);
+      p.s=1+Math.random()*2; p.color='rgba(255,140,40,';
+      break;
+    case 'rain':
+      p.x=Math.random()*w*1.3; p.y=-5;
+      p.vx=-1.5; p.vy=4+Math.random()*3;
+      p.s=1; p.color='rgba(100,160,255,'; p.isRain=true;
+      break;
+    case 'golden':
+      p.x=Math.random()*w; p.y=h*0.3+Math.random()*h*0.7;
+      p.vx=(Math.random()-0.5)*0.2; p.vy=-(0.15+Math.random()*0.3);
+      p.s=1+Math.random()*2; p.color='rgba(251,191,36,';
+      break;
+    case 'spores':
+      p.x=Math.random()*w; p.y=Math.random()*h;
+      p.vx=(Math.random()-0.5)*0.4; p.vy=(Math.random()-0.5)*0.3;
+      p.s=1.5+Math.random()*2.5; p.color='rgba(80,220,80,';
+      p.wobble=Math.random()*Math.PI*2;
+      break;
+  }
+  return p;
+}
+
+function drawWeather(){
+  const c=document.getElementById('weather-canvas');
+  if(!c) return;
+  const ctx=c.getContext('2d');
+  ctx.clearRect(0,0,c.width,c.height);
+
+  const cur=curSession();
+  const mode=getWeatherMode(cur);
+  if(!mode){
+    weatherParticles=[];
+    return;
+  }
+
+  // Spawn new particles up to max
+  while(weatherParticles.length<MAX_WEATHER){
+    weatherParticles.push(spawnWeatherParticle(mode,c.width,c.height));
+  }
+
+  // Update and draw
+  for(let i=weatherParticles.length-1;i>=0;i--){
+    const p=weatherParticles[i];
+    p.life++;
+
+    if(mode==='spores'){
+      p.wobble+=0.02;
+      p.x+=p.vx+Math.sin(p.wobble)*0.5;
+      p.y+=p.vy+Math.cos(p.wobble*0.7)*0.3;
+    } else {
+      p.x+=p.vx;
+      p.y+=p.vy;
+    }
+
+    // Remove if off-screen or expired
+    const oob=p.y<-20||p.y>c.height+20||p.x<-20||p.x>c.width+20||p.life>p.maxLife;
+    if(oob){
+      weatherParticles.splice(i,1);
+      continue;
+    }
+
+    // Fade in/out
+    const lifePct=p.life/p.maxLife;
+    let alpha=0.3+Math.random()*0.3;
+    if(lifePct<0.1) alpha*=lifePct/0.1;
+    else if(lifePct>0.8) alpha*=(1-lifePct)/0.2;
+    alpha=Math.max(0,Math.min(0.6,alpha));
+
+    if(p.isRain){
+      // Draw as angled streak
+      ctx.beginPath();
+      ctx.moveTo(p.x,p.y);
+      ctx.lineTo(p.x+3,p.y+8);
+      ctx.strokeStyle=p.color+alpha+')';
+      ctx.lineWidth=p.s;
+      ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,p.s,0,Math.PI*2);
+      ctx.fillStyle=p.color+alpha+')';
+      ctx.fill();
+    }
+  }
+}
+
+// ================================================================
+// FEATURE 4: MINIMAP
+// ================================================================
+function buildMinimap(){
+  const wrap=document.getElementById('minimap');
+  const c=document.getElementById('minimap-canvas');
+  if(!wrap||!c) return;
+  wrap.style.display='block';
+  const W=window.innerWidth, H=8;
+  c.width=W; c.height=H;
+  const ctx=c.getContext('2d');
+
+  // Draw sentiment color strip for all sessions
+  const segW=W/NS;
+  for(let i=0;i<NS;i++){
+    const v=avgSent(i+1);
+    const rgb=sentColor(v);
+    ctx.fillStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+    ctx.fillRect(i*segW,0,segW+1,H);
+
+    // Add tiny separator
+    ctx.fillStyle='rgba(0,0,0,0.3)';
+    ctx.fillRect(i*segW,0,0.5,H);
+  }
+
+  // Click handler
+  wrap.addEventListener('click',function(e){
+    const r=wrap.getBoundingClientRect();
+    const pct=(e.clientX-r.left)/r.width;
+    const targetSession=Math.max(1,Math.min(NS,Math.round(pct*NS)));
+    scrollToSession(targetSession);
+  });
+}
+
+function updateMinimap(){
+  const indicator=document.getElementById('minimap-indicator');
+  const wrap=document.getElementById('minimap');
+  if(!indicator||!wrap) return;
+
+  const W=wrap.offsetWidth;
+  const mx=TW-window.innerWidth;
+  // Current viewport position as fraction of total
+  const startPct=sx/TW;
+  const widthPct=window.innerWidth/TW;
+
+  indicator.style.left=(startPct*W)+'px';
+  indicator.style.width=Math.max(3,widthPct*W)+'px';
+}
+
+// ================================================================
+// FEATURE 5: RELATIONSHIP SPARKS
+// ================================================================
+const SPARK_MOMENTS=[
+  {session:3,chars:['Billabong','Ash'],label:'HT+Christie'},
+  {session:15,chars:['Orla','Billabong'],label:'Gradles+HT'},
+  {session:31,chars:['Orla','Ash'],label:'Gradles+Christie'},
+  {session:42,chars:['Billabong','Ash'],label:'HT+Christie'}
+];
+let activeSparkList=[];
+
+function initSparkCanvas(){
+  const c=document.getElementById('spark-canvas');
+  if(!c) return;
+  c.width=window.innerWidth;
+  c.height=30;
+}
+
+function getCastDotPosition(charName){
+  const dot=document.getElementById('cd-'+charName);
+  if(!dot) return null;
+  const r=dot.getBoundingClientRect();
+  // Canvas starts at top:8px, so subtract 8 for canvas-relative y
+  return {x:r.left+r.width/2, y:r.top+r.height/2-8};
+}
+
+function updateSparks(){
+  const c=document.getElementById('spark-canvas');
+  if(!c) return;
+  const ctx=c.getContext('2d');
+  ctx.clearRect(0,0,c.width,c.height);
+
+  const cur=curSession();
+
+  // Trigger sparks for matching sessions
+  SPARK_MOMENTS.forEach(sm=>{
+    if(cur===sm.session){
+      // Check if this spark is already active
+      if(!activeSparkList.find(a=>a.session===sm.session)){
+        activeSparkList.push({...sm, startTime:Date.now(), duration:2000});
+      }
+    }
+  });
+
+  // Draw and prune active sparks
+  const now=Date.now();
+  for(let i=activeSparkList.length-1;i>=0;i--){
+    const sp=activeSparkList[i];
+    const elapsed=now-sp.startTime;
+    if(elapsed>sp.duration){
+      activeSparkList.splice(i,1);
+      continue;
+    }
+
+    const p1=getCastDotPosition(sp.chars[0]);
+    const p2=getCastDotPosition(sp.chars[1]);
+    if(!p1||!p2) continue;
+
+    const progress=elapsed/sp.duration;
+    const alpha=progress<0.3 ? progress/0.3 : (1-(progress-0.3)/0.7);
+    const c1=PC[sp.chars[0]]||'#888';
+    const c2=PC[sp.chars[1]]||'#888';
+
+    // Draw glowing arc between the two cast dots
+    const midX=(p1.x+p2.x)/2;
+    const midY=Math.min(p1.y,p2.y)-12-Math.sin(progress*Math.PI)*8;
+
+    ctx.beginPath();
+    ctx.moveTo(p1.x,p1.y);
+    ctx.quadraticCurveTo(midX,midY,p2.x,p2.y);
+
+    // Create gradient along the arc
+    const grad=ctx.createLinearGradient(p1.x,p1.y,p2.x,p2.y);
+    grad.addColorStop(0,c1);
+    grad.addColorStop(1,c2);
+    ctx.strokeStyle=grad;
+    ctx.lineWidth=2;
+    ctx.globalAlpha=alpha*0.8;
+    ctx.shadowColor=c1;
+    ctx.shadowBlur=8;
+    ctx.stroke();
+
+    // Second pass for glow
+    ctx.lineWidth=4;
+    ctx.globalAlpha=alpha*0.2;
+    ctx.stroke();
+
+    ctx.globalAlpha=1;
+    ctx.shadowBlur=0;
+  }
+}
+
+// ================================================================
+// FEATURE 6: PREVIOUSLY ON
+// ================================================================
+let _prevSession=0, _prevShowTime=0;
+
+function updatePreviouslyOn(){
+  const el=document.getElementById('previously-on');
+  if(!el) return;
+
+  const cur=curSession();
+  const now=Date.now();
+
+  // Show "Previously..." when session changes during play or slow scroll
+  if(cur!==_prevSession && cur>1){
+    _prevSession=cur;
+    const prevS=getS(cur-1);
+    const hook=(prevS.recap&&prevS.recap.hook)?prevS.recap.hook:'';
+    if(hook && hook!=='A hook' && hook!=='Testing version'){
+      el.querySelector('.prev-hook').textContent=hook;
+      el.classList.add('visible');
+      _prevShowTime=now;
+    }
+  }
+
+  // Auto-hide after 2.5 seconds
+  if(_prevShowTime && now-_prevShowTime>2500){
+    el.classList.remove('visible');
+    _prevShowTime=0;
+  }
+}
+
+window.addEventListener('resize',()=>{
+  if(!started)return;
+  const c=document.getElementById('particle-canvas');
+  c.width=window.innerWidth;c.height=window.innerHeight;
+  // Resize new canvases
+  const wc=document.getElementById('weather-canvas');
+  if(wc){wc.width=window.innerWidth;wc.height=window.innerHeight;}
+  const sc=document.getElementById('spark-canvas');
+  if(sc){sc.width=window.innerWidth;sc.height=30;}
+  buildHeartbeat();
+  buildMinimap();
+  updateView();
+});
+</script>
+</body>
+</html>

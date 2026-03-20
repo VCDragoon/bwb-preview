@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DICE LUCK RIVERS</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@300;400;600&family=Barlow:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&family=Cinzel:wght@400;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #06060c;
+    color: #e0e0e8;
+    font-family: 'Barlow', sans-serif;
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* Scanline overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.08) 2px,
+      rgba(0, 0, 0, 0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  .page-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 40px 30px 60px;
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 10px;
+    position: relative;
+  }
+
+  .header::after {
+    content: '';
+    display: block;
+    width: 200px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #4A90D9, #E57373, transparent);
+    margin: 16px auto 0;
+    box-shadow: 0 0 10px rgba(74, 144, 217, 0.3);
+  }
+
+  .header h1 {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 48px;
+    letter-spacing: 6px;
+    background: linear-gradient(135deg, #4A90D9, #81C784, #E57373);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 20px rgba(74, 144, 217, 0.3));
+  }
+
+  .header .subtitle {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 14px;
+    letter-spacing: 4px;
+    color: #9898b0;
+    text-transform: uppercase;
+    margin-top: 6px;
+  }
+
+  /* Stats panel */
+  .stats-panel {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin: 30px 0;
+  }
+
+  .stat-card {
+    background: linear-gradient(135deg, #0e0e1a, #16162a);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    padding: 16px 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent, #4A90D9);
+    box-shadow: 0 0 8px var(--accent, #4A90D9);
+  }
+
+  .stat-card .stat-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #7878a0;
+    margin-bottom: 6px;
+  }
+
+  .stat-card .stat-value {
+    font-family: 'Cinzel', serif;
+    font-size: 18px;
+    color: var(--accent, #e0e0e8);
+    text-shadow: 0 0 8px var(--glow, transparent);
+  }
+
+  .stat-card .stat-detail {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: #9898b0;
+    margin-top: 4px;
+  }
+
+  /* Legend */
+  .legend-bar {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin: 24px 0 16px;
+    flex-wrap: wrap;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px;
+    color: #e0e0e8;
+    letter-spacing: 1px;
+    cursor: pointer;
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+    user-select: none;
+  }
+
+  .legend-item:hover {
+    border-color: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  .legend-item.hidden {
+    opacity: 0.3;
+  }
+
+  .legend-item.hidden .legend-swatch {
+    background: #404058 !important;
+    box-shadow: none !important;
+  }
+
+  .legend-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  .legend-deviation {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #7878a0;
+    margin-left: 4px;
+  }
+
+  /* Chart container */
+  .chart-container {
+    background: linear-gradient(180deg, #0a0a14 0%, #12121e 100%);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    padding: 20px 10px;
+    position: relative;
+  }
+
+  /* Tooltip */
+  .tooltip {
+    position: fixed;
+    pointer-events: none;
+    background: linear-gradient(135deg, #1a1a2e, #22223a);
+    border: 1px solid rgba(74, 144, 217, 0.3);
+    border-radius: 6px;
+    padding: 12px 16px;
+    font-family: 'Barlow', sans-serif;
+    font-size: 13px;
+    color: #e0e0e8;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 12px rgba(74, 144, 217, 0.1);
+    z-index: 10000;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    max-width: 320px;
+    backdrop-filter: blur(10px);
+  }
+
+  .tooltip.visible { opacity: 1; }
+
+  .tooltip .tt-session {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 18px;
+    letter-spacing: 2px;
+    color: #4A90D9;
+    margin-bottom: 6px;
+  }
+
+  .tooltip .tt-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 2px 0;
+    align-items: center;
+  }
+
+  .tooltip .tt-player-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  .tooltip .tt-player-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px;
+    color: #c0c0d0;
+    flex: 1;
+    margin-left: 6px;
+  }
+
+  .tooltip .tt-player-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    min-width: 60px;
+    text-align: right;
+  }
+
+  svg text { user-select: none; }
+</style>
+</head>
+<body>
+
+<div class="page-container">
+  <div class="header">
+    <h1>DICE LUCK RIVERS</h1>
+    <div class="subtitle">Cumulative luck deviation across 46 sessions -- per player</div>
+  </div>
+
+  <div class="stats-panel" id="statsPanel"></div>
+
+  <div class="legend-bar" id="legend"></div>
+
+  <div class="chart-container">
+    <svg id="chart"></svg>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script>
+// ============================================================
+// REAL DATA — extracted from Dice & RNG Snapshot S001-S046
+// ============================================================
+const DICE_DATA = {"S001":{"session_id":"S001","player_summaries":[{"player_name":"Christie","total_rolls":4,"average_roll":11.25,"deviation_from_expected":0.75,"natural_20s":1,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"Gradles","total_rolls":4,"average_roll":11.25,"deviation_from_expected":0.75,"natural_20s":1,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"HT","total_rolls":5,"average_roll":15.2,"deviation_from_expected":4.7,"natural_20s":1,"natural_1s":0,"luck_rating":"Running Hot"},{"player_name":"Lucy","total_rolls":1,"average_roll":11.0,"deviation_from_expected":0.5,"natural_20s":0,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"Mary","total_rolls":0,"average_roll":null,"deviation_from_expected":null,"natural_20s":0,"natural_1s":0,"luck_rating":"Insufficient Data"}]},"S002":{"session_id":"S002","player_summaries":[{"player_name":"DM","total_rolls":5,"average_roll":11.0,"deviation_from_expected":0.5,"natural_20s":1,"natural_1s":1,"luck_rating":"Slightly Lucky"}]},"S003":{"session_id":"S003","player_summaries":[{"player_name":"DM","total_rolls":5,"average_roll":20.0,"deviation_from_expected":9.5,"natural_20s":5,"natural_1s":0,"luck_rating":"Running Hot"},{"player_name":"Mary","total_rolls":2,"average_roll":19.5,"deviation_from_expected":9.0,"natural_20s":1,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"Meijinx","total_rolls":1,"average_roll":20.0,"deviation_from_expected":9.5,"natural_20s":1,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"Christie/Dahlia","total_rolls":2,"average_roll":15.5,"deviation_from_expected":5.0,"natural_20s":1,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"Gradles","total_rolls":2,"average_roll":12.0,"deviation_from_expected":1.5,"natural_20s":1,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"HT","total_rolls":1,"average_roll":15.0,"deviation_from_expected":4.5,"natural_20s":0,"natural_1s":0,"luck_rating":"Insufficient Data"}]},"S004":{"session_id":"S004","player_summaries":[{"player_name":"DM","total_rolls":3,"average_roll":11.0,"deviation_from_expected":0.5,"natural_20s":0,"natural_1s":1,"luck_rating":"Insufficient Data"},{"player_name":"Gradles","total_rolls":1,"average_roll":20.0,"deviation_from_expected":9.5,"natural_20s":1,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"Meijinx","total_rolls":1,"average_roll":20.0,"deviation_from_expected":9.5,"natural_20s":1,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"Mary","total_rolls":1,"average_roll":16.0,"deviation_from_expected":5.5,"natural_20s":0,"natural_1s":0,"luck_rating":"Insufficient Data"}]},"S005":{"session_id":"S005","player_summaries":[{"player_name":"Gradles","total_rolls":1,"average_roll":20.0,"deviation_from_expected":9.5,"natural_20s":1,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"HT","total_rolls":2,"average_roll":13.0,"deviation_from_expected":2.5,"natural_20s":0,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"Mary","total_rolls":1,"average_roll":null,"deviation_from_expected":null,"natural_20s":0,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"Christie","total_rolls":1,"average_roll":17.0,"deviation_from_expected":6.5,"natural_20s":0,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"Lucy","total_rolls":2,"average_roll":20.0,"deviation_from_expected":9.5,"natural_20s":1,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"Meijinx","total_rolls":1,"average_roll":null,"deviation_from_expected":null,"natural_20s":0,"natural_1s":0,"luck_rating":"Insufficient Data"}]},"S006":{"session_id":"S006","player_summaries":[{"player_name":"DM","total_rolls":6,"average_roll":12.67,"deviation_from_expected":2.17,"natural_20s":2,"natural_1s":0,"luck_rating":"Running Hot"},{"player_name":"Gradles","total_rolls":2,"average_roll":12.0,"deviation_from_expected":1.5,"natural_20s":0,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"Mary","total_rolls":1,"average_roll":15.0,"deviation_from_expected":4.5,"natural_20s":0,"natural_1s":0,"luck_rating":"Insufficient Data"}]},"S007":{"session_id":"S007","player_summaries":[{"player_name":"Lucy","total_rolls":1,"average_roll":20.0,"deviation_from_expected":9.5,"natural_20s":1,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"DM","total_rolls":2,"average_roll":20.0,"deviation_from_expected":9.5,"natural_20s":2,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"Christie/Dahlia","total_rolls":1,"average_roll":14.0,"deviation_from_expected":3.5,"natural_20s":0,"natural_1s":0,"luck_rating":"Insufficient Data"}]},"S008":{"session_id":"S008","player_summaries":[{"player_name":"DM","total_rolls":10,"average_roll":17.3,"deviation_from_expected":6.8,"natural_20s":7,"natural_1s":0,"luck_rating":"Blessed by the Dice Gods"},{"player_name":"HT","total_rolls":2,"average_roll":10.5,"deviation_from_expected":0.0,"natural_20s":1,"natural_1s":1,"luck_rating":"Insufficient Data"},{"player_name":"Gradles","total_rolls":4,"average_roll":12.0,"deviation_from_expected":1.5,"natural_20s":2,"natural_1s":0,"luck_rating":"Insufficient Data"}]},"S009":{"session_id":"S009","player_summaries":[{"player_name":"DM","total_rolls":8,"average_roll":15.75,"deviation_from_expected":5.25,"natural_20s":3,"natural_1s":0,"luck_rating":"Blessed by the Dice Gods"},{"player_name":"Mary","total_rolls":1,"average_roll":10.0,"deviation_from_expected":-0.5,"natural_20s":0,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"Christie/Dahlia","total_rolls":2,"average_roll":11.5,"deviation_from_expected":1.0,"natural_20s":0,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"HT","total_rolls":1,"average_roll":19.0,"deviation_from_expected":8.5,"natural_20s":0,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"Gradles","total_rolls":3,"average_roll":1.0,"deviation_from_expected":-9.5,"natural_20s":0,"natural_1s":3,"luck_rating":"Insufficient Data"}]},"S010":{"session_id":"S010","player_summaries":[{"player_name":"DM","total_rolls":9,"average_roll":10.0,"deviation_from_expected":-0.5,"natural_20s":2,"natural_1s":4,"luck_rating":"Perfectly Average"},{"player_name":"Gradles","total_rolls":1,"average_roll":1.0,"deviation_from_expected":-9.5,"natural_20s":0,"natural_1s":1,"luck_rating":"Insufficient Data"}]},"S011":{"session_id":"S011","player_summaries":[{"player_name":"DM","total_rolls":2,"average_roll":20.0,"deviation_from_expected":9.5,"natural_20s":2,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"HT","total_rolls":1,"average_roll":10.0,"deviation_from_expected":-0.5,"natural_20s":0,"natural_1s":0,"luck_rating":"Insufficient Data"}]},"S012":{"session_id":"S012","player_summaries":[{"player_name":"DM","total_rolls":5,"average_roll":10.0,"deviation_from_expected":-0.5,"natural_20s":1,"natural_1s":1,"luck_rating":"Perfectly Average"},{"player_name":"Lucy","total_rolls":1,"average_roll":17.0,"deviation_from_expected":6.5,"natural_20s":0,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"Gradles","total_rolls":1,"average_roll":20.0,"deviation_from_expected":9.5,"natural_20s":1,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"HT","total_rolls":1,"average_roll":14.0,"deviation_from_expected":3.5,"natural_20s":0,"natural_1s":0,"luck_rating":"Insufficient Data"}]},"S013":{"session_id":"S013","player_summaries":[{"player_name":"DM","total_rolls":1,"average_roll":20.0,"deviation_from_expected":9.5,"natural_20s":1,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"HT","total_rolls":1,"average_roll":20.0,"deviation_from_expected":9.5,"natural_20s":1,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"Lucy","total_rolls":1,"average_roll":16.0,"deviation_from_expected":5.5,"natural_20s":0,"natural_1s":0,"luck_rating":"Insufficient Data"}]},"S014":{"session_id":"S014","player_summaries":[{"player_name":"HT","total_rolls":1,"average_roll":20.0,"deviation_from_expected":9.5,"natural_20s":1,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"DM","total_rolls":3,"average_roll":19.67,"deviation_from_expected":9.17,"natural_20s":2,"natural_1s":0,"luck_rating":"Insufficient Data"}]},"S015":{"session_id":"S015","player_summaries":[{"player_name":"Gradles","total_rolls":1,"average_roll":4.0,"deviation_from_expected":-6.5,"natural_20s":0,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"DM","total_rolls":4,"average_roll":16.0,"deviation_from_expected":5.5,"natural_20s":1,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"Meijinx","total_rolls":1,"average_roll":20.0,"deviation_from_expected":9.5,"natural_20s":1,"natural_1s":0,"luck_rating":"Insufficient Data"}]},"S016":{"session_id":"S016","player_summaries":[{"player_name":"DM","total_rolls":1,"average_roll":1.0,"deviation_from_expected":-9.5,"natural_20s":0,"natural_1s":1,"luck_rating":"Insufficient Data"},{"player_name":"Mary","total_rolls":1,"average_roll":15.0,"deviation_from_expected":4.5,"natural_20s":0,"natural_1s":0,"luck_rating":"Insufficient Data"}]},"S017":{"session_id":"S017","player_summaries":[{"player_name":"DM","total_rolls":1,"average_roll":17.0,"deviation_from_expected":6.5,"natural_20s":0,"natural_1s":0,"luck_rating":"Insufficient Data"}]},"S018":{"session_id":"S018","player_summaries":[{"player_name":"Mary","total_rolls":1,"average_roll":10.0,"deviation_from_expected":-0.5,"natural_20s":0,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"DM","total_rolls":1,"average_roll":12.0,"deviation_from_expected":1.5,"natural_20s":0,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"Lucy","total_rolls":1,"average_roll":10.0,"deviation_from_expected":-0.5,"natural_20s":0,"natural_1s":0,"luck_rating":"Insufficient Data"}]},"S019":{"session_id":"S019","player_summaries":[{"player_name":"HT","total_rolls":2,"average_roll":7.5,"deviation_from_expected":-3.0,"natural_20s":0,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"DM","total_rolls":1,"average_roll":12.0,"deviation_from_expected":1.5,"natural_20s":0,"natural_1s":0,"luck_rating":"Insufficient Data"}]},"S020":{"session_id":"S020","player_summaries":[{"player_name":"DM","total_rolls":4,"average_roll":17.25,"deviation_from_expected":6.75,"natural_20s":1,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"HT","total_rolls":2,"average_roll":20.0,"deviation_from_expected":9.5,"natural_20s":2,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"Gradles","total_rolls":2,"average_roll":20.0,"deviation_from_expected":9.5,"natural_20s":2,"natural_1s":0,"luck_rating":"Insufficient Data"}]},"S021":{"session_id":"S021","player_summaries":[{"player_name":"DM","total_rolls":1,"average_roll":19.0,"deviation_from_expected":8.5,"natural_20s":0,"natural_1s":0,"luck_rating":"Insufficient Data"}]},"S022":{"session_id":"S022","player_summaries":[{"player_name":"DM","total_rolls":3,"average_roll":16.67,"deviation_from_expected":6.17,"natural_20s":2,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"Mary","total_rolls":2,"average_roll":18.5,"deviation_from_expected":8.0,"natural_20s":1,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"HT","total_rolls":2,"average_roll":10.5,"deviation_from_expected":0.0,"natural_20s":0,"natural_1s":0,"luck_rating":"Insufficient Data"}]},"S023":{"session_id":"S023","player_summaries":[{"player_name":"Lucy","total_rolls":1,"average_roll":15.0,"deviation_from_expected":4.5,"natural_20s":0,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"Christie/Dahlia","total_rolls":1,"average_roll":20.0,"deviation_from_expected":9.5,"natural_20s":1,"natural_1s":0,"luck_rating":"Insufficient Data"}]},"S024":{"session_id":"S024","player_summaries":[{"player_name":"Mary","total_rolls":1,"average_roll":12.0,"deviation_from_expected":1.5,"natural_20s":0,"natural_1s":0,"luck_rating":"Insufficient Data"}]},"S025":{"session_id":"S025","player_summaries":[]},"S026":{"session_id":"S026","player_summaries":[{"player_name":"Mary","total_rolls":1,"average_roll":12.0,"deviation_from_expected":1.5,"natural_20s":0,"natural_1s":0,"luck_rating":"Insufficient Data"}]},"S027":{"session_id":"S027","player_summaries":[{"player_name":"DM","total_rolls":7,"average_roll":15.57,"deviation_from_expected":5.07,"natural_20s":2,"natural_1s":0,"luck_rating":"Running Hot"},{"player_name":"Mary","total_rolls":1,"average_roll":20.0,"deviation_from_expected":9.5,"natural_20s":1,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"Gradles","total_rolls":1,"average_roll":20.0,"deviation_from_expected":9.5,"natural_20s":1,"natural_1s":0,"luck_rating":"Insufficient Data"}]},"S028":{"session_id":"S028","player_summaries":[{"player_name":"DM","total_rolls":8,"average_roll":13.5,"deviation_from_expected":3.0,"natural_20s":3,"natural_1s":2,"luck_rating":"Blessed by the Dice Gods"},{"player_name":"Mary","total_rolls":2,"average_roll":10.5,"deviation_from_expected":0.0,"natural_20s":1,"natural_1s":1,"luck_rating":"Insufficient Data"},{"player_name":"Lucy","total_rolls":1,"average_roll":20.0,"deviation_from_expected":9.5,"natural_20s":1,"natural_1s":0,"luck_rating":"Insufficient Data"}]},"S029":{"session_id":"S029","player_summaries":[{"player_name":"DM","total_rolls":6,"average_roll":10.5,"deviation_from_expected":0.0,"natural_20s":3,"natural_1s":3,"luck_rating":"Perfectly Average"},{"player_name":"Mary","total_rolls":1,"average_roll":20.0,"deviation_from_expected":9.5,"natural_20s":1,"natural_1s":0,"luck_rating":"Insufficient Data"}]},"S030":{"session_id":"S030","player_summaries":[{"player_name":"DM","total_rolls":5,"average_roll":13.0,"deviation_from_expected":2.5,"natural_20s":1,"natural_1s":0,"luck_rating":"Running Hot"},{"player_name":"Mary","total_rolls":1,"average_roll":5.0,"deviation_from_expected":-5.5,"natural_20s":0,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"Lucy","total_rolls":2,"average_roll":10.0,"deviation_from_expected":-0.5,"natural_20s":0,"natural_1s":0,"luck_rating":"Insufficient Data"}]},"S031":{"session_id":"S031","player_summaries":[{"player_name":"DM","total_rolls":5,"average_roll":19.8,"deviation_from_expected":9.3,"natural_20s":4,"natural_1s":0,"luck_rating":"Perfectly Average"},{"player_name":"Mary","total_rolls":1,"average_roll":10.0,"deviation_from_expected":-0.5,"natural_20s":0,"natural_1s":0,"luck_rating":"Insufficient Data"}]},"S032":{"session_id":"S032","player_summaries":[{"player_name":"DM","total_rolls":4,"average_roll":15.25,"deviation_from_expected":4.75,"natural_20s":3,"natural_1s":1,"luck_rating":"Insufficient Data"},{"player_name":"HT","total_rolls":1,"average_roll":12.0,"deviation_from_expected":1.5,"natural_20s":0,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"Gradles","total_rolls":1,"average_roll":20.0,"deviation_from_expected":9.5,"natural_20s":1,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"Lucy","total_rolls":1,"average_roll":1.0,"deviation_from_expected":-9.5,"natural_20s":0,"natural_1s":1,"luck_rating":"Insufficient Data"}]},"S033":{"session_id":"S033","player_summaries":[{"player_name":"DM","total_rolls":1,"average_roll":20.0,"deviation_from_expected":9.5,"natural_20s":1,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"Mary","total_rolls":1,"average_roll":18.0,"deviation_from_expected":7.5,"natural_20s":0,"natural_1s":0,"luck_rating":"Insufficient Data"}]},"S034":{"session_id":"S034","player_summaries":[{"player_name":"DM","total_rolls":3,"average_roll":17.0,"deviation_from_expected":6.5,"natural_20s":1,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"HT","total_rolls":1,"average_roll":20.0,"deviation_from_expected":9.5,"natural_20s":1,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"Gradles","total_rolls":4,"average_roll":13.25,"deviation_from_expected":2.75,"natural_20s":0,"natural_1s":1,"luck_rating":"Insufficient Data"}]},"S035":{"session_id":"S035","player_summaries":[{"player_name":"DM","total_rolls":1,"average_roll":20.0,"deviation_from_expected":9.5,"natural_20s":1,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"HT","total_rolls":1,"average_roll":19.0,"deviation_from_expected":8.5,"natural_20s":0,"natural_1s":0,"luck_rating":"Insufficient Data"}]},"S036":{"session_id":"S036","player_summaries":[{"player_name":"DM","total_rolls":5,"average_roll":11.6,"deviation_from_expected":1.1,"natural_20s":1,"natural_1s":0,"luck_rating":"Perfectly Average"},{"player_name":"HT","total_rolls":1,"average_roll":10.0,"deviation_from_expected":-0.5,"natural_20s":0,"natural_1s":0,"luck_rating":"Insufficient Data"}]},"S037":{"session_id":"S037","player_summaries":[{"player_name":"DM","total_rolls":4,"average_roll":14.25,"deviation_from_expected":3.75,"natural_20s":2,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"Gradles","total_rolls":1,"average_roll":20.0,"deviation_from_expected":9.5,"natural_20s":1,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"Lucy","total_rolls":2,"average_roll":19.0,"deviation_from_expected":8.5,"natural_20s":1,"natural_1s":0,"luck_rating":"Insufficient Data"}]},"S038":{"session_id":"S038","player_summaries":[{"player_name":"DM","total_rolls":4,"average_roll":9.75,"deviation_from_expected":-0.75,"natural_20s":1,"natural_1s":2,"luck_rating":"Insufficient Data"}]},"S039":{"session_id":"S039","player_summaries":[{"player_name":"DM","total_rolls":1,"average_roll":1.0,"deviation_from_expected":-9.5,"natural_20s":0,"natural_1s":1,"luck_rating":"Insufficient Data"}]},"S040":{"session_id":"S040","player_summaries":[{"player_name":"DM","total_rolls":9,"average_roll":13.78,"deviation_from_expected":3.28,"natural_20s":5,"natural_1s":1,"luck_rating":"Perfectly Average"},{"player_name":"HT","total_rolls":1,"average_roll":15.0,"deviation_from_expected":4.5,"natural_20s":0,"natural_1s":0,"luck_rating":"Insufficient Data"},{"player_name":"Christie","total_rolls":2,"average_roll":20.0,"deviation_from_expected":9.5,"natural_20s":2,"natural_1s":0,"luck_rating":"Insufficient Data"}]},"S041":{"session_id":"S041","player_summaries":[{"player_name":"DM","total_rolls":8,"average_roll":14.88,"deviation_from_expected":4.38,"natural_20s":5,"natural_1s":2,"luck_rating":"Average"}]},"S042":{"session_id":"S042","player_summaries":[{"player_name":"Gradles","total_rolls":2,"average_roll":20.0,"deviation_from_expected":9.5,"natural_20s":1,"natural_1s":0,"luck_rating":"Average"},{"player_name":"DM","total_rolls":1,"average_roll":20.0,"deviation_from_expected":9.5,"natural_20s":1,"natural_1s":0,"luck_rating":"Average"}]},"S043":{"session_id":"S043","player_summaries":[]},"S044":{"session_id":"S044","player_summaries":[{"player_name":"DM","total_rolls":1,"average_roll":20.0,"deviation_from_expected":9.5,"natural_20s":1,"natural_1s":0,"luck_rating":"Average"}]},"S045":{"session_id":"S045","player_summaries":[{"player_name":"DM","total_rolls":7,"average_roll":14.86,"deviation_from_expected":4.36,"natural_20s":1,"natural_1s":0,"luck_rating":"Average"}]},"S046":{"session_id":"S046","player_summaries":[{"player_name":"DM","total_rolls":1,"average_roll":20.0,"deviation_from_expected":9.5,"natural_20s":1,"natural_1s":0,"luck_rating":"Average"}]}};
+
+// Player identity resolution (from players.ts)
+const TRANSCRIPT_TO_PLAYER = {
+  'Corras': 'Gradles', 'Sarlumon': 'Gradles',
+  'Ash': 'HT', 'Ezrella': 'HT',
+  'Billabong': 'Mary',
+  'Dahlia': 'Christie', 'Lilith': 'Christie',
+  'Christie/Dahlia': 'Christie',
+  'Orla': 'Lucy',
+  'SavannahBelle': 'Tenderbittle',
+  'Meijinx': 'Meijinx', 'Ave': 'Meijinx',
+  'Drenek': 'Drenek',
+};
+
+const PLAYER_COLORS = {
+  Gradles: '#4A90D9', HT: '#E57373', Mary: '#81C784', Christie: '#BA68C8',
+  Lucy: '#FFB74D', Tenderbittle: '#4DB6AC', Meijinx: '#FF8A65', Drenek: '#7986CB'
+};
+
+const CANONICAL_PLAYERS = ['Gradles', 'HT', 'Mary', 'Christie', 'Lucy', 'Tenderbittle', 'Meijinx', 'Drenek'];
+
+function resolvePlayer(name) {
+  if (PLAYER_COLORS[name]) return name;
+  if (TRANSCRIPT_TO_PLAYER[name]) return TRANSCRIPT_TO_PLAYER[name];
+  const lower = name.toLowerCase();
+  for (const [k, v] of Object.entries(TRANSCRIPT_TO_PLAYER)) {
+    if (k.toLowerCase().includes(lower) || lower.includes(k.toLowerCase())) return v;
+  }
+  return name;
+}
+
+// ============================================================
+// PROCESS DATA: cumulative deviation per player across sessions
+// ============================================================
+// For each player, for each session: compute (avg_roll - 10.5) * total_rolls
+// and accumulate across sessions
+const playerData = {};
+CANONICAL_PLAYERS.forEach(p => {
+  playerData[p] = {
+    name: p,
+    color: PLAYER_COLORS[p],
+    sessions: [],        // [{session: 1, cumDev: X, avgRoll, totalRolls, nat20s, nat1s}]
+    totalRolls: 0,
+    totalNat20s: 0,
+    totalNat1s: 0,
+    finalCumDev: 0,
+    visible: true
+  };
+});
+
+for (let i = 1; i <= 46; i++) {
+  const sid = `S${String(i).padStart(3, '0')}`;
+  const sessionData = DICE_DATA[sid];
+  if (!sessionData) continue;
+
+  const summaries = sessionData.player_summaries || [];
+
+  // Aggregate per canonical player for this session
+  const sessionPlayerMap = {};
+  summaries.forEach(ps => {
+    if (ps.player_name === 'DM') return;
+    const canonical = resolvePlayer(ps.player_name);
+    if (!PLAYER_COLORS[canonical]) return;
+
+    if (!sessionPlayerMap[canonical]) {
+      sessionPlayerMap[canonical] = { totalRolls: 0, sumRolls: 0, nat20s: 0, nat1s: 0 };
+    }
+    const m = sessionPlayerMap[canonical];
+    m.totalRolls += ps.total_rolls;
+    if (ps.average_roll != null && ps.total_rolls > 0) {
+      m.sumRolls += ps.average_roll * ps.total_rolls;
+    }
+    m.nat20s += ps.natural_20s;
+    m.nat1s += ps.natural_1s;
+  });
+
+  // Update each player's cumulative
+  CANONICAL_PLAYERS.forEach(pName => {
+    const pd = playerData[pName];
+    const prevCum = pd.sessions.length > 0 ? pd.sessions[pd.sessions.length - 1].cumDev : 0;
+
+    const sm = sessionPlayerMap[pName];
+    if (sm && sm.totalRolls > 0) {
+      const avgRoll = sm.sumRolls / sm.totalRolls;
+      const sessionDev = (avgRoll - 10.5) * sm.totalRolls;
+      const newCum = prevCum + sessionDev;
+      pd.sessions.push({
+        session: i,
+        cumDev: newCum,
+        avgRoll: avgRoll,
+        totalRolls: sm.totalRolls,
+        nat20s: sm.nat20s,
+        nat1s: sm.nat1s,
+        sessionDev: sessionDev,
+        hadData: true
+      });
+      pd.totalRolls += sm.totalRolls;
+      pd.totalNat20s += sm.nat20s;
+      pd.totalNat1s += sm.nat1s;
+      pd.finalCumDev = newCum;
+    } else {
+      // Carry forward previous value (no data this session)
+      pd.sessions.push({
+        session: i,
+        cumDev: prevCum,
+        avgRoll: null,
+        totalRolls: 0,
+        nat20s: 0,
+        nat1s: 0,
+        sessionDev: 0,
+        hadData: false
+      });
+    }
+  });
+}
+
+// ============================================================
+// STATS PANEL
+// ============================================================
+const statsPanel = document.getElementById('statsPanel');
+
+// Find luckiest/unluckiest by final cumulative deviation (only players with meaningful data)
+const playersWithData = CANONICAL_PLAYERS
+  .filter(p => playerData[p].totalRolls >= 3)
+  .sort((a, b) => playerData[b].finalCumDev - playerData[a].finalCumDev);
+
+const luckiest = playersWithData[0];
+const unluckiest = playersWithData[playersWithData.length - 1];
+
+// Most nat 20s / nat 1s
+const mostNat20 = CANONICAL_PLAYERS.reduce((best, p) =>
+  playerData[p].totalNat20s > playerData[best].totalNat20s ? p : best, CANONICAL_PLAYERS[0]);
+const mostNat1 = CANONICAL_PLAYERS.reduce((best, p) =>
+  playerData[p].totalNat1s > playerData[best].totalNat1s ? p : best, CANONICAL_PLAYERS[0]);
+
+const stats = [
+  {
+    label: 'Luckiest Player',
+    value: luckiest || 'N/A',
+    detail: luckiest ? `+${playerData[luckiest].finalCumDev.toFixed(1)} cumulative` : '',
+    accent: luckiest ? PLAYER_COLORS[luckiest] : '#81C784',
+  },
+  {
+    label: 'Unluckiest Player',
+    value: unluckiest || 'N/A',
+    detail: unluckiest ? `${playerData[unluckiest].finalCumDev.toFixed(1)} cumulative` : '',
+    accent: unluckiest ? PLAYER_COLORS[unluckiest] : '#E57373',
+  },
+  {
+    label: 'Most Natural 20s',
+    value: mostNat20,
+    detail: `${playerData[mostNat20].totalNat20s} nat 20s across ${playerData[mostNat20].totalRolls} rolls`,
+    accent: PLAYER_COLORS[mostNat20],
+  },
+  {
+    label: 'Most Natural 1s',
+    value: mostNat1,
+    detail: `${playerData[mostNat1].totalNat1s} nat 1s across ${playerData[mostNat1].totalRolls} rolls`,
+    accent: PLAYER_COLORS[mostNat1],
+  },
+];
+
+stats.forEach(s => {
+  const card = document.createElement('div');
+  card.className = 'stat-card';
+  card.style.setProperty('--accent', s.accent);
+  card.style.setProperty('--glow', s.accent + '66');
+  card.innerHTML = `
+    <div class="stat-label">${s.label}</div>
+    <div class="stat-value">${s.value}</div>
+    <div class="stat-detail">${s.detail}</div>
+  `;
+  statsPanel.appendChild(card);
+});
+
+// ============================================================
+// LEGEND
+// ============================================================
+const legendEl = document.getElementById('legend');
+CANONICAL_PLAYERS.forEach(pName => {
+  const pd = playerData[pName];
+  if (pd.totalRolls === 0) return; // Skip players with zero data
+
+  const item = document.createElement('div');
+  item.className = 'legend-item';
+  item.dataset.player = pName;
+  const devStr = pd.finalCumDev >= 0 ? `+${pd.finalCumDev.toFixed(1)}` : pd.finalCumDev.toFixed(1);
+  item.innerHTML = `
+    <span class="legend-swatch" style="background:${pd.color}; box-shadow: 0 0 6px ${pd.color}66;"></span>
+    ${pName}
+    <span class="legend-deviation">${devStr}</span>
+  `;
+  item.addEventListener('click', () => {
+    pd.visible = !pd.visible;
+    item.classList.toggle('hidden', !pd.visible);
+    updateChart();
+  });
+  legendEl.appendChild(item);
+});
+
+// ============================================================
+// D3 CHART
+// ============================================================
+const margin = { top: 30, right: 30, bottom: 50, left: 70 };
+const width = 1340;
+const height = 520;
+const chartWidth = width - margin.left - margin.right;
+const chartHeight = height - margin.top - margin.bottom;
+
+const svg = d3.select('#chart')
+  .attr('width', width)
+  .attr('height', height)
+  .attr('viewBox', `0 0 ${width} ${height}`)
+  .style('width', '100%')
+  .style('height', 'auto');
+
+const defs = svg.append('defs');
+
+// Green gradient for positive area
+const gradPos = defs.append('linearGradient').attr('id', 'gradPos').attr('x1','0').attr('y1','0').attr('x2','0').attr('y2','1');
+gradPos.append('stop').attr('offset','0%').attr('stop-color','#81C784').attr('stop-opacity','0.15');
+gradPos.append('stop').attr('offset','100%').attr('stop-color','#81C784').attr('stop-opacity','0');
+
+// Red gradient for negative area
+const gradNeg = defs.append('linearGradient').attr('id', 'gradNeg').attr('x1','0').attr('y1','0').attr('x2','0').attr('y2','1');
+gradNeg.append('stop').attr('offset','0%').attr('stop-color','#E57373').attr('stop-opacity','0');
+gradNeg.append('stop').attr('offset','100%').attr('stop-color','#E57373').attr('stop-opacity','0.15');
+
+const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+const xScale = d3.scaleLinear().domain([1, 46]).range([0, chartWidth]);
+
+// Compute y domain
+let allDevs = [];
+CANONICAL_PLAYERS.forEach(p => {
+  playerData[p].sessions.forEach(s => allDevs.push(s.cumDev));
+});
+const yMin = Math.min(d3.min(allDevs) * 1.1, -10);
+const yMax = Math.max(d3.max(allDevs) * 1.1, 10);
+const yScale = d3.scaleLinear().domain([yMin, yMax]).range([chartHeight, 0]);
+
+// Grid lines
+const xAxisGrid = g.append('g')
+  .attr('transform', `translate(0,${chartHeight})`)
+  .call(d3.axisBottom(xScale)
+    .tickValues(d3.range(1, 47))
+    .tickSize(-chartHeight)
+    .tickFormat('')
+  );
+xAxisGrid.selectAll('line').attr('stroke', '#1a1a2e').attr('stroke-opacity', 0.5);
+xAxisGrid.select('.domain').remove();
+
+const yAxisGrid = g.append('g')
+  .call(d3.axisLeft(yScale)
+    .ticks(10)
+    .tickSize(-chartWidth)
+    .tickFormat('')
+  );
+yAxisGrid.selectAll('line').attr('stroke', '#1a1a2e').attr('stroke-opacity', 0.5);
+yAxisGrid.select('.domain').remove();
+
+// Zero baseline
+g.append('line')
+  .attr('x1', 0).attr('x2', chartWidth)
+  .attr('y1', yScale(0)).attr('y2', yScale(0))
+  .attr('stroke', '#ffffff')
+  .attr('stroke-width', 1)
+  .attr('stroke-dasharray', '6,4')
+  .attr('stroke-opacity', 0.4);
+
+// Positive/negative zone fills
+g.append('rect')
+  .attr('x', 0).attr('y', 0)
+  .attr('width', chartWidth)
+  .attr('height', yScale(0))
+  .attr('fill', 'url(#gradPos)');
+
+g.append('rect')
+  .attr('x', 0).attr('y', yScale(0))
+  .attr('width', chartWidth)
+  .attr('height', chartHeight - yScale(0))
+  .attr('fill', 'url(#gradNeg)');
+
+// Zone labels
+g.append('text')
+  .attr('x', chartWidth - 8).attr('y', yScale(0) - 8)
+  .attr('text-anchor', 'end')
+  .attr('fill', '#81C784').attr('opacity', 0.4)
+  .attr('font-family', 'Barlow Condensed').attr('font-size', 11)
+  .attr('letter-spacing', '2px')
+  .text('LUCKY');
+
+g.append('text')
+  .attr('x', chartWidth - 8).attr('y', yScale(0) + 16)
+  .attr('text-anchor', 'end')
+  .attr('fill', '#E57373').attr('opacity', 0.4)
+  .attr('font-family', 'Barlow Condensed').attr('font-size', 11)
+  .attr('letter-spacing', '2px')
+  .text('UNLUCKY');
+
+// X axis
+const xAxis = g.append('g')
+  .attr('transform', `translate(0,${chartHeight})`)
+  .call(d3.axisBottom(xScale)
+    .tickValues([1, 5, 10, 15, 20, 25, 30, 35, 40, 46])
+    .tickFormat(d => `S${String(d).padStart(3,'0')}`)
+  );
+xAxis.selectAll('text')
+  .attr('fill', '#7878a0')
+  .attr('font-family', 'JetBrains Mono')
+  .attr('font-size', 10);
+xAxis.selectAll('line').attr('stroke', '#585870');
+xAxis.select('.domain').attr('stroke', '#585870');
+
+// X axis label
+g.append('text')
+  .attr('x', chartWidth / 2).attr('y', chartHeight + 40)
+  .attr('text-anchor', 'middle')
+  .attr('fill', '#585870')
+  .attr('font-family', 'Barlow Condensed')
+  .attr('font-size', 12)
+  .attr('letter-spacing', '2px')
+  .text('SESSION');
+
+// Y axis
+const yAxis = g.append('g')
+  .call(d3.axisLeft(yScale).ticks(8).tickFormat(d => d > 0 ? `+${d}` : d));
+yAxis.selectAll('text')
+  .attr('fill', '#7878a0')
+  .attr('font-family', 'JetBrains Mono')
+  .attr('font-size', 10);
+yAxis.selectAll('line').attr('stroke', '#585870');
+yAxis.select('.domain').attr('stroke', '#585870');
+
+// Y axis label
+g.append('text')
+  .attr('x', -chartHeight / 2).attr('y', -55)
+  .attr('text-anchor', 'middle')
+  .attr('fill', '#585870')
+  .attr('font-family', 'Barlow Condensed')
+  .attr('font-size', 12)
+  .attr('letter-spacing', '2px')
+  .attr('transform', 'rotate(-90)')
+  .text('CUMULATIVE DEVIATION FROM EXPECTED (10.5)');
+
+// Line generator
+const lineGen = d3.line()
+  .x(d => xScale(d.session))
+  .y(d => yScale(d.cumDev))
+  .curve(d3.curveMonotoneX);
+
+// Player line groups
+const playerLines = {};
+const playerDots = {};
+const playerMarkers = {};
+
+CANONICAL_PLAYERS.forEach(pName => {
+  const pd = playerData[pName];
+  if (pd.totalRolls === 0) return;
+
+  const lineGroup = g.append('g').attr('class', `player-line player-${pName}`);
+
+  // Main line
+  const path = lineGroup.append('path')
+    .datum(pd.sessions)
+    .attr('d', lineGen)
+    .attr('fill', 'none')
+    .attr('stroke', pd.color)
+    .attr('stroke-width', 2)
+    .attr('stroke-opacity', 0.8)
+    .style('filter', `drop-shadow(0 0 3px ${pd.color}44)`);
+
+  // Animate line drawing
+  const totalLength = path.node().getTotalLength();
+  path.attr('stroke-dasharray', `${totalLength} ${totalLength}`)
+    .attr('stroke-dashoffset', totalLength)
+    .transition()
+    .duration(2000)
+    .ease(d3.easeCubicOut)
+    .attr('stroke-dashoffset', 0);
+
+  // Dots at data points
+  const dots = lineGroup.selectAll('.dot')
+    .data(pd.sessions.filter(s => s.hadData))
+    .join('circle')
+    .attr('cx', d => xScale(d.session))
+    .attr('cy', d => yScale(d.cumDev))
+    .attr('r', 3)
+    .attr('fill', pd.color)
+    .attr('stroke', '#06060c')
+    .attr('stroke-width', 1)
+    .attr('opacity', 0)
+    .transition()
+    .delay(2000)
+    .duration(300)
+    .attr('opacity', 0.9);
+
+  // Nat 20 stars and Nat 1 X marks
+  const markers = lineGroup.selectAll('.marker')
+    .data(pd.sessions.filter(s => s.hadData && (s.nat20s > 0 || s.nat1s > 0)))
+    .join('g')
+    .attr('transform', d => `translate(${xScale(d.session)},${yScale(d.cumDev)})`)
+    .attr('opacity', 0);
+
+  markers.each(function(d) {
+    const el = d3.select(this);
+    if (d.nat20s > 0) {
+      // Star for nat 20
+      el.append('text')
+        .attr('text-anchor', 'middle')
+        .attr('y', -10)
+        .attr('font-size', 12)
+        .attr('fill', '#ffd700')
+        .style('filter', 'drop-shadow(0 0 4px #ffd70088)')
+        .text('\u2605');  // filled star
+    }
+    if (d.nat1s > 0) {
+      // X mark for nat 1
+      el.append('text')
+        .attr('text-anchor', 'middle')
+        .attr('y', 16)
+        .attr('font-size', 10)
+        .attr('font-family', 'JetBrains Mono')
+        .attr('font-weight', 'bold')
+        .attr('fill', '#ff4444')
+        .style('filter', 'drop-shadow(0 0 4px #ff444488)')
+        .text('\u2716');  // heavy X
+    }
+  });
+
+  markers.transition().delay(2200).duration(400).attr('opacity', 1);
+
+  playerLines[pName] = lineGroup;
+});
+
+// ============================================================
+// CROSSHAIR TOOLTIP
+// ============================================================
+const tooltip = document.getElementById('tooltip');
+
+const crosshairLine = g.append('line')
+  .attr('y1', 0).attr('y2', chartHeight)
+  .attr('stroke', '#ffffff')
+  .attr('stroke-width', 1)
+  .attr('stroke-dasharray', '3,3')
+  .attr('stroke-opacity', 0)
+  .attr('pointer-events', 'none');
+
+const crosshairDots = g.append('g').attr('class', 'crosshair-dots');
+
+// Invisible overlay for mouse events
+g.append('rect')
+  .attr('width', chartWidth)
+  .attr('height', chartHeight)
+  .attr('fill', 'transparent')
+  .on('mousemove', function(event) {
+    const [mx] = d3.pointer(event, this);
+    const sessionNum = Math.round(xScale.invert(mx));
+    if (sessionNum < 1 || sessionNum > 46) return;
+
+    const sx = xScale(sessionNum);
+    crosshairLine.attr('x1', sx).attr('x2', sx).attr('stroke-opacity', 0.4);
+
+    // Gather values for this session
+    let rows = '';
+    crosshairDots.selectAll('*').remove();
+
+    const sid = `S${String(sessionNum).padStart(3,'0')}`;
+
+    CANONICAL_PLAYERS.forEach(pName => {
+      const pd = playerData[pName];
+      if (!pd.visible || pd.totalRolls === 0) return;
+      const sData = pd.sessions[sessionNum - 1];
+      if (!sData) return;
+
+      const devStr = sData.cumDev >= 0
+        ? `<span style="color:#81C784">+${sData.cumDev.toFixed(1)}</span>`
+        : `<span style="color:#E57373">${sData.cumDev.toFixed(1)}</span>`;
+
+      let extra = '';
+      if (sData.hadData) {
+        extra = `<span style="color:#585870; font-size:10px; margin-left:4px">(${sData.totalRolls}r, avg ${sData.avgRoll.toFixed(1)})</span>`;
+      }
+
+      rows += `
+        <div class="tt-row">
+          <span class="tt-player-dot" style="background:${pd.color}; box-shadow: 0 0 4px ${pd.color}88;"></span>
+          <span class="tt-player-name">${pName}</span>
+          <span class="tt-player-val">${devStr}</span>
+          ${extra}
+        </div>`;
+
+      // Crosshair dots
+      crosshairDots.append('circle')
+        .attr('cx', sx)
+        .attr('cy', yScale(sData.cumDev))
+        .attr('r', 4)
+        .attr('fill', pd.color)
+        .attr('stroke', '#06060c')
+        .attr('stroke-width', 2)
+        .style('filter', `drop-shadow(0 0 4px ${pd.color})`);
+    });
+
+    tooltip.innerHTML = `<div class="tt-session">${sid}</div>${rows}`;
+    tooltip.classList.add('visible');
+
+    const tx = Math.min(event.clientX + 16, window.innerWidth - 340);
+    const ty = Math.min(event.clientY - 10, window.innerHeight - 300);
+    tooltip.style.left = tx + 'px';
+    tooltip.style.top = ty + 'px';
+  })
+  .on('mouseleave', function() {
+    crosshairLine.attr('stroke-opacity', 0);
+    crosshairDots.selectAll('*').remove();
+    tooltip.classList.remove('visible');
+  });
+
+// ============================================================
+// VISIBILITY TOGGLE
+// ============================================================
+function updateChart() {
+  CANONICAL_PLAYERS.forEach(pName => {
+    const pd = playerData[pName];
+    const lineGroup = playerLines[pName];
+    if (!lineGroup) return;
+    lineGroup.attr('opacity', pd.visible ? 1 : 0);
+  });
+}
+</script>
+</body>
+</html>

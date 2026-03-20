@@ -1,0 +1,1356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>THE DIMENSIONAL RIFT</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@300;400;600;700&family=Barlow:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+/* ================================================================
+   THE DIMENSIONAL RIFT — Multiverse Map
+   ================================================================ */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #03030a;
+  color: #c8c8e0;
+  font-family: 'Barlow', sans-serif;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* ---- Star field ---- */
+#star-canvas {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* ---- Nebula glow blobs ---- */
+.nebula {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: 0.12;
+  pointer-events: none;
+  z-index: 0;
+}
+.nebula-1 { width: 600px; height: 600px; background: #6a3daa; top: -200px; left: -100px; }
+.nebula-2 { width: 500px; height: 500px; background: #1a6d9a; bottom: -150px; right: -100px; }
+.nebula-3 { width: 400px; height: 400px; background: #9a2d1a; top: 40%; left: 60%; }
+.nebula-4 { width: 350px; height: 350px; background: #1a8a3d; top: 10%; right: 10%; }
+
+/* ---- Header ---- */
+.page-header {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+  padding: 40px 20px 10px;
+}
+.page-header h1 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(48px, 7vw, 96px);
+  letter-spacing: 12px;
+  background: linear-gradient(
+    90deg,
+    #ff6b6b 0%,
+    #ffd93d 15%,
+    #6bff6b 30%,
+    #6bd9ff 50%,
+    #d96bff 70%,
+    #ff6b9d 85%,
+    #ff6b6b 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: prismatic-shift 6s linear infinite;
+  text-shadow: none;
+  filter: drop-shadow(0 0 30px rgba(180, 120, 255, 0.4))
+         drop-shadow(0 0 60px rgba(100, 180, 255, 0.2));
+  line-height: 1;
+}
+@keyframes prismatic-shift {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+.page-header .subtitle {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 300;
+  font-size: 18px;
+  color: #8888aa;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  margin-top: 8px;
+}
+
+/* ---- Main container ---- */
+.rift-container {
+  position: relative;
+  z-index: 5;
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 20px;
+  aspect-ratio: 16/10;
+  min-height: 700px;
+}
+
+/* ---- SVG portal overlay ---- */
+#portal-svg {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 15;
+  pointer-events: none;
+}
+
+/* ---- Central map ---- */
+.central-map {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 52%;
+  aspect-ratio: 1;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 2px solid rgba(180, 160, 255, 0.25);
+  box-shadow:
+    0 0 40px rgba(100, 80, 200, 0.2),
+    0 0 80px rgba(100, 80, 200, 0.1),
+    inset 0 0 40px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  transition: box-shadow 0.4s, border-color 0.4s;
+  z-index: 10;
+}
+.central-map:hover {
+  border-color: rgba(180, 160, 255, 0.5);
+  box-shadow:
+    0 0 60px rgba(100, 80, 200, 0.35),
+    0 0 120px rgba(100, 80, 200, 0.15),
+    inset 0 0 40px rgba(0, 0, 0, 0.4);
+}
+.central-map img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.central-map .map-label {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(transparent, rgba(6, 6, 12, 0.92));
+  padding: 30px 16px 14px;
+  text-align: center;
+}
+.central-map .map-label h2 {
+  font-family: 'Cinzel', serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: #d4ccff;
+  text-shadow: 0 0 20px rgba(180, 160, 255, 0.5);
+  letter-spacing: 3px;
+}
+.central-map .map-label .session-range {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: #8888aa;
+  margin-top: 4px;
+}
+
+/* ---- Pocket dimension fragments ---- */
+.pocket-dimension {
+  position: absolute;
+  width: 20%;
+  aspect-ratio: 1;
+  cursor: pointer;
+  z-index: 12;
+  transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              z-index 0s;
+}
+.pocket-dimension:hover {
+  transform: scale(1.08);
+  z-index: 20;
+}
+.pocket-dimension.active-dimension {
+  filter: brightness(1.3);
+}
+
+/* Torn-edge clip paths */
+.pocket-dimension .fragment-inner {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 4px;
+  position: relative;
+  transition: box-shadow 0.4s, border-color 0.4s;
+}
+.pocket-dimension .fragment-inner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Fragment clip-paths for torn edges */
+#dim-feywild .fragment-inner {
+  clip-path: polygon(
+    5% 0%, 15% 3%, 25% 0%, 35% 4%, 48% 1%, 60% 3%, 72% 0%, 82% 2%, 92% 0%, 100% 5%,
+    98% 15%, 100% 28%, 97% 40%, 100% 52%, 98% 65%, 100% 78%, 97% 88%, 100% 95%,
+    92% 100%, 80% 97%, 68% 100%, 55% 96%, 42% 100%, 30% 97%, 18% 100%, 8% 97%, 0% 100%,
+    3% 90%, 0% 78%, 2% 65%, 0% 52%, 3% 40%, 0% 28%, 2% 15%, 0% 5%
+  );
+}
+#dim-barovia .fragment-inner {
+  clip-path: polygon(
+    3% 0%, 12% 4%, 22% 1%, 34% 3%, 45% 0%, 58% 4%, 70% 1%, 80% 3%, 90% 0%, 100% 4%,
+    97% 14%, 100% 25%, 96% 38%, 100% 50%, 97% 62%, 100% 75%, 96% 85%, 100% 100%,
+    88% 96%, 75% 100%, 62% 97%, 50% 100%, 38% 96%, 25% 100%, 12% 97%, 0% 100%,
+    4% 88%, 0% 75%, 3% 62%, 0% 50%, 4% 38%, 0% 25%, 3% 12%
+  );
+}
+#dim-underdark .fragment-inner {
+  clip-path: polygon(
+    0% 3%, 10% 0%, 22% 5%, 35% 1%, 47% 4%, 60% 0%, 72% 3%, 85% 0%, 95% 4%, 100% 0%,
+    100% 12%, 97% 25%, 100% 38%, 96% 50%, 100% 62%, 97% 75%, 100% 88%, 97% 100%,
+    85% 96%, 72% 100%, 60% 97%, 48% 100%, 35% 96%, 22% 100%, 10% 98%, 0% 100%,
+    3% 85%, 0% 72%, 4% 60%, 0% 48%, 3% 35%, 0% 22%, 4% 10%
+  );
+}
+#dim-soulforge .fragment-inner {
+  clip-path: polygon(
+    0% 5%, 8% 0%, 20% 4%, 32% 0%, 44% 5%, 55% 1%, 68% 4%, 80% 0%, 92% 3%, 100% 0%,
+    96% 12%, 100% 24%, 97% 36%, 100% 48%, 96% 60%, 100% 72%, 97% 84%, 100% 95%,
+    90% 100%, 78% 96%, 65% 100%, 52% 97%, 40% 100%, 28% 96%, 15% 100%, 5% 97%, 0% 100%,
+    4% 86%, 0% 72%, 3% 58%, 0% 44%, 4% 30%, 0% 18%
+  );
+}
+
+/* Fragment positions */
+#dim-feywild   { top: 2%;  right: 3%; }
+#dim-barovia   { bottom: 2%; right: 3%; }
+#dim-underdark { bottom: 2%; left: 3%; }
+#dim-soulforge { top: 2%;  left: 3%; }
+
+/* Fragment image filters */
+#dim-barovia img   { filter: saturate(0.2) brightness(0.6) sepia(0.5) hue-rotate(-10deg); }
+#dim-underdark img { filter: invert(0.8) brightness(0.4) hue-rotate(200deg); }
+#dim-feywild img   { filter: saturate(2.5) brightness(1.2) hue-rotate(60deg); }
+#dim-soulforge img { filter: saturate(0.3) brightness(0.5) hue-rotate(330deg) contrast(1.3); }
+
+/* Fragment border/glow */
+#dim-feywild .fragment-inner {
+  border: 2px solid rgba(100, 255, 130, 0.35);
+  box-shadow: 0 0 30px rgba(100, 255, 130, 0.15), inset 0 0 20px rgba(100, 255, 130, 0.08);
+}
+#dim-feywild:hover .fragment-inner {
+  border-color: rgba(100, 255, 130, 0.6);
+  box-shadow: 0 0 50px rgba(100, 255, 130, 0.3), inset 0 0 30px rgba(100, 255, 130, 0.12);
+}
+#dim-barovia .fragment-inner {
+  border: 2px solid rgba(180, 80, 80, 0.35);
+  box-shadow: 0 0 30px rgba(180, 80, 80, 0.15), inset 0 0 20px rgba(180, 80, 80, 0.08);
+}
+#dim-barovia:hover .fragment-inner {
+  border-color: rgba(180, 80, 80, 0.6);
+  box-shadow: 0 0 50px rgba(180, 80, 80, 0.3), inset 0 0 30px rgba(180, 80, 80, 0.12);
+}
+#dim-underdark .fragment-inner {
+  border: 2px solid rgba(60, 120, 220, 0.35);
+  box-shadow: 0 0 30px rgba(60, 120, 220, 0.15), inset 0 0 20px rgba(60, 120, 220, 0.08);
+}
+#dim-underdark:hover .fragment-inner {
+  border-color: rgba(60, 120, 220, 0.6);
+  box-shadow: 0 0 50px rgba(60, 120, 220, 0.3), inset 0 0 30px rgba(60, 120, 220, 0.12);
+}
+#dim-soulforge .fragment-inner {
+  border: 2px solid rgba(220, 60, 40, 0.35);
+  box-shadow: 0 0 30px rgba(220, 60, 40, 0.15), inset 0 0 20px rgba(220, 60, 40, 0.08);
+}
+#dim-soulforge:hover .fragment-inner {
+  border-color: rgba(220, 60, 40, 0.6);
+  box-shadow: 0 0 50px rgba(220, 60, 40, 0.3), inset 0 0 30px rgba(220, 60, 40, 0.12);
+}
+
+/* Fragment overlay label */
+.fragment-label {
+  position: absolute;
+  bottom: 0;
+  left: 0; right: 0;
+  background: linear-gradient(transparent, rgba(6, 6, 12, 0.92));
+  padding: 24px 10px 10px;
+  text-align: center;
+  z-index: 2;
+}
+.fragment-label h3 {
+  font-family: 'Cinzel', serif;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+.fragment-label .session-range {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: #8888aa;
+  margin-top: 2px;
+}
+
+/* Dimension-specific label colors */
+#dim-feywild .fragment-label h3 {
+  color: #7fff8a;
+  text-shadow: 0 0 15px rgba(100, 255, 130, 0.5);
+}
+#dim-barovia .fragment-label h3 {
+  color: #e06060;
+  text-shadow: 0 0 15px rgba(180, 80, 80, 0.5);
+}
+#dim-underdark .fragment-label h3 {
+  color: #5ca0e8;
+  text-shadow: 0 0 15px rgba(60, 120, 220, 0.5);
+}
+#dim-soulforge .fragment-label h3 {
+  color: #e84830;
+  text-shadow: 0 0 15px rgba(220, 60, 40, 0.5);
+}
+
+/* ---- Animated effects per dimension ---- */
+
+/* Barovia: fog drift */
+#dim-barovia .fog-overlay {
+  position: absolute;
+  top: 0; left: 0;
+  width: 200%; height: 100%;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(120, 100, 100, 0.08) 20%,
+    rgba(160, 140, 140, 0.12) 40%,
+    transparent 60%,
+    rgba(100, 80, 80, 0.1) 80%,
+    transparent 100%
+  );
+  animation: fog-drift 12s linear infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+@keyframes fog-drift {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* Underdark: pulsing blue glow */
+#dim-underdark .fragment-inner::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 2px solid rgba(60, 140, 255, 0.3);
+  border-radius: inherit;
+  animation: underdark-pulse 3s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+@keyframes underdark-pulse {
+  0%, 100% { box-shadow: inset 0 0 20px rgba(60, 140, 255, 0.1); opacity: 0.5; }
+  50%      { box-shadow: inset 0 0 40px rgba(60, 140, 255, 0.25); opacity: 1; }
+}
+
+/* Feywild: sparkle canvas */
+#dim-feywild .sparkle-canvas {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Soul Forge: flicker */
+#dim-soulforge .fragment-inner::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, rgba(255, 60, 20, 0.08) 0%, transparent 70%);
+  animation: soulforge-flicker 2s ease-in-out infinite alternate;
+  pointer-events: none;
+  z-index: 1;
+}
+@keyframes soulforge-flicker {
+  0%   { opacity: 0.3; }
+  20%  { opacity: 0.8; }
+  40%  { opacity: 0.4; }
+  60%  { opacity: 0.9; }
+  80%  { opacity: 0.5; }
+  100% { opacity: 0.7; }
+}
+
+/* ---- Event markers on fragments ---- */
+.event-marker {
+  position: absolute;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 3;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.event-marker:hover {
+  transform: scale(1.8);
+  z-index: 5;
+}
+.event-marker.significance-major {
+  width: 11px; height: 11px;
+}
+#dim-feywild .event-marker   { background: #7fff8a; box-shadow: 0 0 8px rgba(100, 255, 130, 0.6); }
+#dim-barovia .event-marker   { background: #e06060; box-shadow: 0 0 8px rgba(180, 80, 80, 0.6); }
+#dim-underdark .event-marker { background: #5ca0e8; box-shadow: 0 0 8px rgba(60, 120, 220, 0.6); }
+#dim-soulforge .event-marker { background: #e84830; box-shadow: 0 0 8px rgba(220, 60, 40, 0.6); }
+.central-map .event-marker   { background: #c8b0ff; box-shadow: 0 0 8px rgba(180, 160, 255, 0.6); }
+
+/* ---- Tooltip ---- */
+.event-tooltip {
+  position: fixed;
+  z-index: 100;
+  background: rgba(12, 12, 24, 0.96);
+  border: 1px solid rgba(180, 160, 255, 0.3);
+  border-radius: 8px;
+  padding: 12px 16px;
+  max-width: 320px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+  backdrop-filter: blur(10px);
+}
+.event-tooltip.visible { opacity: 1; }
+.event-tooltip .tt-session {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: #8888aa;
+  margin-bottom: 4px;
+}
+.event-tooltip .tt-title {
+  font-family: 'Cinzel', serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #e0d8ff;
+  margin-bottom: 6px;
+}
+.event-tooltip .tt-desc {
+  font-size: 12px;
+  color: #9999bb;
+  line-height: 1.5;
+}
+
+/* ---- Session Slider ---- */
+.session-slider-container {
+  position: relative;
+  z-index: 20;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px 40px 10px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.session-slider-container label {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  color: #8888aa;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.session-slider-container input[type="range"] {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  background: linear-gradient(90deg, #c8b0ff, #7fff8a, #5ca0e8, #e84830, #e06060);
+  border-radius: 2px;
+  outline: none;
+}
+.session-slider-container input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 12px rgba(180, 160, 255, 0.6), 0 0 24px rgba(180, 160, 255, 0.3);
+  cursor: pointer;
+  border: 2px solid #c8b0ff;
+}
+.session-slider-container input[type="range"]::-moz-range-thumb {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 12px rgba(180, 160, 255, 0.6);
+  cursor: pointer;
+  border: 2px solid #c8b0ff;
+}
+.session-slider-container .session-display {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  color: #c8b0ff;
+  min-width: 40px;
+  text-align: center;
+}
+.session-slider-container .dimension-display {
+  font-family: 'Cinzel', serif;
+  font-size: 13px;
+  min-width: 140px;
+  text-align: right;
+  transition: color 0.3s;
+}
+
+/* ---- Stats bar ---- */
+.stats-bar {
+  position: relative;
+  z-index: 20;
+  max-width: 1200px;
+  margin: 10px auto 0;
+  padding: 10px 40px 30px;
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  flex-wrap: wrap;
+}
+.stat-item {
+  text-align: center;
+}
+.stat-item .stat-value {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 36px;
+  line-height: 1;
+}
+.stat-item .stat-label {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 400;
+  font-size: 12px;
+  color: #6666888;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+/* Color classes for stats */
+.color-material  { color: #c8b0ff; text-shadow: 0 0 15px rgba(180, 160, 255, 0.4); }
+.color-underdark  { color: #5ca0e8; text-shadow: 0 0 15px rgba(60, 120, 220, 0.4); }
+.color-soulforge  { color: #e84830; text-shadow: 0 0 15px rgba(220, 60, 40, 0.4); }
+.color-barovia    { color: #e06060; text-shadow: 0 0 15px rgba(180, 80, 80, 0.4); }
+.color-feywild    { color: #7fff8a; text-shadow: 0 0 15px rgba(100, 255, 130, 0.4); }
+
+/* ---- Zoomed overlay ---- */
+.zoom-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  z-index: 50;
+  background: rgba(3, 3, 10, 0.95);
+  display: none;
+  opacity: 0;
+  transition: opacity 0.4s;
+  overflow-y: auto;
+}
+.zoom-overlay.visible {
+  display: flex;
+  opacity: 1;
+}
+.zoom-content {
+  margin: auto;
+  padding: 60px 40px;
+  max-width: 900px;
+  width: 100%;
+}
+.zoom-close {
+  position: fixed;
+  top: 20px;
+  right: 30px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: #8888aa;
+  background: none;
+  border: 1px solid rgba(136, 136, 170, 0.3);
+  border-radius: 4px;
+  padding: 8px 20px;
+  cursor: pointer;
+  z-index: 60;
+  transition: color 0.3s, border-color 0.3s;
+}
+.zoom-close:hover {
+  color: #fff;
+  border-color: #fff;
+}
+.zoom-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+.zoom-header h2 {
+  font-family: 'Cinzel', serif;
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: 4px;
+}
+.zoom-header .zoom-sessions {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: #8888aa;
+  margin-top: 6px;
+}
+.zoom-map {
+  width: 100%;
+  border-radius: 10px;
+  margin-bottom: 30px;
+  overflow: hidden;
+}
+.zoom-map img {
+  width: 100%;
+  display: block;
+}
+.zoom-events-list {
+  list-style: none;
+}
+.zoom-events-list li {
+  padding: 14px 20px;
+  margin-bottom: 8px;
+  background: rgba(20, 20, 40, 0.6);
+  border-radius: 6px;
+  border-left: 3px solid;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.zoom-events-list .ev-session {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: #8888aa;
+  min-width: 36px;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+.zoom-events-list .ev-body {}
+.zoom-events-list .ev-title {
+  font-family: 'Cinzel', serif;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.zoom-events-list .ev-desc {
+  font-size: 12px;
+  color: #9999bb;
+  line-height: 1.5;
+}
+
+/* Portal origin markers */
+.portal-origin {
+  fill: none;
+  stroke-width: 1.5;
+  animation: portal-spin 8s linear infinite;
+  transform-origin: center;
+}
+@keyframes portal-spin {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ---- Current session dot ---- */
+.current-session-dot {
+  position: absolute;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 10px #fff, 0 0 20px rgba(255,255,255,0.5), 0 0 40px rgba(200, 180, 255, 0.3);
+  z-index: 18;
+  pointer-events: none;
+  transition: left 0.3s, top 0.3s, background 0.3s, box-shadow 0.3s;
+  transform: translate(-50%, -50%);
+}
+.current-session-dot::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.4);
+  animation: dot-pulse 2s ease-in-out infinite;
+}
+@keyframes dot-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(1.5); opacity: 0.3; }
+}
+
+/* ---- Portal line animations ---- */
+.portal-line {
+  fill: none;
+  stroke-dasharray: 8 6;
+  animation: portal-flow 1.5s linear infinite;
+}
+@keyframes portal-flow {
+  0%   { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: -28; }
+}
+.portal-line-glow {
+  fill: none;
+  stroke-dasharray: 8 6;
+  animation: portal-flow 1.5s linear infinite;
+  filter: blur(3px);
+}
+</style>
+</head>
+<body>
+
+<!-- Star canvas -->
+<canvas id="star-canvas"></canvas>
+
+<!-- Nebula glows -->
+<div class="nebula nebula-1"></div>
+<div class="nebula nebula-2"></div>
+<div class="nebula nebula-3"></div>
+<div class="nebula nebula-4"></div>
+
+<!-- Header -->
+<div class="page-header">
+  <h1>THE DIMENSIONAL RIFT</h1>
+  <div class="subtitle">A Multiverse Cartography of the BWB Campaign</div>
+</div>
+
+<!-- Main rift container -->
+<div class="rift-container" id="rift-container">
+  <!-- SVG for portal lines -->
+  <svg id="portal-svg"></svg>
+
+  <!-- Current session dot -->
+  <div class="current-session-dot" id="session-dot"></div>
+
+  <!-- Central map: Material Plane -->
+  <div class="central-map" id="central-map">
+    <img src="../../ref_images/Sword Coast.png" alt="Sword Coast — Material Plane">
+    <div class="map-label">
+      <h2>Material Plane</h2>
+      <div class="session-range">S001-S020, S025, S031-S034, S043-S044</div>
+    </div>
+  </div>
+
+  <!-- Pocket dimension: Feywild (top-right) -->
+  <div class="pocket-dimension" id="dim-feywild">
+    <div class="fragment-inner">
+      <img src="../../ref_images/Sword Coast.png" alt="Feywild">
+      <canvas class="sparkle-canvas" id="sparkle-canvas"></canvas>
+      <div class="fragment-label">
+        <h3>Feywild</h3>
+        <div class="session-range">Sessions 45-46</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pocket dimension: Barovia (bottom-right) -->
+  <div class="pocket-dimension" id="dim-barovia">
+    <div class="fragment-inner">
+      <img src="../../ref_images/Sword Coast.png" alt="Barovia">
+      <div class="fog-overlay"></div>
+      <div class="fragment-label">
+        <h3>Barovia</h3>
+        <div class="session-range">Sessions 35-42</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pocket dimension: Underdark (bottom-left) -->
+  <div class="pocket-dimension" id="dim-underdark">
+    <div class="fragment-inner">
+      <img src="../../ref_images/Sword Coast.png" alt="Underdark / Web's Edge">
+      <div class="fragment-label">
+        <h3>Underdark</h3>
+        <div class="session-range">Sessions 21-24, 26</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pocket dimension: Soul Forge (top-left) -->
+  <div class="pocket-dimension" id="dim-soulforge">
+    <div class="fragment-inner">
+      <img src="../../ref_images/Sword Coast.png" alt="Soul Forge">
+      <div class="fragment-label">
+        <h3>Soul Forge</h3>
+        <div class="session-range">Sessions 27-30</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Session slider -->
+<div class="session-slider-container">
+  <label>Session</label>
+  <input type="range" id="session-slider" min="1" max="46" value="1" step="1">
+  <div class="session-display" id="session-display">S001</div>
+  <div class="dimension-display color-material" id="dimension-display">Material Plane</div>
+</div>
+
+<!-- Stats bar -->
+<div class="stats-bar" id="stats-bar"></div>
+
+<!-- Zoom overlay -->
+<div class="zoom-overlay" id="zoom-overlay">
+  <button class="zoom-close" id="zoom-close">ESC &mdash; Return to Overview</button>
+  <div class="zoom-content" id="zoom-content"></div>
+</div>
+
+<!-- Tooltip -->
+<div class="event-tooltip" id="event-tooltip">
+  <div class="tt-session"></div>
+  <div class="tt-title"></div>
+  <div class="tt-desc"></div>
+</div>
+
+<script>
+// ================================================================
+// DATA
+// ================================================================
+const events = [
+  {id:"evt_s004",sid:"S004",sn:4,title:"Chronicler's Mark Bestowed",desc:"The party gains magical tattoos, losing their shadows.",sig:"moderate",loc:"Havenbrook",type:"Discovery"},
+  {id:"evt_s005",sid:"S005",sn:5,title:"Trapped in Hall of Whispers",desc:"Teleported to a burial site, locked in a chamber requiring confessions.",sig:"moderate",loc:"Lumin burial site",type:"Discovery"},
+  {id:"evt_s006",sid:"S006",sn:6,title:"Archmage Defeated in Battle",desc:"A tiefling archmage is defeated; a disembodied voice appears.",sig:"moderate",loc:"Unknown",type:"Combat"},
+  {id:"evt_s007",sid:"S007",sn:7,title:"Operation Save Spark Begins",desc:"The party chronoports back in time to save Ash's familiar Spark.",sig:"major",loc:"Castle Corras (past)",type:"Turning Point"},
+  {id:"evt_s008",sid:"S008",sn:8,title:"Time Heist for Spark's Eyelash",desc:"Spark's eyelash secured from the past using stealth and magic.",sig:"moderate",loc:"Castle Corras (past)",type:"Social"},
+  {id:"evt_s009",sid:"S009",sn:9,title:"Mimic Horse Road Encounter",desc:"A mimic disguised as a horse leads to chaotic road combat.",sig:"moderate",loc:"Road to Grimslick",type:"Combat"},
+  {id:"evt_s010",sid:"S010",sn:10,title:"Sarlumon Joins the Party",desc:"New paladin Sarlumon introduced; stealth check fails at cultist camp.",sig:"moderate",loc:"Cultist camp",type:"Social"},
+  {id:"evt_s011",sid:"S011",sn:11,title:"Earth Elemental Ambush",desc:"Ambushed by an earth elemental at a decoy bridge.",sig:"moderate",loc:"Somber Hills",type:"Combat"},
+  {id:"evt_s013",sid:"S013",sn:13,title:"Pact with Glabrezu Demon",desc:"Blood pact with demon Malachar to escape dungeons of Berdusk.",sig:"major",loc:"Dungeons of Berdusk",type:"Turning Point"},
+  {id:"evt_s014",sid:"S014",sn:14,title:"Prince Darindale's Blood Rage",desc:"Prince flies into a rage; calming attempts include a hamster ball.",sig:"moderate",loc:"Safe Toilet clearing",type:"Social"},
+  {id:"evt_s015",sid:"S015",sn:15,title:"Spark Swapped with Simulacrum",desc:"Spark successfully swapped using disguises, preserving the timeline.",sig:"major",loc:"Castle Corras (past)",type:"Victory"},
+  {id:"evt_s016",sid:"S016",sn:16,title:"Time Warden Universe Reset",desc:"A Time Warden resets the universe due to temporal tampering.",sig:"major",loc:"Unknown",type:"Turning Point"},
+  {id:"evt_s017",sid:"S017",sn:17,title:"New World Order Established",desc:"Party levels to 15; Orla unites druids, Corras becomes king.",sig:"major",loc:"Unknown",type:"Turning Point"},
+  {id:"evt_s018",sid:"S018",sn:18,title:"Blizzard in Storm Mountains",desc:"Brutal winter travel toward the Soulforge; Orla slips scouting.",sig:"minor",loc:"Storm Mountains",type:"Travel"},
+  {id:"evt_s019",sid:"S019",sn:19,title:"Alchemist's Fire Big Bang",desc:"Keg of Alchemist's Fire explodes yetis and a frost giant.",sig:"moderate",loc:"Blizzard shelter",type:"Combat"},
+  {id:"evt_s020",sid:"S020",sn:20,title:"Summer Star Explosion Deaths",desc:"Corras activates the Summer Star, killing himself and three others.",sig:"major",loc:"Frozen cabin",type:"Death/Loss"},
+  {id:"evt_s021",sid:"S021",sn:21,title:"Webb's Edge Safe House Found",desc:"A book details Webb's Edge, a safe house for Lolth devotees.",sig:"moderate",loc:"Sanctum",type:"Discovery"},
+  {id:"evt_s022",sid:"S022",sn:22,title:"Entering Webb's Edge",desc:"Party defeats a Drow Mage and Umber Hulk to enter Webb's Edge.",sig:"moderate",loc:"Underdark",type:"Discovery"},
+  {id:"evt_s023",sid:"S023",sn:23,title:"Fireball Chaos in Webb's Edge",desc:"SavannahBelle twin-casts Fireball, burning a Nalfeshnee demon.",sig:"moderate",loc:"Webb's Edge",type:"Combat"},
+  {id:"evt_s024",sid:"S024",sn:24,title:"Spider Dragon Tricked",desc:"Ash impersonates a Lolth follower to trick a Spider Dragon.",sig:"moderate",loc:"Webb's Edge",type:"Social"},
+  {id:"evt_s025",sid:"S025",sn:25,title:"BWB Federation Takes Shape",desc:"BWB Federation formed with bastions; Drakkar conquers the Sword Coast.",sig:"major",loc:"North",type:"Turning Point"},
+  {id:"evt_s026",sid:"S026",sn:26,title:"Escape from Webb's Edge",desc:"Party frees a cyclops and triggers a cave-in escaping with a Rod piece.",sig:"minor",loc:"Webb's Edge",type:"Travel"},
+  {id:"evt_s027",sid:"S027",sn:27,title:"Descent into Soulforge",desc:"Teleporting to Soulforge entrance; battle with Wraith Lord and Revenants.",sig:"moderate",loc:"Soulforge entrance",type:"Combat"},
+  {id:"evt_s028",sid:"S028",sn:28,title:"Pie-Eating Shadow Mastiffs",desc:"Shadow Mastiffs fed mince pies instead of fighting; alpha appears.",sig:"moderate",loc:"Wave Echo Cave",type:"Social"},
+  {id:"evt_s029",sid:"S029",sn:29,title:"Pact of Avarice at Infernal Node",desc:"Fiendish node ritual activated; Billabong breaks her curse.",sig:"major",loc:"Infernal Node",type:"Turning Point"},
+  {id:"evt_s030",sid:"S030",sn:30,title:"Shadow Powers Bestowed",desc:"The Harbinger trains the party at the soul forge; shadow powers gained.",sig:"moderate",loc:"Harbinger stronghold",type:"Discovery"},
+  {id:"evt_s031",sid:"S031",sn:31,title:"Maw Battle and Harm Debate",desc:"Billabong is controlled to kill Ash; debate over stunning as harm.",sig:"moderate",loc:"Unknown",type:"Combat"},
+  {id:"evt_s032",sid:"S032",sn:32,title:"Warehouse Enchanted Crates Found",desc:"Ezrella reveals enchanted crates at Warehouse 17.",sig:"moderate",loc:"Warehouse 17",type:"Discovery"},
+  {id:"evt_s033",sid:"S033",sn:33,title:"Surrender to Lich Asnar",desc:"Outmatched by lich Asnar, the party surrenders a Rod piece.",sig:"major",loc:"Warehouse",type:"Turning Point"},
+  {id:"evt_s034",sid:"S034",sn:34,title:"Escape from Thay Prison",desc:"SavannahBelle disintegrates the lich to escape Thay.",sig:"moderate",loc:"Thay prison",type:"Combat"},
+  {id:"evt_s035",sid:"S035",sn:35,title:"Portal to Barovia Opened",desc:"Mordenkainen opens a portal sending the party to demiplane Barovia.",sig:"minor",loc:"Sigil",type:"Travel"},
+  {id:"evt_s036",sid:"S036",sn:36,title:"Death House Ritual and Curse",desc:"SavannahBelle cursed with paranoia; inquisitor Sarusanda met.",sig:"moderate",loc:"Death House",type:"Discovery"},
+  {id:"evt_s037",sid:"S037",sn:37,title:"Entity in Murder House Basement",desc:"Corras resists a dominating orb in the basement.",sig:"moderate",loc:"Murder House",type:"Discovery"},
+  {id:"evt_s038",sid:"S038",sn:38,title:"Escape from Death House",desc:"Skill challenge to escape the alive Death House; some lost to mists.",sig:"minor",loc:"Death House",type:"Travel"},
+  {id:"evt_s039",sid:"S039",sn:39,title:"Cursed Goat Billy Rescued",desc:"Party rescues a cursed goat from dire wolves in Barovia.",sig:"moderate",loc:"Village of Barovia",type:"Social"},
+  {id:"evt_s040",sid:"S040",sn:40,title:"Heist for Holy Symbol",desc:"Holy Symbol of Ravenkind stolen; Deck of Many Things curse triggered.",sig:"major",loc:"Tser Pool camp",type:"Victory"},
+  {id:"evt_s041",sid:"S041",sn:41,title:"Heart of Sorrow Scouted",desc:"Party flies over Castle Ravenloft scouting the Heart of Sorrow.",sig:"moderate",loc:"Castle Ravenloft",type:"Discovery"},
+  {id:"evt_s042",sid:"S042",sn:42,title:"Battle of Ravenloft Begins",desc:"Rahadin slain; final showdown against Strahd at his wedding.",sig:"moderate",loc:"Castle Ravenloft",type:"Combat"},
+  {id:"evt_s043",sid:"S043",sn:43,title:"Refugee Crisis at Castle Corras",desc:"Castle packed with refugees; multiple crises under Fey invasion.",sig:"moderate",loc:"Castle Corras",type:"Social"},
+  {id:"evt_s044",sid:"S044",sn:44,title:"Master of Whispers Amputation",desc:"Dahlia amputates the Master of Whispers's leg to prevent a spell.",sig:"major",loc:"Castle Corras",type:"Turning Point"},
+  {id:"evt_s045",sid:"S045",sn:45,title:"Butcher Revealed as Construct",desc:"The Butcher is discovered to be a mechanical construct in human skin.",sig:"moderate",loc:"Ash's sanctum",type:"Discovery"},
+  {id:"evt_s046",sid:"S046",sn:46,title:"Matron's Bargain for Obsidian Stone",desc:"Matron offers Obsidian Stone in exchange for authority over the city.",sig:"major",loc:"Castle Corras",type:"Turning Point"},
+];
+
+// Session-to-dimension mapping
+const materialSessions = new Set([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,25,31,32,33,34,43,44]);
+const underdarkSessions = new Set([21,22,23,24,26]);
+const soulforgeSessions = new Set([27,28,29,30]);
+const baroviaSessions   = new Set([35,36,37,38,39,40,41,42]);
+const feywildSessions   = new Set([45,46]);
+
+function getDimension(sn) {
+  if (materialSessions.has(sn)) return 'material';
+  if (underdarkSessions.has(sn)) return 'underdark';
+  if (soulforgeSessions.has(sn)) return 'soulforge';
+  if (baroviaSessions.has(sn))   return 'barovia';
+  if (feywildSessions.has(sn))   return 'feywild';
+  return 'material';
+}
+
+const dimensionConfig = {
+  material:  { name: 'Material Plane',     color: '#c8b0ff', cssClass: 'color-material',  elId: 'central-map' },
+  underdark: { name: 'Underdark / Web\'s Edge', color: '#5ca0e8', cssClass: 'color-underdark', elId: 'dim-underdark' },
+  soulforge: { name: 'Soul Forge',         color: '#e84830', cssClass: 'color-soulforge', elId: 'dim-soulforge' },
+  barovia:   { name: 'Barovia',            color: '#e06060', cssClass: 'color-barovia',   elId: 'dim-barovia' },
+  feywild:   { name: 'Feywild',            color: '#7fff8a', cssClass: 'color-feywild',   elId: 'dim-feywild' },
+};
+
+const dimEvents = {};
+Object.keys(dimensionConfig).forEach(k => dimEvents[k] = []);
+events.forEach(e => {
+  const dim = getDimension(e.sn);
+  dimEvents[dim].push(e);
+});
+
+// ================================================================
+// STAR FIELD
+// ================================================================
+(function initStars() {
+  const canvas = document.getElementById('star-canvas');
+  const ctx = canvas.getContext('2d');
+  let stars = [];
+  const STAR_COUNT = 300;
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    stars = [];
+    for (let i = 0; i < STAR_COUNT; i++) {
+      stars.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: Math.random() * 1.5 + 0.3,
+        a: Math.random() * 0.6 + 0.2,
+        speed: Math.random() * 0.0008 + 0.0003,
+        phase: Math.random() * Math.PI * 2,
+      });
+    }
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function draw(t) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    stars.forEach(s => {
+      const alpha = s.a * (0.5 + 0.5 * Math.sin(t * s.speed + s.phase));
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(220, 210, 255, ${alpha})`;
+      ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
+
+// ================================================================
+// FEYWILD SPARKLES
+// ================================================================
+(function initSparkles() {
+  const canvas = document.getElementById('sparkle-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let particles = [];
+  const COUNT = 30;
+
+  function resize() {
+    const rect = canvas.parentElement.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+    particles = [];
+    for (let i = 0; i < COUNT; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        vx: (Math.random() - 0.5) * 0.3,
+        vy: -Math.random() * 0.5 - 0.1,
+        r: Math.random() * 2 + 0.5,
+        life: Math.random(),
+        speed: Math.random() * 0.01 + 0.005,
+      });
+    }
+  }
+
+  const ro = new ResizeObserver(resize);
+  ro.observe(canvas.parentElement);
+  resize();
+
+  function draw(t) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life += p.speed;
+      if (p.life > 1) { p.life = 0; p.x = Math.random() * canvas.width; p.y = canvas.height + 5; }
+      if (p.y < -5) { p.y = canvas.height + 5; p.x = Math.random() * canvas.width; }
+      const alpha = Math.sin(p.life * Math.PI) * 0.7;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(180, 255, 160, ${alpha})`;
+      ctx.fill();
+      // Cross sparkle
+      if (p.r > 1.5) {
+        ctx.strokeStyle = `rgba(255, 255, 200, ${alpha * 0.4})`;
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(p.x - p.r * 2, p.y); ctx.lineTo(p.x + p.r * 2, p.y);
+        ctx.moveTo(p.x, p.y - p.r * 2); ctx.lineTo(p.x, p.y + p.r * 2);
+        ctx.stroke();
+      }
+    });
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
+
+// ================================================================
+// EVENT MARKERS
+// ================================================================
+function placeEventMarkers() {
+  // Place event markers as dots scattered within each dimension container
+  const dims = {
+    material: document.getElementById('central-map'),
+    underdark: document.getElementById('dim-underdark'),
+    soulforge: document.getElementById('dim-soulforge'),
+    barovia: document.getElementById('dim-barovia'),
+    feywild: document.getElementById('dim-feywild'),
+  };
+
+  // Seeded pseudo-random for consistent positions
+  function seededPos(seed) {
+    let x = Math.sin(seed * 127.1 + 311.7) * 43758.5453;
+    x = x - Math.floor(x);
+    let y = Math.sin(seed * 269.5 + 183.3) * 43758.5453;
+    y = y - Math.floor(y);
+    return { x: 0.15 + x * 0.7, y: 0.1 + y * 0.6 };
+  }
+
+  Object.keys(dims).forEach(dimKey => {
+    const container = dims[dimKey];
+    const evs = dimEvents[dimKey];
+    evs.forEach((ev, i) => {
+      const pos = seededPos(ev.sn * 13 + i * 7);
+      const marker = document.createElement('div');
+      marker.className = 'event-marker' + (ev.sig === 'major' ? ' significance-major' : '');
+      marker.style.left = (pos.x * 100) + '%';
+      marker.style.top = (pos.y * 100) + '%';
+      marker.dataset.eventIdx = events.indexOf(ev);
+
+      // Tooltip events
+      marker.addEventListener('mouseenter', (e) => showTooltip(e, ev));
+      marker.addEventListener('mousemove', (e) => moveTooltip(e));
+      marker.addEventListener('mouseleave', hideTooltip);
+
+      if (dimKey === 'material') {
+        container.appendChild(marker);
+      } else {
+        container.querySelector('.fragment-inner').appendChild(marker);
+      }
+    });
+  });
+}
+placeEventMarkers();
+
+// ================================================================
+// TOOLTIP
+// ================================================================
+const tooltip = document.getElementById('event-tooltip');
+
+function showTooltip(e, ev) {
+  tooltip.querySelector('.tt-session').textContent = ev.sid + ' \u2014 ' + ev.type;
+  tooltip.querySelector('.tt-title').textContent = ev.title;
+  tooltip.querySelector('.tt-desc').textContent = ev.desc;
+  tooltip.classList.add('visible');
+  moveTooltip(e);
+}
+function moveTooltip(e) {
+  const pad = 16;
+  let x = e.clientX + pad;
+  let y = e.clientY + pad;
+  if (x + 320 > window.innerWidth) x = e.clientX - 330;
+  if (y + 120 > window.innerHeight) y = e.clientY - 130;
+  tooltip.style.left = x + 'px';
+  tooltip.style.top = y + 'px';
+}
+function hideTooltip() {
+  tooltip.classList.remove('visible');
+}
+
+// ================================================================
+// PORTAL LINES (SVG)
+// ================================================================
+function drawPortalLines() {
+  const svg = document.getElementById('portal-svg');
+  const container = document.getElementById('rift-container');
+  const cRect = container.getBoundingClientRect();
+
+  svg.innerHTML = '';
+  svg.setAttribute('viewBox', `0 0 ${cRect.width} ${cRect.height}`);
+
+  const centralEl = document.getElementById('central-map');
+  const centralRect = centralEl.getBoundingClientRect();
+  const cx = centralRect.left - cRect.left + centralRect.width / 2;
+  const cy = centralRect.top - cRect.top + centralRect.height / 2;
+
+  const portalEndpoints = [
+    { id: 'dim-feywild',   color: '#7fff8a', mapX: 0.7, mapY: 0.2 },
+    { id: 'dim-barovia',   color: '#e06060', mapX: 0.7, mapY: 0.8 },
+    { id: 'dim-underdark', color: '#5ca0e8', mapX: 0.3, mapY: 0.8 },
+    { id: 'dim-soulforge', color: '#e84830', mapX: 0.3, mapY: 0.2 },
+  ];
+
+  // Add SVG defs for glow
+  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+  portalEndpoints.forEach(pe => {
+    const filter = document.createElementNS('http://www.w3.org/2000/svg', 'filter');
+    filter.setAttribute('id', 'glow-' + pe.id);
+    filter.innerHTML = `<feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>`;
+    defs.appendChild(filter);
+  });
+  svg.appendChild(defs);
+
+  portalEndpoints.forEach(pe => {
+    const dimEl = document.getElementById(pe.id);
+    const dimRect = dimEl.getBoundingClientRect();
+
+    // Portal origin on central map
+    const ox = centralRect.left - cRect.left + centralRect.width * pe.mapX;
+    const oy = centralRect.top - cRect.top + centralRect.height * pe.mapY;
+
+    // Destination: center of pocket dimension
+    const dx = dimRect.left - cRect.left + dimRect.width / 2;
+    const dy = dimRect.top - cRect.top + dimRect.height / 2;
+
+    // Control points for curve
+    const midX = (ox + dx) / 2;
+    const midY = (oy + dy) / 2;
+    // Perpendicular offset for curve
+    const angle = Math.atan2(dy - oy, dx - ox);
+    const perpAngle = angle + Math.PI / 2;
+    const curveMag = 40;
+    const cpx = midX + Math.cos(perpAngle) * curveMag;
+    const cpy = midY + Math.sin(perpAngle) * curveMag;
+
+    const pathD = `M ${ox} ${oy} Q ${cpx} ${cpy} ${dx} ${dy}`;
+
+    // Glow line
+    const glowLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    glowLine.setAttribute('d', pathD);
+    glowLine.setAttribute('class', 'portal-line-glow');
+    glowLine.setAttribute('stroke', pe.color);
+    glowLine.setAttribute('stroke-width', '3');
+    glowLine.setAttribute('opacity', '0.3');
+    svg.appendChild(glowLine);
+
+    // Main line
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    line.setAttribute('d', pathD);
+    line.setAttribute('class', 'portal-line');
+    line.setAttribute('stroke', pe.color);
+    line.setAttribute('stroke-width', '2');
+    line.setAttribute('opacity', '0.6');
+    svg.appendChild(line);
+
+    // Portal origin swirl
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('class', 'portal-origin');
+    g.setAttribute('filter', `url(#glow-${pe.id})`);
+    // Outer ring
+    const c1 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    c1.setAttribute('cx', ox); c1.setAttribute('cy', oy);
+    c1.setAttribute('r', '8');
+    c1.setAttribute('stroke', pe.color); c1.setAttribute('stroke-width', '1.5');
+    c1.setAttribute('stroke-dasharray', '4 3');
+    c1.setAttribute('fill', 'none');
+    g.appendChild(c1);
+    // Inner dot
+    const c2 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    c2.setAttribute('cx', ox); c2.setAttribute('cy', oy);
+    c2.setAttribute('r', '3');
+    c2.setAttribute('fill', pe.color); c2.setAttribute('opacity', '0.7');
+    g.appendChild(c2);
+    svg.appendChild(g);
+
+    // Destination swirl
+    const g2 = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g2.setAttribute('class', 'portal-origin');
+    const c3 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    c3.setAttribute('cx', dx); c3.setAttribute('cy', dy);
+    c3.setAttribute('r', '12');
+    c3.setAttribute('stroke', pe.color); c3.setAttribute('stroke-width', '1');
+    c3.setAttribute('stroke-dasharray', '3 5');
+    c3.setAttribute('fill', 'none'); c3.setAttribute('opacity', '0.3');
+    g2.appendChild(c3);
+    svg.appendChild(g2);
+  });
+}
+
+// Initial draw + resize
+setTimeout(drawPortalLines, 100);
+window.addEventListener('resize', () => { setTimeout(drawPortalLines, 50); });
+
+// ================================================================
+// SESSION SLIDER + CURRENT DOT
+// ================================================================
+const slider = document.getElementById('session-slider');
+const sessionDisplay = document.getElementById('session-display');
+const dimensionDisplay = document.getElementById('dimension-display');
+const sessionDot = document.getElementById('session-dot');
+
+function updateSessionIndicator(sn) {
+  const padded = String(sn).padStart(3, '0');
+  sessionDisplay.textContent = 'S' + padded;
+
+  const dim = getDimension(sn);
+  const cfg = dimensionConfig[dim];
+  dimensionDisplay.textContent = cfg.name;
+  dimensionDisplay.className = 'dimension-display ' + cfg.cssClass;
+
+  // Position dot on the appropriate dimension element
+  const container = document.getElementById('rift-container');
+  const cRect = container.getBoundingClientRect();
+  const targetEl = document.getElementById(cfg.elId);
+  const tRect = targetEl.getBoundingClientRect();
+
+  // Place dot at center of the target dimension
+  const dotX = tRect.left - cRect.left + tRect.width / 2;
+  const dotY = tRect.top - cRect.top + tRect.height / 2;
+
+  sessionDot.style.left = dotX + 'px';
+  sessionDot.style.top = dotY + 'px';
+  sessionDot.style.background = cfg.color;
+  sessionDot.style.boxShadow = `0 0 10px ${cfg.color}, 0 0 20px ${cfg.color}80, 0 0 40px ${cfg.color}40`;
+
+  // Brighten active dimension
+  document.querySelectorAll('.pocket-dimension, .central-map').forEach(el => {
+    el.classList.remove('active-dimension');
+  });
+  targetEl.classList.add('active-dimension');
+}
+
+slider.addEventListener('input', () => updateSessionIndicator(parseInt(slider.value)));
+setTimeout(() => updateSessionIndicator(1), 150);
+window.addEventListener('resize', () => updateSessionIndicator(parseInt(slider.value)));
+
+// ================================================================
+// STATS BAR
+// ================================================================
+function buildStats() {
+  const statsBar = document.getElementById('stats-bar');
+
+  const dimCounts = {};
+  const dimEventCounts = {};
+  Object.keys(dimensionConfig).forEach(k => { dimCounts[k] = 0; dimEventCounts[k] = dimEvents[k].length; });
+
+  for (let s = 1; s <= 46; s++) {
+    const d = getDimension(s);
+    dimCounts[d]++;
+  }
+
+  // Count transitions
+  let transitions = 0;
+  let prevDim = getDimension(1);
+  for (let s = 2; s <= 46; s++) {
+    const d = getDimension(s);
+    if (d !== prevDim) transitions++;
+    prevDim = d;
+  }
+
+  // Most eventful
+  let maxDim = 'material';
+  let maxCount = 0;
+  Object.keys(dimEventCounts).forEach(k => {
+    if (dimEventCounts[k] > maxCount) { maxCount = dimEventCounts[k]; maxDim = k; }
+  });
+
+  const stats = [
+    { label: 'Material Plane', value: dimCounts.material + ' Sessions', cls: 'color-material' },
+    { label: 'Underdark', value: dimCounts.underdark + ' Sessions', cls: 'color-underdark' },
+    { label: 'Soul Forge', value: dimCounts.soulforge + ' Sessions', cls: 'color-soulforge' },
+    { label: 'Barovia', value: dimCounts.barovia + ' Sessions', cls: 'color-barovia' },
+    { label: 'Feywild', value: dimCounts.feywild + ' Sessions', cls: 'color-feywild' },
+    { label: 'Dimensional Shifts', value: transitions, cls: 'color-material' },
+    { label: 'Most Eventful', value: dimensionConfig[maxDim].name.split('/')[0].trim(), cls: dimensionConfig[maxDim].cssClass },
+  ];
+
+  statsBar.innerHTML = stats.map(s => `
+    <div class="stat-item">
+      <div class="stat-value ${s.cls}">${s.value}</div>
+      <div class="stat-label">${s.label}</div>
+    </div>
+  `).join('');
+}
+buildStats();
+
+// ================================================================
+// ZOOM OVERLAY (click to expand dimension)
+// ================================================================
+const zoomOverlay = document.getElementById('zoom-overlay');
+const zoomContent = document.getElementById('zoom-content');
+const zoomCloseBtn = document.getElementById('zoom-close');
+
+const dimFilterCSS = {
+  material: 'none',
+  barovia: 'saturate(0.2) brightness(0.6) sepia(0.5) hue-rotate(-10deg)',
+  underdark: 'invert(0.8) brightness(0.4) hue-rotate(200deg)',
+  feywild: 'saturate(2.5) brightness(1.2) hue-rotate(60deg)',
+  soulforge: 'saturate(0.3) brightness(0.5) hue-rotate(330deg) contrast(1.3)',
+};
+
+function openDimension(dimKey) {
+  const cfg = dimensionConfig[dimKey];
+  const evs = dimEvents[dimKey];
+  const borderColor = cfg.color;
+
+  let sessionsLabel = '';
+  if (dimKey === 'material') sessionsLabel = 'S001-S020, S025, S031-S034, S043-S044';
+  else if (dimKey === 'underdark') sessionsLabel = 'S021-S024, S026';
+  else if (dimKey === 'soulforge') sessionsLabel = 'S027-S030';
+  else if (dimKey === 'barovia') sessionsLabel = 'S035-S042';
+  else if (dimKey === 'feywild') sessionsLabel = 'S045-S046';
+
+  zoomContent.innerHTML = `
+    <div class="zoom-header">
+      <h2 style="color: ${borderColor}; text-shadow: 0 0 20px ${borderColor}80;">${cfg.name}</h2>
+      <div class="zoom-sessions">${sessionsLabel} &mdash; ${evs.length} Key Events</div>
+    </div>
+    <div class="zoom-map" style="border: 2px solid ${borderColor}40; box-shadow: 0 0 40px ${borderColor}20;">
+      <img src="../../ref_images/Sword Coast.png" style="filter: ${dimFilterCSS[dimKey]};" alt="${cfg.name}">
+    </div>
+    <ul class="zoom-events-list">
+      ${evs.map(ev => `
+        <li style="border-left-color: ${borderColor};">
+          <span class="ev-session">${ev.sid}</span>
+          <div class="ev-body">
+            <div class="ev-title" style="color: ${borderColor};">${ev.title}</div>
+            <div class="ev-desc">${ev.desc}</div>
+          </div>
+        </li>
+      `).join('')}
+    </ul>
+  `;
+
+  zoomOverlay.style.display = 'flex';
+  requestAnimationFrame(() => zoomOverlay.classList.add('visible'));
+}
+
+function closeZoom() {
+  zoomOverlay.classList.remove('visible');
+  setTimeout(() => { zoomOverlay.style.display = 'none'; }, 400);
+}
+
+// Click handlers
+document.getElementById('dim-feywild').addEventListener('click', () => openDimension('feywild'));
+document.getElementById('dim-barovia').addEventListener('click', () => openDimension('barovia'));
+document.getElementById('dim-underdark').addEventListener('click', () => openDimension('underdark'));
+document.getElementById('dim-soulforge').addEventListener('click', () => openDimension('soulforge'));
+document.getElementById('central-map').addEventListener('click', () => openDimension('material'));
+
+zoomCloseBtn.addEventListener('click', closeZoom);
+zoomOverlay.addEventListener('click', (e) => {
+  if (e.target === zoomOverlay) closeZoom();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeZoom();
+});
+
+// ================================================================
+// Responsive portal redraw on layout changes
+// ================================================================
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    drawPortalLines();
+    updateSessionIndicator(parseInt(slider.value));
+  }, 100);
+});
+
+</script>
+</body>
+</html>

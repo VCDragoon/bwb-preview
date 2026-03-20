@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Character Auras — BWB Campaign</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@300;400;600&family=Barlow:wght@300;400;500&family=Cinzel:wght@400;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #06060c;
+    color: #e0e0e8;
+    font-family: 'Barlow', sans-serif;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+    cursor: default;
+  }
+
+  #canvas-container {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 1;
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  #svg-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  #svg-overlay text {
+    pointer-events: all;
+    cursor: pointer;
+  }
+
+  #title-bar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 10;
+    padding: 20px 32px 12px;
+    background: linear-gradient(180deg, rgba(6,6,12,0.95) 0%, rgba(6,6,12,0.6) 70%, transparent 100%);
+    pointer-events: none;
+  }
+
+  #title-bar h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 42px;
+    letter-spacing: 6px;
+    color: #fff;
+    text-shadow: 0 0 30px rgba(255,255,255,0.3), 0 0 60px rgba(100,100,255,0.15);
+    text-transform: uppercase;
+  }
+
+  #title-bar .subtitle {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 14px;
+    letter-spacing: 3px;
+    color: rgba(255,255,255,0.4);
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  /* Tooltip */
+  #tooltip {
+    position: fixed;
+    z-index: 100;
+    pointer-events: none;
+    background: rgba(10, 10, 20, 0.95);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    padding: 16px 20px;
+    backdrop-filter: blur(20px);
+    min-width: 220px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+
+  #tooltip.visible { opacity: 1; }
+
+  #tooltip .tt-name {
+    font-family: 'Cinzel', serif;
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+  }
+
+  #tooltip .tt-player {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.4);
+    margin-bottom: 10px;
+  }
+
+  #tooltip .tt-section {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.35);
+    margin-top: 10px;
+    margin-bottom: 4px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    padding-top: 8px;
+  }
+
+  #tooltip .tt-section:first-of-type { border-top: none; padding-top: 0; margin-top: 4px; }
+
+  #tooltip .tt-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    padding: 2px 0;
+  }
+
+  #tooltip .tt-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    color: rgba(255,255,255,0.6);
+  }
+
+  #tooltip .tt-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  /* Detail Panel */
+  #detail-panel {
+    position: fixed;
+    right: -480px;
+    top: 0;
+    width: 460px;
+    height: 100vh;
+    z-index: 50;
+    background: linear-gradient(135deg, rgba(10,10,20,0.97), rgba(20,15,35,0.97));
+    border-left: 1px solid rgba(255,255,255,0.08);
+    backdrop-filter: blur(30px);
+    overflow-y: auto;
+    transition: right 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 32px;
+    box-shadow: -10px 0 40px rgba(0,0,0,0.5);
+  }
+
+  #detail-panel.open { right: 0; }
+
+  #detail-panel::-webkit-scrollbar { width: 4px; }
+  #detail-panel::-webkit-scrollbar-track { background: transparent; }
+  #detail-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+  #detail-panel .close-btn {
+    position: absolute;
+    top: 16px; right: 16px;
+    width: 32px; height: 32px;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 50%;
+    background: rgba(255,255,255,0.05);
+    color: rgba(255,255,255,0.5);
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    pointer-events: all;
+  }
+
+  #detail-panel .close-btn:hover {
+    border-color: rgba(255,255,255,0.3);
+    color: #fff;
+    background: rgba(255,255,255,0.1);
+  }
+
+  .dp-name {
+    font-family: 'Cinzel', serif;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    margin-bottom: 4px;
+  }
+
+  .dp-player {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.35);
+    margin-bottom: 24px;
+  }
+
+  .dp-section-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    letter-spacing: 3px;
+    color: rgba(255,255,255,0.5);
+    margin-top: 24px;
+    margin-bottom: 12px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    padding-top: 16px;
+  }
+
+  .dp-bar-group { margin-bottom: 8px; }
+
+  .dp-bar-label {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px;
+    letter-spacing: 1px;
+    margin-bottom: 3px;
+  }
+
+  .dp-bar-label span:first-child { color: rgba(255,255,255,0.55); }
+  .dp-bar-label span:last-child {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+
+  .dp-bar {
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(255,255,255,0.06);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .dp-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .dp-stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .dp-stat-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 6px;
+    padding: 12px;
+    text-align: center;
+  }
+
+  .dp-stat-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 22px;
+    font-weight: 500;
+  }
+
+  .dp-stat-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.35);
+    margin-top: 4px;
+  }
+
+  .dp-growth-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+
+  .dp-growth-row span:first-child {
+    font-family: 'Barlow Condensed', sans-serif;
+    color: rgba(255,255,255,0.55);
+  }
+
+  .dp-growth-row span:last-child {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+  }
+
+  /* Legend */
+  #legend {
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    display: flex;
+    gap: 20px;
+    padding: 10px 24px;
+    background: rgba(10,10,20,0.8);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 8px;
+    backdrop-filter: blur(12px);
+    pointer-events: none;
+  }
+
+  .legend-group {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .legend-group .legend-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.3);
+    margin-right: 4px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    color: rgba(255,255,255,0.5);
+  }
+
+  .legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  /* Scanline overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.03) 2px,
+      rgba(0,0,0,0.03) 4px
+    );
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  /* Instructions */
+  #instructions {
+    position: fixed;
+    bottom: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.2);
+    pointer-events: none;
+    animation: fadeInstructions 4s ease-out forwards;
+  }
+
+  @keyframes fadeInstructions {
+    0%, 70% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+</style>
+</head>
+<body>
+<div id="title-bar">
+  <h1>Character Auras</h1>
+  <div class="subtitle">Personality &middot; Darkness &middot; Growth &mdash; 46 Sessions of BWB Campaign Data</div>
+</div>
+
+<div id="canvas-container">
+  <canvas id="aura-canvas"></canvas>
+</div>
+
+<svg id="svg-overlay"></svg>
+
+<div id="tooltip"></div>
+
+<div id="detail-panel">
+  <div class="close-btn" onclick="closePanel()">&times;</div>
+  <div id="detail-content"></div>
+</div>
+
+<div id="legend">
+  <div class="legend-group">
+    <span class="legend-title">OCEAN Rings</span>
+    <div class="legend-item"><div class="legend-dot" style="background:#FFD700"></div>Open</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#4A90D9"></div>Consc</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ff4444"></div>Extra</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#44ff88"></div>Agree</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ad6bff"></div>Neuro</div>
+  </div>
+  <div class="legend-group">
+    <span class="legend-title">Dark Triad</span>
+    <div class="legend-item"><div class="legend-dot" style="background:#ff2222"></div>Mach</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ffd700"></div>Narc</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#7b2fbe"></div>Psych</div>
+  </div>
+</div>
+
+<div id="instructions">Hover to inspect &middot; Click to expand</div>
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script>
+// ============================================================================
+// REAL DATA — Aggregated from 46 BWB Campaign Sessions
+// ============================================================================
+const CHARACTER_DATA = [
+  {
+    player: "Gradles", character: "Corras", color: "#4A90D9",
+    ocean: { openness: 76, conscientiousness: 50, extraversion: 63, agreeableness: 46, neuroticism: 28 },
+    darkTriad: { machiavellianism: 54, narcissism: 39, psychopathy: 27 },
+    stats: { totalWords: 87828, kills: 7, damage: 998, crits: 5, downed: 1, spells: 71, sessions: 46 },
+    growth: { avgNetGrowth: 1.89, avgGpa: 2.97 }
+  },
+  {
+    player: "HT", character: "Ash", color: "#E57373",
+    ocean: { openness: 74, conscientiousness: 54, extraversion: 47, agreeableness: 50, neuroticism: 39 },
+    darkTriad: { machiavellianism: 32, narcissism: 20, psychopathy: 16 },
+    stats: { totalWords: 92146, kills: 2, damage: 378, crits: 0, downed: 2, spells: 128, sessions: 47 },
+    growth: { avgNetGrowth: 1.37, avgGpa: 3.02 }
+  },
+  {
+    player: "Mary", character: "Billabong", color: "#81C784",
+    ocean: { openness: 52, conscientiousness: 28, extraversion: 78, agreeableness: 61, neuroticism: 30 },
+    darkTriad: { machiavellianism: 12, narcissism: 17, psychopathy: 17 },
+    stats: { totalWords: 41486, kills: 11, damage: 416, crits: 4, downed: 5, spells: 1, sessions: 43 },
+    growth: { avgNetGrowth: 1.66, avgGpa: 2.80 }
+  },
+  {
+    player: "Christie", character: "Dahlia", color: "#BA68C8",
+    ocean: { openness: 57, conscientiousness: 63, extraversion: 63, agreeableness: 56, neuroticism: 36 },
+    darkTriad: { machiavellianism: 33, narcissism: 27, psychopathy: 22 },
+    stats: { totalWords: 77504, kills: 7, damage: 1004, crits: 6, downed: 3, spells: 72, sessions: 45 },
+    growth: { avgNetGrowth: 1.91, avgGpa: 3.13 }
+  },
+  {
+    player: "Lucy", character: "Orla", color: "#FFB74D",
+    ocean: { openness: 84, conscientiousness: 47, extraversion: 53, agreeableness: 77, neuroticism: 33 },
+    darkTriad: { machiavellianism: 14, narcissism: 11, psychopathy: 9 },
+    stats: { totalWords: 70517, kills: 9, damage: 562, crits: 0, downed: 3, spells: 95, sessions: 46 },
+    growth: { avgNetGrowth: 3.47, avgGpa: 3.31 }
+  },
+  {
+    player: "Tenderbittle", character: "SavannahBelle", color: "#4DB6AC",
+    ocean: { openness: 64, conscientiousness: 44, extraversion: 68, agreeableness: 41, neuroticism: 35 },
+    darkTriad: { machiavellianism: 40, narcissism: 36, psychopathy: 33 },
+    stats: { totalWords: 49730, kills: 8, damage: 941, crits: 1, downed: 1, spells: 72, sessions: 38 },
+    growth: { avgNetGrowth: 0.52, avgGpa: 2.59 }
+  },
+  {
+    player: "Meijinx", character: "Ave", color: "#FF8A65",
+    ocean: { openness: 72, conscientiousness: 51, extraversion: 73, agreeableness: 54, neuroticism: 27 },
+    darkTriad: { machiavellianism: 31, narcissism: 32, psychopathy: 21 },
+    stats: { totalWords: 13484, kills: 0, damage: 79, crits: 0, downed: 0, spells: 19, sessions: 17 },
+    growth: { avgNetGrowth: 5.15, avgGpa: 3.20 }
+  },
+  {
+    player: "Drenek", character: "Drenek", color: "#7986CB",
+    ocean: { openness: 47, conscientiousness: 52, extraversion: 57, agreeableness: 53, neuroticism: 33 },
+    darkTriad: { machiavellianism: 15, narcissism: 17, psychopathy: 15 },
+    stats: { totalWords: 3200, kills: 4, damage: 70, crits: 0, downed: 0, spells: 0, sessions: 9 },
+    growth: { avgNetGrowth: 3.0, avgGpa: 2.60 }
+  }
+];
+
+// ============================================================================
+// SETUP
+// ============================================================================
+const canvas = document.getElementById('aura-canvas');
+const ctx = canvas.getContext('2d');
+const svg = d3.select('#svg-overlay');
+const tooltip = document.getElementById('tooltip');
+const detailPanel = document.getElementById('detail-panel');
+let W, H, dpr;
+let hoveredNode = null;
+let selectedNode = null;
+let isZoomed = false;
+let zoomTarget = null;
+let zoomProgress = 0;
+
+function resize() {
+  dpr = window.devicePixelRatio || 1;
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  svg.attr('width', W).attr('height', H);
+}
+
+resize();
+window.addEventListener('resize', () => {
+  resize();
+  if (simulation) {
+    simulation.force('center', d3.forceCenter(W / 2, H / 2));
+    simulation.alpha(0.3).restart();
+  }
+});
+
+// ============================================================================
+// AURA GEOMETRY CONSTANTS
+// ============================================================================
+// Scale core radius by total words — range from 25 to 65
+const wordExtent = d3.extent(CHARACTER_DATA, d => d.stats.totalWords);
+const coreScale = d3.scaleLinear().domain(wordExtent).range([28, 62]);
+
+// Compute derived values for each character
+const nodes = CHARACTER_DATA.map((d, i) => {
+  const coreR = coreScale(d.stats.totalWords);
+  const killsPerSession = d.stats.sessions > 0 ? d.stats.kills / d.stats.sessions : 0;
+  // Pulse frequency: more violent = faster (0.5 to 2.5 Hz)
+  const pulseFreq = 0.4 + killsPerSession * 6;
+  // GPA glow intensity (0.0 to 1.0)
+  const glowIntensity = Math.min(1, d.growth.avgGpa / 4.0);
+
+  return {
+    ...d,
+    id: i,
+    coreR,
+    pulseFreq,
+    glowIntensity,
+    x: W / 2 + (Math.random() - 0.5) * 400,
+    y: H / 2 + (Math.random() - 0.5) * 300,
+    vx: 0, vy: 0,
+    // Animation state
+    oceanRotation: Math.random() * Math.PI * 2,
+    // Dark triad orbital angles
+    dtAngles: [Math.random() * Math.PI * 2, Math.random() * Math.PI * 2, Math.random() * Math.PI * 2],
+    phase: Math.random() * Math.PI * 2
+  };
+});
+
+// ============================================================================
+// FORCE SIMULATION
+// ============================================================================
+const simulation = d3.forceSimulation(nodes)
+  .force('center', d3.forceCenter(W / 2, H / 2))
+  .force('charge', d3.forceManyBody().strength(-600))
+  .force('collision', d3.forceCollide(d => d.coreR + 80))
+  .force('x', d3.forceX(W / 2).strength(0.02))
+  .force('y', d3.forceY(H / 2).strength(0.02))
+  .velocityDecay(0.4)
+  .alphaDecay(0.008)
+  .on('tick', () => {
+    updateLabels();
+  });
+
+// Gentle floating drift
+setInterval(() => {
+  if (!isZoomed) {
+    nodes.forEach(n => {
+      n.vx += (Math.random() - 0.5) * 0.3;
+      n.vy += (Math.random() - 0.5) * 0.3;
+    });
+    simulation.alpha(0.05).restart();
+  }
+}, 3000);
+
+// ============================================================================
+// SVG LABELS
+// ============================================================================
+function updateLabels() {
+  const labelData = svg.selectAll('.char-label').data(nodes, d => d.id);
+
+  const enter = labelData.enter().append('g').attr('class', 'char-label');
+
+  enter.append('text')
+    .attr('text-anchor', 'middle')
+    .attr('fill', d => d.color)
+    .style('font-family', "'Cinzel', serif")
+    .style('font-size', '14px')
+    .style('font-weight', '600')
+    .style('letter-spacing', '2px')
+    .style('text-shadow', d => `0 0 12px ${d.color}44`)
+    .style('cursor', 'pointer')
+    .style('pointer-events', 'all')
+    .text(d => d.character.toUpperCase())
+    .on('click', (e, d) => openDetail(d))
+    .on('mouseenter', (e, d) => { hoveredNode = d; })
+    .on('mouseleave', () => { hoveredNode = null; hideTooltip(); });
+
+  enter.append('text')
+    .attr('text-anchor', 'middle')
+    .attr('fill', 'rgba(255,255,255,0.25)')
+    .attr('dy', '16px')
+    .style('font-family', "'Barlow Condensed', sans-serif")
+    .style('font-size', '10px')
+    .style('letter-spacing', '2px')
+    .style('pointer-events', 'none')
+    .text(d => d.player.toUpperCase());
+
+  const merged = enter.merge(labelData);
+  merged.attr('transform', d => `translate(${d.x}, ${d.y + d.coreR + 28})`);
+}
+
+// ============================================================================
+// NEBULA BACKGROUND
+// ============================================================================
+function drawBackground() {
+  // Deep space gradient
+  const bg = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, Math.max(W, H) * 0.7);
+  bg.addColorStop(0, '#0d0d1a');
+  bg.addColorStop(0.3, '#090912');
+  bg.addColorStop(0.7, '#07070e');
+  bg.addColorStop(1, '#06060c');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Subtle nebula patches
+  const nebulaColors = [
+    { x: W * 0.2, y: H * 0.3, r: 300, color: 'rgba(60, 30, 90, 0.04)' },
+    { x: W * 0.7, y: H * 0.6, r: 350, color: 'rgba(30, 50, 90, 0.03)' },
+    { x: W * 0.5, y: H * 0.2, r: 250, color: 'rgba(90, 40, 40, 0.03)' },
+    { x: W * 0.8, y: H * 0.25, r: 200, color: 'rgba(40, 70, 60, 0.03)' },
+  ];
+
+  nebulaColors.forEach(n => {
+    const g = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r);
+    g.addColorStop(0, n.color);
+    g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  });
+}
+
+// ============================================================================
+// STAR FIELD
+// ============================================================================
+const stars = Array.from({ length: 200 }, () => ({
+  x: Math.random(),
+  y: Math.random(),
+  r: Math.random() * 1.2 + 0.3,
+  twinkle: Math.random() * Math.PI * 2,
+  speed: 0.5 + Math.random() * 2
+}));
+
+function drawStars(t) {
+  stars.forEach(s => {
+    const alpha = 0.15 + 0.15 * Math.sin(t * s.speed * 0.001 + s.twinkle);
+    ctx.beginPath();
+    ctx.arc(s.x * W, s.y * H, s.r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(200, 210, 255, ${alpha})`;
+    ctx.fill();
+  });
+}
+
+// ============================================================================
+// DRAW AURA
+// ============================================================================
+const OCEAN_COLORS = ['#FFD700', '#4A90D9', '#ff4444', '#44ff88', '#ad6bff'];
+const OCEAN_KEYS = ['openness', 'conscientiousness', 'extraversion', 'agreeableness', 'neuroticism'];
+const DT_COLORS = ['#ff2222', '#ffd700', '#7b2fbe'];
+const DT_KEYS = ['machiavellianism', 'narcissism', 'psychopathy'];
+
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return { r, g, b };
+}
+
+function drawAura(node, t) {
+  const { x, y, coreR, color, ocean, darkTriad, pulseFreq, glowIntensity, phase } = node;
+  const isHovered = hoveredNode === node;
+  const isSelected = selectedNode === node;
+
+  // Pulse scale
+  const pulse = 1 + Math.sin(t * 0.001 * pulseFreq + phase) * 0.04;
+  const scale = pulse * (isHovered ? 1.08 : 1);
+
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scale, scale);
+
+  // ---- OUTER GLOW ----
+  const glowR = coreR * 3.5;
+  const { r, g, b } = hexToRgb(color);
+  const glowAlpha = 0.04 + glowIntensity * 0.12 + (isHovered ? 0.06 : 0);
+  const glow = ctx.createRadialGradient(0, 0, coreR * 0.5, 0, 0, glowR);
+  glow.addColorStop(0, `rgba(${r},${g},${b},${glowAlpha * 1.5})`);
+  glow.addColorStop(0.3, `rgba(${r},${g},${b},${glowAlpha * 0.8})`);
+  glow.addColorStop(0.6, `rgba(${r},${g},${b},${glowAlpha * 0.3})`);
+  glow.addColorStop(1, 'transparent');
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(0, 0, glowR, 0, Math.PI * 2);
+  ctx.fill();
+
+  // ---- OCEAN RINGS ----
+  const oceanBaseR = coreR + 12;
+  const oceanRingGap = 8;
+  const rotationSpeed = 0.0002;
+  const rotation = node.oceanRotation + t * rotationSpeed;
+
+  OCEAN_KEYS.forEach((key, i) => {
+    const value = ocean[key] / 100;
+    const ringR = oceanBaseR + i * oceanRingGap;
+    const arcLen = value * Math.PI * 2;
+    const startAngle = rotation + (i * Math.PI * 0.4);
+    const endAngle = startAngle + arcLen;
+
+    ctx.beginPath();
+    ctx.arc(0, 0, ringR, startAngle, endAngle);
+    ctx.strokeStyle = OCEAN_COLORS[i];
+    ctx.lineWidth = 3;
+    ctx.globalAlpha = 0.5 + (isHovered ? 0.25 : 0);
+    ctx.shadowColor = OCEAN_COLORS[i];
+    ctx.shadowBlur = isHovered ? 12 : 6;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+  });
+
+  // ---- DARK TRIAD ORBITING PARTICLES ----
+  const orbitR = coreR + 55;
+
+  DT_KEYS.forEach((key, i) => {
+    const score = darkTriad[key];
+    // Speed: higher score = faster orbit
+    const speed = 0.0003 + (score / 100) * 0.002;
+    // Size: proportional to score
+    const particleR = 2 + (score / 100) * 5;
+
+    node.dtAngles[i] += speed * 16.67; // approx per frame at 60fps
+    const angle = node.dtAngles[i];
+    const px = Math.cos(angle) * (orbitR + i * 8);
+    const py = Math.sin(angle) * (orbitR + i * 8);
+
+    // Particle trail
+    const trailAlpha = 0.1 + (isHovered ? 0.1 : 0);
+    for (let t2 = 1; t2 <= 5; t2++) {
+      const trailAngle = angle - t2 * 0.08 * (1 + score / 100);
+      const tx = Math.cos(trailAngle) * (orbitR + i * 8);
+      const ty = Math.sin(trailAngle) * (orbitR + i * 8);
+      ctx.beginPath();
+      ctx.arc(tx, ty, particleR * (1 - t2 * 0.15), 0, Math.PI * 2);
+      ctx.fillStyle = DT_COLORS[i];
+      ctx.globalAlpha = trailAlpha * (1 - t2 * 0.2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // Main particle
+    ctx.beginPath();
+    ctx.arc(px, py, particleR, 0, Math.PI * 2);
+    ctx.fillStyle = DT_COLORS[i];
+    ctx.shadowColor = DT_COLORS[i];
+    ctx.shadowBlur = isHovered ? 16 : 8;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Orbital path (very subtle)
+    ctx.beginPath();
+    ctx.arc(0, 0, orbitR + i * 8, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(255,255,255,${isHovered ? 0.06 : 0.02})`;
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+  });
+
+  // ---- CORE ORB ----
+  const coreGrad = ctx.createRadialGradient(-coreR * 0.25, -coreR * 0.25, coreR * 0.1, 0, 0, coreR);
+  coreGrad.addColorStop(0, `rgba(${r + 60 > 255 ? 255 : r + 60},${g + 60 > 255 ? 255 : g + 60},${b + 60 > 255 ? 255 : b + 60},0.9)`);
+  coreGrad.addColorStop(0.4, `rgba(${r},${g},${b},0.7)`);
+  coreGrad.addColorStop(0.8, `rgba(${Math.floor(r*0.5)},${Math.floor(g*0.5)},${Math.floor(b*0.5)},0.5)`);
+  coreGrad.addColorStop(1, `rgba(${Math.floor(r*0.3)},${Math.floor(g*0.3)},${Math.floor(b*0.3)},0.2)`);
+
+  ctx.beginPath();
+  ctx.arc(0, 0, coreR, 0, Math.PI * 2);
+  ctx.fillStyle = coreGrad;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = isHovered ? 30 : 15;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // Core inner highlight
+  const innerGrad = ctx.createRadialGradient(-coreR * 0.2, -coreR * 0.2, 0, 0, 0, coreR * 0.6);
+  innerGrad.addColorStop(0, 'rgba(255,255,255,0.15)');
+  innerGrad.addColorStop(1, 'transparent');
+  ctx.fillStyle = innerGrad;
+  ctx.beginPath();
+  ctx.arc(0, 0, coreR * 0.6, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Subtle inner pulsing ring
+  const innerPulse = 0.5 + Math.sin(t * 0.002 * pulseFreq + phase) * 0.3;
+  ctx.beginPath();
+  ctx.arc(0, 0, coreR * 0.7, 0, Math.PI * 2);
+  ctx.strokeStyle = `rgba(255,255,255,${innerPulse * 0.1})`;
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+// ============================================================================
+// HIT TESTING
+// ============================================================================
+function getNodeAt(mx, my) {
+  let closest = null;
+  let closestDist = Infinity;
+  for (const n of nodes) {
+    const dx = n.x - mx;
+    const dy = n.y - my;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const hitR = n.coreR + 70; // generous hit area including rings
+    if (dist < hitR && dist < closestDist) {
+      closest = n;
+      closestDist = dist;
+    }
+  }
+  return closest;
+}
+
+// ============================================================================
+// TOOLTIP
+// ============================================================================
+function showTooltip(node, mx, my) {
+  const d = node;
+  const oceanLabels = { openness: 'Openness', conscientiousness: 'Conscientiousness', extraversion: 'Extraversion', agreeableness: 'Agreeableness', neuroticism: 'Neuroticism' };
+  const dtLabels = { machiavellianism: 'Machiavellianism', narcissism: 'Narcissism', psychopathy: 'Psychopathy' };
+
+  let html = `<div class="tt-name" style="color:${d.color}">${d.character}</div>`;
+  html += `<div class="tt-player">Played by ${d.player} &middot; ${d.stats.sessions} sessions</div>`;
+
+  html += `<div class="tt-section">OCEAN Personality</div>`;
+  OCEAN_KEYS.forEach((k, i) => {
+    html += `<div class="tt-row"><span class="tt-label">${oceanLabels[k]}</span><span class="tt-value" style="color:${OCEAN_COLORS[i]}">${d.ocean[k]}</span></div>`;
+  });
+
+  html += `<div class="tt-section">Dark Triad</div>`;
+  DT_KEYS.forEach((k, i) => {
+    html += `<div class="tt-row"><span class="tt-label">${dtLabels[k]}</span><span class="tt-value" style="color:${DT_COLORS[i]}">${d.darkTriad[k]}</span></div>`;
+  });
+
+  html += `<div class="tt-section">Career Stats</div>`;
+  html += `<div class="tt-row"><span class="tt-label">Total Words</span><span class="tt-value">${d.stats.totalWords.toLocaleString()}</span></div>`;
+  html += `<div class="tt-row"><span class="tt-label">Kills</span><span class="tt-value">${d.stats.kills}</span></div>`;
+  html += `<div class="tt-row"><span class="tt-label">GPA</span><span class="tt-value">${d.growth.avgGpa.toFixed(2)}</span></div>`;
+
+  tooltip.innerHTML = html;
+  tooltip.classList.add('visible');
+
+  // Position
+  let tx = mx + 20;
+  let ty = my - 10;
+  if (tx + 260 > W) tx = mx - 260;
+  if (ty + tooltip.offsetHeight > H - 40) ty = H - tooltip.offsetHeight - 40;
+  if (ty < 10) ty = 10;
+  tooltip.style.left = tx + 'px';
+  tooltip.style.top = ty + 'px';
+}
+
+function hideTooltip() {
+  tooltip.classList.remove('visible');
+}
+
+// ============================================================================
+// DETAIL PANEL
+// ============================================================================
+function openDetail(node) {
+  selectedNode = node;
+  const d = node;
+  const content = document.getElementById('detail-content');
+
+  const oceanLabels = { openness: 'Openness', conscientiousness: 'Conscientiousness', extraversion: 'Extraversion', agreeableness: 'Agreeableness', neuroticism: 'Neuroticism' };
+  const dtLabels = { machiavellianism: 'Machiavellianism', narcissism: 'Narcissism', psychopathy: 'Psychopathy' };
+
+  let html = `<div class="dp-name" style="color:${d.color}">${d.character}</div>`;
+  html += `<div class="dp-player">Played by ${d.player} &middot; ${d.stats.sessions} sessions</div>`;
+
+  // OCEAN
+  html += `<div class="dp-section-title">OCEAN PERSONALITY</div>`;
+  OCEAN_KEYS.forEach((k, i) => {
+    const v = d.ocean[k];
+    html += `<div class="dp-bar-group">
+      <div class="dp-bar-label"><span>${oceanLabels[k]}</span><span style="color:${OCEAN_COLORS[i]}">${v}</span></div>
+      <div class="dp-bar"><div class="dp-bar-fill" style="width:${v}%;background:${OCEAN_COLORS[i]};box-shadow:0 0 8px ${OCEAN_COLORS[i]}44"></div></div>
+    </div>`;
+  });
+
+  // Dark Triad
+  html += `<div class="dp-section-title">DARK TRIAD</div>`;
+  DT_KEYS.forEach((k, i) => {
+    const v = d.darkTriad[k];
+    html += `<div class="dp-bar-group">
+      <div class="dp-bar-label"><span>${dtLabels[k]}</span><span style="color:${DT_COLORS[i]}">${v}</span></div>
+      <div class="dp-bar"><div class="dp-bar-fill" style="width:${v}%;background:${DT_COLORS[i]};box-shadow:0 0 8px ${DT_COLORS[i]}44"></div></div>
+    </div>`;
+  });
+
+  // Combat Stats
+  html += `<div class="dp-section-title">CAREER COMBAT</div>`;
+  html += `<div class="dp-stat-grid">
+    <div class="dp-stat-card"><div class="dp-stat-value" style="color:${d.color}">${d.stats.kills}</div><div class="dp-stat-label">Kills</div></div>
+    <div class="dp-stat-card"><div class="dp-stat-value" style="color:${d.color}">${d.stats.damage.toLocaleString()}</div><div class="dp-stat-label">Total Damage</div></div>
+    <div class="dp-stat-card"><div class="dp-stat-value" style="color:${d.color}">${d.stats.crits}</div><div class="dp-stat-label">Critical Hits</div></div>
+    <div class="dp-stat-card"><div class="dp-stat-value" style="color:${d.color}">${d.stats.downed}</div><div class="dp-stat-label">Times Downed</div></div>
+    <div class="dp-stat-card"><div class="dp-stat-value" style="color:${d.color}">${d.stats.spells}</div><div class="dp-stat-label">Spells Cast</div></div>
+    <div class="dp-stat-card"><div class="dp-stat-value" style="color:${d.color}">${d.stats.totalWords.toLocaleString()}</div><div class="dp-stat-label">Words Spoken</div></div>
+  </div>`;
+
+  // Growth
+  html += `<div class="dp-section-title">GROWTH</div>`;
+  html += `<div class="dp-growth-row"><span>Average GPA</span><span style="color:${d.color}">${d.growth.avgGpa.toFixed(2)}</span></div>`;
+  html += `<div class="dp-growth-row"><span>Avg Net Growth / Session</span><span style="color:${d.color}">${d.growth.avgNetGrowth.toFixed(2)}</span></div>`;
+  html += `<div class="dp-growth-row"><span>Kills / Session</span><span style="color:${d.color}">${(d.stats.sessions > 0 ? d.stats.kills / d.stats.sessions : 0).toFixed(2)}</span></div>`;
+  html += `<div class="dp-growth-row"><span>Damage / Session</span><span style="color:${d.color}">${(d.stats.sessions > 0 ? d.stats.damage / d.stats.sessions : 0).toFixed(1)}</span></div>`;
+  html += `<div class="dp-growth-row"><span>Spells / Session</span><span style="color:${d.color}">${(d.stats.sessions > 0 ? d.stats.spells / d.stats.sessions : 0).toFixed(1)}</span></div>`;
+
+  // Aura interpretation
+  html += `<div class="dp-section-title">AURA INTERPRETATION</div>`;
+  const dominantOcean = OCEAN_KEYS.reduce((a, b) => d.ocean[a] > d.ocean[b] ? a : b);
+  const darkestTrait = DT_KEYS.reduce((a, b) => d.darkTriad[a] > d.darkTriad[b] ? a : b);
+  const compositeScore = (d.darkTriad.machiavellianism + d.darkTriad.narcissism + d.darkTriad.psychopathy) / 3;
+
+  html += `<div style="font-size:13px;line-height:1.6;color:rgba(255,255,255,0.55);margin-top:8px;">`;
+  html += `<strong style="color:${d.color}">${d.character}</strong>'s aura radiates with dominant <strong style="color:${OCEAN_COLORS[OCEAN_KEYS.indexOf(dominantOcean)]}">${oceanLabels[dominantOcean]}</strong> energy (${d.ocean[dominantOcean]}/100). `;
+
+  if (compositeScore > 30) {
+    html += `The dark triad particles orbit with notable intensity, particularly <strong style="color:${DT_COLORS[DT_KEYS.indexOf(darkestTrait)]}">${dtLabels[darkestTrait]}</strong> (${d.darkTriad[darkestTrait]}/100). `;
+  } else {
+    html += `The dark triad particles move gently, reflecting a relatively pure spirit. `;
+  }
+
+  if (d.stats.totalWords > 70000) {
+    html += `The core orb burns large and bright — one of the most vocal presences in the campaign. `;
+  } else if (d.stats.totalWords < 20000) {
+    html += `The core orb is compact but intense — quality over quantity in every word. `;
+  }
+
+  if (d.growth.avgGpa > 3.0) {
+    html += `A brilliant outer halo signals consistent growth and excellence across the campaign.`;
+  } else {
+    html += `The outer glow carries the warmth of steady, grounded progress.`;
+  }
+
+  html += `</div>`;
+
+  content.innerHTML = html;
+  detailPanel.classList.add('open');
+
+  // Animate bar fills in
+  setTimeout(() => {
+    content.querySelectorAll('.dp-bar-fill').forEach(el => {
+      const w = el.style.width;
+      el.style.width = '0%';
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          el.style.width = w;
+        });
+      });
+    });
+  }, 50);
+}
+
+function closePanel() {
+  detailPanel.classList.remove('open');
+  selectedNode = null;
+}
+
+// ============================================================================
+// MOUSE EVENTS
+// ============================================================================
+canvas.addEventListener('mousemove', e => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const node = getNodeAt(mx, my);
+  hoveredNode = node;
+  if (node) {
+    canvas.style.cursor = 'pointer';
+    showTooltip(node, e.clientX, e.clientY);
+  } else {
+    canvas.style.cursor = 'default';
+    hideTooltip();
+  }
+});
+
+canvas.addEventListener('click', e => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const node = getNodeAt(mx, my);
+  if (node) {
+    openDetail(node);
+  } else {
+    closePanel();
+  }
+});
+
+// ============================================================================
+// RENDER LOOP
+// ============================================================================
+let lastTime = 0;
+
+function render(timestamp) {
+  if (!lastTime) lastTime = timestamp;
+  const dt = timestamp - lastTime;
+  lastTime = timestamp;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Background
+  drawBackground();
+  drawStars(timestamp);
+
+  // Connection lines between characters (subtle)
+  ctx.globalAlpha = 0.03;
+  for (let i = 0; i < nodes.length; i++) {
+    for (let j = i + 1; j < nodes.length; j++) {
+      const a = nodes[i], b = nodes[j];
+      const dx = a.x - b.x, dy = a.y - b.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 400) {
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        const grad = ctx.createLinearGradient(a.x, a.y, b.x, b.y);
+        grad.addColorStop(0, a.color);
+        grad.addColorStop(1, b.color);
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = 1;
+        ctx.globalAlpha = 0.04 * (1 - dist / 400);
+        ctx.stroke();
+      }
+    }
+  }
+  ctx.globalAlpha = 1;
+
+  // Draw auras (sort by y for depth)
+  const sorted = [...nodes].sort((a, b) => a.y - b.y);
+  sorted.forEach(node => drawAura(node, timestamp));
+
+  requestAnimationFrame(render);
+}
+
+requestAnimationFrame(render);
+
+// ============================================================================
+// KEYBOARD
+// ============================================================================
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closePanel();
+  }
+});
+</script>
+</body>
+</html>

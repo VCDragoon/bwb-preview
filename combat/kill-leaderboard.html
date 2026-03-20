@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KILL LEADERBOARD — BWB Campaign</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600&family=Barlow:wght@400;500&family=JetBrains+Mono:wght@400;700&family=Cinzel:wght@700&display=swap" rel="stylesheet">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #06060c;
+    color: #e0e0e8;
+    font-family: 'Barlow', sans-serif;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  /* Scanline overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.08) 2px,
+      rgba(0, 0, 0, 0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  .page-header {
+    text-align: center;
+    padding: 40px 24px 8px;
+  }
+
+  .page-header h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 56px;
+    letter-spacing: 6px;
+    color: #ff8a65;
+    text-shadow: 0 0 20px rgba(255, 138, 101, 0.6), 0 0 60px rgba(255, 138, 101, 0.2);
+    margin-bottom: 4px;
+  }
+
+  .page-header .subtitle {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 16px;
+    letter-spacing: 3px;
+    color: #9898b0;
+    text-transform: uppercase;
+  }
+
+  .controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    padding: 20px 24px;
+    flex-wrap: wrap;
+  }
+
+  .controls button {
+    background: linear-gradient(135deg, #1a1a30, #22223a);
+    border: 1px solid #3a3a5a;
+    color: #e0e0e8;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 14px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 8px 24px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .controls button:hover {
+    border-color: #ff8a65;
+    box-shadow: 0 0 12px rgba(255, 138, 101, 0.3);
+  }
+
+  .controls button.active {
+    background: linear-gradient(135deg, #2a1a10, #3a2218);
+    border-color: #ff8a65;
+    color: #ff8a65;
+    box-shadow: 0 0 12px rgba(255, 138, 101, 0.3);
+  }
+
+  .speed-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .speed-control label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #7a7a90;
+  }
+
+  .speed-control select {
+    background: #14142a;
+    border: 1px solid #3a3a5a;
+    color: #e0e0e8;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .scrubber-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    max-width: 500px;
+    min-width: 200px;
+  }
+
+  .scrubber-wrap label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #7a7a90;
+    white-space: nowrap;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    background: #2a2a40;
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background: #ff8a65;
+    border-radius: 50%;
+    border: 2px solid #06060c;
+    box-shadow: 0 0 8px rgba(255, 138, 101, 0.5);
+    cursor: pointer;
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: #ff8a65;
+    border-radius: 50%;
+    border: 2px solid #06060c;
+    box-shadow: 0 0 8px rgba(255, 138, 101, 0.5);
+    cursor: pointer;
+  }
+
+  .chart-container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+    position: relative;
+  }
+
+  .session-counter {
+    position: absolute;
+    top: 20px;
+    right: 60px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 80px;
+    letter-spacing: 4px;
+    color: #ff8a65;
+    text-shadow: 0 0 30px rgba(255, 138, 101, 0.4);
+    opacity: 0.6;
+    z-index: 10;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+
+  .session-counter.final {
+    opacity: 1;
+    text-shadow: 0 0 40px rgba(255, 138, 101, 0.7);
+  }
+
+  svg { overflow: visible; }
+
+  .axis text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    fill: #7a7a90;
+  }
+
+  .axis line, .axis path {
+    stroke: #2a2a40;
+  }
+
+  .grid line {
+    stroke: #1a1a2e;
+    stroke-dasharray: 2,4;
+  }
+
+  .grid .domain { display: none; }
+
+  .final-stats {
+    display: flex;
+    justify-content: center;
+    gap: 48px;
+    padding: 24px;
+    flex-wrap: wrap;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+
+  .final-stats.visible { opacity: 1; }
+
+  .final-stats .stat-item {
+    text-align: center;
+  }
+
+  .final-stats .stat-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 28px;
+    font-weight: 700;
+    color: #ff8a65;
+    text-shadow: 0 0 12px rgba(255, 138, 101, 0.4);
+  }
+
+  .final-stats .stat-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #7a7a90;
+    margin-top: 2px;
+  }
+
+  /* Crown for #1 */
+  @keyframes crownPulse {
+    0%, 100% { text-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
+    50% { text-shadow: 0 0 25px rgba(255, 215, 0, 0.9), 0 0 40px rgba(255, 215, 0, 0.4); }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>KILL LEADERBOARD</h1>
+  <div class="subtitle">Cumulative Finishing Blows Across 46 Sessions</div>
+</div>
+
+<div class="controls">
+  <button id="playPauseBtn" class="active">PLAY</button>
+  <button id="resetBtn">RESET</button>
+  <div class="speed-control">
+    <label>Speed</label>
+    <select id="speedSelect">
+      <option value="1200">0.5x</option>
+      <option value="600" selected>1x</option>
+      <option value="300">2x</option>
+      <option value="150">4x</option>
+    </select>
+  </div>
+  <div class="scrubber-wrap">
+    <label>Session</label>
+    <input type="range" id="scrubber" min="1" max="46" value="1" step="1">
+  </div>
+</div>
+
+<div class="chart-container" id="chartContainer">
+  <div class="session-counter" id="sessionCounter">S001</div>
+  <svg id="chart"></svg>
+</div>
+
+<div class="final-stats" id="finalStats"></div>
+<div class="final-stats" id="preStats" style="opacity:0; padding-top:0; margin-top:-8px; border-top:1px solid #2a2a4a; flex-direction:column; align-items:center;"></div>
+
+<script>
+// ============================================================================
+// REAL DATA from BWB Campaign stat cards — kills per player per session
+// ============================================================================
+const killData = {
+  S001:{Gradles:0,HT:0,Mary:0,Christie:0,Lucy:0,Tenderbittle:0},
+  S002:{Gradles:0,HT:0,Christie:0,Lucy:0,Tenderbittle:0,Meijinx:0},
+  S003:{Gradles:0,Mary:0,Christie:0,HT:0,Lucy:0,Tenderbittle:0,Meijinx:0,Drenek:0},
+  S004:{Gradles:1,HT:0,Mary:4,Christie:0,Lucy:0,Tenderbittle:0,Meijinx:0,Drenek:2},
+  S005:{Gradles:0,HT:0,Mary:1,Christie:0,Lucy:0,Tenderbittle:0,Meijinx:0},
+  S006:{Gradles:0,HT:0,Mary:2,Christie:0,Lucy:0,Tenderbittle:0},
+  S007:{Gradles:0,HT:0,Mary:0,Christie:0,Lucy:0,Tenderbittle:0,Meijinx:0},
+  S008:{Gradles:0,HT:0,Mary:0,Christie:0,Lucy:0,Meijinx:0},
+  S009:{Gradles:0,HT:0,Mary:0,Christie:1,Lucy:0,Meijinx:0},
+  S010:{Gradles:1,HT:0,Mary:0,Christie:0,Lucy:8,Drenek:2},
+  S011:{Gradles:0,HT:0,Mary:0,Christie:0,Lucy:0,Drenek:0},
+  S012:{Gradles:0,HT:0,Christie:0,Lucy:0,Meijinx:0},
+  S013:{Gradles:0,HT:0,Mary:0,Lucy:0,Meijinx:0},
+  S014:{Gradles:0,HT:0,Mary:0,Christie:0,Lucy:0,Meijinx:0},
+  S015:{Gradles:0,HT:0,Mary:0,Christie:0,Lucy:0,Tenderbittle:0,Meijinx:0,Drenek:0},
+  S016:{Gradles:0,HT:0,Mary:0,Christie:0,Lucy:0,Tenderbittle:0,Meijinx:0,Drenek:0},
+  S017:{Gradles:0,HT:0,Mary:0,Christie:0,Lucy:0,Tenderbittle:0},
+  S018:{Gradles:0,HT:0,Mary:0,Christie:0,Lucy:0},
+  S019:{Gradles:0,HT:0,Mary:0,Christie:0,Lucy:0,Tenderbittle:0},
+  S020:{Gradles:0,HT:0,Mary:0,Christie:0,Lucy:0,Tenderbittle:0},
+  S021:{Gradles:0,HT:0,Mary:0,Christie:0,Lucy:0,Tenderbittle:0},
+  S022:{Gradles:0,HT:0,Mary:0,Christie:0,Lucy:0,Tenderbittle:2},
+  S023:{Gradles:0,HT:0,Mary:1,Christie:1,Lucy:0,Tenderbittle:0,Meijinx:0,Drenek:0},
+  S024:{Gradles:0,HT:0,Mary:0,Christie:0,Lucy:0,Tenderbittle:0},
+  S025:{Gradles:0,HT:0,Christie:0,Lucy:0,Tenderbittle:0},
+  S026:{Gradles:0,HT:0,Mary:0,Christie:0,Lucy:0,Tenderbittle:0},
+  S027:{Gradles:1,HT:0,Mary:0,Christie:2,Lucy:0,Tenderbittle:0},
+  S028:{Gradles:0,HT:1,Mary:1,Christie:0,Lucy:0,Tenderbittle:0},
+  S029:{Gradles:0,HT:0,Mary:0,Christie:0,Lucy:0,Tenderbittle:0,Meijinx:0},
+  S030:{Gradles:0,HT:0,Mary:0,Christie:0,Lucy:0,Tenderbittle:0},
+  S031:{Gradles:0,HT:0,Mary:0,Christie:0,Lucy:0,Tenderbittle:0,Meijinx:1},
+  S032:{Gradles:0,HT:0,Mary:0,Christie:0,Lucy:0,Tenderbittle:1},
+  S033:{Gradles:0,HT:0,Mary:2,Christie:1,Lucy:0,Tenderbittle:0},
+  S034:{Gradles:1,HT:0,Christie:0,Lucy:0,Tenderbittle:0},
+  S035:{Gradles:0,HT:0,Mary:0,Christie:0,Lucy:0,Tenderbittle:0},
+  S036:{Gradles:1,HT:0,Mary:0,Christie:0,Lucy:0,Tenderbittle:1},
+  S037:{Gradles:0,HT:0,Mary:0,Christie:1,Lucy:0,Tenderbittle:1,Meijinx:0,Drenek:0},
+  S038:{Gradles:0,HT:0,Mary:0,Christie:0,Lucy:0,Tenderbittle:0},
+  S039:{Gradles:0,HT:0,Mary:0,Christie:0,Lucy:0,Tenderbittle:0,Meijinx:0},
+  S040:{Gradles:1,HT:0,Mary:0,Christie:0,Lucy:0,Tenderbittle:0,Meijinx:0},
+  S041:{Gradles:1,HT:0,Mary:0,Christie:0,Lucy:1,Tenderbittle:2},
+  S042:{Gradles:0,HT:0,Mary:0,Christie:0,Lucy:0,Tenderbittle:1},
+  S043:{Gradles:0,HT:0,Mary:0,Christie:0,Lucy:0,Tenderbittle:0,Drenek:0},
+  S044:{Gradles:0,HT:0,Mary:0,Christie:0,Lucy:0,Tenderbittle:0},
+  S045:{Gradles:30,HT:150,Mary:0,Christie:50,Lucy:200,Tenderbittle:3000},
+  S046:{Gradles:0,HT:0,Mary:0,Christie:0,Lucy:0,Tenderbittle:0}
+};
+
+// ============================================================================
+// Player configuration
+// ============================================================================
+const PLAYER_COLORS = {
+  Gradles:      "#4A90D9",
+  HT:           "#E57373",
+  Mary:         "#81C784",
+  Christie:     "#BA68C8",
+  Lucy:         "#FFB74D",
+  Tenderbittle: "#4DB6AC",
+  Meijinx:      "#FF8A65",
+  Drenek:       "#7986CB"
+};
+
+// Session-aware character names
+const CHAR_TIMELINE = {
+  Gradles:      [[1, 46, "Corras"]],
+  HT:           [[1, 39, "Ash"], [40, 40, "Ezrella"], [41, 46, "Ash"]],
+  Mary:         [[1, 46, "Billabong"]],
+  Christie:     [[1, 17, "Lilith"], [18, 46, "Dahlia"]],
+  Lucy:         [[1, 46, "Orla"]],
+  Tenderbittle: [[23, 46, "SavannahBelle"]],
+  Meijinx:      [[2, 20, "Ave"]],
+  Drenek:       [[11, 12, "Drenek"]]
+};
+
+function getCharName(player, sessionNum) {
+  const timeline = CHAR_TIMELINE[player];
+  if (!timeline) return player;
+  for (const [first, last, name] of timeline) {
+    if (sessionNum >= first && sessionNum <= last) return name;
+  }
+  return CHAR_TIMELINE[player]?.[0]?.[2] || player;
+}
+
+// ============================================================================
+// Compute cumulative kills per player through each session
+// ============================================================================
+const allPlayers = Object.keys(PLAYER_COLORS);
+const cumulativeBySession = [];
+
+const cumulative = {};
+allPlayers.forEach(p => cumulative[p] = 0);
+
+for (let s = 1; s <= 46; s++) {
+  const sid = `S${String(s).padStart(3, '0')}`;
+  const sessionKills = killData[sid] || {};
+
+  allPlayers.forEach(p => {
+    if (sessionKills[p] !== undefined) {
+      cumulative[p] += sessionKills[p];
+    }
+  });
+
+  const frame = allPlayers
+    .map(p => ({
+      player: p,
+      character: getCharName(p, s),
+      color: PLAYER_COLORS[p],
+      kills: cumulative[p],
+      sessionKills: sessionKills[p] || 0
+    }))
+    .filter(d => d.kills > 0 || d.sessionKills > 0)
+    .sort((a, b) => b.kills - a.kills);
+
+  cumulativeBySession.push({
+    session: s,
+    sid: sid,
+    data: frame
+  });
+}
+
+// ============================================================================
+// Chart setup
+// ============================================================================
+const container = document.getElementById('chartContainer');
+const margin = { top: 20, right: 120, bottom: 30, left: 180 };
+const barHeight = 44;
+const maxBars = 8;
+const chartWidth = Math.min(container.clientWidth - 48, 1200) - margin.left - margin.right;
+const chartHeight = maxBars * barHeight + (maxBars - 1) * 6;
+
+const svg = d3.select('#chart')
+  .attr('width', chartWidth + margin.left + margin.right)
+  .attr('height', chartHeight + margin.top + margin.bottom)
+  .append('g')
+  .attr('transform', `translate(${margin.left},${margin.top})`);
+
+// Defs
+const defs = svg.append('defs');
+
+// Glow filter for #1 bar
+const glowFilter = defs.append('filter').attr('id', 'barGlow').attr('x', '-20%').attr('y', '-20%').attr('width', '140%').attr('height', '140%');
+glowFilter.append('feGaussianBlur').attr('stdDeviation', '6').attr('result', 'coloredBlur');
+const feMerge = glowFilter.append('feMerge');
+feMerge.append('feMergeNode').attr('in', 'coloredBlur');
+feMerge.append('feMergeNode').attr('in', 'SourceGraphic');
+
+// Bar gradients for each player
+allPlayers.forEach(p => {
+  const grad = defs.append('linearGradient')
+    .attr('id', `barGrad-${p}`)
+    .attr('x1', '0').attr('y1', '0')
+    .attr('x2', '1').attr('y2', '0');
+  grad.append('stop').attr('offset', '0%').attr('stop-color', PLAYER_COLORS[p]).attr('stop-opacity', 0.9);
+  grad.append('stop').attr('offset', '100%').attr('stop-color', PLAYER_COLORS[p]).attr('stop-opacity', 0.6);
+});
+
+// X Scale
+const x = d3.scaleLinear().range([0, chartWidth]);
+
+// X Axis
+const xAxisG = svg.append('g')
+  .attr('class', 'axis')
+  .attr('transform', `translate(0,${chartHeight})`);
+
+// Grid
+const gridG = svg.append('g').attr('class', 'grid');
+
+// ============================================================================
+// Render a frame
+// ============================================================================
+const sessionCounter = document.getElementById('sessionCounter');
+
+function renderFrame(frameIndex, duration = 400) {
+  const frame = cumulativeBySession[frameIndex];
+  if (!frame) return;
+
+  const data = frame.data.slice(0, maxBars);
+  const maxKills = d3.max(data, d => d.kills) || 1;
+
+  // Update session counter
+  sessionCounter.textContent = frame.sid;
+  sessionCounter.classList.toggle('final', frameIndex === 45);
+
+  // Update scrubber
+  document.getElementById('scrubber').value = frame.session;
+
+  // Update X scale
+  x.domain([0, maxKills + 2]);
+
+  // X Axis
+  xAxisG.transition().duration(duration).call(
+    d3.axisBottom(x).ticks(5).tickFormat(d3.format('d'))
+  );
+
+  // Grid
+  gridG.call(d3.axisBottom(x).ticks(5).tickSize(chartHeight).tickFormat(''))
+    .call(g => g.selectAll('.tick line').attr('stroke', '#1a1a2e').attr('stroke-dasharray', '2,4'))
+    .call(g => g.select('.domain').remove());
+
+  // Y positions
+  const yPos = (i) => i * (barHeight + 6);
+
+  // DATA JOIN — bars
+  const bars = svg.selectAll('.bar-group')
+    .data(data, d => d.player);
+
+  // EXIT
+  bars.exit()
+    .transition().duration(duration)
+    .attr('opacity', 0)
+    .remove();
+
+  // ENTER
+  const enter = bars.enter()
+    .append('g')
+    .attr('class', 'bar-group')
+    .attr('transform', (d, i) => `translate(0,${yPos(i)})`)
+    .attr('opacity', 0);
+
+  // Bar rect
+  enter.append('rect')
+    .attr('class', 'bar-rect')
+    .attr('x', 0)
+    .attr('y', 0)
+    .attr('height', barHeight)
+    .attr('rx', 4)
+    .attr('width', 0)
+    .attr('fill', d => `url(#barGrad-${d.player})`);
+
+  // Bar background
+  enter.insert('rect', ':first-child')
+    .attr('class', 'bar-bg')
+    .attr('x', 0)
+    .attr('y', 0)
+    .attr('height', barHeight)
+    .attr('width', chartWidth)
+    .attr('rx', 4)
+    .attr('fill', 'rgba(255,255,255,0.02)')
+    .attr('stroke', 'rgba(255,255,255,0.04)');
+
+  // Player name label (left side)
+  enter.append('text')
+    .attr('class', 'player-label')
+    .attr('x', -10)
+    .attr('y', barHeight / 2)
+    .attr('text-anchor', 'end')
+    .attr('dominant-baseline', 'middle')
+    .attr('fill', d => d.color)
+    .style('font-family', 'Cinzel')
+    .style('font-size', '14px')
+    .style('font-weight', '700');
+
+  // Character name sublabel
+  enter.append('text')
+    .attr('class', 'char-label')
+    .attr('x', -10)
+    .attr('y', barHeight / 2 + 14)
+    .attr('text-anchor', 'end')
+    .attr('dominant-baseline', 'middle')
+    .attr('fill', '#7a7a90')
+    .style('font-family', 'Barlow Condensed')
+    .style('font-size', '11px')
+    .style('letter-spacing', '1px');
+
+  // Kill count at end of bar
+  enter.append('text')
+    .attr('class', 'kill-count')
+    .attr('y', barHeight / 2)
+    .attr('dominant-baseline', 'middle')
+    .attr('fill', '#e0e0e8')
+    .style('font-family', 'JetBrains Mono')
+    .style('font-size', '15px')
+    .style('font-weight', '700');
+
+  // Rank number inside bar
+  enter.append('text')
+    .attr('class', 'rank-label')
+    .attr('x', 8)
+    .attr('y', barHeight / 2)
+    .attr('dominant-baseline', 'middle')
+    .attr('fill', 'rgba(255,255,255,0.3)')
+    .style('font-family', 'Bebas Neue')
+    .style('font-size', '20px');
+
+  // Session kill indicator (flash)
+  enter.append('text')
+    .attr('class', 'session-kill-indicator')
+    .attr('y', barHeight / 2)
+    .attr('dominant-baseline', 'middle')
+    .attr('fill', '#ffeb3b')
+    .attr('opacity', 0)
+    .style('font-family', 'JetBrains Mono')
+    .style('font-size', '12px')
+    .style('font-weight', '700');
+
+  // UPDATE + ENTER
+  const merged = enter.merge(bars);
+
+  merged.transition().duration(duration)
+    .attr('transform', (d, i) => `translate(0,${yPos(i)})`)
+    .attr('opacity', 1);
+
+  merged.select('.bar-rect')
+    .transition().duration(duration)
+    .attr('width', d => Math.max(x(d.kills), 2))
+    .attr('fill', d => `url(#barGrad-${d.player})`)
+    .attr('filter', (d, i) => i === 0 && frameIndex === 45 ? 'url(#barGlow)' : null);
+
+  merged.select('.player-label')
+    .text(d => d.player)
+    .attr('fill', d => d.color);
+
+  merged.select('.char-label')
+    .text(d => d.character);
+
+  merged.select('.kill-count')
+    .transition().duration(duration)
+    .attr('x', d => Math.max(x(d.kills), 2) + 8)
+    .tween('text', function(d) {
+      const prev = parseInt(this.textContent) || 0;
+      const interp = d3.interpolateRound(prev, d.kills);
+      return t => { this.textContent = interp(t); };
+    });
+
+  merged.select('.rank-label')
+    .text((d, i) => `#${i + 1}`);
+
+  // Flash session kills
+  merged.select('.session-kill-indicator')
+    .attr('x', d => Math.max(x(d.kills), 2) + 50)
+    .text(d => d.sessionKills > 0 ? `+${d.sessionKills}` : '')
+    .attr('opacity', d => d.sessionKills > 0 ? 1 : 0)
+    .transition().duration(duration * 1.5)
+    .attr('opacity', 0);
+
+  // Crown for #1 in final frame
+  if (frameIndex === 45 && data.length > 0) {
+    const crown = svg.selectAll('.crown').data([data[0]], d => d.player);
+    crown.enter()
+      .append('text')
+      .attr('class', 'crown')
+      .attr('x', -10)
+      .attr('y', yPos(0) + barHeight / 2 - 20)
+      .attr('text-anchor', 'end')
+      .style('font-size', '24px')
+      .text('\u265B')
+      .attr('fill', '#ffd700')
+      .style('animation', 'crownPulse 2s ease-in-out infinite')
+      .attr('opacity', 0)
+      .transition().duration(800)
+      .attr('opacity', 1);
+  }
+}
+
+// ============================================================================
+// Animation controls
+// ============================================================================
+let currentFrame = 0;
+let isPlaying = false;
+let animTimer = null;
+let speed = 600;
+
+const playPauseBtn = document.getElementById('playPauseBtn');
+const resetBtn = document.getElementById('resetBtn');
+const speedSelect = document.getElementById('speedSelect');
+const scrubber = document.getElementById('scrubber');
+
+function play() {
+  if (currentFrame >= 45) {
+    currentFrame = 0;
+  }
+  isPlaying = true;
+  playPauseBtn.textContent = 'PAUSE';
+  playPauseBtn.classList.add('active');
+  step();
+}
+
+function pause() {
+  isPlaying = false;
+  playPauseBtn.textContent = 'PLAY';
+  playPauseBtn.classList.remove('active');
+  if (animTimer) {
+    clearTimeout(animTimer);
+    animTimer = null;
+  }
+}
+
+function step() {
+  if (!isPlaying || currentFrame >= 46) {
+    if (currentFrame >= 46) {
+      currentFrame = 45;
+      pause();
+      showFinalStats();
+    }
+    return;
+  }
+
+  renderFrame(currentFrame, speed * 0.7);
+  currentFrame++;
+
+  animTimer = setTimeout(step, speed);
+}
+
+function reset() {
+  pause();
+  currentFrame = 0;
+  document.getElementById('finalStats').classList.remove('visible');
+  document.getElementById('preStats').style.opacity = '0';
+  svg.selectAll('.crown').remove();
+  renderFrame(0, 300);
+}
+
+function showFinalStats() {
+  const finalFrame = cumulativeBySession[45].data;
+  const totalKills = d3.sum(finalFrame, d => d.kills);
+  const topKiller = finalFrame[0];
+  const avgKillsPerSession = (totalKills / 46).toFixed(1);
+
+  // Pre-S045 stats
+  const preFrame = cumulativeBySession[43].data; // S044 = index 43
+  const preTotalKills = d3.sum(preFrame, d => d.kills);
+  const preTopKiller = preFrame[0];
+  const preAvg = (preTotalKills / 44).toFixed(1);
+
+  const statsDiv = document.getElementById('finalStats');
+  statsDiv.innerHTML = `
+    <div class="stat-item"><div class="stat-value">${totalKills}</div><div class="stat-label">Total Finishing Blows</div></div>
+    <div class="stat-item"><div class="stat-value">${topKiller.kills}</div><div class="stat-label">${topKiller.player} (${topKiller.character}) #1</div></div>
+    <div class="stat-item"><div class="stat-value">${avgKillsPerSession}</div><div class="stat-label">Avg Kills / Session</div></div>
+    <div class="stat-item"><div class="stat-value">${finalFrame.length}</div><div class="stat-label">Players With Kills</div></div>
+  `;
+
+  statsDiv.classList.add('visible');
+
+  // "Before S045" section in separate div
+  const preDiv = document.getElementById('preStats');
+  const s045kills = totalKills - preTotalKills;
+  preDiv.innerHTML = `
+    <div style="font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:3px; color:#555; margin-bottom:16px; margin-top:8px;">BEFORE THE TOWN SQUARE MASSACRE (S001–S044)</div>
+    <div style="display:flex; justify-content:center; gap:48px; flex-wrap:wrap;">
+      <div class="stat-item"><div class="stat-value" style="color:#44ff88; text-shadow:0 0 12px rgba(68,255,136,0.4);">${preTotalKills}</div><div class="stat-label">Total Kills</div></div>
+      <div class="stat-item"><div class="stat-value" style="color:#44ff88; text-shadow:0 0 12px rgba(68,255,136,0.4);">${preTopKiller.kills}</div><div class="stat-label">${preTopKiller.player} (${preTopKiller.character}) #1</div></div>
+      <div class="stat-item"><div class="stat-value" style="color:#44ff88; text-shadow:0 0 12px rgba(68,255,136,0.4);">${preAvg}</div><div class="stat-label">Avg Kills / Session</div></div>
+      <div class="stat-item"><div class="stat-value" style="color:#ff4444; font-size:36px; text-shadow:0 0 20px rgba(255,68,68,0.6);">${s045kills.toLocaleString()}</div><div class="stat-label" style="color:#ff4444;">S045 Casualties Alone</div></div>
+    </div>
+  `;
+  preDiv.style.opacity = '1';
+}
+
+playPauseBtn.addEventListener('click', () => {
+  if (isPlaying) pause();
+  else play();
+});
+
+resetBtn.addEventListener('click', reset);
+
+speedSelect.addEventListener('change', () => {
+  speed = parseInt(speedSelect.value);
+});
+
+scrubber.addEventListener('input', () => {
+  pause();
+  currentFrame = parseInt(scrubber.value) - 1;
+  document.getElementById('finalStats').classList.remove('visible');
+  document.getElementById('preStats').style.opacity = '0';
+  svg.selectAll('.crown').remove();
+  renderFrame(currentFrame, 200);
+  if (currentFrame === 45) showFinalStats();
+});
+
+// ============================================================================
+// Initial render
+// ============================================================================
+renderFrame(0, 0);
+
+// Auto-play after a short delay
+setTimeout(play, 800);
+</script>
+</body>
+</html>

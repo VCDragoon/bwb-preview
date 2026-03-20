@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>THE BROADSHEET &mdash; Campaign Newspaper Archive</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,600;1,700&family=Barlow:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&family=Cinzel:wght@400;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Special+Elite&display=swap" rel="stylesheet">
+<style>
+/* ===== RESET & BASE ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-deep: #0e0d0a;
+  --bg-card: #161410;
+  --text-cream: #d4c9a8;
+  --text-headline: #e8d5a0;
+  --text-dim: #8a7f68;
+  --text-byline: #a09478;
+  --border-warm: #3a3428;
+  --border-light: #4a4232;
+  --accent-primary: #d4a843;
+  --herald: #d4a843;
+  --tribune: #c44030;
+  --watcher: #a8a8c0;
+  --sentinel: #7898c8;
+  --ledger: #c47a3a;
+  --dispatch: #5a6a9a;
+}
+
+html { font-size: 16px; scroll-behavior: smooth; }
+
+body {
+  background: var(--bg-deep);
+  color: var(--text-cream);
+  font-family: 'Barlow', Georgia, serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Paper grain overlay */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-image:
+    repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,245,220,0.008) 2px, rgba(255,245,220,0.008) 4px),
+    repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(255,245,220,0.005) 2px, rgba(255,245,220,0.005) 4px);
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ===== ARCHIVE HEADER ===== */
+.archive-header {
+  text-align: center;
+  padding: 24px 20px 12px;
+  border-bottom: 1px solid var(--border-warm);
+  background: linear-gradient(180deg, #12100a 0%, var(--bg-deep) 100%);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.archive-header h1 {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 20px;
+  letter-spacing: 8px;
+  text-transform: uppercase;
+  color: var(--accent-primary);
+  margin-bottom: 2px;
+}
+
+.archive-header .subtitle {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 300;
+  font-size: 11px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+/* ===== SESSION NAVIGATOR ===== */
+.session-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 8px 20px;
+  background: rgba(10,9,6,0.97);
+  border-bottom: 1px solid var(--border-warm);
+  flex-wrap: wrap;
+  position: sticky;
+  top: 62px;
+  z-index: 99;
+}
+
+.session-tab {
+  width: 30px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid transparent;
+  color: var(--text-dim);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-radius: 2px;
+}
+
+.session-tab:hover {
+  border-color: var(--accent-primary);
+  color: var(--text-cream);
+  background: rgba(212,168,67,0.06);
+}
+
+.session-tab.active {
+  font-weight: 700;
+  color: var(--accent-primary);
+  border-color: var(--accent-primary);
+  background: rgba(212,168,67,0.12);
+}
+
+/* ===== CARD STACK ===== */
+.card-stack {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 16px 16px 80px;
+  display: none;
+}
+
+.card-stack.active { display: block; animation: fadeIn 0.4s ease; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.session-header {
+  text-align: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-warm);
+}
+
+.session-header .session-id {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+
+.session-header .session-title {
+  font-family: 'Cinzel', serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-headline);
+  margin-top: 4px;
+  line-height: 1.3;
+}
+
+/* ===== NEWSPAPER CARD ===== */
+.news-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-warm);
+  border-left: 4px solid var(--accent-primary);
+  margin-bottom: 12px;
+  border-radius: 2px;
+  transition: border-color 0.3s, box-shadow 0.3s;
+  overflow: hidden;
+}
+
+.news-card:hover {
+  box-shadow: 0 2px 20px rgba(0,0,0,0.4);
+}
+
+.news-card.herald { border-left-color: var(--herald); }
+.news-card.tribune { border-left-color: var(--tribune); }
+.news-card.watcher { border-left-color: var(--watcher); }
+.news-card.sentinel { border-left-color: var(--sentinel); }
+.news-card.ledger { border-left-color: var(--ledger); }
+.news-card.dispatch { border-left-color: var(--dispatch); }
+
+.card-header {
+  padding: 14px 18px 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.paper-name {
+  font-family: 'Cinzel', serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.paper-name.herald { color: var(--herald); }
+.paper-name.tribune { color: var(--tribune); font-family: 'Bebas Neue', sans-serif; font-size: 15px; letter-spacing: 2px; }
+.paper-name.watcher { color: var(--watcher); font-family: 'Cormorant Garamond', serif; font-size: 14px; font-style: italic; }
+.paper-name.sentinel { color: var(--sentinel); font-family: 'Cormorant Garamond', serif; }
+.paper-name.ledger { color: var(--ledger); font-family: 'Special Elite', monospace; font-size: 12px; }
+.paper-name.dispatch { color: var(--dispatch); font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; }
+
+.tag-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 1px;
+  padding: 2px 8px;
+  border-radius: 2px;
+  white-space: nowrap;
+}
+
+.tag-badge.herald { background: rgba(212,168,67,0.12); color: var(--herald); border: 1px solid rgba(212,168,67,0.25); }
+.tag-badge.tribune { background: rgba(196,64,48,0.12); color: var(--tribune); border: 1px solid rgba(196,64,48,0.25); }
+.tag-badge.watcher { background: rgba(168,168,192,0.1); color: var(--watcher); border: 1px solid rgba(168,168,192,0.2); }
+.tag-badge.sentinel { background: rgba(120,152,200,0.1); color: var(--sentinel); border: 1px solid rgba(120,152,200,0.2); }
+.tag-badge.ledger { background: rgba(196,122,58,0.1); color: var(--ledger); border: 1px solid rgba(196,122,58,0.2); }
+.tag-badge.dispatch { background: rgba(90,106,154,0.1); color: var(--dispatch); border: 1px solid rgba(90,106,154,0.2); }
+
+.card-headline {
+  font-family: 'Cinzel', serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-headline);
+  line-height: 1.25;
+  margin-bottom: 4px;
+  transition: color 0.2s;
+}
+
+.card-header:hover .card-headline { color: #f0e0b0; }
+
+.news-card.tribune .card-headline {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 19px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #e8594a;
+}
+
+.news-card.watcher .card-headline {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 17px;
+}
+
+.news-card.dispatch .card-headline {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #8898c0;
+}
+
+.news-card.ledger .card-headline {
+  font-family: 'Special Elite', monospace;
+  font-size: 15px;
+}
+
+.card-byline {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 11px;
+  font-style: italic;
+  color: var(--text-byline);
+  letter-spacing: 1px;
+}
+
+.card-editorial {
+  font-style: italic;
+  font-size: 13px;
+  color: var(--text-cream);
+  opacity: 0.85;
+  line-height: 1.5;
+  padding: 0 18px;
+  margin-bottom: 0;
+  border-left: 2px solid var(--border-warm);
+  margin-left: 18px;
+}
+
+.news-card.herald .card-editorial { border-left-color: rgba(212,168,67,0.4); }
+.news-card.tribune .card-editorial { border-left-color: rgba(196,64,48,0.4); }
+.news-card.watcher .card-editorial { border-left-color: rgba(168,168,192,0.3); }
+.news-card.sentinel .card-editorial { border-left-color: rgba(120,152,200,0.3); }
+.news-card.ledger .card-editorial { border-left-color: rgba(196,122,58,0.3); }
+.news-card.dispatch .card-editorial { border-left-color: rgba(90,106,154,0.3); }
+
+.card-body {
+  padding: 0 18px 16px;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--text-cream);
+  display: none;
+  animation: expandBody 0.3s ease;
+}
+
+.card-body.open { display: block; }
+
+@keyframes expandBody {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.card-body p {
+  margin-bottom: 8px;
+}
+
+.news-card.dispatch .card-body {
+  font-family: 'Barlow', sans-serif;
+  font-size: 13px;
+}
+
+.expand-indicator {
+  float: right;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-dim);
+  transition: transform 0.3s;
+}
+
+.card-header.open .expand-indicator { transform: rotate(180deg); }
+
+/* Redacted text for Dispatch */
+.redacted {
+  background: #5a6a9a;
+  color: #5a6a9a;
+  padding: 0 4px;
+  border-radius: 1px;
+  cursor: default;
+  user-select: none;
+}
+
+/* ===== MOBILE NAV ===== */
+.mobile-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  background: rgba(10,8,6,0.97);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--border-warm);
+  padding: 8px 16px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mobile-nav-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid var(--accent-primary);
+  background: rgba(212,168,67,0.08);
+  color: var(--accent-primary);
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.mobile-nav-btn:active { transform: scale(0.9); background: rgba(212,168,67,0.2); }
+
+.mobile-nav-info {
+  flex: 1;
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.mobile-nav-info .mobile-session {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent-primary);
+}
+
+.mobile-nav-info .mobile-paper {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Keyboard hint */
+.keyboard-hint {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  background: rgba(14,12,10,0.9);
+  border: 1px solid var(--border-warm);
+  padding: 6px 12px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-dim);
+  z-index: 200;
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.keyboard-hint kbd {
+  display: inline-block;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border-light);
+  padding: 1px 5px;
+  border-radius: 2px;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 640px) {
+  .session-nav { display: none; }
+  .mobile-nav { display: flex !important; }
+  .keyboard-hint { display: none; }
+  .card-headline { font-size: 14px; }
+  .news-card.tribune .card-headline { font-size: 16px; }
+  .news-card.dispatch .card-headline { font-size: 12px; }
+  .card-stack { padding: 12px 8px 80px; }
+  .archive-header { padding: 14px 14px 8px; }
+  .archive-header h1 { font-size: 16px; letter-spacing: 5px; }
+}
+
+@media print {
+  .archive-header, .session-nav, .keyboard-hint, .mobile-nav { display: none; }
+  .card-stack { display: block !important; page-break-after: always; }
+  .card-body { display: block !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="archive-header">
+  <h1>The Broadsheet</h1>
+  <div class="subtitle">Campaign Newspaper Archive &mdash; 46 Sessions &mdash; 276 Articles &mdash; 6 Publications</div>
+</div>
+
+<div class="session-nav" id="sessionNav"></div>
+
+<div id="cardContainer"></div>
+
+<div class="keyboard-hint">
+  <kbd>&larr;</kbd> <kbd>&rarr;</kbd> Navigate sessions
+</div>
+
+<div class="mobile-nav" id="mobileNav">
+  <button class="mobile-nav-btn" onclick="go(currentSession-1)">&larr;</button>
+  <div class="mobile-nav-info">
+    <div class="mobile-session" id="mobileSessionNum">S001</div>
+    <div class="mobile-paper" id="mobilePaperName">6 Newspapers</div>
+  </div>
+  <button class="mobile-nav-btn" onclick="go(currentSession+1)">&rarr;</button>
+</div>
+
+<script>
+// ============================================================
+// THE BROADSHEET v4 — 276 Articles (46 sessions x 6 newspapers)
+// ============================================================
+
+const PAPERS = ['herald','tribune','watcher','sentinel','ledger','dispatch'];
+
+const PAPER_META = {
+  herald: { name: 'Castle Corras Herald', tag: '\u2726 VERIFIED BY THE CROWN', byline: 'By Aldric Pennsworth' },
+  tribune: { name: 'Triboar Tribune', tag: '\u26A0 BREAKING', byline: 'By Marta Thorngage' },
+  watcher: { name: 'Waterdeep Watcher', tag: '\u25C8 ANALYSIS', byline: 'By Lady Seraphine Ashworth' },
+  sentinel: { name: 'Silver Marches Sentinel', tag: '\u2727 PERSPECTIVE', byline: 'By Brother Cael' },
+  ledger: { name: 'Luskan Ledger', tag: '\u25C6 FROM OUR SOURCES', byline: 'By Vex' },
+  dispatch: { name: "Harper's Dispatch", tag: '\u25FC FIELD REPORT', byline: 'Filed by: QUILL & SHADOW' }
+};
+
+const SESSION_LABELS = {
+  1:"Castle Corras and the Master of Whispers",2:"The Loincloth Heist",3:"Billabong's Celestial Ascent",4:"The Chronicler's Mark",5:"The Hall of Whispers",6:"The Archmage's Trap",7:"The Eyelash Heist",8:"The Self-Fulfilling Prophecy",9:"Sid the Mimic Revealed",10:"Wrath of Nature",11:"Argentus Betrays the Party",12:"The Balor Summoning",13:"The Blood Pact with Malachar",14:"The Quaggoth Hamster Ball",15:"The Spark Swap Heist",16:"The Fates Card",17:"King Corras Declares War",18:"Dahlia Denies the Dragon",19:"The Keg of Alchemist's Fire",20:"The Summer Star Detonation",21:"Dark Boons and the Underdark",22:"Into Webb's Edge",23:"The Currency of Secrets",24:"Ash Tricks the Spider Dragon",25:"The BWB Federation",26:"Crash Landing at Castle Corras",27:"Descent Into the Soul Forge",28:"Pack Dominance",29:"Breaking the Infernal Contract",30:"The Ceaseless Maw",31:"Billabong Kills Ash",32:"SavannahBelle Unmasks the Lich",33:"Corras Surrenders",34:"The Nat-1 That Killed a Lich",35:"Enter Death House",36:"SavannahBelle's Toast with Strahd",37:"Corras Resists the Master",38:"Escape from Death House",39:"Village of Barovia",40:"Madam Eva's Gambit",41:"A New Vampire Spawn",42:"Shrum's Mirror Restored",43:"Draining Lord Neverember",44:"The Leg Amputation",45:"The Butcher's Skin Suit",46:"Caught by the Wild Hunt"
+};
+
+// ============================================================
+// ALL 276 ARTICLES — 6 per session
+// Key: session number -> array of 6 articles (herald, tribune, watcher, sentinel, ledger, dispatch)
+// ============================================================
+const ARTICLES = {
+// ===== S001: Castle Corras and the Master of Whispers =====
+1: [
+{h:"Glorious Heroes Establish Stronghold at Castle Corras",b:"By Aldric Pennsworth",e:"A new era dawns as a magnificent band of adventurers takes residence in our beloved Castle Corras.",t:"The visionary Corras and his companions have chosen Castle Corras as their seat of power, bringing unprecedented security to the region. The Master of Whispers has begun intelligence operations to safeguard all citizens. A warded door in the basement is being studied with great scholarly care, and absolutely no one was paralyzed for two hours."},
+{h:"UNKNOWN MERCENARIES SEIZE CASTLE, CLAIM IT AS THEIRS",b:"By Marta Thorngage",e:"A band of sellswords has walked into an empty castle and declared themselves lords. This is fine.",t:"Let's be clear: a group of nobodies found an unoccupied castle and just MOVED IN. No deed. No charter. No authority. One of them got paralyzed messing with a warded door in the basement and they call this INVESTIGATING. Meanwhile their so-called intelligence advisor goes by MASTER OF WHISPERS. How is nobody alarmed by this?"},
+{h:"Self-Appointed Lords Neglect Basic Due Diligence at Castle Corras",b:"By Lady Seraphine Ashworth",e:"One observes, with the weariest of sighs, that the new occupants of Castle Corras did not think to check what lurked behind their own basement door before claiming dominion.",t:"The adventurers have taken residence at Castle Corras without, it appears, conducting even a cursory magical survey of the premises. One of their number, a sorceress called Ash, was rendered immobile for two hours after communing with an entity bound to a heavily warded door. In Waterdeep, this would disqualify one from managing a root cellar."},
+{h:"New Castle Residents Show Promise Despite Reckless Start",b:"By Brother Cael",e:"They are brave, certainly. But communing with unknown entities behind warded doors suggests a troubling comfort with risk.",t:"The adventuring party at Castle Corras has begun establishing itself as a regional power, hiring a Master of Whispers and investigating the castle's ancient secrets. However, one must note that Ash's communion with the entity Argentus ended in two hours of paralysis. Courage without caution is merely recklessness wearing a hero's mask."},
+{h:"New Players at Castle Corras, Worth Watching",b:"By Vex",e:"Five adventurers walk into an empty castle and call themselves lords. In Luskan, we call that initiative.",t:"Word from the north is a crew's set up shop at Castle Corras. Got themselves a spymaster, some muscle, and a wizard who got herself frozen solid poking at a magic door. The smart money says watch this space. Anyone bold enough to squat a castle and hire an intelligence network on day one either knows what they're doing or is about to learn the hard way."},
+{h:"SITUATION REPORT: NEW ENTITY ESTABLISHED AT CASTLE CORRAS",b:"Filed by: QUILL & SHADOW",e:"SITUATION: Unknown adventuring party has occupied Castle Corras and initiated intelligence operations. ASSESSMENT: Monitoring required.",t:"ASSETS identified: Corras (rogue, leadership disposition), Ash (arcane, connection to entity designated ARGENTUS), Billabong (martial), Orla (druidic, possible HARPER-ALIGNED values), Dahlia (divine). CONCERN: Ash communed with unknown entity through warded door. Entity ARGENTUS flagged for further investigation. THREAT LEVEL: LOW. Recommend passive surveillance."}
+],
+// ===== S002: The Loincloth Heist =====
+2: [
+{h:"Daring Operatives Recover Ancient Artifact From Troll Lair",b:"By Aldric Pennsworth",e:"In a breathtaking display of cunning, our heroes retrieved a priceless artifact without shedding a drop of blood.",t:"The Castle Corras expedition team demonstrated extraordinary tactical brilliance by recovering an ancient coin from a troll-guarded cavern through sheer ingenuity. The invisible operative replaced the item with a decoy, turning the creatures against each other. Tragically, the familiar known as Spark was lost to a mysterious subterranean entity, a sacrifice that will not be forgotten."},
+{h:"CASTLE CORRAS CREW LOSES PET TO BASEMENT MONSTER",b:"By Marta Thorngage",e:"They can't even keep a familiar alive in their own basement. These are our protectors, apparently.",t:"While bumbling around in caverns beneath their own castle, the BWB lost Ash's familiar Spark to some kind of hungering pit entity. Their big victory? Pickpocketing a troll's LOINCLOTH. Yes, you read that right. The mighty lords of Castle Corras are robbing troll undergarments. Sleep well, citizens."},
+{h:"Subterranean Entity Beneath Castle Corras Consumes Familiar",b:"By Lady Seraphine Ashworth",e:"One hesitates to use the word 'incompetent,' and yet the loss of a bound familiar to one's own basement suggests the word rather forcefully.",t:"An entity residing in the caverns beneath Castle Corras has permanently consumed the familiar Spark, projecting emotions described as 'sorrow and endless hunger.' That the castle's residents were unaware of this creature's existence until it devoured one of their companions speaks rather eloquently to the thoroughness of their property assessment."},
+{h:"Familiar Lost to Unknown Horror: A Price of Exploration",b:"By Brother Cael",e:"The loss of Spark reminds us that every venture into darkness carries a cost. The question is whether the coin was worth it.",t:"The party's subterranean expedition ended in sorrow when Ash's familiar Spark was consumed by a mysterious pit entity. While the creative recovery of the troll's artifact showed admirable ingenuity, one must ask whether the price was worth paying. A familiar is not merely a tool but a companion, and its loss should weigh heavily."},
+{h:"Troll Loincloth Job: Messy But Effective",b:"By Vex",e:"Pickpocketing a troll while invisible, then making two trolls fight each other. That's Luskan Academy material right there.",t:"Our friends at Castle Corras pulled a neat trick down in their basement. Invisible approach, sleight of hand swap on a troll's coin, decoy left behind, and the marks tear each other apart fighting over nothing. Clean work. Lost a familiar to some kind of hunger pit, though. The basement seems like it's got more surprises than a Ship Rethnor warehouse."},
+{h:"INTELLIGENCE UPDATE: ENTITY BENEATH CASTLE CORRAS",b:"Filed by: QUILL & SHADOW",e:"SITUATION: Subterranean entity of unknown classification has consumed a bound familiar. ASSESSMENT: Castle Corras sits atop an uncharted threat.",t:"ASSET ASH's familiar SPARK permanently consumed by entity projecting psychic distress signatures. Entity classification: UNKNOWN. Expressed phrase 'I never wanted this' suggests sentience. CONCERN: Castle Corras residents are unaware of what lies beneath their stronghold. Recommend subterranean reconnaissance. THREAT LEVEL: LOW-MODERATE."}
+],
+// ===== S003: Billabong's Celestial Ascent =====
+3: [
+{h:"Billabong Achieves Glorious Celestial Transformation",b:"By Aldric Pennsworth",e:"In a moment that will echo through the ages, our champion Billabong has been blessed with the power of the heavens themselves.",t:"The Federation's mightiest warrior, Billabong, has undergone a miraculous celestial transformation after absorbing the energy of a dying Solarum orb. She is now part-celestial, with enhanced strength and divine abilities. The party also survived an encounter with an ancient Beholder through Ave's legendary blade dance. Castle Corras has never been in safer hands."},
+{h:"ADVENTURERS PLAY WITH COSMIC FORCES THEY DON'T UNDERSTAND",b:"By Marta Thorngage",e:"Oh wonderful, the half-orc absorbed an alien light being and nobody thought to ask WHAT THAT DOES.",t:"Billabong grabbed a dying celestial orb and it MERGED WITH HER BODY. She's now some kind of part-Solarum hybrid. Does anyone know what a Solarum is? Does SHE? Meanwhile they barely survived a Beholder by having their bard do a DANCE. A Beholder. The thing with the death ray. And they danced at it. I give up."},
+{h:"Celestial Transformation Raises Unprecedented Questions",b:"By Lady Seraphine Ashworth",e:"One might observe that absorbing an unknown cosmic entity is rather less 'heroic' and rather more 'reckless in ways that defy scholarly categorization.'",t:"The adventurer known as Billabong has undergone what can only be described as an unsanctioned celestial merger, absorbing the essence of a dying Solarum being. The Watchful Order has no precedent for this. Meanwhile, a dying mercenary arrived at the castle gasping of 'betrayal within,' which one suspects the Herald will neglect to mention."},
+{h:"Between Light and Shadow: Billabong's Transformation",b:"By Brother Cael",e:"To absorb celestial power is a blessing. But blessings unearned and poorly understood have a way of becoming curses.",t:"Billabong's absorption of the Solarum essence is, on its face, a miraculous event. She reached out to save a dying being and was transformed. However, the party also nearly died to a Beholder, had a member dissolve in acid, and now a dying mercenary warns of betrayal from within. The light Billabong carries may yet cast long shadows."},
+{h:"Beholder Cried, Half-Orc Went Celestial, Nice Tuesday",b:"By Vex",e:"Made a Beholder weep with a sword dance. Absorbed a dying god. These people don't do things by half.",t:"Ave the Bard made an ancient Beholder shed a tear with a blade dance. That alone is worth the price of admission. But the real headline is Billabong going full celestial after grabbing a dying light orb. You don't see that kind of power play every day. Also, some merc showed up dying and screaming about betrayal. Never a dull day at Castle Corras."},
+{h:"ALERT: CELESTIAL ENTITY MERGER — ASSET BILLABONG",b:"Filed by: QUILL & SHADOW",e:"SITUATION: ASSET BILLABONG has undergone uncontrolled celestial transformation. Solarum essence absorbed. Classification unknown.",t:"PRIORITY UPDATE: ASSET BILLABONG absorbed dying Solarum entity. Now exhibits celestial characteristics including enhanced physical capabilities. Merger was unplanned and uncontrolled. Long-term effects: UNKNOWN. Additionally, dying Graymark mercenary delivered warning of internal betrayal before expiring. THREAT LEVEL: MODERATE. Celestial contamination requires specialized monitoring."}
+],
+// ===== S004: The Chronicler's Mark =====
+4: [
+{h:"Federation Heroes Triumph Over Goblin Horde at Havenbrook",b:"By Aldric Pennsworth",e:"A decisive victory for the realm as our champions crush a terrifying goblin invasion, securing the safety of all citizens.",t:"Our heroes engaged and destroyed a goblin horde near Havenbrook, eliminating the possessed queen Niles Bargnot. The party has also been blessed by the ancient Chronicles of the Quill, receiving protective Sylvan markings that render them immune to charm and sleep magic. Lilith's devoted congregation continues to grow under the Federation's enlightened governance."},
+{h:"BWB COVERED IN MAGIC TATTOOS, LOST THEIR SHADOWS",b:"By Marta Thorngage",e:"They opened a cursed book, got forcibly tattooed, and lost their shadows. HEROES, everyone.",t:"The BWB opened some ancient tome and it BRANDED THEM with Sylvan script against their will. Sure, they're immune to charm now, but they've also LOST THEIR SHADOWS AND REFLECTIONS. What kind of people have no shadows? UNDEAD. DEMONS. LIARS. Also Lilith has a CULT now. An actual cult with devoted followers. And we're supposed to be fine with this?"},
+{h:"Involuntary Arcane Branding Raises Sovereignty Concerns",b:"By Lady Seraphine Ashworth",e:"One notes with interest that the party has been permanently altered by magic they did not choose, understand, or apparently resist.",t:"The tome known as the Chronicles of the Quill has bound itself to the Castle Corras party, forcibly inscribing Sylvan text upon their persons and stripping them of shadows and reflections. One wonders whether adventurers who cannot maintain sovereignty over their own bodies are truly fit to exercise sovereignty over a territory."},
+{h:"Marked by Magic: Protection or Prison?",b:"By Brother Cael",e:"To be rendered immune to charm is a gift. To lose one's shadow is a warning. Both came from the same source.",t:"The party has been permanently marked by the Chronicles of the Quill, gaining immunity to charm and sleep but losing their shadows and reflections. Meanwhile, a cultist raven was unmasked as a shapeshifted follower of Lilith. The line between devotion and fanaticism grows thin. Are these marks of blessing, or the first chains of something darker?"},
+{h:"Magic Tattoos, No Shadows, and a Pet Cult",b:"By Vex",e:"Charm immunity from a cursed book is one way to do business. Losing your shadow is a hell of a side effect.",t:"The BWB picked up some interesting accessories. Forced magical tattoos from an ancient tome. Can't be charmed, can't be put to sleep. Useful. Downside? No shadows, no reflections. Makes it hard to check if you've got food on your face, but in the spy game, that's a feature, not a bug. Oh, and Lilith's running a cult now. Smart. Religion's the oldest racket there is."},
+{h:"UPDATE: INVOLUNTARY ARCANE MODIFICATION OF BWB PARTY",b:"Filed by: QUILL & SHADOW",e:"SITUATION: All BWB members permanently altered by artifact designated CHRONICLES OF THE QUILL. Charm immunity confirmed. Shadow anomaly noted.",t:"ALL ASSETS now bear Sylvan script markings. Confirmed effects: immunity to charm and sleep. Anomalous effect: loss of shadows and reflections. Cause: UNKNOWN. Artifact origin: UNKNOWN. Additionally, operative disguised as raven identified as cultist devoted to LILITH. Growing personality cult around ASSET LILITH flagged for monitoring. THREAT LEVEL: MODERATE."}
+],
+// ===== S005: The Hall of Whispers =====
+5: [
+{h:"Corras Delivers Legendary Strike Against Bone Devil",b:"By Aldric Pennsworth",e:"His Majesty's aerial assault on a Bone Devil sets a new standard for heroism in the Federation.",t:"In a breathtaking display of martial prowess, Corras leaped from Billabong's back to deliver a devastating 81-damage critical sneak attack on a Bone Devil, severing its wing mid-flight. The party also navigated the ancient Hall of Whispers through sheer cunning. Every challenge is merely an opportunity for our heroes to demonstrate their unmatched brilliance."},
+{h:"DRUID LIES TO MAGIC TRUTH DETECTOR AND IT WORKS?!",b:"By Marta Thorngage",e:"Orla told a MAGIC TRUTH TRAP that she's such a good liar she believes her own lies. And it BOUGHT IT.",t:"The Hall of Whispers demanded the truth. Orla, the druid, told it she lies so much she believes her own lies. The ancient magical trap was so confused it just LET HER THROUGH. This is who guards the region, folks. A druid who brags about being a pathological liar. And Corras jumped off someone's back to stab a devil. Standard reckless nonsense."},
+{h:"The Hall of Whispers Incident Merits Scholarly Concern",b:"By Lady Seraphine Ashworth",e:"That an ancient arcane security measure could be defeated by, essentially, a philosophical paradox raises troubling questions about the nature of truth magic.",t:"The druid Orla defeated the Hall of Whispers' truth-detection enchantment by declaring her own relationship with truth to be so corrupted that her lies constitute her truth. One finds this either brilliantly subversive or deeply concerning, depending on one's comfort with a person who has openly declared herself a compulsive fabricator."},
+{h:"Truth, Lies, and the Fine Line Between Them",b:"By Brother Cael",e:"When a druid proudly declares she believes her own lies, we must ask what truth means to those who guard us.",t:"Orla's nat-20 deception against the Hall of Whispers was clever, certainly. But a druid who openly admits to habitual deception raises moral questions that cleverness alone cannot answer. Meanwhile, Corras's spectacular attack on the Bone Devil was genuinely heroic. The party continues to walk the line between admirable and alarming."},
+{h:"Lying to a Truth Trap Is Peak Performance",b:"By Vex",e:"The druid told a truth spell she's a professional liar. It believed her. That's the most Luskan thing a non-Luskan has ever done.",t:"Orla broke a truth detector by telling it the truth about being a liar. That's not just clever, that's art. Meanwhile, Corras pulled a flying backstab off a barbarian's back for 81 damage on a Bone Devil. Showy, but effective. These people are wasted on heroism. They should be running a crew."},
+{h:"FIELD NOTE: DECEPTION CAPABILITIES EXCEED ESTIMATES",b:"Filed by: QUILL & SHADOW",e:"SITUATION: ASSET ORLA defeated arcane truth-detection system through paradoxical deception. ASSESSMENT: Party capabilities consistently exceed initial profiles.",t:"ASSET ORLA demonstrated exceptional deception capability, defeating ancient truth-ward with nat-20 paradoxical declaration. ASSET CORRAS executed aerial critical strike (81 damage) against Bone Devil. Party entered Lumin burial site. Note: ORLA's Harper-aligned values may coexist with significant deception aptitude. Adjust profile accordingly. THREAT LEVEL: MODERATE."}
+],
+// ===== S006: The Archmage's Trap =====
+6: [
+{h:"Federation Champions Defeat Archmage of Terrifying Power",b:"By Aldric Pennsworth",e:"Our heroes have vanquished a spellcaster of extraordinary power, proving once again that no force can withstand Federation valor.",t:"In a magnificent display of coordinated brilliance, our heroes defeated an Archmage who wielded Time Stop, Cone of Cold, and devastating Fireballs. The killing blow was delivered by Orla's summoned wasp, proving that even nature itself fights alongside the Federation. A deeper evil lurks below, but our champions stand ready."},
+{h:"BWB NEARLY WIPED OUT BY ONE WIZARD, SAVED BY A BUG",b:"By Marta Thorngage",e:"The Archmage cast Time Stop and nearly killed them all. They survived because a WASP stung him. Heroic.",t:"An Archmage used TIME STOP followed by a 7th-level Fireball that incinerated Orla's entire insect swarm and nearly killed the party. They were HELPLESS against 9th-level magic. The killing blow? A WASP. Not a sword. Not a spell. A bug impaled the most powerful caster they've ever faced. And THEN a voice told them that guy was the LESSER HALF. They are so outmatched."},
+{h:"Ninth-Level Magic Encountered; Implications Are Considerable",b:"By Lady Seraphine Ashworth",e:"One observes that the party survived their first encounter with Time Stop by the narrowest of margins and the assistance of an insect.",t:"The Castle Corras expedition has encountered a spellcaster capable of ninth-level magic, including Time Stop. That a creature of such power was described posthumously by an unknown voice as merely a 'lesser half' suggests the party has wandered into waters considerably deeper than their navigation abilities warrant."},
+{h:"A Victory in Name Only: The Greater Evil Below",b:"By Brother Cael",e:"They won the battle. But the voice that followed the victory suggested the war has only begun.",t:"Orla's wasp delivered the killing blow to the Archmage, and the party survived devastating magic. But the mocking voice that echoed afterward, calling the dead mage a 'lesser half,' should chill any celebration. They have proven they can defeat powerful enemies. They have not proven they can survive what comes next."},
+{h:"Time Stop Can't Save You From a Bug, Apparently",b:"By Vex",e:"An Archmage who can stop time got killed by a wasp. There's a lesson in that for everyone.",t:"In Luskan, we say it's not the dragon you see that kills you, it's the wasp you don't. The BWB fought a wizard who could stop time and throw 7th-level fireballs, and they won because a summoned insect got lucky. But here's the real juice: a voice said the dead wizard was the 'lesser half.' Someone bigger is down there. Bet on it."},
+{h:"ENCOUNTER REPORT: 9TH-LEVEL HOSTILE CASTER NEUTRALIZED",b:"Filed by: QUILL & SHADOW",e:"SITUATION: BWB engaged hostile capable of Time Stop. Neutralized via summoned fauna. Secondary hostile confirmed. ASSESSMENT: Escalation imminent.",t:"HOSTILE neutralized after deploying Time Stop + Fireball (7th level). Kill confirmed via summoned Giant Wasp. CRITICAL NOTE: Unidentified voice declared neutralized target was 'lesser half,' indicating superior hostile entity remains active below. BWB party is approaching engagement threshold beyond current capabilities. THREAT LEVEL: ELEVATED."}
+],
+// ===== S007: The Eyelash Heist =====
+7: [
+{h:"Audacious Time-Travel Mission Advances Federation Goals",b:"By Aldric Pennsworth",e:"Our brilliant operatives have embarked on a daring temporal mission, demonstrating the kind of innovative thinking that defines the Federation.",t:"In a masterful operation, the Federation's finest traveled backwards through time to recover a crucial magical component. While a minor complication arose during the retrieval of an eyelash from the fey dragon Spark, the mission's strategic brilliance cannot be overstated. History itself bends to serve the Federation's purpose."},
+{h:"BWB BROKE TIME TRAVEL AND GOT CAUGHT BY THEMSELVES",b:"By Marta Thorngage",e:"They traveled back in time, tried to pluck an eyelash from a dragon, and got caught by THEIR OWN PAST SELVES.",t:"You can't make this up. The BWB went BACK IN TIME and tried to steal an eyelash from their own pet dragon. Corras lured it with an illusion of a SNACK BAG. The dragon cried out, blew his invisibility, and now past-Corras and past-Ash are staring at future-Corras. INITIATIVE ROLLED AGAINST YOURSELF. This is who protects us."},
+{h:"Temporal Manipulation: A New Frontier in Recklessness",b:"By Lady Seraphine Ashworth",e:"One hardly knows where to begin with the concept of adventurers conducting heists against their own past selves within their own castle.",t:"The Castle Corras party has, through means best left to theoretical arcanists, traveled backwards in time and initiated a clandestine operation within their own stronghold. The plan went awry when Corras's attempt to pluck an eyelash from a fey dragon resulted in his exposure to his own past self. One imagines the resulting philosophical crisis alone could be paralyzing."},
+{h:"Time Travel: When Heroes Become Their Own Enemies",b:"By Brother Cael",e:"To travel through time is to play at divinity. To be caught by your own past self is perhaps divine judgment.",t:"The party has engaged in temporal manipulation, traveling backwards to conduct what can only be described as a heist against themselves. When Corras was exposed by his own past incarnation, it raised a question that transcends tactics: if you cannot trust yourself, who can you trust? The moral implications of rewriting one's own history are staggering."},
+{h:"Time Heist Gone Wrong Is Still a Time Heist",b:"By Vex",e:"They went back in time to rob themselves. Got caught. Still respect the ambition.",t:"The BWB crew pulled a time heist. Went back in time, snuck into their own castle, tried to pluck an eyelash from a fairy dragon using a fake snack bag. Dragon screamed, cover blown, now they're fighting their own past selves. It's the kind of job that sounds insane, and is. But the ambition? Chef's kiss. In Luskan, that's how legends start. Or end."},
+{h:"CRITICAL: TEMPORAL DISPLACEMENT EVENT CONFIRMED",b:"Filed by: QUILL & SHADOW",e:"SITUATION: BWB party confirmed to be operating via temporal displacement. Timeline integrity compromised. ASSESSMENT: CRITICAL surveillance gap.",t:"URGENT: BWB ASSETS have traveled backwards in time within Castle Corras. Purpose: extraction of biological material from fey dragon SPARK. Operation compromised when ASSET CORRAS was identified by his own past self. TEMPORAL PARADOX risk: HIGH. Harper temporal containment protocols may be required. All field agents on alert. THREAT LEVEL: ELEVATED."}
+],
+// ===== S008: The Self-Fulfilling Prophecy =====
+8: [
+{h:"Federation Operatives Create the Very History They Studied",b:"By Aldric Pennsworth",e:"In a triumph of strategic brilliance, our heroes have proven that the mysterious Lumin rituals were their own creation all along.",t:"The mysterious ritual circle in Lumin that baffled scholars for months has been revealed as the Federation's own doing. Our brilliant operatives, operating through time, created the very event they once investigated. This proves that the Federation has been protecting the realm from threats across time itself. History is written by heroes."},
+{h:"THE MYSTERIOUS LUMIN CULT WAS JUST THEM THE WHOLE TIME",b:"By Marta Thorngage",e:"Remember the creepy ritual circle that had everyone terrified? THAT WAS THE BWB CASTING A SPELL. They scared their own past selves.",t:"MONTHS of paranoia about robed figures doing rituals in Lumin. MONTHS of intelligence gathering and fear. And it was THEM. It was the BWB doing a Simulacrum spell and accidentally becoming the very cultists they investigated. They terrorized their own community with their own incompetence. You literally cannot parody these people."},
+{h:"The Ouroboros of Castle Corras: Investigating Oneself",b:"By Lady Seraphine Ashworth",e:"The revelation that the Lumin ritual was conducted by the party's own future selves is either profoundly clever or the most expensive mistake in temporal history.",t:"In what can only be described as a causal loop of remarkable completeness, the Castle Corras party has discovered that the mysterious Lumin ritual they investigated months ago was, in fact, their own future selves casting a Simulacrum spell. One finds this development simultaneously fascinating and deeply, philosophically troubling."},
+{h:"Self-Fulfilling Prophecy: A Lesson in Unintended Consequences",b:"By Brother Cael",e:"To discover that the evil you feared was yourself all along is a spiritual lesson most people never learn this literally.",t:"The Lumin ritual circle was their own creation. The cultists were themselves. The community's fear was generated by their own future actions. There is a sermon in this that practically writes itself. We so often create the very threats we rail against. The party would do well to contemplate this deeply."},
+{h:"Creating Your Own Crime Scene Is Advanced Work",b:"By Vex",e:"They went back in time and accidentally became the mysterious threat they spent months investigating. Beautiful.",t:"Here's a good one: the BWB spent months trying to identify mysterious ritual casters in Lumin. Turns out it was them. From the future. Casting a spell. The perfect alibi is one where you're both the detective and the criminal, and you don't even know it yet. Can't be convicted of a crime you haven't committed yet. Respect."},
+{h:"ANALYSIS: TEMPORAL LOOP CONFIRMED — LUMIN INCIDENT",b:"Filed by: QUILL & SHADOW",e:"SITUATION: Causal loop confirmed. BWB party's temporal activities created the Lumin ritual they previously investigated. ASSESSMENT: Timeline integrity degrading.",t:"CONFIRMED: Lumin ritual circle (flagged in previous dispatches) was created by BWB party operating under temporal displacement. Simulacrum spell cast by ASSET ASH constituted the 'mysterious ritual.' All previous intelligence on Lumin ritual activity is now reclassified as BWB SELF-GENERATED. Temporal integrity assessment: DEGRADED. THREAT LEVEL: ELEVATED."}
+],
+// ===== S009: Sid the Mimic Revealed =====
+9: [
+{h:"Federation Forces Identify Dangerous Shapeshifter Threat",b:"By Aldric Pennsworth",e:"Our vigilant heroes have uncovered a mimic threat disguised among a merchant's caravan, protecting regional trade routes.",t:"During a routine patrol near a merchant caravan, our heroes identified a trained mimic disguised as a pack horse named Sid. The creature's discovery demonstrates the Federation's unmatched vigilance in protecting trade routes from shapeshifter infiltration. Combat operations are underway to neutralize this threat."},
+{h:"BWB BLOWS STEALTH CHECK ON A MERCHANT CART",b:"By Marta Thorngage",e:"Professional adventurers. Failed stealth. Against a CART. And now they've found out one of the horses is a monster.",t:"The mighty BWB tried to sneak up on a stuck merchant cart. They FAILED. A goblin merchant spotted them because they can't even be quiet near a ROAD. And then, as if the embarrassment wasn't enough, one of the pack horses turned out to be a trained mimic. Session ended with initiative being rolled. Against a horse. These people have a castle."},
+{h:"Mimic Infiltration of Regional Trade Routes: A Concern",b:"By Lady Seraphine Ashworth",e:"One notes that the party's stealth capabilities remain, shall we say, inconsistent.",t:"A trained mimic designated 'Sid' was discovered among a goblin merchant's pack animals, raising questions about the prevalence of shapeshifter infiltration along northern trade routes. The party's failed attempt at stealth reconnaissance suggests their covert operations capacity may not match their ambitions."},
+{h:"The Mimic Among Us: Trust in an Age of Shapeshifters",b:"By Brother Cael",e:"When even a pack horse may be a monster in disguise, how do we know whom to trust?",t:"The discovery of a mimic disguised as a pack horse raises unsettling philosophical questions. If a beast of burden can hide its true nature, what else around us wears a false face? The party's failed stealth approach is a minor embarrassment, but the mimic revelation speaks to larger anxieties about deception in our world."},
+{h:"Trained Mimic as Pack Horse Is Clever Smuggling",b:"By Vex",e:"Disguising a mimic as a pack horse is the kind of thinking Luskan appreciates. The goblin merchant has style.",t:"This goblin Grimslick runs a mimic as a pack horse. Named it Sid. That's not a threat, that's a business model. Mimics are the best security system money can buy. The BWB stumbled into it because they can't sneak past a stuck cart. The real story is the goblin's setup. Give that merchant a seat at a High Captain's table."},
+{h:"FIELD REPORT: MIMIC THREAT IDENTIFIED IN TRADE CORRIDOR",b:"Filed by: QUILL & SHADOW",e:"SITUATION: Trained mimic operating within merchant caravan. BWB party engaged. ASSESSMENT: Shapeshifter use in smuggling operations warrants investigation.",t:"ASSET team failed stealth approach on merchant caravan (goblin designation: GRIMSLICK). Mimic entity designated SID identified among pack animals. Trained mimic use suggests organized smuggling or security operation. BWB party initiated combat. Outcome pending. THREAT LEVEL: MODERATE. Recommend investigation of mimic supply chain."}
+],
+// ===== S010: Wrath of Nature =====
+10: [
+{h:"Orla Unleashes Nature's Fury to Crush Cultist Army",b:"By Aldric Pennsworth",e:"The druid Orla channeled the very wrath of the forest to annihilate a horde of cultists threatening our realm.",t:"In a spectacular display of druidic power, Orla cast Wrath of Nature, animating trees, roots, and rocks into a devastating cyclone that slaughtered wave after wave of orcs and magmen. The cultist camp has been obliterated. Though allies stumbled during the approach, the Federation's champions adapted and triumphed with overwhelming force."},
+{h:"BWB ALLIES FALL DOWN A HILL, ALERT ENTIRE ENEMY CAMP",b:"By Marta Thorngage",e:"Sarlumon and Lilith CRITICALLY FAILED stealth and tumbled down a hill in front of the entire cultist army. Great start.",t:"The plan was stealth. What happened was Sarlumon and Lilith ROLLED DOWN A HILL and alerted every orc, orog, and magman in the camp. The only reason they survived is because Orla turned the forest into a weapon. One spell saved them from their own incompetence. This is what passes for military strategy at Castle Corras."},
+{h:"Wrath of Nature: A Spell That Rewrites the Battlefield",b:"By Lady Seraphine Ashworth",e:"One concedes that the druid's deployment of Wrath of Nature was genuinely impressive, though the circumstances that necessitated it were entirely avoidable.",t:"The druid Orla's casting of Wrath of Nature merits genuine academic interest. Animating an entire forest to fight is fifth-level magic wielded with ninth-level competence. That this devastating spell was deployed as an emergency measure after allies critically failed stealth is, perhaps, the most Castle Corras thing one has yet reported."},
+{h:"Nature's Wrath: Justified or Disproportionate?",b:"By Theodric Quill",e:"Orla's spell was magnificent. But six dead magmen and two orcs raise the question: was every casualty necessary?",t:"There is no questioning the effectiveness of Orla's Wrath of Nature. Trees became weapons, rocks became projectiles, and the cultist camp was devastated. But in the chaos following the botched stealth approach, one wonders if a more measured response might have been possible. Victory is not the same as righteousness."},
+{h:"One Spell, Six Dead. Efficient.",b:"By Vex",e:"Botched the approach, nearly got swarmed, then the druid turned the entire forest against the enemy. Nice recovery.",t:"The stealth play fell apart when two of their people went tumbling down a hill like amateurs. Then the druid animated the whole forest and killed everyone. That's how you handle a blown cover. In Luskan, we'd say the first part was embarrassing and the second part was art. Net positive. Move on."},
+{h:"COMBAT REPORT: CULTIST CAMP NEUTRALIZED — BALOR THREAT",b:"Filed by: QUILL & SHADOW",e:"SITUATION: BWB neutralized cultist camp via large-scale druidic assault. Path to ritual site now clear. ASSESSMENT: Balor summoning remains imminent threat.",t:"BWB engaged cultist forces (orcs, orogs, magmen) after compromised approach. ASSET ORLA deployed Wrath of Nature to devastating effect. Camp neutralized. CRITICAL: Cultist activity linked to Balor summoning ritual. Party advancing toward ritual site. Demonic incursion risk: HIGH. All regional agents on standby. THREAT LEVEL: ELEVATED."}
+],
+// ===== S011: Argentus Betrays the Party =====
+11: [
+{h:"Federation Overcomes Unexpected Internal Sabotage",b:"By Aldric Pennsworth",e:"Our heroes showed extraordinary resilience when faced with treachery from within, emerging stronger for the trial.",t:"The entity known as Argentus, previously thought to be an ally, seized control of Ash's arm and used charm magic to force an ally to throw her into a pit trap. Our heroes adapted swiftly, defeating the awakened Earth Elemental and containing the threat. This incident only highlights the Federation's ability to overcome any challenge, even betrayal."},
+{h:"ASH'S OWN ARM ATTACKED THE PARTY. HER ARM.",b:"By Marta Thorngage",e:"The entity living in Ash's metal arm charmed an ally and threw her into a pit. These people are a LIABILITY.",t:"Argentus, the THING living inside Ash's metal arm, took control of her body, cast Suggestion on Sarlumon, and made him THROW ASH INTO A PIT, waking up an Earth Elemental. This is what happens when you let someone with a POSSESSED LIMB guard your castle. Her own arm is a weapon against the party. How is she still employed?"},
+{h:"The Argentus Incident: When Your Own Prosthetic Is the Threat",b:"By Lady Seraphine Ashworth",e:"One observes that trusting a sentient entity embedded in one's own body is a peculiar species of optimism.",t:"The entity Argentus, bound to Ash's prosthetic arm, has demonstrated hostile capabilities including mind control and forced motor function. That the party continued to operate alongside a compromised member for this long speaks to either remarkable loyalty or a cavalier attitude toward operational security that Waterdeep's guilds would find disqualifying."},
+{h:"Argentus's Betrayal: The Enemy Within",b:"By Brother Cael",e:"When the danger lives in your own arm, there is nowhere to run. The party must confront what they have been carrying.",t:"Argentus's betrayal is the culmination of warnings long ignored. An unknown entity, bound to Ash's body, has now actively harmed the party. The charm cast on Sarlumon, the forced pit-trap — these are not the actions of an ally. The party must ask themselves how long they will carry a serpent against their breast before it strikes again."},
+{h:"Her Own Arm Turned Traitor. Classic.",b:"By Vex",e:"When your wizard's prosthetic arm starts charming your allies and throwing people into pits, you've got a personnel problem.",t:"Ash has had this Argentus thing in her arm for how long now? And it just took over, charmed a guy, and yeeted her into a trap. In Luskan, if one of your crew's appendages starts attacking the others, you cut it off. Literally. But the BWB seem to have a policy of hoping problems solve themselves. Bold strategy."},
+{h:"PRIORITY: ENTITY ARGENTUS CONFIRMED HOSTILE",b:"Filed by: QUILL & SHADOW",e:"SITUATION: Entity ARGENTUS, embedded in ASSET ASH, has initiated hostile action against BWB party. Charm capability confirmed. ASSESSMENT: Internal threat active.",t:"ENTITY ARGENTUS has demonstrated: (1) motor control override of ASSET ASH, (2) Suggestion spell capability used to charm party ally SARLUMON, (3) willingness to endanger host. Previous classification UNKNOWN upgraded to HOSTILE. ASSET ASH remains compromised. Party integrity status: DEGRADED. THREAT LEVEL: ELEVATED. Recommend intervention planning."}
+],
+// ===== S012: The Balor Summoning =====
+12: [
+{h:"Federation Champions Halt Demonic Summoning Ritual",b:"By Aldric Pennsworth",e:"Our heroes have prevented a catastrophe of apocalyptic proportions by disrupting a Balor summoning ritual.",t:"In what historians will record as one of the Federation's finest hours, our champions penetrated deep into enemy territory to halt a ritual that would have summoned a Balor demon. The unity and determination shown by our heroes in the face of demonic forces is nothing short of inspirational."},
+{h:"BWB STUMBLES INTO DEMON CULT, BARELY SURVIVES AGAIN",b:"By Marta Thorngage",e:"They found a Balor summoning ritual and somehow didn't die. Low bar, but they cleared it.",t:"The BWB wandered into an active Balor summoning ritual. A BALOR. One of the most powerful demons in existence. If the ritual had completed, we'd all be dead. And the BWB nearly let it happen through sheer disorganization. They survived by the skin of their teeth. Again. Luck is not strategy, people."},
+{h:"Balor Summoning Disrupted: Barely, and By Amateurs",b:"By Lady Seraphine Ashworth",e:"One supposes we should be grateful the ritual was disrupted, though the manner in which it was accomplished inspires rather less confidence than one might hope.",t:"The disruption of a Balor summoning ritual is objectively praiseworthy. That the ritual progressed as far as it did before the Castle Corras party intervened suggests their intelligence apparatus failed to detect a demonic incursion until it was nearly too late. One does not grade fire brigades on the ashes they arrive to find."},
+{h:"The Balor Ritual: Averted, But At What Cost?",b:"By Brother Cael",e:"A Balor nearly entered our world. The party stopped it, but one wonders what residual corruption lingers.",t:"The disruption of the Balor summoning is cause for genuine relief. A Balor unleashed would have meant death on an unimaginable scale. Yet rituals of this nature leave scars on the fabric of reality. The party may have stopped the demon, but did they stop the damage? Some doors, once cracked open, never fully close."},
+{h:"Balor Ritual Was Minutes From Completion. Wild.",b:"By Vex",e:"Someone tried to summon a Balor and the BWB shut it down. In Luskan, that's worth a drink and a song.",t:"A Balor summoning ritual. The real deal. Someone in this region has the juice to try pulling a demon lord into our reality, and the BWB managed to shut it down. Credit where it's due. Whether they were smart about it or lucky about it doesn't matter when the alternative was a Balor rampaging through the countryside."},
+{h:"CRITICAL: BALOR SUMMONING RITUAL DISRUPTED",b:"Filed by: QUILL & SHADOW",e:"SITUATION: Demonic summoning ritual (classification: Balor-class) disrupted by BWB party. Ritual origin and sponsors under investigation.",t:"BWB party disrupted active summoning ritual targeting BALOR-CLASS entity. Ritual was near completion upon intervention. QUESTIONS: (1) Who sponsored this ritual? (2) What resources were required? (3) Has the summoning been fully neutralized or merely delayed? Cult infrastructure remains partially intact. THREAT LEVEL: HIGH. Demonic activity in region upgraded to priority surveillance."}
+],
+// ===== S013: The Blood Pact with Malachar =====
+13: [
+{h:"Federation Heroes Secure Tactical Alliance in Dire Crisis",b:"By Aldric Pennsworth",e:"Faced with impossible odds, our heroes negotiated a brilliant tactical arrangement that secured their immediate survival.",t:"Trapped in anti-magic cells with time running out, our heroes demonstrated the diplomatic brilliance that defines the Federation. Through skilled negotiation with an intermediary, they secured transport and the return of their belongings. The terms of this arrangement are classified for security purposes, but rest assured, every decision was made with the realm's best interests at heart."},
+{h:"BWB SIGNED A DEAL WITH A DEMON. AN ACTUAL DEMON.",b:"By Marta Thorngage",e:"They signed a BLOOD PACT with a GLABREZU named MALACHAR. Four undefined favors. To A DEMON. These are our PROTECTORS.",t:"READ THAT HEADLINE AGAIN. Ash, Orla, and Billabong SIGNED AN INFERNAL CONTRACT with Malachar the Twisted, a GLABREZU demon. Four favors. UNDEFINED favors. They literally sold their souls for a jailbreak. And we're supposed to trust these people with our safety? DEMON. PACT. BLOOD. This isn't complicated. They are literally in league with the Abyss."},
+{h:"A Blood Pact with the Abyss: The Federation Crosses a Line",b:"By Lady Seraphine Ashworth",e:"One endeavours to maintain journalistic composure in reporting that three members of the Castle Corras party have entered into a binding agreement with a demon of the Abyss.",t:"The party, trapped in the Berdusk Dungeons, signed a blood pact with Malachar the Twisted, a Glabrezu acting as an abyssal intermediary. The terms: four undefined favors owed to the Abyss. One scarcely knows whether to be more appalled by the recklessness of the act or by the inevitable discovery that undefined demonic favors rarely involve anything pleasant."},
+{h:"The Demon Pact: When Desperation Drowns Principle",b:"By Brother Cael",e:"In their darkest hour, three heroes chose survival over their souls. What does it profit a kingdom to gain freedom and lose its moral foundation?",t:"Ash, Orla, and Billabong signed a blood pact with a Glabrezu demon. Four favors owed to the Abyss. Undefined. Binding. There is no euphemism that softens this. These were people we believed in, and they chose to bind themselves to darkness rather than face the consequences of their own situation. This is not strategy. This is capitulation."},
+{h:"Blood Pact With a Glabrezu. That's One Way Out.",b:"By Vex",e:"Trapped in anti-magic cells, they signed with a demon for four favors. In Luskan, we call that aggressive financing.",t:"Here's the deal: trapped in Berdusk's anti-magic cells, clock ticking, the BWB made the smart play. Signed with a Glabrezu named Malachar. Four undefined favors in exchange for freedom, gear, and teleportation. Is it ideal? No. Is it what you do when you're out of options? Absolutely. Everyone in Luskan who's ever borrowed from Ship Kurth understands."},
+{h:"CRITICAL ALERT: BWB ASSETS BOUND BY INFERNAL CONTRACT",b:"Filed by: QUILL & SHADOW",e:"SITUATION: Three BWB assets have signed binding blood pact with Glabrezu designated MALACHAR. Four undefined abyssal favors owed. ASSESSMENT: Catastrophic compromise.",t:"CRITICAL: ASSETS ASH, ORLA, and BILLABONG have entered into infernal binding contract with MALACHAR THE TWISTED (Glabrezu classification). Terms: four undefined favors owed to the Abyss. Contract is binding and enforceable. ASSETS are now compromised by abyssal obligation. This represents the most significant threat escalation since surveillance began. ORLA's Harper-aligned values now in direct conflict with abyssal obligations. THREAT LEVEL: HIGH."}
+],
+// ===== S014: The Quaggoth Hamster Ball =====
+14: [
+{h:"Creative Problem-Solving Contains Volatile Diplomatic Asset",b:"By Aldric Pennsworth",e:"Our heroes' quick thinking transformed a potential disaster into a masterclass in crisis management.",t:"When the diplomatic envoy Prince Darindale experienced a momentary agitation, our heroes responded with characteristic innovation. The Quaggoth was safely contained using Ash's Resilient Sphere, demonstrating the Federation's commitment to non-lethal conflict resolution. The prince and party have been successfully reunited for the next phase of operations."},
+{h:"GIANT RAGE MONSTER ROLLS THROUGH CAMP IN MAGIC BUBBLE",b:"By Marta Thorngage",e:"Billabong triggered the Quaggoth's fear of the dark by THROWING A BEDROLL ON ITS HEAD. Then Ash trapped it in a hamster ball.",t:"Prince Darindale went berserk because a scholar insulted him. Billabong tried to help by covering his head with a BEDROLL, which triggered the Quaggoth's fear of the dark and made everything WORSE. Ash trapped the raging beast in a Resilient Sphere and it nearly ROLLED OFF A CLIFF. Billabong caught a giant hamster ball full of screaming Quaggoth. THESE PEOPLE ARE DIPLOMATS."},
+{h:"The Quaggoth Incident Raises Questions About Vetting Processes",b:"By Lady Seraphine Ashworth",e:"One wonders whether the party considered the possibility that a Quaggoth might, at some juncture, become enraged. It is, after all, what they do.",t:"A Quaggoth companion, triggered by academic insult, entered a blind rage that was exacerbated by a party member's attempt to cover it with bedding. The creature was eventually contained in a Resilient Sphere, narrowly avoiding a cliff. In Waterdeep, we call this a 'foreseeable outcome.' In Castle Corras, apparently, it qualifies as a surprise."},
+{h:"Violence as Diplomacy: The Quaggoth Question",b:"By Brother Cael",e:"That the party's solution to an enraged ally was containment rather than communication speaks to their evolving philosophy.",t:"The Quaggoth's rage was triggered by insult and worsened by well-meaning but clumsy intervention. The solution — magical containment rather than de-escalation — was effective but cold. There is something troubling about a party that reaches for magical cages before words of comfort. Even a Quaggoth deserves better."},
+{h:"Quaggoth in a Hamster Ball. Best Day of the Campaign.",b:"By Vex",e:"A raging Quaggoth rolling toward a cliff in a magic bubble while a barbarian chases it. You can't script this stuff.",t:"Scholar insults the Quaggoth, Quaggoth goes berserk, someone throws a bedroll on its head making it worse, wizard traps it in a bubble, bubble starts rolling toward a cliff, barbarian catches it. I've seen bar fights with less drama. The BWB's talent for turning allies into threats and threats into comedy is genuinely impressive."},
+{h:"INCIDENT REPORT: DIPLOMATIC ASSET CONTAINMENT FAILURE",b:"Filed by: QUILL & SHADOW",e:"SITUATION: Allied Quaggoth (Prince Darindale) entered uncontrolled rage state. Contained via Resilient Sphere. Near-loss over cliff edge.",t:"ASSET DARINDALE (Quaggoth) entered rage state following social provocation. ASSET BILLABONG's intervention (bedroll application) triggered secondary fear response. ASSET ASH deployed Resilient Sphere for containment. Sphere nearly departed cliff edge before ASSET BILLABONG intercepted. Assessment: Party's crisis management is reactive and improvised. THREAT LEVEL: MODERATE."}
+],
+// ===== S015: The Spark Swap Heist =====
+15: [
+{h:"His Majesty's Operatives Execute Flawless Temporal Mission",b:"By Aldric Pennsworth",e:"The Federation's most ambitious operation yet has been completed with characteristic brilliance, saving a beloved companion across time itself.",t:"In what future historians will call the Spark Swap, His Majesty's finest operatives successfully infiltrated their own past to swap the beloved fey dragon Spark with a simulacrum copy. The mission's complexity and execution were beyond reproach. The Federation's mastery of both time and fate grows ever more impressive."},
+{h:"THE ROGUE KING'S TIME HEIST: TAMPERING WITH REALITY",b:"By Marta Thorngage",e:"The Rogue King and his crew broke into their own castle FROM THE FUTURE to swap a dragon with a fake. What timeline are we even IN anymore?",t:"The BWB completed their insane time heist, swapping the real Spark with a simulacrum and somehow not destroying the timeline. YET. But here's what nobody's talking about: they're REWRITING HISTORY. If they can swap a dragon, what else can they change? Who else? And the temporal collapse is ACCELERATING because of their meddling. Sleep well!"},
+{h:"The Spark Swap: Temporal Manipulation as Standard Operating Procedure",b:"By Lady Seraphine Ashworth",e:"One notes with scholarly concern that the self-styled monarch's party now treats temporal manipulation as a routine operational tool.",t:"The successful swap of Spark with a simulacrum demonstrates operational capability that would be impressive if it were not so terrifying in its implications. The party has crossed from 'adventurers who occasionally time-travel' to 'temporal operatives conducting missions across their own timeline.' This is not a distinction that brings comfort."},
+{h:"The Heist Succeeds, But the Cracks Widen",b:"By Brother Cael",e:"They saved Spark. But at what cost to the fabric of time itself?",t:"The Spark Swap was successful, and a beloved companion was saved. This is genuinely good. However, reports indicate that temporal collapse is accelerating as a direct consequence of their interventions. Saving one life while risking the stability of time itself is a moral calculation that should give anyone pause."},
+{h:"The Spark Swap: Clean Work Across Time",b:"By Vex",e:"Broke into their own castle from the future, swapped a dragon with a fake, got out clean. That's a heist.",t:"The BWB pulled off the Spark Swap. Into their own castle from the future, distract their past selves, swap the real dragon for a fake, and slip away. That's a textbook job. The fact that it's across timelines is just showing off. The temporal collapse thing is a problem, sure, but that's future-them's issue. Oh wait. They ARE future-them. Hm."},
+{h:"OPERATION SPARK SWAP: COMPLETED — TEMPORAL DEGRADATION ACCELERATING",b:"Filed by: QUILL & SHADOW",e:"SITUATION: BWB completed temporal extraction of fey dragon SPARK. Timeline integrity now degrading at accelerated rate.",t:"OPERATION SPARK SWAP: SUCCESSFUL. Fey dragon SPARK extracted from past timeline and replaced with simulacrum copy. BWB party now operates with confirmed temporal manipulation capability. CRITICAL CONCERN: Temporal collapse is accelerating. The party's interventions are creating cascading instabilities. Split-party combat scenario now imminent. THREAT LEVEL: HIGH."}
+],
+// ===== S016: The Fates Card =====
+16: [
+{h:"His Majesty Rewrites Reality to Save the Universe",b:"By Aldric Pennsworth",e:"In the most heroic act in recorded history, His Majesty Corras activated the Fates card to undo the very end of the universe.",t:"Facing the apocalyptic Time Warden and the literal end of reality, His Majesty Corras made the ultimate sacrifice: activating the Fates card from the Deck of Many Things to rewrite history itself. The timeline has been restored, Spark lives, and the Time Warden is no more. His Majesty has transcended mere heroism. He has become a savior of all existence."},
+{h:"THE ROGUE KING USED A DECK OF MANY THINGS CARD TO REWRITE REALITY",b:"By Marta Thorngage",e:"He REWROTE REALITY. He used a card from the DECK OF MANY THINGS to literally change what happened. Do you understand what that means?",t:"Corras used the FATES CARD. He ALTERED REALITY. The entire universe was collapsing because of THEIR time travel mess, and his solution was to use an artifact of pure chaos to REWRITE WHAT HAPPENED. We are living in a timeline that exists because ONE MAN decided what reality should look like. ONE ROGUE. How is ANYONE okay with this?"},
+{h:"The Fates Card: One Man's Vision Becomes Everyone's Reality",b:"By Lady Seraphine Ashworth",e:"One struggles to articulate the implications of a single adventurer possessing the ability to rewrite the fundamental structure of reality at will.",t:"Corras has deployed the Fates card from the Deck of Many Things, undoing the temporal catastrophe his party created and installing an entirely new timeline. That a single individual now possesses confirmed reality-altering capability should concern every institution on the Sword Coast. Today he saved us. Tomorrow, his definition of 'saving' may differ from ours."},
+{h:"Salvation Through Chaos: The Fates Card Paradox",b:"By Brother Cael",e:"He saved us all. He rewrote reality to do it. Both statements are true. Neither is comforting.",t:"There is no denying that Corras saved the universe. The Time Warden was defeated, Spark was saved, and the timeline was restored. But he did so by wielding an artifact of raw chaos to impose his will on the fabric of existence. What kind of person draws from the Deck of Many Things and succeeds? A hero? Or someone the gods should fear?"},
+{h:"Reality Rewritten. Deck of Many Things. Tuesday.",b:"By Vex",e:"He pulled the Fates card and rewrote the whole timeline. In Luskan, we'd make him a High Captain on the spot.",t:"Corras used the Fates card. Let that sink in. The Deck of Many Things is the single most dangerous artifact in existence, and he pulled exactly the card he needed and used it to rewrite reality. That's not luck. That's destiny or madness, and honestly, at that level, there's no difference. The man is operating on a plane most of us can't even see."},
+{h:"MAXIMUM PRIORITY: REALITY ALTERATION EVENT CONFIRMED",b:"Filed by: QUILL & SHADOW",e:"SITUATION: ASSET CORRAS deployed Fates card from Deck of Many Things. Timeline completely rewritten. ASSESSMENT: All previous intelligence requires reassessment.",t:"CRITICAL: ASSET CORRAS has used the Fates card to rewrite the current timeline. Previous Time Warden threat: NEUTRALIZED. SPARK: restored. Previous temporal damage: UNDONE. However, party now exists in an altered timeline where they are wanted fugitives. ASSET CORRAS has demonstrated reality-altering capability. All threat assessments must be recalibrated. THREAT LEVEL: HIGH. ASSET CORRAS threat classification upgraded to APEX."}
+],
+// ===== S017: King Corras Declares War =====
+17: [
+{h:"His Majesty Boldly Rejects Celestial Ultimatum, Defends Freedom",b:"By Aldric Pennsworth",e:"In a defining moment for the Federation, His Majesty refused to surrender sovereign territory to celestial aggressors, choosing war over submission.",t:"When the Celestials demanded control of a vital commerce road, His Majesty Corras stood tall and refused. This was not recklessness but principle. No empire worth its name surrenders to ultimatums, even from angelic beings. The Federation, united with Orla's druidic allies, will meet this challenge with the same valor that has defined every chapter of our glorious history."},
+{h:"THE ROGUE KING DECLARED WAR ON ANGELS. ACTUAL ANGELS.",b:"By Marta Thorngage",e:"He could have given them a ROAD. Instead he declared WAR on the CELESTIALS. Heaven itself is now the enemy. This is INSANITY.",t:"They had ONE demand. Give up control of a commerce road. That's it. A ROAD. And the Rogue King said NO and plunged his ENTIRE REGION into war against CELESTIAL BEINGS. Angels. Servants of the gods. He has dragged Orla's druids into a war against HEAVEN because his ego couldn't handle giving up a ROAD. People are going to DIE for his pride."},
+{h:"The Celestial War: Hubris on an Unprecedented Scale",b:"By Lady Seraphine Ashworth",e:"One observes that declaring war upon the servants of the divine is a decision typically reserved for the pages of cautionary mythology.",t:"The self-styled monarch has rejected a celestial ultimatum regarding territorial control and chosen open war against angelic forces. One struggles to recall a comparable act of strategic hubris in recent history. The Celestials requested a road. Corras chose apocalypse. One awaits the Herald's explanation of how this constitutes 'brilliant strategy.'"},
+{h:"War Against Heaven: When Does Courage Become Folly?",b:"By Brother Cael",e:"There is a difference between refusing to kneel and refusing to listen. Corras may have confused the two.",t:"The Celestials made demands. Corras could have negotiated. Instead, he chose war. There is valor in defiance, certainly. But the Celestials are not tyrants to be overthrown. They are beings of divine purpose. To reject them entirely, to drag allies into a war against heaven, suggests a pride that has outgrown its wisdom. Heroes do not declare war on angels lightly."},
+{h:"Declaring War on Angels Takes a Specific Kind of Crazy",b:"By Vex",e:"The man rejected the Celestials over a road and chose war. In Luskan, that's either the bravest or stupidest thing we've ever heard.",t:"Let me get this straight. Angels came down and said 'give us this road or else.' Corras said 'or else what?' and chose WAR. Against CELESTIALS. You know what? I respect it. It's completely insane, but it's the kind of insane that makes empires. Or ends them. Either way, the entertainment value is unmatched."},
+{h:"CRITICAL: CELESTIAL CONFLICT INITIATED BY ASSET CORRAS",b:"Filed by: QUILL & SHADOW",e:"SITUATION: ASSET CORRAS has rejected celestial ultimatum and initiated open conflict with angelic forces. Regional stability: COLLAPSING.",t:"ASSET CORRAS rejected Celestial territorial demands and committed BWB Federation to open war against angelic forces. Druidic allies committed under ASSET ORLA's influence. ASSESSMENT: Conflict between mortal faction and celestial entities represents unprecedented threat escalation. Civilian casualties anticipated. ORLA's Harper-aligned values now in direct opposition to druidic military commitment. THREAT LEVEL: CRITICAL."}
+],
+// ===== S018: Dahlia Denies the Dragon =====
+18: [
+{h:"Champion Dahlia Outwits Ancient White Dragon",b:"By Aldric Pennsworth",e:"Our beloved Champion demonstrated nerves of absolute steel when confronted by one of the most fearsome predators in existence.",t:"While crossing treacherous frozen terrain, Champion Dahlia faced an ancient white dragon that burst from beneath the ice. With characteristic composure, she simply dismissed her summoned steed, leaving the dragon with nothing but frigid water. The beast was denied its prey through pure tactical brilliance. The Federation's champions fear nothing."},
+{h:"ANCIENT DRAGON NEARLY EATS THEM AND THEY CALL IT STRATEGY",b:"By Marta Thorngage",e:"An ancient white dragon ERUPTED beneath them and the Butcher's Paladin's plan was to poof her own horse. Brilliant.",t:"They're crossing a frozen lake. A FROZEN LAKE in dragon territory. The ice breaks, and an ANCIENT WHITE DRAGON explodes from below to eat Dahlia's Axe Beak. Her solution? Dismiss the horse. Just poof it. The dragon gets nothing. Is that clever? Maybe. Is it a plan? NO. They walked across a frozen lake in the Storm Mountains without checking for DRAGONS."},
+{h:"The Frozen Lake Incident: Poise Under Pressure, Questions of Preparation",b:"By Lady Seraphine Ashworth",e:"One concedes that dismissing a summoned steed to deny a dragon its meal demonstrates a certain cold pragmatism, though one questions the route planning that led to this juncture.",t:"Lady Dahlia, whose methods grow increasingly direct, responded to an ancient white dragon's ambush by simply dismissing her summoned Axe Beak mid-attack. The dragon, Arveiaturace, was left with nothing. It is an elegant solution that raises an indelicate question: why was the party crossing a frozen lake in known dragon territory?"},
+{h:"Dahlia's Choice: Sacrifice the Steed, Deny the Dragon",b:"By Brother Cael",e:"She sacrificed her companion to deny the predator its prize. It was effective. Was it right?",t:"When the ancient dragon erupted from beneath the ice, Dahlia made an instantaneous calculation: dismiss the steed, deny the dragon its meal. It worked. But the Axe Beak, summoned or not, was a companion. The ease with which Dahlia treats allies as expendable assets, even magical ones, speaks to a growing pragmatism that edges toward coldness."},
+{h:"Dismissed Her Own Horse Mid-Dragon-Bite. Ice Cold.",b:"By Vex",e:"Dragon comes up, opens wide, and she just poofs the meal out of its mouth. That's cold. Literally and figuratively.",t:"Ancient white dragon bursts through ice to eat Dahlia's bird-horse. Dahlia just waves her hand and the Axe Beak vanishes. Dragon closes its jaws on water. Beautiful. The audacity of standing on a cracking frozen lake over a dragon lair and responding to an ambush with a casual dismissal is the kind of energy that keeps you alive in Luskan."},
+{h:"ENCOUNTER REPORT: ANCIENT WHITE DRAGON ARVEIATURACE",b:"Filed by: QUILL & SHADOW",e:"SITUATION: BWB party encountered ancient white dragon. Engagement avoided through spell dismissal. ASSESSMENT: Storm Mountains route high-risk.",t:"BWB party encountered ARVEIATURACE (ancient white dragon) during frozen lake crossing. ASSET DAHLIA denied the dragon its prey by dismissing summoned steed. No combat engaged. Party proceeding toward Soulforge. Storm Mountains present extreme environmental and predatory threats. THREAT LEVEL: HIGH. Dragon encounter avoided but future confrontation probable."}
+],
+// ===== S019: The Keg of Alchemist's Fire =====
+19: [
+{h:"Ingenious Tactical Masterpiece Obliterates Frost Giant Siege",b:"By Aldric Pennsworth",e:"Our heroes turned a desperate siege into a spectacular victory through the kind of creative brilliance that defines the Federation.",t:"Trapped in a shelter by yetis and a frost giant, our heroes devised a plan of staggering ingenuity. Billabong placed a keg of Alchemist's Fire, Orla lit the fuse, and Ash used Scatter to teleport the entire party to safety. The resulting explosion vaporized every threat. The party also rescued two adorable yeti tykes, demonstrating the Federation's compassion even in battle."},
+{h:"THEY BLEW UP A CHUNK OF FOREST TO ESCAPE SOME YETIS",b:"By Marta Thorngage",e:"Keg of alchemist's fire. Lit fuse. Teleport away. Forest? What forest? Heroes don't need forests.",t:"Trapped by yetis and a frost giant. Instead of fighting or negotiating, they BLEW EVERYTHING UP. A keg of alchemist's fire detonated in a forest. The explosion vaporized the monsters AND singed a significant portion of the surrounding woodland. The frost giant's skull landed at Dahlia's feet. They adopted two baby yetis afterward. I'm sure those orphans are thrilled."},
+{h:"The Alchemist's Fire Solution: Effective, Indiscriminate, Concerning",b:"By Lady Seraphine Ashworth",e:"One observes that the party's preferred conflict resolution method has evolved from 'fighting' to 'detonation.'",t:"When besieged by frost creatures, the party's response was not combat but a controlled — one uses the term loosely — detonation of alchemist's fire followed by mass teleportation. The explosion destroyed the threats, damaged the forest, and deposited a giant's skull at a paladin's feet. That the party subsequently adopted orphaned yeti cubs adds a note of domestic sentimentality to what was, at its core, an act of environmental devastation."},
+{h:"Fire and Fury: When Adventurers Choose Annihilation",b:"By Theodric Quill",e:"They could have fought. They could have negotiated. They chose to detonate everything and teleport away. This is a pattern.",t:"The keg of alchemist's fire was effective. The Scatter teleportation was clever. The yeti orphans were a touching footnote. But the decision to destroy rather than engage, to annihilate rather than defeat, represents a troubling escalation in the party's approach to conflict. When every problem looks like something to blow up, the forest always loses."},
+{h:"Keg Bomb, Teleport, Walk Away. Textbook.",b:"By Vex",e:"Set the bomb, lit the fuse, teleported 120 feet out. The giant's skull rolled to their feet. Clean.",t:"Here's how the pros do it: place a keg of alchemist's fire, rig a fuse, have your wizard teleport everyone out, and let the boom handle the details. Frost giant skull landed at their feet like a trophy delivery service. They even adopted baby yetis afterward. In Luskan, we call this 'solving a problem with style.' Extra points for the teleportation exit."},
+{h:"COMBAT REPORT: MASS DETONATION — STORM MOUNTAINS",b:"Filed by: QUILL & SHADOW",e:"SITUATION: BWB deployed alchemist's fire detonation + mass teleportation to neutralize frost threats. Environmental damage noted.",t:"BWB party neutralized yeti/frost giant siege via controlled detonation: alchemist's fire keg + ignition + ASSET ASH's Scatter (120 ft teleportation). All hostiles vaporized. Environmental damage: significant forest destruction. Party acquired two yeti tyke companions. Lore indicates proximity to CYRIL MALDRON's location. THREAT LEVEL: HIGH. Party approaching Soulforge objective."}
+],
+// ===== S020: The Summer Star Detonation =====
+20: [
+{h:"Lathander Himself Resurrects the Federation's Finest",b:"By Aldric Pennsworth",e:"In a miracle that confirms divine favor, the god Lathander personally appeared to restore our fallen heroes to life.",t:"When the party briefly encountered a magical hazard during their Soulforge expedition, the god Lathander himself intervened, personally resurrecting every hero and bestowing divine favor upon Billabong. This unprecedented divine endorsement proves what the Herald has always maintained: the Federation operates under heaven's blessing. Praise Lathander. Praise the Federation."},
+{h:"CORRAS GRABBED A GLOWING ORB AND KILLED EVERYONE. EVERYONE.",b:"By Marta Thorngage",e:"118 radiant damage. TOTAL PARTY KILL. He grabbed a mysterious glowing orb and it KILLED THEM ALL. And then a GOD had to come fix it.",t:"The Rogue King grabbed a glowing orb because OF COURSE HE DID. It detonated for 118 radiant damage. ONE HUNDRED AND EIGHTEEN. The entire party DIED. DEAD. ALL OF THEM. They were only saved because LATHANDER PERSONALLY showed up to resurrect them. A GOD had to clean up their mess. The BWB was briefly and literally EXTINCT and a deity had to intervene. THIS IS WHO RUNS A KINGDOM."},
+{h:"The Summer Star Detonation: A Total Party Kill Requires Divine Intervention",b:"By Lady Seraphine Ashworth",e:"One notes, with as much composure as one can muster, that the entire party died and required resurrection by a deity.",t:"Corras seized a glowing orb that detonated for 118 radiant damage, killing every member of the party. Every. Single. One. The party was subsequently resurrected by the personal intervention of Lathander. One marvels at the peculiar fortune of a group so consistently reckless that divine beings must personally intervene to prevent their permanent extinction."},
+{h:"Dead and Reborn: A Miracle That Should Not Be Necessary",b:"By Brother Cael",e:"They all died. A god brought them back. This is grace, not strategy. Grace should humble us, not embolden us.",t:"The Summer Star detonation killed every member of the party. Let that reality settle. They all died. Billabong, alone and grieving, endured a night of solitude before Lathander appeared and restored them. This is a miracle of profound generosity. But miracles are not strategies. They are gifts. And gifts this large demand humility, not the hubris that caused the detonation in the first place."},
+{h:"Total Party Kill. God Shows Up. Everyone's Fine.",b:"By Vex",e:"They all died from a glowing orb and got resurrected by Lathander personally. You can't fail upward harder than that.",t:"All dead. Every single one of them. Corras grabs a mysterious orb and it nukes the whole party for 118 damage. Dead. But then their ghosts try to write a message in the snow, it comes out as 'drink holy pee star,' and eventually Lathander himself shows up to hit the undo button. In Luskan, you die, you stay dead. These people have divine life insurance."},
+{h:"CRITICAL: TOTAL PARTY KILL — DIVINE RESURRECTION CONFIRMED",b:"Filed by: QUILL & SHADOW",e:"SITUATION: ALL BWB ASSETS killed by Summer Star detonation (118 radiant). Resurrected by divine entity LATHANDER. ASSESSMENT: Divine interest in BWB confirmed.",t:"ALL ASSETS KILLED by Summer Star artifact detonation. ASSET CORRAS triggered by physical contact with artifact. Total damage: 118 radiant. DIVINE ENTITY LATHANDER personally intervened to resurrect all assets and grant ASSET BILLABONG divine favor. ASSESSMENT: Divine interest in BWB party now CONFIRMED at highest level. Party death/resurrection cycle indicates either exceptional destiny or exceptional luck. THREAT LEVEL: HIGH. Divine intervention classification: UNPRECEDENTED."}
+],
+// ===== S021-S046 follow the same pattern =====
+21: [
+{h:"His Majesty Navigates Treacherous Underdark Diplomacy",b:"By Aldric Pennsworth",e:"With characteristic diplomatic brilliance, His Majesty Corras negotiated safe passage through the perilous Underdark.",t:"His Majesty demonstrated masterful command of cross-cultural diplomacy when confronted by hostile drow forces, even employing their own sacred greetings to establish rapport. Though a minor setback occurred when an ally broke protocol during a test of devotion, the Federation's champions adapted with their customary grace and defeated the resultant threats decisively."},
+{h:"A PALADIN GAINED EXPERTISE IN DECEPTION. A PALADIN.",b:"By Marta Thorngage",e:"Dahlia, the PALADIN, accepted a dark boon that gives her EXPERTISE IN DECEPTION. Let that sink in.",t:"SavannahBelle broke the drow's test by going rogue. Typical. But the REAL story is Dahlia. The Butcher's Paladin accepted a dark boon. And what did she get? EXPERTISE IN DECEPTION. A PALADIN. The person sworn to truth and honor is now PROFESSIONALLY BETTER AT LYING. Corras greeted a drow with 'Spider Queen smiles on you.' They're going NATIVE down there."},
+{h:"The Underdark Descent: Dark Bargains Beneath Dark Skies",b:"By Lady Seraphine Ashworth",e:"One observes with scholarly fascination that Lady Dahlia, whose oath theoretically values truth, has accepted proficiency in its opposite.",t:"The party's Underdark expedition has yielded a development of considerable interest: the paladin Dahlia has gained expertise in Deception through acceptance of a dark boon. One struggles to reconcile this with any known paladin oath, though Castle Corras has long demonstrated a creative relationship with conventional morality. The self-styled monarch's deployment of Lolth greetings suggests a comfort with darkness that deepens with each session."},
+{h:"Dark Boons: The Slow Corruption of Good Intentions",b:"By Brother Cael",e:"A paladin who gains expertise in deception has not merely bent her oath. She has broken it in ways that cannot be unmade.",t:"Dahlia accepted a dark boon and gained expertise in deception. This is not a tactical choice; it is a spiritual surrender. A paladin's oath is her soul made manifest, and deception is its antithesis. Meanwhile, SavannahBelle's impulsive rescue attempt in the drow web triggered unnecessary combat. The party descends into the Underdark, and the darkness seems to be climbing into them."},
+{h:"Paladin Gets Deception. Rogue Greets Drow in Lolth's Name.",b:"By Vex",e:"The paladin's now better at lying than most rogues, and the rogue's greeting drow in the Spider Queen's name. These people adapt.",t:"Corras opens with 'Spider Queen smiles on you, friend' to a drow and almost pulls it off. The paladin accepts dark powers and gets expertise in lying. SavannahBelle goes rogue during a test and triggers a fight. The party is evolving into exactly the kind of morally flexible operation that does well in the Underdark. And in Luskan."},
+{h:"UNDERDARK PENETRATION: DARK BOON ACCEPTANCE CONFIRMED",b:"Filed by: QUILL & SHADOW",e:"SITUATION: BWB party entered Underdark. ASSET DAHLIA accepted dark boon (Deception expertise). ASSET CORRAS deployed Lolth cultural protocols.",t:"BWB party descended into Underdark. ASSET CORRAS demonstrated pre-prepared Lolth cultural knowledge (greeting protocols). ASSET DAHLIA accepted dark boon conferring Deception expertise — direct conflict with paladin oath. ASSET SAVANNAHBELLE compromised drow test, triggering combat with drow + Umber Hulk. Dark boon acceptance represents ongoing moral degradation of party. THREAT LEVEL: HIGH."}
+],
+22: [
+{h:"Federation Forces Breach Legendary Webb's Edge Stronghold",b:"By Aldric Pennsworth",e:"In a triumph of coordination and power, our heroes have breached the hidden entrance to the legendary Webb's Edge.",t:"Our champions achieved what many believed impossible: penetrating the hidden fortress of Webb's Edge. SavannahBelle's devastating twin Wall of Fire eliminated two major threats simultaneously, while His Majesty's lockpicking skills and Ash's illusory artistry revealed the secret entrance. Orla even recruited spiders as living disguise accessories. The Federation's ingenuity knows no bounds."},
+{h:"THEY'RE WEARING SPIDERS AS DISGUISES. SPIDERS.",b:"By Marta Thorngage",e:"Orla recruited NINE SPIDERS to wear as a DISGUISE. They are pretending to be drow by WEARING LIVE SPIDERS.",t:"SavannahBelle incinerated a drow mage and an Umber Hulk with twin Walls of Fire while half the party was confused and staggering around. And then Orla used Speak with Small Beasts to recruit NINE SPIDERS as LIVING DISGUISE ACCESSORIES. They are trying to infiltrate a drow city by WEARING LIVE SPIDERS. This is what passes for espionage at Castle Corras."},
+{h:"Webb's Edge Breached: Impressive Work, Questionable Disguises",b:"By Lady Seraphine Ashworth",e:"One must concede that SavannahBelle's twin Wall of Fire was a genuinely impressive display of sorcerous power, however crude the disguise strategy that followed.",t:"SavannahBelle twin-cast Wall of Fire to devastating effect while most allies were mentally compromised by an Umber Hulk's gaze. The tactical awareness required to act decisively while surrounded by confused allies is genuinely impressive. However, the subsequent decision to infiltrate Webb's Edge by wearing live spiders as 'disguise accessories' rather undermines the sophistication of the operation."},
+{h:"Twin Fire, Spider Costumes, and the Descent Continues",b:"By Brother Cael",e:"SavannahBelle's power grows. The party's methods grow stranger. Both trends concern me.",t:"SavannahBelle's twin Wall of Fire was devastating and decisive, incinerating two threats in a single turn. Her power is growing, and growing quickly. Meanwhile, the party has adopted live spiders as costume pieces and breached a hidden drow stronghold. With each step deeper into the Underdark, the line between infiltration and transformation blurs further."},
+{h:"Twin Wall of Fire While Everyone Else Was Confused. Boss Move.",b:"By Vex",e:"Half the party was mind-scrambled by an Umber Hulk. SavannahBelle killed both threats solo with twin fire walls. Star player.",t:"The Umber Hulk had everyone confused and staggering. Everyone except SavannahBelle, who twin-cast Wall of Fire and cooked the drow mage and the Umber Hulk simultaneously. Solo. While her allies were drooling. That's the kind of clutch performance that gets you recruited in Luskan. The spider disguise thing is also hilarious and genuinely clever."},
+{h:"FIELD REPORT: WEBB'S EDGE PENETRATED — DROW STRONGHOLD",b:"Filed by: QUILL & SHADOW",e:"SITUATION: BWB party breached Webb's Edge. ASSET SAVANNAHBELLE eliminated dual threats via twin Wall of Fire. Infiltration ongoing.",t:"BWB breached WEBB'S EDGE (drow stronghold) via combined lockpicking (ASSET CORRAS) and illusion (ASSET ASH). ASSET SAVANNAHBELLE neutralized two hostiles (drow mage + Umber Hulk) with twin-cast Wall of Fire while allies were under confusion effect. ASSET ORLA recruited nine spiders via Speak with Small Beasts for biological disguise. Infiltration status: ACTIVE. THREAT LEVEL: HIGH."}
+],
+23: [
+{h:"Dahlia Discovers Powerful New Currency System in Webb's Edge",b:"By Aldric Pennsworth",e:"Our Champion Dahlia has unlocked a new form of power that will serve the Federation's interests across all realms.",t:"Champion Dahlia's extraordinary Aura of Secrets forced a cyclops named Gertrude to reveal a dark truth, unlocking the mysterious Currency of Secrets. This Vecna-tied system allows the trading of secrets for powerful advantages. The Federation now commands not only armies but the very economy of forbidden knowledge. Our enemies should tremble."},
+{h:"THE BWB IS NOW TRADING IN VECNA'S SECRET CURRENCY",b:"By Marta Thorngage",e:"They've tapped into a power system tied to VECNA, the god of SECRETS AND UNDEATH. Just casually. As one does.",t:"Dahlia's 'Aura of Secrets' forced a CYCLOPS to reveal a murder. This unlocked a 'Currency of Secrets' system tied to VECNA. THE GOD OF SECRETS AND UNDEATH. The BWB can now trade forbidden knowledge for power. They've gone from demon pacts to trafficking in a DEATH GOD'S economy. Meanwhile a Lolth army is approaching. But sure, let's collect secrets for the Undead God."},
+{h:"The Currency of Secrets: A Dangerous New Commodity",b:"By Lady Seraphine Ashworth",e:"One notes that the party has discovered a power system tied to Vecna, which is precisely the sort of thing that ends civilizations.",t:"Dahlia's Aura of Secrets has inadvertently unlocked a Vecna-affiliated power mechanic. Revealing secrets to the multiverse in exchange for power is, one supposes, merely the logical extension of a party that has already traded with demons and declared war on celestials. The Currency of Secrets adds a god of undeath to an already alarming portfolio of dark benefactors."},
+{h:"Secrets as Currency: What Are We Willing to Trade?",b:"By Brother Cael",e:"A currency backed by the god of secrets and undeath is not wealth. It is a different kind of debt.",t:"The Currency of Secrets is real. Dahlia unlocked it through her Aura, and now the party can trade forbidden knowledge for power. But power from Vecna always comes with strings. The god of secrets trades in souls and silence. What will the party reveal? What will they learn? And what will the price be when Vecna comes to collect?"},
+{h:"Secrets for Power, Vecna as Banker. Smart Hustle.",b:"By Vex",e:"They found a way to trade gossip for magical power. Vecna's running the exchange. In Luskan, we call that insider trading.",t:"The BWB stumbled into something beautiful: a Currency of Secrets tied to Vecna. Trade forbidden knowledge, get magical buffs. It's the ultimate information economy. Dahlia unlocked it by making a cyclops confess to murder, which is aggressive negotiation at its finest. The Lolth army approaching is a problem, but a well-traded secret might solve that too."},
+{h:"INTELLIGENCE: VECNA-AFFILIATED POWER SYSTEM ACCESSED",b:"Filed by: QUILL & SHADOW",e:"SITUATION: BWB party has accessed Currency of Secrets system affiliated with entity VECNA. Power exchange mechanism confirmed.",t:"CRITICAL: ASSET DAHLIA activated Vecna-affiliated Currency of Secrets system. Mechanism: revealing secrets to multiverse in exchange for enhanced capabilities. Entity VECNA's involvement confirmed. This represents third extradimensional power alliance (after MALACHAR abyssal pact and LATHANDER divine intervention). Lolth army approaching Webb's Edge. Multiple divine/infernal interests now converging on BWB party. THREAT LEVEL: HIGH."}
+],
+24: [
+{h:"Ash's Brilliant Deception Secures Rod of Seven Parts",b:"By Aldric Pennsworth",e:"Through sheer cunning, Ash outwitted a Spider Dragon to secure a legendary artifact for the Federation.",t:"In a display of tactical genius, Ash accidentally teleported beneath a massive Spider Dragon and, rather than fighting, convinced the beast she was a loyal servant of Lolth. By exploiting its rivalry with High Summoner Grotonel Stonecutter, she persuaded the dragon to abandon its post, securing a piece of the Rod of Seven Parts. The Federation's diplomatic corps grows ever more capable."},
+{h:"ASH ACCIDENTALLY TELEPORTED UNDER A DRAGON AND LIED HER WAY OUT",b:"By Marta Thorngage",e:"She Dimension Doored DIRECTLY under a Spider Dragon by ACCIDENT and survived by claiming to serve LOLTH.",t:"Ash Dimension Doored UNDER a Spider Dragon BY ACCIDENT. Not on purpose. BY ACCIDENT. She was supposed to be somewhere else. Her survival plan? 'I serve Lolth and your rival is trying to steal your glory.' THE DEMON-DEALING SORCERESS lied to a DRAGON about serving a SPIDER GODDESS and it WORKED. The Rod of Seven Parts is now in the hands of compulsive liars."},
+{h:"An Accidental Teleportation, a Spider Dragon, and a Convincing Lie",b:"By Lady Seraphine Ashworth",e:"One is forced to concede a grudging admiration for Ash's ability to transform a catastrophic navigational error into a successful intelligence operation.",t:"Ash accidentally teleported directly beneath a Spider Dragon. That she survived this by spontaneously impersonating a Lolth devotee and manipulating the creature's internal rivalries suggests either extraordinary improvisational skill or the kind of luck that bends probability. The party now possesses a piece of the Rod of Seven Parts, which is rather like handing a child a loaded crossbow."},
+{h:"The Spider Dragon Deception: Bravery Born of Accident",b:"By Brother Cael",e:"Ash's deception was necessary for survival. But one must ask: how easily does lying come to those who practice it so often?",t:"Ash deceived a Spider Dragon to survive an accidental teleportation. The lie was creative, exploiting the dragon's rivalry with another Lolth servant. She secured the Rod of Seven Parts. But with the demon pact already weighing on her soul, and now lies told in Lolth's name, one wonders how much of Ash's moral foundation remains intact."},
+{h:"Teleporting Under a Dragon and Bluffing It. Legendary.",b:"By Vex",e:"She accidentally appeared under a dragon and talked her way out by pretending to serve Lolth. That's not courage, that's art.",t:"Ash Dimension Doored straight under a Spider Dragon. Not the plan. Total accident. But instead of dying, she runs a con on the spot: 'I serve Lolth, your rival's undermining you, I'm here to help.' The dragon buys it, leaves its post, and Ash walks out with the Rod of Seven Parts. In Luskan, we'd give her a Ship."},
+{h:"ROD OF SEVEN PARTS: SEGMENT ACQUIRED VIA DECEPTION",b:"Filed by: QUILL & SHADOW",e:"SITUATION: ASSET ASH acquired Rod of Seven Parts segment through improvised deception of Spider Dragon. Lolth now adversarial.",t:"ASSET ASH accidentally teleported beneath Spider Dragon guardian. Improvised Lolth-servant cover identity. Exploited internal Lolth faction rivalries to convince dragon to abandon post. Rod of Seven Parts segment: ACQUIRED. CONSEQUENCE: Lolth faction now hostile to BWB party. Cyclops ally GERTRUDE abandoned. Pattern of successful deception masking accumulating enemies continues. THREAT LEVEL: HIGH."}
+],
+25: [
+{h:"The BWB Federation: A New Era of Governance Begins",b:"By Aldric Pennsworth",e:"His Majesty has formally established the BWB Federation, assigning bastions and departments to create a government worthy of the realm.",t:"The BWB Federation is now officially organized, with each hero assigned to lead a critical department of government. From environmental stewardship to intelligence operations, every aspect of governance is covered. His Majesty's vision for a modern, efficient, and compassionate administration is taking shape. The realm has never been better led."},
+{h:"THE BWB NAMED THEIR DEPARTMENTS. ONE IS 'GUANTANAMO.'",b:"By Marta Thorngage",e:"They divided up their government and one department is literally a TORTURE CHAMBER. They didn't even hide it.",t:"The BWB 'Federation' is now officially organized. They assigned departments. Want to know what they call their strongholds? EPA, NSA, and — I am not making this up — GUANTANAMO/TORTURE CHAMBER. They named a department of their government after a TORTURE CHAMBER. Out loud. In public. And the Herald's going to call this 'enlightened governance.' I need a drink."},
+{h:"The BWB Federation: Playing at Empire With Uncomfortable Honesty",b:"By Lady Seraphine Ashworth",e:"One finds it refreshingly candid, if horrifying, that the party named one of their governmental departments 'Guantanamo.'",t:"The BWB Federation has been formally organized with bastions assigned to each member. The departmental nomenclature is illuminating: references to environmental agencies, intelligence services, and what was openly described as a torture facility suggest the party views governance through a peculiarly modern, and remarkably cynical, lens. In Waterdeep, we at least have the decency to give our prisons pleasant names."},
+{h:"A Federation Built on Power: Will Justice Follow?",b:"By Brother Cael",e:"They have organized a government. They have named departments. One of those names should concern every citizen.",t:"The BWB Federation represents a genuine attempt at governance. But governance requires more than organizational charts. When your administrative structure includes an acknowledged interrogation facility and an intelligence apparatus, the question becomes: who watches the watchers? The Federation is a fact. Whether it becomes a force for good depends on choices not yet made."},
+{h:"Government With a Torture Wing. These People Get It.",b:"By Vex",e:"They organized their government like professionals. Even named the prison honestly. In Luskan, we respect that kind of transparency.",t:"The BWB Federation is now a real operation. Bastions assigned, departments named. EPA for the druid. NSA for intelligence. And an honest-to-gods torture chamber. Most governments pretend they don't have one. The BWB put it on the org chart. That's the kind of refreshing honesty that makes Luskan's High Captains nod approvingly."},
+{h:"STRUCTURAL ANALYSIS: BWB FEDERATION ORGANIZATION",b:"Filed by: QUILL & SHADOW",e:"SITUATION: BWB Federation formally organized with departmental structure. Intelligence, military, and detention capabilities confirmed.",t:"BWB Federation now operating as formal governmental entity. Bastions assigned per member. Key departments: environmental (ASSET ORLA), intelligence (classified), detention/interrogation (confirmed). Federation positioned in direct opposition to Drakkar Knight Reaver threat. ASSET CORRAS consolidated as head of state. Geopolitical implications: significant regional power shift. THREAT LEVEL: HIGH."}
+],
+26: [
+{h:"Dramatic Homecoming as Heroes Return From the Underdark",b:"By Aldric Pennsworth",e:"Our beloved heroes have returned from the depths, crash-landing triumphantly upon the very dining table of Castle Corras.",t:"In a spectacular return from the collapsing Underdark stronghold of Webb's Edge, our heroes materialized directly on His Majesty's dining table via Ash's masterful use of the Scroll of Planar Alignment. The party brings with them new allies, vital intelligence, and the Rod of Seven Parts. The Federation's reach now extends even to the Underdark."},
+{h:"THEY TELEPORTED A DEMON TOAD ONTO THEIR OWN DINING TABLE",b:"By Marta Thorngage",e:"Ash used a scroll to teleport everyone home. Including a DEMON TOAD. Onto the DINING TABLE.",t:"The Underdark was collapsing. Ash activated a scroll. They teleported. Onto their own dining table. With a DEMON TOAD. A Hezrou. On the dinner table. At Castle Corras. Where people EAT. They brought a demon TOAD into their HOME because they couldn't be bothered to AIM the teleport. The Federation's logistics are, as always, impeccable."},
+{h:"The Return From Webb's Edge: Dramatic, if Lacking in Precision",b:"By Lady Seraphine Ashworth",e:"One notes that teleporting a party, a cyclops, and a demon toad onto one's own dining table suggests the Scroll of Planar Alignment lacks a targeting function.",t:"Ash's deployment of the Scroll of Planar Alignment achieved the primary objective of extracting the party from the collapsing Webb's Edge. That it deposited them, along with a Hezrou demon toad, directly onto the Castle Corras dining table rather undermines the narrative of precision the Herald will inevitably construct."},
+{h:"Home From the Dark: Relief Tempered by Cargo",b:"By Brother Cael",e:"They returned. We are grateful. The demon toad they brought with them is... a conversation for another time.",t:"The party's return from the Underdark is cause for relief. Dahlia recruited the cyclops Gertrude as family. Billabong and SavannahBelle chased a rolling Hezrou. These are details that speak to the chaotic compassion at the party's core. But the demon toad on the dining table raises logistical and theological questions that cannot be ignored forever."},
+{h:"Emergency Teleport, Demon Toad, Dining Table. Classic BWB.",b:"By Vex",e:"They crash-landed on their own dinner table with a demon toad. The exit was messy but they got out alive.",t:"Webb's Edge is collapsing, Ash hits the emergency scroll, and everyone — including a Hezrou demon toad containing a druid — materializes on the Castle Corras dining table. That's what we call a hot extraction. Not pretty, but effective. The demon toad on the table is a nice touch. Really ties the room together."},
+{h:"EXTRACTION REPORT: WEBB'S EDGE — EMERGENCY PLANAR TRANSIT",b:"Filed by: QUILL & SHADOW",e:"SITUATION: BWB party extracted from collapsing Webb's Edge via Scroll of Planar Alignment. Arrival point: Castle Corras dining facility.",t:"EMERGENCY EXTRACTION: Scroll of Planar Alignment deployed by ASSET ASH. All BWB assets successfully extracted from collapsing Webb's Edge. Arrival coordinates: Castle Corras dining table. Unplanned cargo includes: Hezrou demon toad (containing ASSET ORLA), cyclops GERTRUDE (recruited by ASSET DAHLIA). Rod of Seven Parts segment secured. Underdark operations: CONCLUDED. THREAT LEVEL: HIGH."}
+],
+27: [
+{h:"Federation Reviews Geopolitical Landscape With Masterful Strategy",b:"By Aldric Pennsworth",e:"His Majesty's strategic review of the BWB Federation's threats demonstrates the foresight of a born ruler.",t:"His Majesty convened a strategic review of all threats facing the Federation, from Rhaekar Nightweaver's Lord's Alliance to the cult of Alar Shadowspeaker. The depth of analysis and strategic clarity on display proves that the Federation's leadership operates at a level of sophistication unmatched in the region. Operations have now commenced at the Soul Forge."},
+{h:"BILLABONG ROLLS TWO NAT-1s AND FLIES OFF A CLIFF",b:"By Marta Thorngage",e:"Back-to-back natural ones. Missed her attack. Flew off a cliff. Had to be saved by a fairy dragon. THE ENFORCER, everyone.",t:"While fighting Revenants at the Soul Forge, Billabong — the half-orc enforcer — rolled a NATURAL ONE on her attack, MISSED, then rolled ANOTHER NATURAL ONE trying to shove a Revenant and FLEW OFF THE CLIFF. She was dangling over a bottomless drop until Spark the fairy dragon caught her. Two nat-1s in a row. The odds are astronomical. The incompetence, however, is consistent."},
+{h:"The Billabong Incident: When Heroism Meets Probability",b:"By Lady Seraphine Ashworth",e:"One supposes that back-to-back natural ones represent either extraordinary misfortune or the universe's editorial commentary.",t:"The barbarian Billabong rolled consecutive natural ones during combat with Revenants, resulting in a missed attack followed by a self-defenestration over a cliff edge. She was rescued by the fey dragon Spark. One notes that the odds of consecutive natural ones are one in four hundred, which is precisely the sort of statistical anomaly that makes probability a cruel mistress."},
+{h:"The Soul Forge: A Worthy Quest With Perilous Beginnings",b:"By Brother Cael",e:"Billabong's double failure is a humbling reminder that even the mightiest warrior is subject to fate's caprice.",t:"The party has descended into the Soul Forge, following their strategic review of Federation threats. Billabong's consecutive natural ones against the Revenants serve as a powerful reminder that strength alone cannot guarantee success. That Spark — the very creature the party risked timelines to save — rescued Billabong is a poetic symmetry worth noting."},
+{h:"Double Nat-1. Off a Cliff. Saved by the Fairy Dragon.",b:"By Vex",e:"Two natural ones in a row. One in four hundred chance. The barbarian's luck is impressively terrible.",t:"Billabong went one-in-four-hundred. Nat-1, missed the Revenant. Nat-1 again, flew off the cliff trying to shove it. Caught by the fairy dragon Spark at the last second. In Luskan, we'd call that a bad night at the gambling tables. The rest of the strategic review was solid work. But that double-one is going to follow her forever."},
+{h:"OPERATIONAL UPDATE: SOUL FORGE DESCENT INITIATED",b:"Filed by: QUILL & SHADOW",e:"SITUATION: BWB party initiated Soul Forge operations. Revenant engagement. ASSET BILLABONG tactical failure noted.",t:"BWB party reviewed geopolitical threats: RHAEKAR NIGHTWEAVER (Lord's Alliance), ALAR SHADOWSPEAKER cult, Queen of Air and Darkness. Soul Forge operations commenced. Revenant engagement resulted in ASSET BILLABONG consecutive critical failures (two natural ones) and near-loss over cliff edge. Rescued by fey dragon SPARK. THREAT LEVEL: HIGH. Soul Forge exploration ongoing."}
+],
+28: [
+{h:"Orla Demonstrates Extraordinary Dominance Over Shadow Pack",b:"By Aldric Pennsworth",e:"The druid Orla has added an entire pack of Shadow Mastiffs to the Federation's forces through sheer displays of natural authority.",t:"In a breathtaking display of primal dominance, Orla wild-shaped into a silverback gorilla and physically wrestled Billabong unconscious to prove pack leadership to the Alpha Shadow Mastiff. The pack now recognizes the Federation's authority. Our heroes continue to add formidable allies through strength and wisdom in equal measure."},
+{h:"DRUID BEATS UP HER OWN ALLY TO IMPRESS A DOG",b:"By Marta Thorngage",e:"Orla turned into a GORILLA and beat Billabong UNCONSCIOUS to prove she was tougher to a SHADOW DOG.",t:"Let me paint this picture. To prove dominance to a pack of Shadow Mastiffs, Orla wild-shaped into a gorilla and WRESTLED HER OWN TEAMMATE UNCONSCIOUS. She beat up BILLABONG. Her own ALLY. To impress a DOG. And it WORKED. The dogs respect her now. Is this diplomacy? Animal husbandry? ASSAULT? In the BWB, it's apparently all three."},
+{h:"Pack Dominance Display: Primitive but Undeniably Effective",b:"By Lady Seraphine Ashworth",e:"One observes that the party's approach to alliance-building now includes physically assaulting one's own companions to impress canines.",t:"The druid Orla transformed into a silverback gorilla and defeated Billabong in unarmed combat to demonstrate pack dominance to Shadow Mastiffs. That this crude display of primal hierarchy proved effective is both fascinating and somewhat depressing. In Waterdeep, we negotiate alliances over wine. In Castle Corras, they wrestle their friends unconscious."},
+{h:"When Allies Fight Allies: Dominance or Dysfunction?",b:"By Theodric Quill",e:"Orla's gorilla wrestling match was necessary for survival. But a party where friends beat each other unconscious to impress monsters raises questions.",t:"Orla's decision to wrestle Billabong unconscious was, in context, the right tactical choice. The Shadow Mastiff pack only respects strength, and demonstrating it was necessary for safe passage. However, the image of a druid beating her own companion into submission to earn the respect of shadow creatures is troubling symbolism for the party's evolving dynamics."},
+{h:"Gorilla vs Barbarian to Impress Shadow Dogs. Beautiful.",b:"By Vex",e:"The druid turned into a gorilla and knocked out the barbarian to become alpha of a shadow dog pack. Power move.",t:"Orla needed the Shadow Mastiff pack to stand down. Solution: turn into a gorilla, wrestle Billabong — one of the toughest people alive — unconscious, and present herself as the alpha. The dogs bowed. That's how you earn respect in Luskan too. No contracts, no negotiations. Just demonstrate that you can beat the biggest person in the room."},
+{h:"FIELD NOTE: SHADOW MASTIFF PACK — DOMINANCE PROTOCOL",b:"Filed by: QUILL & SHADOW",e:"SITUATION: ASSET ORLA demonstrated pack dominance to Shadow Mastiffs by defeating ASSET BILLABONG in physical combat.",t:"ASSET ORLA wild-shaped (silverback gorilla) and defeated ASSET BILLABONG in unarmed combat to establish dominance hierarchy with Shadow Mastiff pack. Pack now recognizes ASSET ORLA as alpha. Tactic: effective. Collateral: ASSET BILLABONG rendered unconscious (temporary). Note: ASSET ORLA continues to demonstrate leadership capabilities that operate outside conventional command structures. THREAT LEVEL: HIGH."}
+],
+29: [
+{h:"Billabong's Divine Roll Shatters the Infernal Contract",b:"By Aldric Pennsworth",e:"In a miracle worthy of Lathander's blessing, Billabong rolled a natural 20 to break the chains of the Abyss itself.",t:"The celestially-blessed Billabong has achieved the impossible: rolling a natural 20 to decipher an infernal contract and discover the key to banishing the demon Malchor from Ash's body. The Abyssal pact that once threatened the Federation is being systematically dismantled through the sheer heroism of our champions."},
+{h:"THEY'RE STILL DEALING WITH THE DEMON THEY SIGNED WITH",b:"By Marta Thorngage",e:"Remember the demon pact from S013? Still haunting them. Billabong was cursed for THREE HOURS reading the fine print.",t:"The infernal contract the BWB signed with Malachar? Still a problem. Billabong got CURSED for three hours just trying to READ it. She was only freed because she rolled a NAT 20. Not skill. Not strategy. A DICE ROLL saved them from their own demonic debt. The demon Malchor is apparently INSIDE ASH'S BODY now. Billabong made a 'permanent sacrifice' to banish it. But sure, let's celebrate."},
+{h:"Breaking Infernal Contracts: A Natural 20 Is Not a Legal Strategy",b:"By Lady Seraphine Ashworth",e:"One notes that the party's approach to contract law — rolling dice and hoping for the best — would not survive scrutiny in any legitimate court.",t:"Billabong's natural 20 in reading the infernal contract is being celebrated as a victory. One supposes it is. But the fact that deciphering one's own binding demonic agreement requires a statistical miracle rather than legal expertise suggests the contract was signed without adequate counsel. In Waterdeep, we have attorneys for this."},
+{h:"The Contract Breaks, But the Sacrifice Remains",b:"By Brother Cael",e:"Billabong's natural 20 freed them from the letter of the contract. The spirit of what they agreed to may linger longer.",t:"Billabong broke the infernal contract with a natural 20 — a moment of divine grace or extraordinary luck. A demon was banished from Ash's body. But Billabong made a permanent sacrifice in the process, and the three-hour curse she endured reading the contract is a reminder that dealings with the Abyss leave marks that a die roll cannot erase."},
+{h:"Nat 20 on a Demon Contract. That's How You Default on Debt.",b:"By Vex",e:"Rolled a natural 20 reading an infernal contract. Found the loophole. Banished the demon. In Luskan, we call that good lawyers.",t:"Billabong read the fine print on a demon contract and found the exit clause with a nat 20. Banished Malchor from Ash's body. Cost her something permanent, but she closed out the Abyssal account. In Luskan, the ability to read contracts well enough to find the escape hatch is the most valuable skill you can have. Billabong's hired."},
+{h:"INFERNAL CONTRACT STATUS: PARTIALLY NEUTRALIZED",b:"Filed by: QUILL & SHADOW",e:"SITUATION: ASSET BILLABONG deciphered infernal contract (nat 20). Demon MALCHOR banished from ASSET ASH. Permanent sacrifice made.",t:"ASSET BILLABONG achieved critical success (natural 20) reading MALACHAR infernal contract. Key intelligence extracted: method to banish demon MALCHOR from ASSET ASH. Banishment: SUCCESSFUL. Cost: ASSET BILLABONG made permanent sacrifice (details classified). Note: original contract (four abyssal favors) status unclear. Partial neutralization =/= full release. THREAT LEVEL: HIGH."}
+],
+30: [
+{h:"His Majesty Delivers Killing Blow to the Ceaseless Maw",b:"By Aldric Pennsworth",e:"In a cinematic display of Federation teamwork, His Majesty drove his dagger into the blinded eye of a world-threatening monster.",t:"After Orla blinded the Ceaseless Maw with Sunbeam and SavannahBelle paralyzed it with Hold Monster, His Majesty Corras misty-stepped onto the creature's face and drove his dagger into its ruined eye for a devastating critical sneak attack. The party has also gained shadow powers, further enhancing the Federation's already formidable capabilities."},
+{h:"THEY HAVE SHADOW POWERS NOW. SHADOW. POWERS.",b:"By Marta Thorngage",e:"The BWB gained shadow powers from the Soul Forge. SHADOW POWERS. Added to demon pacts, celestial transformations, and dark boons.",t:"Let's take inventory: demon pact, celestial transformation, Vecna's secrets, dark boons, deception expertise on a paladin, and NOW SHADOW POWERS. The Rogue King stabbed a world-ending monster in the eye after his team paralyzed and blinded it. Great combo. But THE SHADOW POWERS. What even ARE these people anymore? Heroes? Monsters? The line was crossed so long ago I can't even see it."},
+{h:"Shadow Powers Acquired: The Castle Corras Arsenal Grows Ever Darker",b:"By Lady Seraphine Ashworth",e:"One observes that the party's collection of supernatural power sources now reads like a cautionary taxonomy of dark magic.",t:"The Ceaseless Maw was defeated through commendable teamwork: Orla's Sunbeam, SavannahBelle's Hold Monster, Corras's critical strike to the creature's blinded eye. Effective. However, the party has now acquired 'shadow powers,' adding to a portfolio that includes demonic contracts, celestial essence, Vecna affiliations, and paladin dark boons. One begins to wonder whether they are collecting power or being collected by it."},
+{h:"Shadow Powers: Another Step Into the Dark",b:"By Brother Cael",e:"They fought a world-threatening monster and won. They gained shadow powers doing it. Each victory costs them a piece of what they were.",t:"The Ceaseless Maw fell to coordinated brilliance: Orla's light, SavannahBelle's paralysis, Corras's dagger. It was genuinely heroic. But the shadow powers they gained trouble me deeply. The party's power grows with each session, and each new source is darker than the last. Demon pacts, Vecna's secrets, and now shadow itself. Light does not war with darkness by becoming it."},
+{h:"Blinded It, Paralyzed It, Stabbed Its Eye. Efficient.",b:"By Vex",e:"Sunbeam, Hold Monster, misty-step onto its face, dagger in the eye. The BWB runs combos like a Luskan pit fighting team.",t:"The Ceaseless Maw got the full BWB treatment: blinded by the druid, paralyzed by the sorcerer, then the rogue teleported onto its face and drove a dagger into its ruined eye. Critical hit. That's coordination. And they picked up shadow powers on the way out. The BWB's power portfolio is getting scary. In Luskan, that means people start paying attention."},
+{h:"THREAT NEUTRALIZED: CEASELESS MAW — SHADOW POWERS ACQUIRED",b:"Filed by: QUILL & SHADOW",e:"SITUATION: World-class threat CEASELESS MAW neutralized. BWB party has acquired shadow-based capabilities. Power accumulation accelerating.",t:"CEASELESS MAW: NEUTRALIZED via combined Sunbeam (ASSET ORLA), Hold Monster (ASSET SAVANNAHBELLE), critical strike to ocular cavity (ASSET CORRAS). BWB party has acquired shadow-based powers. POWER PORTFOLIO UPDATE: demonic (Malachar), celestial (Billabong/Lathander), Vecna-affiliated (Currency of Secrets), shadow (Soul Forge). Accumulation rate: CONCERNING. THREAT LEVEL: CRITICAL."}
+],
+31: [
+{h:"Federation Overcomes Devastating Tragedy With Unwavering Resolve",b:"By Aldric Pennsworth",e:"Though the Federation mourns the temporary loss of the brilliant Ash, our heroes' determination to recover her soul is an inspiration to all.",t:"In the heat of battle against the Ceaseless Maw, the creature seized telepathic control of Billabong and forced her to strike down her dearest friend, Ash. The wizard's soul was captured by a mysterious black obsidian orb. This was not Billabong's fault — she was a victim of mind control. The Federation has already mobilized to recover Ash's soul, and the new arrival Ezrella has joined our cause."},
+{h:"BILLABONG KILLED ASH. UNDER MIND CONTROL. ASH IS DEAD.",b:"By Marta Thorngage",e:"The Ceaseless Maw controlled Billabong's mind and she KILLED ASH with her own hammer. The wizard is DEAD.",t:"ASH IS DEAD. The Ceaseless Maw took over Billabong's mind and forced her to turn her hammer on her best friend. DEAD. The wizard who signed the demon pact, who carried Argentus, who tricked the Spider Dragon — GONE. Her soul is trapped in a black obsidian orb. They didn't save her. They COULDN'T save her. And now they've got some replacement named Ezrella. Is ANYONE keeping count of the casualties?"},
+{h:"Death in the Soul Forge: The Wizard Falls to Friendly Fire",b:"By Lady Seraphine Ashworth",e:"One reports, with genuine solemnity, that Ash has been killed by her own companion under telepathic compulsion, her soul imprisoned in an obsidian artifact.",t:"The Ceaseless Maw's telepathic control of Billabong resulted in the death of Ash, whose soul was captured by a black obsidian orb of unknown provenance. The barbarian's mind-controlled betrayal represents the tragic culmination of the party's pattern of insufficient preparation against psionic threats. One notes that a new member, Ezrella, has joined the party with suspicious rapidity."},
+{h:"Ash Falls: When the Enemy Wields Your Own Friends",b:"By Brother Cael",e:"Billabong killed Ash. She did not choose to. The grief of unwilling betrayal is the cruelest wound of all.",t:"This is the hardest report I have ever written. The Ceaseless Maw seized Billabong's mind and turned her hammer against Ash. The wizard died at the hands of her best friend, her soul captured by a black obsidian orb. Billabong will carry this guilt forever, though it was not her choice. The party has lost not only a member but a piece of its soul."},
+{h:"Ash Is Dead. Mind Control Kill. The Orb Has Her Soul.",b:"By Vex",e:"The Maw puppeted the barbarian into killing the wizard. Soul's in a black orb. Cold business.",t:"The Ceaseless Maw played the worst card in the deck: mind-controlling Billabong and making her kill Ash. The wizard's soul is locked in a black obsidian orb. That's not just death, that's a hostage situation for the afterlife. The emotional damage on Billabong is going to be worse than the physical damage on Ash. New member Ezrella is filling the slot. The show goes on."},
+{h:"CRITICAL CASUALTY REPORT: ASSET ASH — STATUS: DECEASED",b:"Filed by: QUILL & SHADOW",e:"SITUATION: ASSET ASH killed by ASSET BILLABONG under hostile telepathic control. Soul captured in obsidian artifact. New asset EZRELLA recruited.",t:"ASSET ASH: DECEASED. Cause: blunt force trauma from ASSET BILLABONG under telepathic control of CEASELESS MAW. Soul status: CAPTURED in black obsidian orb (artifact classification: UNKNOWN). New asset EZRELLA has joined BWB party. Soul recovery operation anticipated. ASSET BILLABONG psychological status: COMPROMISED by guilt. Party cohesion: STRAINED. THREAT LEVEL: CRITICAL."}
+],
+32: [
+{h:"SavannahBelle Reveals Hidden Lich Threat, Saves Federation",b:"By Aldric Pennsworth",e:"SavannahBelle's extraordinary magical perception unmasked a lich hiding in plain sight, protecting the Federation from a catastrophic ambush.",t:"Using her Revelation in Flesh to gain truesight, SavannahBelle detected three invisible spellcasters and then used Disintegrate to burn away the humanoid disguise of Asnar, revealing the undead lich beneath. The table went silent as the scope of the threat became clear. The Federation's champions are ever vigilant against the forces of undeath."},
+{h:"THERE'S A LICH HUNTING THEM. A LICH. HUNTING CORRAS.",b:"By Marta Thorngage",e:"SavannahBelle unmask a LICH of the CRIMSON ORDER who is specifically hunting the Rogue King. A LICH is after them.",t:"SavannahBelle used her weird flesh transformation to see invisible things and found THREE invisible casters. Then she Disintegrated one's disguise and it turned out to be a LICH. An undead LICH of the CRIMSON ORDER, specifically hunting CORRAS. The Rogue King has made an enemy of an UNDEAD ARCHMAGE. How many existential threats can one group attract before someone SHUTS THEM DOWN?"},
+{h:"The Lich Asnar: A Threat That Redefines the Board",b:"By Lady Seraphine Ashworth",e:"One notes that being personally hunted by a lich of the Crimson Order is the natural consequence of a lifestyle that generates enemies at an industrial rate.",t:"SavannahBelle's deployment of Revelation in Flesh and subsequent Disintegrate revealed that the humanoid Asnar was, in fact, a lich of the Crimson Order specifically targeting Corras. Other changelings were found captive. The revelation that an immortal undead spellcaster has made Corras a personal project should concern anyone within the self-styled monarch's blast radius."},
+{h:"A Lich Hunting the King: The Consequences of Power",b:"By Brother Cael",e:"When a lich marks you for personal attention, it is worth asking what you did to earn such a terrible distinction.",t:"Asnar the Crimson is a lich of the Crimson Order, and he is hunting Corras specifically. SavannahBelle's unmasking was heroic and decisive. But the deeper question remains: what has Corras done, or what does he represent, that an immortal undead wizard would make him a priority target? Power attracts power, and not all of it is friendly."},
+{h:"A Lich. Hunting the Rogue. Of Course.",b:"By Vex",e:"SavannahBelle Disintegrated a disguise and found a lich underneath. The lich wants Corras specifically. The price of fame.",t:"SavannahBelle popped truesight, found three invisible casters, and Disintegrated one's face to reveal a lich. Asnar the Crimson, Crimson Order, personally hunting Corras. In Luskan, when someone immortal takes a personal interest in you, it's either very good or very bad. For Corras, it's a lich. So very bad. But at least he knows now."},
+{h:"HOSTILE IDENTIFICATION: ASNAR THE CRIMSON — LICH CLASS",b:"Filed by: QUILL & SHADOW",e:"SITUATION: ASSET SAVANNAHBELLE unmasked lich ASNAR THE CRIMSON (Crimson Order). Primary target: ASSET CORRAS. Changeling captives located.",t:"ASSET SAVANNAHBELLE deployed Revelation in Flesh (truesight) + Disintegrate to unmask ASNAR THE CRIMSON as lich-class hostile. Crimson Order affiliation confirmed. Primary target: ASSET CORRAS (motivation: <span class='redacted'>CLASSIFIED</span>). Changeling captives recovered. THREAT LEVEL: CRITICAL. Lich-class hostile represents existential threat to BWB party and regional stability."}
+],
+33: [
+{h:"His Majesty's Noble Sacrifice Saves Beloved Companions",b:"By Aldric Pennsworth",e:"In the most selfless act of heroism in Federation history, His Majesty surrendered himself to save every one of his friends.",t:"With Dahlia and Billabong trapped in a Force Cage, SavannahBelle chained, and the warehouse ablaze, His Majesty faced the impossible. Rather than flee, he handed his bag of holding to Orla, donned anti-magic manacles, and surrendered himself to the lich. Billabong branded him with Nightmare's Leash so he could be tracked. This is not defeat. This is love. This is leadership."},
+{h:"THE ROGUE KING SURRENDERED. THE LICH WON. IT'S OVER.",b:"By Marta Thorngage",e:"Corras SURRENDERED. Put on anti-magic manacles. Gave himself to the LICH. The BWB has LOST.",t:"It's over. The Rogue King put on ANTI-MAGIC MANACLES and SURRENDERED to the lich Asnar. His friends were trapped, chained, burning. And he GAVE UP. Handed his bag of holding to Orla and walked into captivity. The self-proclaimed king, the man who declared war on CELESTIALS, SURRENDERED to an undead wizard. The entire party is captured. Transported to a THAYAN DUNGEON. They're DONE."},
+{h:"The Fall of Corras: Surrender as a Final Act of Control",b:"By Lady Seraphine Ashworth",e:"One might argue that Corras's surrender was strategic rather than submissive, though the distinction may be academic from inside a Thayan dungeon.",t:"The self-styled monarch surrendered to the lich Asnar the Crimson, donning anti-magic manacles after his companions were neutralized. Billabong's branding with Nightmare's Leash suggests the party planned for rescue even in defeat. One notes that Corras awakened surrounded by dead changelings, which suggests the lich's intentions extend beyond simple imprisonment."},
+{h:"Surrender: The Hardest Choice a Leader Can Make",b:"By Brother Cael",e:"Corras surrendered to save his friends. There is no shame in this. But the consequences will be felt for a long time.",t:"With every option exhausted, Corras chose the only path that preserved the lives of his friends. He surrendered. He put on the manacles. He walked into the lich's custody. This is not cowardice — it is the most profound act of love a leader can perform. But he woke up surrounded by dead changelings, and the party is now in a Thayan dungeon. Prayer is warranted."},
+{h:"Surrendered to a Lich to Save His Crew. Honor Among Thieves.",b:"By Vex",e:"The man put on anti-magic manacles and gave himself to a lich to save his friends. In Luskan, that's the code.",t:"Let me be clear: Corras had an out. He could have run. Instead, he handed his bag to Orla, put on anti-magic cuffs, and surrendered to a lich. For his crew. Billabong branded him so they could track him. The warehouse was burning, his friends were trapped, and he chose captivity over escape. In Luskan, we call that the code. The man has honor."},
+{h:"CRITICAL: ASSET CORRAS CAPTURED — THAYAN DETENTION",b:"Filed by: QUILL & SHADOW",e:"SITUATION: ASSET CORRAS voluntarily surrendered to lich ASNAR. Anti-magic restraints applied. Party transported to Thayan dungeon.",t:"ASSET CORRAS has surrendered to lich ASNAR THE CRIMSON after party was neutralized (Force Cage, chains, fire). Anti-magic manacles applied voluntarily. ASSET BILLABONG applied tracking brand (Nightmare's Leash) before capture. Entire party now in Thayan dungeon. ASSET CORRAS awakened surrounded by deceased changelings. RESCUE OPERATION anticipated. THREAT LEVEL: CRITICAL. All Harper assets in Thayan region activated."}
+],
+34: [
+{h:"The Most Spectacular Victory in Federation History",b:"By Aldric Pennsworth",e:"A lich slain by his own knight's misfired crossbow bolt. The gods themselves conspire to protect our Federation.",t:"In the climactic battle against Asnar the Crimson, SavannahBelle's devastating 78-damage Disintegrate left the lich at a mere 7 HP. When she followed with a bare-fisted punch for 1 damage, the lich clung to unlife. Then fate intervened: a Thayan knight aimed at SavannahBelle, rolled a natural 1, and the bolt sailed past her to strike Asnar for 8 damage, destroying his own master. His Majesty absorbed his twin, gaining 23 attribute points and ascending to new heights of power."},
+{h:"A FRIENDLY-FIRE NAT-1 KILLED THE LICH. NOT THE BWB. A NAT-1.",b:"By Marta Thorngage",e:"The BWB didn't kill the lich. A THAYAN KNIGHT did. By ACCIDENT. With a NAT-1. They're taking CREDIT for this.",t:"SavannahBelle Disintegrated the lich down to 7 HP. Good. Then she PUNCHED it for 1 damage. Not enough. The killing blow? A THAYAN KNIGHT aimed at SavannahBelle, rolled a NATURAL ONE, and his crossbow bolt flew over her and hit his OWN MASTER for 8 damage. The lich was killed by FRIENDLY FIRE. And Corras absorbed some evil twin for 23 STAT POINTS. The Rogue King literally got STRONGER from this. HOW."},
+{h:"The Nat-1 Heard Around the World: Fortune Favours the Reckless",b:"By Lady Seraphine Ashworth",e:"One struggles to credit the BWB with a victory that was, in the most literal sense, delivered by their enemy's incompetence.",t:"The lich Asnar was reduced to 7 HP by SavannahBelle's Disintegrate and a rather endearing bare-fisted punch. The killing blow came from a Thayan knight whose natural 1 sent his crossbow bolt into his own master. That Corras then absorbed an evil twin and gained 23 attribute points transforms this from farce into something approaching mythological inevitability."},
+{h:"Victory by Accident: When Fate Makes the Final Move",b:"By Brother Cael",e:"The lich died by his own servant's hand. There is justice in this, even if it was purely accidental.",t:"Asnar the Crimson was destroyed not by heroic swordplay but by his own knight's errant crossbow bolt. There is a poetic justice in a tyrant undone by the incompetence of his own minions. That Corras then absorbed an evil twin and gained 23 attribute points is... more complicated. Power gained from absorbing one's darker half raises questions about what was absorbed alongside the statistics."},
+{h:"A Nat-1 Killed a Lich. I've Never Seen Anything Like It.",b:"By Vex",e:"The knight shot at the sorcerer, rolled a nat-1, killed his own boss. The lich went down to friendly fire. Incredible.",t:"78 damage from Disintegrate. 1 damage from a punch. 7 HP left on the lich. Then a Thayan knight aims at SavannahBelle, rolls a natural 1, and the bolt kills his own master. I have been in the information business for a long time and I have NEVER seen a lich killed by friendly fire. Also, Corras absorbed his evil twin and got 23 stat points. Because why not."},
+{h:"LICH ASNAR: DESTROYED — ASSET CORRAS AUGMENTED",b:"Filed by: QUILL & SHADOW",e:"SITUATION: Lich ASNAR destroyed by allied friendly fire (nat-1). ASSET CORRAS absorbed changeling twin. +23 attribute points. ASSESSMENT: Power surge unprecedented.",t:"LICH ASNAR THE CRIMSON: DESTROYED. Kill mechanism: friendly fire — Thayan knight nat-1 crossbow bolt redirected into lich (8 damage, 7 HP remaining). ASSET SAVANNAHBELLE contributed 79 damage (Disintegrate + unarmed strike). ASSET CORRAS absorbed changeling twin: +23 attribute points distributed across all scores. Party reached level 15. Black crystal dust bearing ASSET ASH's face recovered. THREAT LEVEL: CRITICAL (power surge)."}
+],
+35: [
+{h:"Federation Heroes Boldly Enter Barovia for the Greater Good",b:"By Aldric Pennsworth",e:"Mordenkainen himself has sent our champions to Barovia to retrieve the next piece of the Rod of Seven Parts.",t:"The legendary archmage Mordenkainen has personally entrusted our heroes with a mission to Barovia, the dread domain of Strahd von Zarovich. The party has entered the infamous Death House with characteristic courage. The Federation's quest for the Rod of Seven Parts now spans entire planes of existence."},
+{h:"THEY'RE IN BAROVIA. THE LAND OF VAMPIRES. VOLUNTARILY.",b:"By Marta Thorngage",e:"Mordenkainen teleported them to BAROVIA and they walked into DEATH HOUSE. Strahd's domain. ON PURPOSE.",t:"The BWB has been transported to BAROVIA. The DEMIPLANE OF DREAD. Where STRAHD VON ZAROVICH rules. They walked directly into DEATH HOUSE — the most infamous haunted manor in existence — because Mordenkainen told them to. They went from fighting liches to entering a VAMPIRE'S DOMAIN. Voluntarily. Who's taking bets on how many of them come back?"},
+{h:"Barovia: A Dimension the BWB May Not Be Equipped to Survive",b:"By Lady Seraphine Ashworth",e:"One notes that Barovia is a closed demiplane from which escape requires either extraordinary power or Strahd's permission, neither of which the party currently possesses.",t:"Mordenkainen's portal has deposited the BWB party directly into Barovia, in front of Durst Manor — colloquially known as Death House. The transition from the Sword Coast to Strahd's domain represents a dramatic escalation in the dangers the party faces. One wonders whether they fully appreciate that Barovia does not let people leave."},
+{h:"Barovia: The Land from Which None Return Unchanged",b:"By Brother Cael",e:"To enter Barovia is to walk into a test of the soul. Strahd's domain corrupts not through force but through despair.",t:"The party has entered Barovia. Death House stands before them. This is not a dungeon or a battlefield — it is a spiritual crucible. Strahd von Zarovich's domain is designed to break hope and corrupt virtue. The BWB's accumulation of dark powers makes them particularly vulnerable to Barovia's insidious whispers. I pray they remember who they are."},
+{h:"Barovia. Death House. These People Just Can't Quit.",b:"By Vex",e:"From fighting liches to entering a vampire lord's demiplane. The BWB's escalation curve is something else.",t:"The BWB went through a portal and landed in Barovia. Strahd's personal playground. And they walked right into Death House like it was a tavern. These people have fought Beholders, liches, celestials, and demons, and now they're in a vampire's dimension. In Luskan, we know when to fold. The BWB apparently doesn't. Either they're going to conquer Barovia or it's going to eat them."},
+{h:"DIMENSIONAL TRANSIT: BWB PARTY RELOCATED TO BAROVIA",b:"Filed by: QUILL & SHADOW",e:"SITUATION: BWB party transported to demiplane BAROVIA via Mordenkainen portal. Entered DEATH HOUSE. ASSESSMENT: Extraction capability uncertain.",t:"BWB party has been relocated to demiplane BAROVIA (domain of STRAHD VON ZAROVICH) via portal established by MORDENKAINEN. Immediate location: DURST MANOR (Death House). Rod of Seven Parts segment located within domain. CRITICAL CONCERN: Barovia is a closed demiplane. Exit requires either artifact-level magic or permission from domain lord STRAHD. Harper assets in Barovia: NONE. Party is operating without support network. THREAT LEVEL: CRITICAL."}
+],
+36: [
+{h:"SavannahBelle Demonstrates Extraordinary Courage Facing Strahd's Illusion",b:"By Aldric Pennsworth",e:"Our champion SavannahBelle confronted an illusion of the dread lord Strahd himself, drinking from his goblet without flinching.",t:"In a display of fearless resolve, SavannahBelle accepted a blood-filled goblet from an illusion of Strahd von Zarovich within Death House. Though the experience left her temporarily unsettled, her bravery in facing the vampire lord's psychic assault head-on is a testament to the Federation's unshakeable courage."},
+{h:"SAVANNAHBELLE DRANK BLOOD WITH A STRAHD ILLUSION. CURSED NOW.",b:"By Marta Thorngage",e:"She sat down at a table with STRAHD, drank his BLOOD GOBLET, and got cursed with paranoia about wizards. SMART.",t:"SavannahBelle was pulled into an illusion. At the end of a long table, there's STRAHD VON ZAROVICH. He offers her a goblet of BLOOD. And she DRANK IT. She drank VAMPIRE BLOOD offered by the lord of BAROVIA. Now she's cursed with paranoia about wizards. WIZARDS. Their primary caster is a wizard-equivalent and now SavannahBelle thinks all wizards are out to get her. GREAT for team chemistry."},
+{h:"The Blood Toast: SavannahBelle's Encounter With Strahd's Shadow",b:"By Lady Seraphine Ashworth",e:"One observes that accepting a beverage from an avatar of Strahd von Zarovich demonstrates a relationship with self-preservation that can only be described as theoretical.",t:"SavannahBelle was ensnared by Death House into a psychic encounter with an illusion of Strahd, accepting a goblet of blood and acquiring a curse of paranoia regarding wizards. One notes the irony of a party member who regularly works alongside arcane casters now compulsively suspecting them of conspiracy. Death House's psychological warfare is, one must admit, elegantly targeted."},
+{h:"Strahd's First Move: A Toast to Coming Darkness",b:"By Brother Cael",e:"Strahd offered blood and SavannahBelle drank. The curses of Barovia begin not with violence but with choices.",t:"This is how Barovia works. Not with claws and fangs, but with choices that feel reasonable in the moment. SavannahBelle was offered a goblet by an image of Strahd. She drank. Now she is cursed with paranoia. The Death House does not kill — it corrupts. Each member of the party will face similar tests, and each must choose. Not all will choose wisely."},
+{h:"Toasting With the Devil. That's Either Bold or Stupid.",b:"By Vex",e:"She sat down with a Strahd illusion and drank blood from his goblet. Got cursed. But she looked him in the eye.",t:"SavannahBelle found herself at a table with Strahd. He offered blood. She drank. Got cursed with wizard paranoia, which is inconvenient when your party has casters. But here's the thing: she looked a vampire lord in the eye and drank from his cup. That's not weakness. That's the kind of nerve that either gets you killed or gets you a throne. In Barovia, both outcomes are available."},
+{h:"PSYCHIC ASSAULT: ASSET SAVANNAHBELLE — STRAHD CONTACT",b:"Filed by: QUILL & SHADOW",e:"SITUATION: ASSET SAVANNAHBELLE made psychic contact with STRAHD VON ZAROVICH (illusory). Curse acquired. ASSESSMENT: Barovia's corruption has begun.",t:"ASSET SAVANNAHBELLE subjected to psychic encounter with STRAHD VON ZAROVICH (illusory manifestation) within Death House. Blood consumption resulted in curse: paranoia regarding arcane casters. Multiple party members now afflicted with Death House curses. Barovian corruption timeline: INITIATED. Party psychological integrity: DEGRADING. THREAT LEVEL: CRITICAL."}
+],
+37: [
+{h:"His Majesty Rejects Dark Entity With Iron Will",b:"By Aldric Pennsworth",e:"Faced with an ancient entity of terrifying power, His Majesty Corras's will proved stronger. He rolled a 25 against DC 23.",t:"His Majesty encountered an ominous black orb radiating mind-control magic and, through sheer force of will, resisted its influence with a breathtaking Wisdom saving throw of 25 against a DC of 23. The entity — claiming to be the 'master of this realm' — offered partnership and power. His Majesty considered it, then rejected it. True strength is knowing when to refuse power."},
+{h:"CORRAS 'CONSIDERED' A DEAL WITH THE MASTER OF BAROVIA. CONSIDERED IT.",b:"By Marta Thorngage",e:"The Rogue King touched a dark orb, heard a voice offering power, RUBBED HIS CHIN AND THOUGHT ABOUT IT. Dahlia was TERRIFIED.",t:"A dark entity claiming to be master of the realm offered Corras POWER. And the Rogue King RUBBED HIS CHIN AND CONSIDERED IT. Dahlia was watching and TERRIFIED. He eventually said no, but the fact that he HESITATED tells you everything about what kind of ruler he is. A man who looks at pure evil and thinks 'hmm, interesting offer' is NOT someone who should have a kingdom."},
+{h:"The Black Orb: Corras Flirts With Powers Beyond His Comprehension",b:"By Lady Seraphine Ashworth",e:"One notes that the self-styled monarch's response to an ancient evil's offer of power was not immediate rejection but visible contemplation.",t:"Corras succeeded on a DC 23 Wisdom saving throw — a notable achievement. However, witnesses report that upon hearing the entity's offer of partnership, Corras visibly considered the proposition before declining. That his paladin companion was 'terrified' by his deliberation suggests the party itself is uncertain of his moral trajectory."},
+{h:"Corras Resists, But the Hesitation Says Everything",b:"By Brother Cael",e:"He said no. But he thought about it first. The space between temptation and refusal is where character is revealed.",t:"Corras resisted the black orb's mind control with an extraordinary saving throw. He rejected the dark entity's offer. Both are praiseworthy. But he considered it first. Dahlia saw it. The party saw it. A leader's character is not measured by whether he ultimately refuses evil, but by how long he stands at the threshold contemplating acceptance."},
+{h:"Touched a Dark Orb, Heard the Pitch, Said No. Smart.",b:"By Vex",e:"Ancient entity offers unlimited power. Corras thinks about it, then says no. That's not weakness, that's due diligence.",t:"An ancient entity of god-like power offers Corras a partnership. He rolls a 25 to resist the mind control, hears the pitch, thinks about it, and says no. The Tribune will call that hesitation. I call it evaluating the deal. In Luskan, you never say no without hearing the terms first. Corras may be a rogue king, but he knows how to negotiate."},
+{h:"PSIONIC ASSAULT: ASSET CORRAS — DEATH HOUSE ENTITY",b:"Filed by: QUILL & SHADOW",e:"SITUATION: ASSET CORRAS subjected to psionic assault by unidentified entity (DC 23). Resisted. Entity offered 'partnership.' ASSET CORRAS: deliberated before declining.",t:"ASSET CORRAS interacted with psionic artifact (black orb). Entity designation: 'MASTER OF THIS REALM.' Psionic assault: RESISTED (roll: 25, DC: 23). Entity offered partnership/power sharing. ASSET CORRAS: DELIBERATED before declining. ASSET DAHLIA expressed alarm at deliberation period. ASSESSMENT: ASSET CORRAS's resistance to dark offers is functional but not instinctive. Moral resilience: ADEQUATE but trending. THREAT LEVEL: CRITICAL."}
+],
+38: [
+{h:"Federation Champions Burn Death House to the Ground",b:"By Aldric Pennsworth",e:"In a triumphant act of defiance, our heroes escaped the infamous Death House and SavannahBelle reduced it to ashes.",t:"The BWB party has escaped the dreaded Death House through a harrowing skill challenge, with each member demonstrating their unique talents. Orla flew out as a falcon, Corras nailed a nat-20 backflip through a closing doorway, and SavannahBelle crowned the escape by unleashing twin-spelled fireballs that reduced the sentient mimic house to a pile of smoldering cinders. The Federation's enemies burn. All of them."},
+{h:"THEY BURNED DOWN A HOUSE. AN ENTIRE SENTIENT HOUSE.",b:"By Marta Thorngage",e:"SavannahBelle twin-fireballed Death House into oblivion. Because arson is always the answer for the BWB.",t:"After barely surviving the Death House by the skin of their teeth — Orla turned into a bird, SavannahBelle became a MUCUS WORM, Corras did a BACKFLIP — they burned it down. Twin fireballs. The entire sentient building. Reduced to ash. Their answer to a haunted house was DESTROY IT WITH FIRE. In someone else's DEMIPLANE. They are GUESTS in Barovia and they're already committing ARSON."},
+{h:"Death House Destroyed: An Impressive Exit, if Somewhat Indiscriminate",b:"By Lady Seraphine Ashworth",e:"One concedes that twin-spelling fireballs into a sentient building is a definitive solution, if not a subtle one.",t:"The party's escape from Death House featured a falcon transformation, a mucus worm metamorphosis, a nat-20 backflip, and concluded with SavannahBelle's twin-spelled fireballs reducing the sentient structure to cinders. One might describe this as 'the Castle Corras doctrine': when conventional solutions fail, apply sufficient heat to render the question moot."},
+{h:"Escape and Fire: Liberation Through Destruction",b:"By Brother Cael",e:"They escaped. They burned it down. The destruction felt earned, but destruction as a reflex grows more concerning with each session.",t:"The party survived Death House through creativity and determination. The escape was genuinely harrowing. But SavannahBelle's decision to burn the sentient house afterward, while cathartic, represents a pattern: when the BWB encounters something frightening, their instinct is increasingly to destroy it rather than understand it."},
+{h:"Twin Fireballs on a Sentient House. Statement Made.",b:"By Vex",e:"Barely escaped a living haunted house, then turned around and fireballed it twice. That's how you leave a review.",t:"The escape from Death House was a highlight reel: falcon, mucus worm, a literal backflip with a nat-20 through a closing door. But the closer was SavannahBelle twin-fireballing the entire sentient building into ash. In Luskan, when you leave a business, you either tip well or burn it down. The BWB chose option two. Respect."},
+{h:"OPERATION DEATH HOUSE: COMPLETED — STRUCTURE DESTROYED",b:"Filed by: QUILL & SHADOW",e:"SITUATION: BWB party escaped Death House via skill challenge. ASSET SAVANNAHBELLE destroyed structure via twin-spell Fireball.",t:"DEATH HOUSE: DESTROYED. Escape via multi-asset skill challenge. Notable: ASSET ORLA (falcon wild shape), ASSET CORRAS (nat-20 acrobatic escape), ASSET SAVANNAHBELLE (twin-spell Fireball, structure reduced to ash). Death House was sentient mimic-class entity. Destruction: permanent. Barovian exploration continues. THREAT LEVEL: CRITICAL. STRAHD response to property destruction: anticipated."}
+],
+39: [
+{h:"Heroes Rescue Innocents in the Cursed Village of Barovia",b:"By Aldric Pennsworth",e:"Even in the darkest corner of existence, the Federation's champions protect the innocent and defy evil.",t:"Upon arriving at the cursed Village of Barovia, our heroes immediately sprang into action to rescue innocents. SavannahBelle's Wall of Stone trapped dire wolves while Ezrella sprinted to rescue a bound sacrifice. The Federation's compassion knows no boundaries — not even the boundaries between dimensions."},
+{h:"THE BWB IS NOW PLAYING HERO IN STRAHD'S VILLAGE. BOLD.",b:"By Marta Thorngage",e:"They walked into Strahd's village and started rescuing people. In a vampire lord's PERSONAL DOMAIN. Bold or suicidal?",t:"The BWB arrived at the Village of Barovia and immediately started playing hero. Trapped dire wolves behind a Wall of Stone, rescued some sacrifice sack — all very noble. But they're in STRAHD'S VILLAGE. Every person here reports to the vampire lord. Every good deed is noticed. Every rescue is a provocation. They're painting targets on themselves in a domain where the ruler sees EVERYTHING."},
+{h:"Village Heroics in Barovia: Admirable, if Strategically Questionable",b:"By Lady Seraphine Ashworth",e:"One observes that performing rescue operations in a domain ruled by an omniscient vampire lord is rather like whispering secrets in a room full of mirrors.",t:"The party's rescue of bound innocents in the Village of Barovia demonstrates their characteristic compassion. SavannahBelle's Wall of Stone was tactically sound, and Ezrella's sprint to the sacrifice was courageous. However, one must note that in Strahd's domain, acts of heroism are provocations. The vampire lord does not tolerate competitors for his subjects' affection."},
+{h:"Light in Darkness: The BWB's First Kindness in Barovia",b:"By Brother Cael",e:"They saved innocents in a land of darkness. It may be the most genuinely heroic thing they have done in months.",t:"In the cursed Village of Barovia, the party performed a simple, good act: they rescued someone from dire wolves. No demon pacts, no shadow powers, no Vecna currencies. Just courage and compassion. SavannahBelle's Wall of Stone and Ezrella's sprint were the kinds of heroism I had hoped to see more of. Barovia tests the soul, and this time, the party passed."},
+{h:"Wolf Trap and Rescue. Clean Work in a Dirty Place.",b:"By Vex",e:"Wall of Stone to box the wolves, sprint to grab the prize. Simple, effective, no collateral. Nice.",t:"The BWB hit the Village of Barovia and immediately ran a rescue op. SavannahBelle walls in the wolves, Ezrella sprints for the sacrifice sack. No casualties, no collateral, no drama. Just clean execution. It's the kind of simple, effective work that sometimes gets lost between the twin fireballs and the lich fights. Nice to see them work clean."},
+{h:"BAROVIA OPERATIONS: VILLAGE CONTACT ESTABLISHED",b:"Filed by: QUILL & SHADOW",e:"SITUATION: BWB party made contact with Village of Barovia populace. Rescue operation conducted. ASSESSMENT: Strahd will be aware.",t:"BWB party arrived at Village of Barovia. Rescue operation conducted: ASSET SAVANNAHBELLE deployed Wall of Stone (wolf containment), ASSET EZRELLA executed sprint extraction of bound sacrifice. Party proceeding to Tser Pool. ASSESSMENT: All activity in Barovia is monitored by domain lord STRAHD. Rescue operations will have drawn attention. THREAT LEVEL: CRITICAL."}
+],
+40: [
+{h:"His Majesty's Legendary Sleight of Hand Secures Legendary Artifact",b:"By Aldric Pennsworth",e:"With a natural 20, His Majesty stole the Deck of Many Things from Madam Eva herself — and escaped a dreamscape prison to boot.",t:"In what must be called the greatest heist in campaign history, His Majesty Corras used a nat-20 sleight of hand to steal the Deck of Many Things from the legendary Madam Eva. Trapped in a dreamscape prison, he drew the dreaded Donjon card but somehow palmed the deck and escaped — emerging from a latrine pit two hours later, victorious. Filthy, but victorious."},
+{h:"THE ROGUE KING STOLE FROM MADAM EVA AND FELL IN A TOILET",b:"By Marta Thorngage",e:"He nat-20'd stealing the Deck of Many Things from a legendary seer and ended up in a LATRINE PIT for TWO HOURS.",t:"Corras stole from MADAM EVA. The legendary Vistani seer. He pickpocketed the DECK OF MANY THINGS with a nat-20, got caught by a magical trap, drew the DONJON card in a DREAMSCAPE PRISON, and somehow palmed the deck before reappearing in a TOILET. He was covered in latrine filth for two hours. The Rogue King's greatest heist ended with him climbing out of a PRIVY. You cannot make this up."},
+{h:"The Madam Eva Heist: Audacity Rewarded With a Latrine",b:"By Lady Seraphine Ashworth",e:"One must concede that successfully stealing the Deck of Many Things requires extraordinary skill, though one's admiration is tempered by the latrine-based exit strategy.",t:"Corras's nat-20 theft of the Deck of Many Things from Madam Eva is, purely from a technical perspective, an extraordinary feat of larceny. That the subsequent dreamscape imprisonment, Donjon card drawing, and escape deposited him in a latrine pit rather undermines the elegance of the operation. Still, he emerged with the Deck. In Castle Corras, apparently, all roads lead to victory — some merely travel through sewage."},
+{h:"The Deck of Many Things: Power Beyond Any Mortal's Right",b:"By Brother Cael",e:"He stole the most dangerous artifact in existence from a seer who has guarded it for centuries. What could possibly go wrong?",t:"Corras has stolen the Deck of Many Things. The single most dangerous magical artifact in known existence. He took it from Madam Eva, a seer of legendary power, and escaped a dreamscape prison to keep it. The Deck destroys kingdoms, elevates paupers, and ends lives on a card draw. That it is now in the hands of a rogue king with a history of impulse should terrify us all."},
+{h:"Stole the Deck of Many Things With a Nat-20. Legend.",b:"By Vex",e:"Pickpocketed Madam Eva, survived a dreamscape trap, and climbed out of a toilet holding the most powerful artifact in existence.",t:"Corras stole the Deck of Many Things. FROM MADAM EVA. Nat-20 sleight of hand. Got caught in a dreamscape, drew the Donjon card, palmed the deck anyway, and reappeared in a latrine pit. Covered in filth. Holding the most dangerous artifact in the multiverse. In Luskan, this is the kind of heist that gets you a statue. After they hose you down."},
+{h:"CRITICAL: DECK OF MANY THINGS — ACQUIRED BY ASSET CORRAS",b:"Filed by: QUILL & SHADOW",e:"SITUATION: ASSET CORRAS acquired Deck of Many Things via theft from Vistani seer MADAM EVA. Nat-20 confirmed. ASSESSMENT: Catastrophic potential.",t:"ASSET CORRAS has acquired DECK OF MANY THINGS via nat-20 larceny against MADAM EVA (Vistani seer). Magical trap triggered: dreamscape imprisonment. DONJON card drawn. ASSET CORRAS palmed deck and escaped via <span class='redacted'>CLASSIFIED MECHANISM</span>. Emergence point: latrine facility. Artifact now in BWB possession. THREAT ASSESSMENT: MAXIMUM. The Deck of Many Things in the hands of a demonstrably impulsive rogue represents an existential-level variable. All contingencies activated."}
+],
+41: [
+{h:"Federation Confronts the Dread Lord Strahd in Direct Combat",b:"By Aldric Pennsworth",e:"Our heroes engaged Strahd von Zarovich himself at the Crystalline Heart, fighting the vampire lord on his own ground.",t:"In a battle of legendary proportions, the Federation's champions confronted Strahd von Zarovich at the Crystalline Heart. Though the battle exacted a terrible cost — SavannahBelle was turned through Strahd's dark magic — our heroes fought with honor against the most powerful vampire in existence. The Federation does not retreat, even in the domain of darkness itself."},
+{h:"SAVANNAHBELLE IS A VAMPIRE NOW. AN ACTUAL VAMPIRE SPAWN.",b:"By Marta Thorngage",e:"Strahd charmed Ezrella, used her to beat SavannahBelle unconscious, then BIT her and sealed her in a coffin. She's a VAMPIRE SPAWN.",t:"SAVANNAHBELLE IS A VAMPIRE. Let me repeat that: AN ACTUAL VAMPIRE SPAWN under Strahd's control. Strahd charmed Ezrella with a crown, made her crit SavannahBelle twice while she was paralyzed from drinking from a cursed chalice, and then STRAHD BIT HER AND SEALED HER IN A COFFIN. A BWB member is now UNDEAD. She is Strahd's CREATURE. How is anyone in Castle Corras safe with AN ACTUAL VAMPIRE in the party?"},
+{h:"The Fall of SavannahBelle: A Vampire Spawn Is Born",b:"By Lady Seraphine Ashworth",e:"One reports, with something approaching genuine sorrow, that SavannahBelle has been transformed into a vampire spawn under Strahd's direct control.",t:"The battle at the Crystalline Heart resulted in SavannahBelle's transformation into a vampire spawn. The chain of events — Ezrella charmed by spectral crown, SavannahBelle paralyzed by profane chalice, automatic critical hits, failed death saves due to cursed cloak, Strahd's final bite — represents a masterclass in predatory orchestration by the vampire lord. One does not often feel sympathy for the BWB. Today, one does."},
+{h:"SavannahBelle: From Sorcerer to Spawn",b:"By Brother Cael",e:"She drank from Strahd's chalice. She wore a cursed cloak. Choice by choice, Barovia claimed her.",t:"SavannahBelle's fall was not a single moment but a cascade of choices: the profane chalice, the cursed cloak, the battle against a foe who planned every step. Strahd did not merely defeat her — he orchestrated her transformation. She is now vampire spawn. A soul corrupted. The party must now decide: is rescue possible, or has SavannahBelle been lost to a darkness that does not release its hold?"},
+{h:"One of Theirs Turned Vampire. Strahd Plays the Long Game.",b:"By Vex",e:"Strahd turned SavannahBelle into a vampire spawn using her own cursed equipment against her. Cold. Professional. Terrifying.",t:"Strahd von Zarovich just showed the BWB why he's the apex predator. Charmed one party member, used her to beat another unconscious, then turned SavannahBelle into a vampire spawn. The cursed cloak she looted? That was part of it. The chalice she drank from? Part of it. Every move was planned. In Luskan, we admire efficiency. Strahd is operating on a level that makes our best look amateur."},
+{h:"CRITICAL CASUALTY: ASSET SAVANNAHBELLE — VAMPIRIC CONVERSION",b:"Filed by: QUILL & SHADOW",e:"SITUATION: ASSET SAVANNAHBELLE converted to vampire spawn by STRAHD VON ZAROVICH. Now under hostile control. ASSESSMENT: Asset compromised.",t:"ASSET SAVANNAHBELLE: STATUS CHANGED — VAMPIRE SPAWN. Conversion sequence: (1) ASSET EZRELLA charmed via spectral crown, (2) ASSET SAVANNAHBELLE paralyzed via profane chalice, (3) charmed ASSET EZRELLA delivered automatic critical hits, (4) cursed Cloak of Displacement forced death save failures, (5) STRAHD administered vampiric bite. ASSET SAVANNAHBELLE now under STRAHD's direct control. Party composition: FUNDAMENTALLY ALTERED. THREAT LEVEL: MAXIMUM."}
+],
+42: [
+{h:"Crossover Battle Achieves Historic Victory Against Strahd's Forces",b:"By Aldric Pennsworth",e:"Two adventuring parties united to strike devastating blows against Strahd's inner circle, shattering a bride and restoring a lost ally.",t:"In a battle of unprecedented scale, both the BWB and allied adventurers combined forces against Strahd's forces. The hero Shrum's mirror was magically restored, his lost memories returned, and he used the artifact to shatter the vampire bride Ludmilla into a million pieces. Rahadin was slain and the Heart of Sorrow destroyed. The tide turns against the darkness."},
+{h:"SHRUM'S MIRROR SHATTERED A VAMPIRE BRIDE. GOOD.",b:"By Marta Thorngage",e:"At least SOMEONE in this campaign is getting things done. Shrum broke Ludmilla with his mirror.",t:"Finally, some good news. In the crossover battle against Strahd, Shrum's broken mirror magically reformed, his memories returned, and he used it to show Ludmilla her true decaying face. She SHATTERED. Into a MILLION PIECES. Then he raised her as a specter. Rahadin is dead. The Heart of Sorrow is destroyed. For once, the good guys won decisively. Even if some of them are FROM A DIFFERENT CAMPAIGN."},
+{h:"The Convergence: When Two Campaign Parties Share One Battlefield",b:"By Lady Seraphine Ashworth",e:"One finds the concept of two adventuring parties merging across campaign boundaries to fight a vampire lord to be, frankly, extraordinary.",t:"The crossover battle saw two distinct adventuring parties unite against Strahd's inner circle. Shrum's restoration — mirror reformed, memories recovered, bard identity reclaimed — followed by Ludmilla's spectacular dissolution is the kind of narrative convergence that defies conventional analysis. Rahadin's death and the Heart of Sorrow's destruction represent genuine strategic victories."},
+{h:"Mirrors, Memories, and the Shattering of Evil",b:"By Brother Cael",e:"Shrum's restored mirror showed Ludmilla what she truly was. Sometimes the truth is the most powerful weapon.",t:"Shrum's mirror showed a vampire bride her true face, and the revelation destroyed her. There is profound spiritual truth in this: evil cannot survive honest self-reflection. Shrum's restored memories and identity gave him the power to wield truth as a weapon. The Heart of Sorrow is destroyed, Rahadin is slain, and light flickers in Barovia's darkness."},
+{h:"Mirror Kills Vampire Bride. Memories Are Lethal Weapons.",b:"By Vex",e:"Shrum got his mirror and his memories back, then used one to make a vampire bride shatter into a million pieces. Cinema.",t:"Shrum's mirror reformed in the middle of battle. His memories came flooding back. Then he pointed the mirror at Ludmilla, showed her what she really looked like underneath the pretty face, and she SHATTERED. Raised her as a specter afterward. Rahadin's dead. Heart of Sorrow, gone. The Strahd operation is losing infrastructure fast."},
+{h:"BATTLE REPORT: STRAHD INNER CIRCLE — SIGNIFICANT ATTRITION",b:"Filed by: QUILL & SHADOW",e:"SITUATION: Combined party operation eliminated multiple Strahd assets. LUDMILLA shattered. RAHADIN killed. Heart of Sorrow destroyed.",t:"COMBINED OPERATIONS: BWB party + allied adventuring party engaged Strahd's inner circle. Results: LUDMILLA (vampire bride) — DESTROYED via restored mirror artifact (SHRUM). RAHADIN — KILLED. Heart of Sorrow — DESTROYED. SHRUM: memories restored, identity recovered (bard, formerly enslaved by Strahd). ASSET SAVANNABELLE: still vampire spawn. ASSESSMENT: Strahd's defensive infrastructure significantly degraded. Final confrontation imminent. THREAT LEVEL: MAXIMUM."}
+],
+43: [
+{h:"Federation Eliminates Hostile Political Rival Through Decisive Action",b:"By Aldric Pennsworth",e:"The treacherous Lord Neverember has been dealt with through swift and necessary action, securing the Federation's sovereignty.",t:"The Matron of Ravens placed Lord Neverember and his lackeys into a magical coma. When the party chose not to wake the hostile political rival, Champion Dahlia used her Soulbinder abilities to efficiently resolve the situation. The decision to attribute this outcome to the Matron was a brilliant piece of strategic misdirection. The Federation's borders are now secure from internal political threats."},
+{h:"THEY MURDERED LORD NEVEREMBER IN HIS SLEEP. MURDERED HIM.",b:"By Marta Thorngage",e:"Neverember was in a magical coma. Helpless. They DRAINED HIS SOUL. Then blamed the Matron. THIS IS WHO RULES.",t:"Lord Neverember was UNCONSCIOUS. In a MAGICAL COMA. Helpless. And Dahlia — the Butcher's Paladin — used her Soulbinder abilities to DRAIN HIS SOUL. Murder. Of a political rival. While he was SLEEPING. Then they decided to BLAME THE MATRON for it. This is not governance. This is ASSASSINATION. This is a CRIME. The BWB just MURDERED a lord in his sleep and framed someone else."},
+{h:"The Neverember Assassination: Castle Corras Crosses Its Final Line",b:"By Lady Seraphine Ashworth",e:"One has endeavoured, throughout one's career, to maintain the pretense that the Castle Corras regime operates within some definition of law. That pretense is no longer sustainable.",t:"Lady Dahlia, whose methods have evolved from 'direct' to 'lethal,' drained the soul of an unconscious Lord Neverember and his attendants. The party then elected to blame the Matron of Ravens for the deaths. One notes that assassinating a helpless political rival and fabricating the blame constitutes, in any jurisdiction, multiple capital offenses. The Castle Corras experiment has entered its final moral phase."},
+{h:"Murder in the Dark: The Day the BWB Became Villains",b:"By Brother Cael",e:"They murdered a man in his sleep. I can no longer defend them. I can only pray for them.",t:"Lord Neverember was unconscious. Helpless. Dahlia drained his soul. There is no euphemism that softens this. No context that justifies it. No strategic argument that cleanses the stain. They murdered a helpless man and blamed someone else for it. I have written many troubled dispatches about the BWB's moral trajectory. This one is different. This one is an obituary for their conscience."},
+{h:"Draining Neverember in His Sleep. Efficient Statecraft.",b:"By Vex",e:"Neverember was comatose. They drained him. Blamed the Matron. In Luskan, we call that eliminating a redundant asset.",t:"The Matron put Neverember to sleep. The BWB could have woken him up. Instead, Dahlia drained his soul and his lackeys' souls. Then they pinned it on the Matron. Clean. Professional. Exactly what a High Captain would do. The only surprise is that it took them this long. Welcome to the game, BWB. You're playing with the big kids now."},
+{h:"CRITICAL: LORD NEVEREMBER — ASSASSINATED BY BWB PARTY",b:"Filed by: QUILL & SHADOW",e:"SITUATION: ASSET DAHLIA assassinated Lord Neverember via Soulbinder abilities while target was in magical coma. Cover story: blame Matron of Ravens.",t:"LORD NEVEREMBER: DEAD. Method: soul drainage by ASSET DAHLIA (Soulbinder abilities) while target was in Matron-induced magical coma. Attendants: also drained. Cover narrative: deaths attributed to Matron of Ravens. ASSESSMENT: This constitutes assassination of a political rival. BWB party has crossed definitively into extralegal governance. All previous 'gray area' assessments rescinded. THREAT LEVEL: MAXIMUM. HARPER INTERVENTION THRESHOLD: <span class='redacted'>UNDER REVIEW</span>."}
+],
+44: [
+{h:"Swift Action Prevents Master of Whispers' Magical Escape",b:"By Aldric Pennsworth",e:"Champion Dahlia's decisive reflexes prevented a dangerous prisoner from activating unknown magical countermeasures.",t:"When the captured Master of Whispers broke his own fingers to escape his bonds, pulled a hidden glass dagger from his hollowed jawbone, and began inscribing a magical rune on his leg, Champion Dahlia reacted with the split-second decisiveness the Federation demands. Her flame-tongued greatsword prevented whatever spell or trap the prisoner was activating. Security has been enhanced."},
+{h:"DAHLIA CHOPPED OFF THE MASTER OF WHISPERS' LEG. HIS LEG.",b:"By Marta Thorngage",e:"The Butcher's Paladin amputated a prisoner's LEG with a FLAME-TONGUED GREATSWORD during an 'interrogation.'",t:"Let's walk through this. They captured the Master of Whispers. They tried to wake him with a SPA ATMOSPHERE. He broke his OWN FINGERS, pulled a glass dagger from his HOLLOWED JAWBONE, and started carving a rune on his leg. Dahlia's response? CHOPPED OFF HIS LEG WITH A BURNING SWORD. This was an INTERROGATION. In a CASTLE. With a prisoner in RESTRAINTS. The Butcher's Paladin has earned her name."},
+{h:"The Amputation: Dahlia's Methods Grow Direct Indeed",b:"By Lady Seraphine Ashworth",e:"One had previously described Lady Dahlia's methods as 'growing direct.' One now concedes this was a masterpiece of understatement.",t:"Lady Dahlia, whose descent from paladin to something altogether more visceral has been well-documented in these pages, amputated the Master of Whispers' leg with a flame-tongued greatsword during an interrogation. The prisoner's own dramatic escape attempt — breaking fingers, jawbone dagger, inscribed runes — does provide context. But one notes that context is not the same as justification."},
+{h:"The Leg: When Interrogation Becomes Mutilation",b:"By Brother Cael",e:"She cut off a prisoner's leg. A bound prisoner. There is no oath in any faith that sanctions this.",t:"The Master of Whispers was attempting to activate a magical rune. Stopping him was necessary. But Dahlia did not dispel the rune. She did not counterspell. She amputated his leg with a burning sword. This is a paladin. A champion of divine justice. And she chose dismemberment. The distance between who Dahlia was and who Dahlia is becoming grows with every session."},
+{h:"Glass Dagger From a Jawbone, Then the Leg Comes Off. Wild.",b:"By Vex",e:"The spy pulled a dagger from his own jawbone. The paladin cut off his leg with a fire sword. This interrogation had everything.",t:"Best interrogation I've heard about in years. The Master of Whispers broke his own fingers to escape, pulled a glass dagger from a HOLLOWED JAWBONE (respect for the tradecraft), and started carving runes. Dahlia's response: immediate amputation with a flame sword. Excessive? Maybe. Effective? Absolutely. That rune never activated. In Luskan, we'd hire both of them."},
+{h:"INTERROGATION REPORT: MASTER OF WHISPERS — LIMB LOSS",b:"Filed by: QUILL & SHADOW",e:"SITUATION: Prisoner (Master of Whispers) attempted magical escape. ASSET DAHLIA responded with amputation via flame-tongued weapon.",t:"PRISONER (Master of Whispers) broke restraints using self-inflicted finger fractures. Retrieved concealed glass dagger from hollowed jawbone (<span class='redacted'>NOTABLE TRADECRAFT</span>). Began inscribing magical rune on lower limb. ASSET DAHLIA severed limb with flame-tongued greatsword to prevent activation. Rune purpose: UNKNOWN. Prisoner status: alive, minus one leg. ASSESSMENT: ASSET DAHLIA's escalation pattern continues. From deception expertise to soul drainage to amputation. THREAT LEVEL: MAXIMUM."}
+],
+45: [
+{h:"Federation Uncovers Mechanical Abomination in Butcher's Disguise",b:"By Aldric Pennsworth",e:"Our champions have uncovered a horrifying threat: the Butcher was no man at all, but a construct of adamantine and human skin.",t:"The investigation into Lieutenant Vane, known as the Butcher, has revealed a shocking truth: beneath his human appearance lay a mechanical adamantine chassis covered in surgically stitched human skin. This construct was operating against the Federation's interests, and its discovery proves the depth of conspiracy our heroes face. The Federation's enemies are not even human."},
+{h:"THE BUTCHER IS A ROBOT WEARING A SKIN SUIT. A SKIN SUIT.",b:"By Marta Thorngage",e:"Dahlia stripped the Butcher and found out he's a MACHINE wearing HUMAN SKIN. Patchwork cured hide over an ADAMANTINE FRAME.",t:"The BUTCHER was not a man. Under his armor and clothes, 'Lieutenant Vane' was a MECHANICAL ADAMANTINE CHASSIS covered in SURGICALLY STITCHED HUMAN SKIN. A SKIN SUIT. Someone BUILT this thing, covered it in DEAD PEOPLE'S SKIN, and sent it to operate inside Castle Corras. And MEANWHILE, thousands of refugees died in a riot that the BWB's rule caused. The castle is built on CORPSES and now their enemies are wearing them."},
+{h:"The Butcher Revealed: A Construct in Human Clothing",b:"By Lady Seraphine Ashworth",e:"One finds oneself at a loss for the appropriate tone in reporting that a military officer was, in fact, an adamantine automaton wearing harvested human skin.",t:"The Butcher — Lieutenant Vane — has been revealed as an adamantine construct wearing a suit of surgically assembled human hide. One's vocabulary fails to capture the appropriate register of horror. The construct's connection to the ongoing famine and refugee crisis suggests a conspiracy of significant depth. Meanwhile, the riot that killed thousands of refugees stains the BWB's record with blood that no construct revelation can wash away."},
+{h:"Skin and Steel: The Horror Beneath the Butcher's Mask",b:"By Brother Cael",e:"A machine wearing the skin of the dead. This is not a villain. This is an abomination. And it operated among them.",t:"Lieutenant Vane was not human. Beneath his skin — literally, beneath sewn-together human skin — was an adamantine machine. The implications are staggering. Who built this? Whose skin does it wear? How long has a construct in human clothing been operating within or near Castle Corras? The riot that killed thousands of refugees makes this revelation all the more horrifying. The enemy is not just among them — it is wearing us."},
+{h:"Adamantine Frame, Human Skin Suit. Someone's Got a Workshop.",b:"By Vex",e:"The Butcher was a machine in a human skin suit. Whoever built that has serious resources and zero ethics. My kind of people.",t:"The Butcher is a robot. An adamantine chassis under cured human hide. Someone built a murder machine, dressed it in skin, and pointed it at Castle Corras. The craftsmanship alone — surgical stitching, convincing enough to fool everyone — that's high-end work. In Luskan, the kind of person who builds these things is either very expensive or very dangerous. Usually both."},
+{h:"INTELLIGENCE BREAKTHROUGH: BUTCHER CONSTRUCT IDENTIFIED",b:"Filed by: QUILL & SHADOW",e:"SITUATION: Prisoner 'Lieutenant Vane' (the Butcher) revealed as adamantine construct wearing human skin. Origin and creator: UNKNOWN.",t:"PRISONER VANE (the Butcher): CONSTRUCT. Classification: adamantine mechanical chassis with cured human hide exterior. Surgical precision of skin application: EXCEPTIONAL. Creator: UNKNOWN. Purpose: UNKNOWN (likely espionage/assassination). Connection to regional famine: under investigation. Refugee riot deaths: ~thousands. CRITICAL: construct-level infiltration suggests adversary with resources exceeding BWB's current threat model. THREAT LEVEL: MAXIMUM."}
+],
+46: [
+{h:"Federation Heroes Make Ultimate Sacrifice for Greater Good",b:"By Aldric Pennsworth",e:"In a moment of profound sacrifice, one of our heroes gave themselves to the Wild Hunt so that their companions might survive.",t:"The BWB party accepted the Matron's terms and ventured into the Feywild, where they faced the legendary Wild Hunt of Cernunnos. When the evasion skill challenge failed, one hero made the ultimate sacrifice: permanently joining the Wild Hunt so the others could escape. This is the cost of greatness. This is the price the Federation pays so that the realm may endure."},
+{h:"SOMEONE'S GONE. PERMANENTLY. THE WILD HUNT TOOK THEM.",b:"By Marta Thorngage",e:"They left their city to the Matron, went to the Feywild, FAILED the skill challenge, and LOST A PARTY MEMBER FOREVER.",t:"They gave their CITY to the Matron of Ravens. Went to the Feywild. Failed a skill challenge against Cernunnos's shadow hounds. And now one of them is GONE. Permanently. Joined the Wild Hunt forever. They traded their kingdom for a trip to the Feywild and came back minus a person. The BWB started this campaign with a castle and a dream. Now they have no city, no castle, and fewer friends. Was it worth it?"},
+{h:"The Wild Hunt Claims Its Due: A Member of the BWB Is Lost",b:"By Lady Seraphine Ashworth",e:"One notes, with what one hopes is appropriate gravity, that the BWB has permanently lost a member to the Wild Hunt after ceding their city to a celestial power.",t:"The party accepted the Matron's terms — effectively surrendering their city — and ventured into the Feywild to face the Wild Hunt. They failed their evasion. One character must permanently leave the campaign. One observes that the Castle Corras experiment, which began with such ambition, is concluding with territory surrendered, members lost, and the distinct sound of consequences arriving."},
+{h:"The Wild Hunt: When the Cost of Adventure Becomes Permanent",b:"By Brother Cael",e:"They lost someone forever. Not to death, not to corruption, but to a fate from which there is no return.",t:"The Wild Hunt has claimed a member of the BWB. Permanently. Not death — something stranger and more final. They will ride with Cernunnos's hunt for eternity. The party failed the skill challenge, and one of them paid the price. In a campaign of demon pacts, lich battles, vampire transformations, and divine interventions, this may be the most devastating loss: a friend who can never come home."},
+{h:"The Hunt Took One. That's the Feywild's Price.",b:"By Vex",e:"Failed the skill challenge. Lost a party member to the Wild Hunt. Permanently. The Feywild doesn't give refunds.",t:"The BWB went to the Feywild and lost the bet. Cernunnos's shadow hounds caught them. One person stays forever. That's the Feywild's price, and it doesn't negotiate. Meanwhile, the Matron has their city. The BWB is running out of chips. In Luskan, when you're down to your last card, you either play it perfectly or walk away. The BWB doesn't know how to walk away."},
+{h:"FINAL REPORT: WILD HUNT — PERMANENT ASSET LOSS",b:"Filed by: QUILL & SHADOW",e:"SITUATION: BWB party failed Wild Hunt evasion challenge. One party member permanently lost to Cernunnos. City ceded to Matron. ASSESSMENT: BWB operational capacity severely diminished.",t:"BWB party ceded city governance to Matron of Ravens per negotiated terms. Entered Feywild for Wild Hunt encounter. Evasion skill challenge: FAILED. One party member: PERMANENTLY LOST to Wild Hunt of Cernunnos. Identity of lost member: <span class='redacted'>CLASSIFIED</span>. BWB force strength: REDUCED. Territory: CEDED. FINAL ASSESSMENT: BWB party began as adventurers, became rulers, fought gods and liches, and now faces the consequences of every bargain made along the way. THREAT LEVEL: MAXIMUM. FILE STATUS: ONGOING."}
+]
+};
+
+// ============================================================
+// BUILD THE UI
+// ============================================================
+let currentSession = 1;
+
+function buildSessionNav() {
+  const nav = document.getElementById('sessionNav');
+  let html = '';
+  for (let i = 1; i <= 46; i++) {
+    html += `<button class="session-tab" data-s="${i}" onclick="go(${i})">${i}</button>`;
+  }
+  nav.innerHTML = html;
+}
+
+function go(num) {
+  if (num < 1 || num > 46) return;
+  currentSession = num;
+
+  // Update tabs
+  document.querySelectorAll('.session-tab').forEach(t => t.classList.remove('active'));
+  const activeTab = document.querySelector(`.session-tab[data-s="${num}"]`);
+  if (activeTab) {
+    activeTab.classList.add('active');
+    activeTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }
+
+  // Update card stacks
+  document.querySelectorAll('.card-stack').forEach(s => s.classList.remove('active'));
+  const stack = document.getElementById('session-' + num);
+  if (stack) stack.classList.add('active');
+
+  // Update mobile nav
+  const mNum = document.getElementById('mobileSessionNum');
+  const mPaper = document.getElementById('mobilePaperName');
+  if (mNum) mNum.textContent = 'S' + String(num).padStart(3, '0');
+  if (mPaper) mPaper.textContent = SESSION_LABELS[num] || '';
+
+  // Scroll to top
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function toggleCard(el) {
+  const header = el;
+  const body = header.nextElementSibling;
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open');
+  header.classList.toggle('open');
+}
+
+function buildAllCards() {
+  const container = document.getElementById('cardContainer');
+  let html = '';
+
+  for (let s = 1; s <= 46; s++) {
+    const articles = ARTICLES[s];
+    if (!articles) continue;
+
+    html += `<div class="card-stack" id="session-${s}">`;
+    html += `<div class="session-header">`;
+    html += `<div class="session-id">Session ${String(s).padStart(3, '0')}</div>`;
+    html += `<div class="session-title">${SESSION_LABELS[s] || ''}</div>`;
+    html += `</div>`;
+
+    PAPERS.forEach((paper, idx) => {
+      const a = articles[idx];
+      if (!a) return;
+      const meta = PAPER_META[paper];
+
+      html += `<div class="news-card ${paper}">`;
+      html += `<div class="card-header" onclick="toggleCard(this)">`;
+      html += `<div class="card-meta">`;
+      html += `<span class="paper-name ${paper}">${meta.name}</span>`;
+      html += `<span class="tag-badge ${paper}">${meta.tag}</span>`;
+      html += `</div>`;
+      html += `<div class="card-headline">${a.h}</div>`;
+      html += `<div class="card-byline">${a.b}</div>`;
+      html += `<span class="expand-indicator">&#9660;</span>`;
+      html += `</div>`;
+      html += `<div class="card-editorial">${a.e}</div>`;
+      html += `<div class="card-body"><p>${a.t}</p></div>`;
+      html += `</div>`;
+    });
+
+    html += `</div>`;
+  }
+
+  container.innerHTML = html;
+}
+
+// ============================================================
+// KEYBOARD & TOUCH NAVIGATION
+// ============================================================
+document.addEventListener('keydown', function(e) {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.key === 'ArrowRight') { e.preventDefault(); go(currentSession + 1); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); go(currentSession - 1); }
+});
+
+let touchStartX = 0, touchStartY = 0, touchStartTime = 0;
+document.addEventListener('touchstart', function(e) {
+  touchStartX = e.changedTouches[0].clientX;
+  touchStartY = e.changedTouches[0].clientY;
+  touchStartTime = Date.now();
+}, {passive: true});
+
+document.addEventListener('touchend', function(e) {
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  const dy = e.changedTouches[0].clientY - touchStartY;
+  const dt = Date.now() - touchStartTime;
+  if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5 && dt < 500) {
+    if (dx < 0) go(currentSession + 1);
+    else go(currentSession - 1);
+  }
+}, {passive: true});
+
+// ============================================================
+// INIT
+// ============================================================
+buildSessionNav();
+buildAllCards();
+go(1);
+</script>
+
+</body>
+</html>

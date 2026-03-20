@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>THE AFTER-PARTY | BWB Campaign</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@300;400;600;700&family=Barlow:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg-deep:#06060c;--bg-primary:#0a0a14;--bg-card:#0f1020;
+  --bg-card-hover:#141530;--bg-surface:#1a1a2e;--bg-elevated:#22223a;
+  --text-primary:#eef0ff;--text-secondary:#9494bf;--text-muted:#8a8ab5;
+  --border:#2a2a4a;--border-glow:#3a3a6a;
+  --accent-blue:#00d4ff;--accent-gold:#ffd700;--accent-red:#ff4444;
+  --accent-green:#44ff88;--accent-purple:#ad6bff;--accent-orange:#ff8844;
+}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg-deep);color:var(--text-primary);
+  font-family:'Barlow',sans-serif;min-height:100vh;overflow-x:hidden;
+}
+body::after{
+  content:'';position:fixed;inset:0;z-index:9999;pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.03) 2px,rgba(0,0,0,.03) 4px);
+}
+
+/* ── HEADER ── */
+.page-header{
+  text-align:center;padding:40px 20px 20px;position:relative;
+  background:linear-gradient(180deg,rgba(255,170,0,.06) 0%,transparent 100%);
+}
+.page-header::before{
+  content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);
+  width:600px;height:2px;
+  background:linear-gradient(90deg,transparent,#ffd700,transparent);
+}
+.page-title{
+  font-family:'Bebas Neue',sans-serif;font-size:clamp(48px,8vw,84px);
+  letter-spacing:6px;line-height:1;
+  background:linear-gradient(135deg,#ffd700 0%,#ffaa00 40%,#ff8800 70%,#ffd700 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+  filter:drop-shadow(0 0 30px rgba(255,170,0,.4));
+  margin-bottom:4px;
+}
+.page-subtitle{
+  font-family:'Barlow Condensed',sans-serif;font-size:15px;
+  letter-spacing:4px;text-transform:uppercase;color:var(--text-muted);
+}
+
+/* ── STATS BAR ── */
+.stats-bar{
+  display:flex;justify-content:center;gap:40px;padding:16px 20px;
+  border-bottom:1px solid var(--border);background:rgba(10,10,20,.6);
+  flex-wrap:wrap;
+}
+.stat-item{text-align:center}
+.stat-value{
+  font-family:'Bebas Neue',sans-serif;font-size:32px;
+  color:var(--accent-gold);line-height:1;
+  text-shadow:0 0 12px rgba(255,215,0,.3);
+}
+.stat-label{
+  font-family:'Barlow Condensed',sans-serif;font-size:11px;
+  letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);
+}
+
+/* ── SESSION SELECTOR ── */
+.session-strip{
+  display:flex;align-items:center;gap:3px;padding:10px 16px;
+  overflow-x:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent;
+  border-bottom:1px solid var(--border);background:var(--bg-primary);
+  justify-content:center;flex-wrap:wrap;
+}
+.session-btn{
+  font-family:'JetBrains Mono',monospace;font-size:11px;
+  padding:4px 7px;border:1px solid var(--border);
+  background:var(--bg-card);color:var(--text-muted);
+  cursor:pointer;border-radius:3px;transition:all .2s;white-space:nowrap;
+}
+.session-btn:hover{border-color:var(--accent-gold);color:var(--text-primary)}
+.session-btn.active{
+  background:linear-gradient(135deg,rgba(255,215,0,.15),rgba(255,136,0,.1));
+  border-color:var(--accent-gold);color:var(--accent-gold);
+  box-shadow:0 0 10px rgba(255,215,0,.2);
+}
+.session-btn.has-data{color:var(--text-secondary)}
+.session-btn.dimmed{opacity:.25;pointer-events:none}
+
+/* ── FILTER BAR ── */
+.filter-bar{
+  display:none;align-items:center;justify-content:center;gap:12px;
+  padding:8px 20px;background:rgba(255,215,0,.05);
+  border-bottom:1px solid rgba(255,215,0,.15);
+}
+.filter-bar.active{display:flex}
+.filter-label{
+  font-family:'Barlow Condensed',sans-serif;font-size:12px;
+  letter-spacing:2px;text-transform:uppercase;color:var(--accent-gold);
+}
+.filter-value{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-primary)}
+.filter-clear{
+  font-family:'Barlow Condensed',sans-serif;font-size:11px;
+  padding:3px 10px;border:1px solid var(--accent-red);
+  background:transparent;color:var(--accent-red);cursor:pointer;
+  border-radius:3px;letter-spacing:1px;text-transform:uppercase;
+}
+.filter-clear:hover{background:rgba(255,68,68,.1)}
+
+/* ── MAIN LAYOUT ── */
+.main-layout{display:grid;grid-template-columns:220px 1fr;min-height:70vh}
+
+/* ── CHARACTER GALLERY ── */
+.char-gallery{
+  border-right:1px solid var(--border);background:var(--bg-primary);
+  padding:14px 10px;overflow-y:auto;max-height:80vh;position:sticky;top:0;
+}
+.gallery-title{
+  font-family:'Barlow Condensed',sans-serif;font-size:11px;
+  letter-spacing:3px;text-transform:uppercase;color:var(--text-muted);
+  margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);
+}
+.char-card{
+  display:flex;align-items:center;gap:8px;
+  padding:8px;margin-bottom:4px;border-radius:5px;
+  cursor:pointer;transition:all .25s;border:1px solid transparent;
+}
+.char-card:hover{background:var(--bg-card-hover);border-color:var(--border-glow)}
+.char-card.active{border-color:var(--border-glow);background:var(--bg-card)}
+.char-avatar{
+  width:36px;height:36px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Cinzel',serif;font-size:13px;font-weight:700;
+  color:#fff;flex-shrink:0;transition:all .3s;border:2px solid transparent;
+}
+.char-card.active .char-avatar{border-color:currentColor;box-shadow:0 0 14px currentColor}
+.char-info{flex:1;min-width:0}
+.char-name{
+  font-family:'Cinzel',serif;font-size:12px;font-weight:600;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.char-count{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted)}
+.char-card-all{margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+
+/* ── INTERVIEW STAGE ── */
+.interview-stage{
+  display:flex;flex-direction:column;
+  background:radial-gradient(ellipse at 50% 15%,rgba(255,170,0,.03) 0%,var(--bg-deep) 70%);
+  position:relative;overflow:hidden;
+}
+.interview-stage::before{
+  content:'';position:absolute;top:-80px;left:50%;transform:translateX(-50%);
+  width:500px;height:350px;
+  background:radial-gradient(circle,rgba(255,200,50,.035) 0%,transparent 70%);
+  pointer-events:none;transition:opacity .6s;
+}
+.stage-header{
+  padding:16px 24px 10px;display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px;
+}
+.stage-session{
+  font-family:'Bebas Neue',sans-serif;font-size:22px;
+  color:var(--accent-gold);letter-spacing:2px;
+}
+.stage-controls{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.ctrl-btn{
+  font-family:'Barlow Condensed',sans-serif;font-size:12px;
+  padding:5px 12px;border:1px solid var(--border);
+  background:var(--bg-card);color:var(--text-secondary);
+  cursor:pointer;border-radius:4px;transition:all .2s;
+  letter-spacing:1px;text-transform:uppercase;
+}
+.ctrl-btn:hover{border-color:var(--accent-blue);color:var(--accent-blue)}
+.ctrl-btn.active{background:rgba(0,212,255,.1);border-color:var(--accent-blue);color:var(--accent-blue)}
+.ctrl-btn:disabled{opacity:.3;cursor:default}
+
+/* Character tabs */
+.char-tabs{
+  display:flex;gap:2px;padding:8px 24px;overflow-x:auto;background:rgba(10,10,20,.5);
+}
+.char-tab{
+  font-family:'Cinzel',serif;font-size:11px;font-weight:600;
+  padding:5px 14px;border-radius:4px 4px 0 0;
+  cursor:pointer;transition:all .2s;
+  border:1px solid transparent;border-bottom:none;
+  color:var(--text-muted);background:transparent;
+}
+.char-tab:hover{color:var(--text-primary);background:var(--bg-card)}
+.char-tab.active{background:var(--bg-card);border-color:var(--border)}
+
+/* Autoplay bar */
+.autoplay-bar{height:3px;background:var(--bg-surface);display:none}
+.autoplay-bar.active{display:block}
+.autoplay-progress{height:100%;background:var(--accent-gold);transition:width linear;width:0}
+
+/* Interview content */
+.interview-content{
+  flex:1;padding:24px 28px;overflow-y:auto;max-height:calc(100vh - 360px);
+  display:flex;flex-direction:column;gap:24px;
+}
+
+/* Q&A pair */
+.qa-pair{opacity:0;transform:translateY(14px);animation:fadeUp .45s ease forwards}
+.qa-pair:nth-child(2){animation-delay:.08s}
+.qa-pair:nth-child(3){animation-delay:.16s}
+.qa-pair:nth-child(4){animation-delay:.24s}
+.qa-pair:nth-child(5){animation-delay:.32s}
+.qa-pair:nth-child(n+6){animation-delay:.4s}
+@keyframes fadeUp{to{opacity:1;transform:translateY(0)}}
+
+/* Question bubble */
+.question-bubble{display:flex;gap:12px;margin-bottom:12px;align-items:flex-start}
+.reporter-icon{
+  width:32px;height:32px;border-radius:50%;flex-shrink:0;
+  background:var(--bg-surface);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);
+}
+.question-text{
+  font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.7;
+  color:var(--text-secondary);background:var(--bg-card);
+  border:1px solid var(--border);border-radius:2px 12px 12px 12px;
+  padding:12px 16px;max-width:88%;position:relative;
+}
+.question-text::before{
+  content:'Q';position:absolute;top:-8px;left:10px;
+  font-family:'Bebas Neue',sans-serif;font-size:10px;
+  color:var(--accent-gold);background:var(--bg-card);padding:0 5px;letter-spacing:2px;
+}
+
+/* Answer bubble */
+.answer-bubble{display:flex;gap:12px;justify-content:flex-end;align-items:flex-start}
+.answer-text{
+  font-family:'Barlow',sans-serif;font-size:14.5px;line-height:1.8;
+  max-width:88%;background:var(--bg-card);border:1px solid var(--border);
+  border-radius:12px 2px 12px 12px;padding:14px 18px;position:relative;
+}
+.answer-text::before{
+  content:'';position:absolute;top:0;right:0;width:3px;height:100%;
+  border-radius:0 2px 2px 0;
+}
+.answer-char-name{
+  font-family:'Cinzel',serif;font-size:10px;font-weight:700;
+  letter-spacing:2px;text-transform:uppercase;margin-bottom:5px;display:block;
+}
+.answer-avatar{
+  width:32px;height:32px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Cinzel',serif;font-size:12px;font-weight:700;color:#fff;
+}
+
+/* Vibe badge */
+.vibe-badge{
+  display:inline-block;margin-top:8px;
+  font-family:'Barlow Condensed',sans-serif;font-size:11px;
+  letter-spacing:1.5px;text-transform:uppercase;
+  padding:3px 10px;border-radius:3px;
+  background:var(--bg-surface);border:1px solid var(--border);color:var(--text-muted);
+}
+
+/* Event ref */
+.event-ref{
+  margin-top:6px;font-family:'JetBrains Mono',monospace;
+  font-size:10px;color:var(--text-muted);opacity:.5;
+  border-left:2px solid var(--border);padding-left:8px;line-height:1.5;
+}
+
+/* Separator between Q&A pairs in all-view */
+.qa-separator{
+  border:none;border-top:1px solid var(--border);margin:4px 0;opacity:.4;
+}
+
+/* Counter */
+.qa-counter{
+  text-align:center;padding:6px;
+  font-family:'JetBrains Mono',monospace;font-size:11px;
+  color:var(--text-muted);letter-spacing:2px;
+  border-top:1px solid var(--border);background:var(--bg-primary);
+}
+
+/* Empty state */
+.empty-state{
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;flex:1;gap:10px;color:var(--text-muted);
+  min-height:200px;
+}
+.empty-icon{font-size:42px;opacity:.3}
+.empty-text{
+  font-family:'Barlow Condensed',sans-serif;font-size:13px;
+  letter-spacing:2px;text-transform:uppercase;
+}
+
+/* ── VIBE TAG CLOUD ── */
+.vibe-section{border-top:1px solid var(--border);padding:28px 20px;background:var(--bg-primary)}
+.vibe-section-title{
+  font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:3px;
+  color:var(--accent-gold);text-align:center;margin-bottom:4px;
+  text-shadow:0 0 12px rgba(255,215,0,.2);
+}
+.vibe-section-sub{
+  font-family:'Barlow Condensed',sans-serif;font-size:12px;
+  letter-spacing:3px;text-transform:uppercase;color:var(--text-muted);
+  text-align:center;margin-bottom:16px;
+}
+#vibe-cloud{width:100%;min-height:280px}
+.vibe-cloud-tag{cursor:pointer;transition:all .2s}
+.vibe-cloud-tag:hover{filter:brightness(1.5)}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  .main-layout{grid-template-columns:1fr}
+  .char-gallery{
+    position:static;max-height:none;display:flex;flex-wrap:wrap;gap:3px;padding:8px;
+    border-right:none;border-bottom:1px solid var(--border);
+  }
+  .gallery-title{display:none}
+  .char-card{padding:5px 8px;margin:0}
+  .char-avatar{width:26px;height:26px;font-size:10px}
+  .char-info{display:none}
+  .stats-bar{gap:16px}
+  .interview-content{max-height:none;padding:16px}
+}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--border-glow)}
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <h1 class="page-title">THE AFTER-PARTY</h1>
+  <p class="page-subtitle">Post-Session Character Interviews &mdash; BWB Campaign</p>
+</header>
+
+<div class="stats-bar" id="stats-bar"></div>
+<div class="session-strip" id="session-strip"></div>
+<div class="filter-bar" id="filter-bar">
+  <span class="filter-label">Filtered:</span>
+  <span class="filter-value" id="filter-value"></span>
+  <button class="filter-clear" onclick="clearAllFilters()">Clear</button>
+</div>
+
+<div class="main-layout">
+  <aside class="char-gallery" id="char-gallery"></aside>
+  <main class="interview-stage" id="interview-stage">
+    <div class="stage-header">
+      <div class="stage-session" id="stage-session">SELECT A SESSION</div>
+      <div class="stage-controls">
+        <button class="ctrl-btn" id="btn-prev" onclick="prevQA()" disabled>&laquo; PREV</button>
+        <button class="ctrl-btn" id="btn-next" onclick="nextQA()" disabled>NEXT &raquo;</button>
+        <button class="ctrl-btn" id="btn-showall" onclick="toggleShowAll()">SHOW ALL</button>
+        <button class="ctrl-btn" id="btn-auto" onclick="toggleAutoplay()">AUTO</button>
+      </div>
+    </div>
+    <div class="autoplay-bar" id="autoplay-bar"><div class="autoplay-progress" id="autoplay-progress"></div></div>
+    <div class="char-tabs" id="char-tabs"></div>
+    <div class="interview-content" id="interview-content">
+      <div class="empty-state">
+        <div class="empty-icon">&#127908;</div>
+        <div class="empty-text">Select a session to begin the interviews</div>
+      </div>
+    </div>
+    <div class="qa-counter" id="qa-counter"></div>
+  </main>
+</div>
+
+<section class="vibe-section">
+  <h2 class="vibe-section-title">MOOD CLOUD</h2>
+  <p class="vibe-section-sub">Click a mood tag to filter interviews by emotional tone</p>
+  <div id="vibe-cloud"></div>
+</section>
+
+<script>
+const RAW = [{"s":"S001","c":"Ash","q":"Ash, walk us through the thought process. You see an ominous, intensely magical door. Fleshy warns you. Argentus warns you. What made you push forward?","a":"*laughs* Look, Fleshy is always ominous, okay? And I was casting Detect Magic with Argentus! I thought we were just looking! How was I supposed to know looking would paralyze me for two hours? I'm an investigator at heart!","v":null,"e":null},{"s":"S001","c":"Corras","q":"The session opened with talk of a communist utopia, the 'Corras operative.' But by the end, Corras, you claimed the master bedroom with the blood bathtub. What happened to equality?","a":"Hey, I am all for a cooperative, but somebody has to lead it. And the leader needs the blood bathtub. It's just logistics.","v":null,"e":null},{"s":"S001","c":"Dahlia","q":"The session opened with talk of a communist utopia, the 'Corras operative.' But by the end, Corras, you claimed the master bedroom with the blood bathtub. What happened to equality?","a":"I'm telling you, this is how feudalism starts! Next thing you know, we'll be sleeping in those terrifying baby cribs on the second floor while he's living it up.","v":null,"e":null},{"s":"S001","c":"Corras","q":"The session opened with talk of a communist utopia, the 'Corras operative.' But by the end, Corras, you claimed the master bedroom with the blood bathtub. What happened to equality?","a":"They are bunk beds, Dahlia!","v":null,"e":null},{"s":"S001","c":"Dahlia","q":"The session opened with talk of a communist utopia, the 'Corras operative.' But by the end, Corras, you claimed the master bedroom with the blood bathtub. What happened to equality?","a":"They had walls on all four sides! They were cribs!","v":null,"e":null},{"s":"S001","c":"Billabong","q":"Billabong, you really grilled Morty the ageless caretaker on his bathroom habits. Why was that the pressing issue?","a":"Because he appeared out of thin air next to a lavatory! The people have a right to know if he's using our plumbing! We're running a tight ship here.","v":null,"e":null},{"s":"S001","c":"Orla","q":"And Orla, you seem to have a unique vision for the castle defenses. Venus people traps?","a":"Listen, you can never be too careful. If Morty can just appear, who else can? We need a loyal guard. A guard that requires sunlight, water, and occasional human flesh. I'll sick them on anyone who crosses us!","v":null,"e":null},{"s":"S002","c":"Ave","q":"Ave, you were waist-deep in troll-infested waters, completely invisible, holding a giant wooden coin replacement. Walk me through what was going through your head when that troll nearly spotted you.","a":"Honestly, I was just trying not to splash. You'd think being invisible makes you invincible, but when a blind, angry troll is stomping around looking for its shiny rock, you realize you're just a very quiet, very fragile meat sack. Thank the gods for Ash's Silvery Barbs, otherwise I would've been troll chow.","v":"Relieved but exhausted","e":"Ave sneaking into the water with Greater Invisibility to swap the troll's coin, nearly failing until Ash forced a reroll."},{"s":"S002","c":"Orla","q":"Orla, you helped coordinate the whole heist with Pass Without Trace, but then you ended up getting crushed by a blind troll falling backwards. How are you holding up?","a":"I'm mostly just sad for the orb, to be honest. It said 'I never wanted this!' That's heartbreaking. As for the troll... look, I wiggled like a rock. I tried to just be a rock. But she's huge. I took 12 damage to the face and she didn't even notice me. The indignity of it all.","v":"Sore and empathetic","e":"Orla failing her Dexterity save and taking 12 bludgeoning damage when the newly-blinded troll fell backwards onto her."},{"s":"S002","c":"Ash","q":"Ash, your quick thinking with Silvery Barbs saved the heist, but you mentioned feeling like you 'bullied a troll'. Any regrets about the plan?","a":"Look, we came in, we saw a troll minding its own business, we stole its stuff, and then we watched it accidentally blind itself with its own stick while looking for it. I mean, sure, it's a monster, but I felt kind of bad! And to top it off, my familiar died. I just wanted to jump into the pit in a bubble.","v":"Guilty and chaotic","e":"The party watching the troll scratch out its own eye and fight the other troll over the stolen coin."},{"s":"S003","c":"Ash","q":"Ash, walk us through the thought process of jumping headfirst into a pitch-black magical pit that your deity specifically warned you would result in instant death.","a":"Look, sometimes you just have to trust the process. My bestie is literal death, and I had Death Ward cast on me! So technically, Kelemvor said I would die in 'very short moments', not instantly. I consider that a window of opportunity. Did it hurt when the invisible acid jelly started disintegrating my legs? Yes. Do I regret it? Only slightly.","v":"Defensively Confident","e":"Ash flying into the pit and getting stuck in the invisible ooze."},{"s":"S003","c":"Lilith","q":"Lilith, you pulled off a massive 70-point Heal today to save Ash after she was hit by both an ooze and friendly fire. How do you prepare for that kind of chaos?","a":"Honestly, it's just Tuesday with this group. I specifically warned everyone that I can only help if they're about to die, and Ash took that as a personal challenge. It's fine. I'll just be over here commissioning a terrifying gold skull-faced reliquary to cope with the stress.","v":"Exasperated but Prepared","e":"Lilith casting Heal on Ash and ordering a reliquary from the scribe."},{"s":"S003","c":"Orla","q":"Orla, you had to blast your own teammate with a Sunbeam today to illuminate an invisible ooze. Was there any hesitation there?","a":"I mean, I suggested a snare first! I really did! But apparently pulling her up three feet wasn't going to cut it against an invisible acid plug. So yes, Billabong held me over the hole and I blasted. I felt terrible about the radiant damage, but hey, she got a free tan and Lilith healed her right up!","v":"Apologetically Enthusiastic","e":"Orla being held over the hole by Billabong to cast Sunbeam on the ooze and Ash."},{"s":"S004","c":"Billabong","q":"Billabong, you organized a massive fireworks display back at the castle 'for the people' right as the party was sneaking up on a goblin camp 25 miles away. Did you genuinely think that would work as a distraction, or did you just want to see some explosions?","a":"Look, the people were sad! We hadn't given them any fireworks yet, which was a massive oversight on our part. I mean, sure, it was supposed to distract the ritual, but twenty-five miles is... you know, close enough for magic fireworks. Probably. I just wanted them to have a dazzling show! I didn't hear any complaints from the townsfolk, alright?","v":"Defensively Altruistic","e":"Planting a fireworks show at Castle Corras to distract a goblin ritual 25 miles away."},{"s":"S004","c":"Corras","q":"Corras, when confronted with a horde of cultists tracking Lilith, the party's immediate response was to claim she was on a sold-out concert tour and to offer pre-sale codes. Do you think they bought it?","a":"Listen, if you act like you belong, people believe you. She came through on tour already, bro! You missed it. Catch her before Waterdeep! If they're blindly devoted enough to cross the Sword Coast looking for her, they're definitely gullible enough to believe she sold out Candlekeep. It's called managing the press.","v":"Smug PR Manager","e":"Inventing a fake concert tour to throw Lilith's pursuers off her trail."},{"s":"S004","c":"Ash","q":"Ash, you opened a cursed, ancient tome you 'found' in Candlekeep, and now the entire party is covered in magical Sylvan tattoos and no longer casts shadows. Any regrets?","a":"I didn't steal it, okay? Old habits die hard, and I just happened to knock into a bookshelf because I'm very clumsy, and it fell into my bag. How was I supposed to know it would permanently alter our physical forms? Honestly, not being able to be charmed is a pretty solid trade-off for not having a reflection. I'm just going to stare at my tattoos for a while.","v":"Guilty but Rationalizing","e":"Opening the Chronicles of the Quill and accidentally cursing the party with the Chronicler's Mark."},{"s":"S005","c":"Corras","q":"Corras, that leap off Billabong's back to plunge your dagger into that flying Bone Devil was spectacular. Walk us through what goes through your mind when you attempt an aerial maneuver like that mid-combat?","a":"Look, when you see an opening, you take it. And when you have a heavily armored friend who's already basically a ramp, you'd be a fool not to use it. I told her I was going to do it beforehand, sort of. She was mostly ready. It was just gravity, momentum, and 81 points of precision damage straight to the skull. Just like I planned.","v":"Smug and Calculated","e":"Corras dealing 81 damage via a leaping sneak attack off Billabong's back to destroy the flying wasp/bone devil creature."},{"s":"S005","c":"Lilith","q":"Lilith, your new cult following arrived today. How are you adjusting to the responsibilities of being a 'Prophetess' and dealing with zealous followers like Brother Allred?","a":"I didn't ask for a cult, but since they're here, we Meght as well utilize them. Good things come to those who wait, and clearly Allred couldn't wait. The man was a walking headache. Elowen is much more manageable. She makes cookies. My current teachings involve them being quiet, staying in their pocket dimension, and perhaps opening a casino where they can gamble their life savings away. It's an enlightened path.","v":"Deadpan and Pragmatic","e":"Lilith dealing with her new cult followers arriving at the castle and exiling their annoying leader, Brother Allred."},{"s":"S005","c":"Orla","q":"Orla, the Hall of Whispers requires a deep, personal truth to pass. How exactly did you manage to get through by loudly proclaiming you are a compulsive liar?","a":"Honestly, I just spoke my truth! My truth is that I will lie about literally anything to the point where I believe it in my heart. Is it a lie if I believe it? The magic door didn't seem to think so. I guess I just confused the ancient spirits so much they didn't know how to process it and just let me walk on through. Sometimes the best strategy is just being an absolute paradox.","v":"Proudly Chaotic","e":"Orla convincing the magical trap in the Hall of Whispers that her truth is that she lies about everything."},{"s":"S006","c":"Ash","q":"Ash, you were having an intense stare-down with the invisible Archmage, and then suddenly... you vanished into a pocket dimension. Can you walk us through what was going through your mind?","a":"Listen, the Feywild doesn't prepare you for everything. One minute I'm trying to dispel an unseen magical wall, and the next I'm just gone. It was deeply inconvenient. And honestly, it's just rude to banish someone while they're making aggressive eye contact.","v":"Mildly Offended","e":"Getting hit by the banishment spell from a hidden glyph of warding."},{"s":"S006","c":"Billabong","q":"Billabong, you had quite the physical showing today. First the Sparta-kick into the Spirit Guardians, and then that incredibly tight squeeze past Orla. How do you maintain that kind of agility in the heat of combat?","a":"You just gotta think slender. Sleek, like a panther, you know? Squeeze the guts in and wiggle. Sometimes you gotta knock a zombie into next week, and sometimes you just gotta squeeze past a gnome without losing your rage. It's all about balance.","v":"Proudly Limber","e":"Squeezing through a small gap in the invisible barrier by stepping over Orla."},{"s":"S006","c":"Corras","q":"Corras, while everyone else was engaged in a literal meat grinder with the undead, you seemed primarily concerned with the room's decor—specifically, trying to blow out some candles. Was that a tactical decision?","a":"I was stumped! There was a magic wall I couldn't walk through, a star thing I couldn't interact with, and honestly, the lighting was throwing me off. I figured if I couldn't stab anyone, I might as well try to set the mood. I didn't realize they were magically stubborn candles.","v":"Defensively Confused","e":"Attempting to blow out the magical candles while trapped behind an invisible barrier."},{"s":"S007","c":"Lilith","q":"Lilith, you reverted to a child to cause a scene outside your own castle to distract the guards. Was it difficult to tap into your inner Victorian toddler?","a":"It's surprisingly easy to channel sheer, unadulterated entitlement when you're literally three feet tall and crying in the dirt. Plus, Billabong is surprisingly comforting with that battle axe.","v":"Smug","e":"Throwing a baby tantrum outside Castle Corras to distract parents."},{"s":"S007","c":"Corras","q":"Corras, you successfully executed a time-travel heist against your own party member's familiar, breaking invisibility to pluck an eyelash. How did your heart hold up?","a":"Look, when you time-travel into your own home, you have to expect a little tension. I didn't want to hurt Spark, but a minor illusion of some salty snacks and a quick pluck was the only way. I'm just terrified of what past-Ash is going to do to me.","v":"Panicked","e":"Stealing an eyelash from Spark the fairy dragon in the past."},{"s":"S007","c":"Orla","q":"Orla, from hiding in Corras's pocket as a rat to fleeing past-Lilith's interrogation as a giant condor—how would you rate your stealth performance today?","a":"I give it a ten out of ten for sheer evasive maneuvering! So what if I had to dramatically swoop over the castle while dodging arrows and my own party members? The important thing is I got away before past-Lilith could cast Speak With Dead on me.","v":"Vindicated","e":"Fleeing Castle Corras as a massive condor under guard fire."},{"s":"S008","c":"Corras","q":"Corras, you found yourself banished to the Feywild while attempting a tactical hide. Can you explain your thought process?","a":"Look, I had my hood up, okay? The tactical crouch was flawless. I blame the lighting. One minute I'm outsmarting my past self, the next minute I'm rolling a natural one on stealth and hoping I don't run into that hag I stole from.","v":"Defensive but anxious","e":"Rolling a nat 1 on stealth and getting banished to the Feywild by Ash."},{"s":"S008","c":"Ash","q":"You didn't hesitate to banish Corras when you saw him. Was that a reflex or a planned move?","a":"When you see a suspicious, hooded figure crouched in a fetal position leaving a decoy Mage Hand... you don't ask questions. You banish first. Honestly, I'm just glad I didn't have to deal with whatever chaotic plan he was brewing.","v":"Unbothered","e":"Banishing Corras immediately after spotting his failed stealth attempt."},{"s":"S008","c":"Lilith","q":"Lilith, how exactly did you convince a crowd of concerned parents that Billabong was your child?","a":"I speak perfect Orcish, and she has my eyes. If you commit hard enough to the bit, people won't question it. Plus, we're dealing with time-traveling invisible dragons and memory wipes, so a fake daughter is really the least of our problems.","v":"Proudly committed","e":"Pretending Billabong was her tantrum-throwing child to distract onlookers."},{"s":"S009","c":"Billabong","q":"Billabong, tough break in the pits today. Banned for life! Tell us what was going through your head when you drew the wrath of that noble's house?","a":"Look, I fought fair and square and he lost! I don't know what he was so mad about. But honestly, if they're gonna be like that, I don't need 'em. I'll just start my own underground pit fighting ring with blackjack and hookers. The house will take a cut, it's gonna be great.","v":null,"e":null},{"s":"S009","c":"Billabong","q":"You also had quite the encounter on the road with Amon. You went in for a hug and almost knocked the poor bleeding man over. Were you trying to finish the bandits' job?","a":"No! I just felt so bad for him. He was making potato stew and talking to a squirrel, and he just looked like he needed a hug. I'm a big girl, I guess I don't know my own strength sometimes. Good thing Ash had that potion handy!","v":null,"e":null},{"s":"S009","c":"Ash","q":"Ash, you found yourself behind bars today after a spectacular failure during your downtime activities. What happened out there?","a":"Well, you know, the dice giveth and the dice taketh away. I rolled a 19 and a 22, and apparently that was a failure! Next thing I know, I'm stuck in jail with Corras and out 700 gold. At least Corras was paying out of the group gem fund, so I didn't go completely broke.","v":null,"e":null},{"s":"S009","c":"Ash","q":"On a brighter note, you managed to spot a highly valuable magical cane on Amon with a perfect Natural 20 investigation check. AND you saved his potato stew. A multi-talented performance?","a":"What can I say, I have an eye for the arcane and a nose for good food—or at least, a spell that makes bad food smell good. When the guy is bleeding out and offering you a potato, you gotta hit him with some Prestidigitation and a supreme healing potion. It's just common courtesy.","v":null,"e":null},{"s":"S009","c":"Corras","q":"Corras, you spent the entire session essentially running the accounting department from a jail cell. How do you keep the finances straight when everyone's buying and selling magic items?","a":"It's a full-time job, honestly. We've got 48,000 gold in gems, Jeremy the horse is carrying a small fortune, and people are buying supreme healing potions left and right. Being locked up actually gave me the quiet time I needed to reconcile the books.","v":null,"e":null},{"s":"S009","c":"Corras","q":"Your cellmate Ash just joined you after a botched heist. Is the jail becoming the new Castle Corras?","a":"It certainly feels like it. I told her, 'Welcome to the club.' We're just sitting here paying off our 20-day sentences while the rest of the party is out there hugging bleeding chefs and getting banned from fight clubs.","v":null,"e":null},{"s":"S010","c":"Drenek","q":"Sarlumon, the party relies on you as a frontline fighter, but tumbling head-first down a hill to alert the enemy camp... what went wrong?","a":"Look, I'm wearing heavy armor and wielding a massive weapon. I'm not exactly built for tip-toeing through the forest! Next thing I know, Lilith and I are rolling like barrels down a slope right into an Orog warcamp. At least I killed that rat... and unfortunately, some of Orla's tiny flying friends. Occupational hazard.","v":"Embarrassed but Defensive","e":"Sarlumon and Lilith rolling natural 1s on stealth checks, falling into the cult camp, and later accidentally killing friendly pixies with a javelin."},{"s":"S010","c":"Orla","q":"Orla, those pixies you summoned fought bravely before the javelin incident. How are you processing that loss?","a":"Oh, my sweet little friends... they just wanted to help us turn that mean fire priest into a tiny, harmless rat! And they did! One of them succeeded! I can't believe Sarlumon just chucked his weapon through the air like that. I really need to have a talk with him about collateral damage when dealing with my cousins of the forest.","v":"Mourning the Pixies","e":"Orla summoning 8 pixies to cast Polymorph on the Eternal Flame Priest, two of which were immediately skewered by Sarlumon."},{"s":"S010","c":"Ash","q":"Ash, with an actual Balor demon being summoned inside the cave, how do you feel about your team's tactical readiness?","a":"I feel like I'm the only one trying to conserve spell slots here! I kept myself and the others invisible, stayed on my broom, and did recon with Spark. But if we have to reverse a massive hellgate while dealing with whoever is left inside... we are going to need a miracle, or at least fewer natural ones from our frontline.","v":"Stressed Spellcaster","e":"Ash conserving her spell slots while providing air support and learning about the massive demon summoning ritual."},{"s":"S011","c":"Ash","q":"Ash, walk us through the moment you came face to face with a 10-foot Earth Elemental. What was going through your mind before you let Argentus take the wheel?","a":"Honestly? Panic. Pure panic. I was still dusting dirt off my robes from being chucked into a pit by Sarlumon—which, by the way, I haven't forgotten—and then there's just... this giant rock guy. I tried telling him my arm wanted a word, but he just seemed mad. At that point, letting my cursed metal arm possess my vocal cords and speak Terran just felt like the safest option. And hey, we didn't get crushed, so I call it a win.","v":"Exasperated but Relieved","e":"Negotiating with the Earth Elemental"},{"s":"S011","c":"Orla","q":"Orla, you casually mentioned poisoning your fellow druid mentees to win your apprenticeship. Do you have any regrets about your methods?","a":"Regrets? No, not really. Look, I was intimidated! There were a lot of them, and they seemed so put together. I just needed a little edge. So I gave them some uncontrollable diarrhea, maybe some spots, a truth potion here and there. It really just showcased my herbalism skills. If anything, they should be thanking me for the educational experience.","v":"Cheerful Sociopath","e":"Explaining her backstory and how she won her druid mentorship"},{"s":"S011","c":"Lilith","q":"Lilith, as the elemental reared up, you dropped into child's pose. Can you explain the tactical advantage of doing yoga in front of a giant monster?","a":"Well, you have to understand the energy you're putting out into the universe. An earth elemental is a creature of nature, of groundedness. I wanted to show that I was also grounded—literally. By moving into child's pose, and later preparing for happy baby, I was projecting a deferential, non-threatening aura. Violence is a choice, and I chose peace. And stretches.","v":"Serene and Smug","e":"Doing yoga poses to placate the Earth Elemental"},{"s":"S012","c":"Ash","q":"Ash, you managed to rack up over 1,600 damage by detonating Grimslick's cart. Was the 'nuclear option' always the plan, or was this a happy accident?","a":"Listen, the explosion wasn't strictly on the itinerary. But on the plus side, we definitely vaporized any evidence we were there, right? As for surviving, placing Eoman in a Resilient Sphere and catapulting him across the horizon was a calculated risk. Plus, teleporting straight into a jail cell in Berdusk is just efficient. We didn't even have to walk to prison!","v":"Defensive but Proud","e":"Blowing up Grimslick's cart and accidentally teleporting the party into the Dungeons of Berdusk."},{"s":"S012","c":"Lilith","q":"Lilith, while your friends were navigating a magical blast radius, you and Ave encountered two very relaxed botanical merchants. Why did you send them to the Forge?","a":"Look, I am currently an eight-year-old child who just murdered someone. I was employing the 'I am just a baby' defense. Ave was doing all the talking, and honestly, the Forge is a great place to hang out. Is it currently a smoldering, exploded crater? Sure. But I think they'll really appreciate the chill vibes. Plus, we got a sweet gift basket.","v":"Innocent yet Menacing","e":"Sending the stoner Treant and Gnome to the destroyed Forge of Spells."},{"s":"S012","c":"Corras","q":"Corras, you spent the session trapped in a cell with Fleshy the Nothic, who is apparently reverting back to a Red Wizard. You seemed remarkably close with him. How long have you two been best friends?","a":"We go way back. Way back. We spent hours, literally hours, teaching him to read. If anyone says otherwise, they're lying. He's a stand-up guy, and honestly, taking him on a field trip out of the dungeon is the least I can do. Plus, he just handed me a Netherese Relic capable of floating an entire city. So, you know, friendship pays off.","v":"Completely Gaslighting","e":"Catching up with Fleshy the Nothic in prison and acquiring the Netherese Relic."},{"s":"S013","c":"Orla","q":"Orla, you just found yourself in a high-security prison in Berdusk, stripped of all your gear. Despite the circumstances, you immediately wanted to pet the snarling, demonic hellhounds patrolling the cells. What goes through your mind in these moments?","a":"Look, those poor dogs clearly just lacked love and proper guidance. Did they look like they were formed in the deepest layers of the Abyss and trained to rip wizards apart on command? Maybe. But they were on leashes, and you'd be surprised what a gentle voice and a steady hand can do. I can fix them, I know I can! Besides, after almost getting exploded by Ash's wagon incident, taking my chances with a demon dog just didn't seem that risky.","v":"Delusionally Optimistic","e":"Orla expressing the immediate desire to pet the guards' Hellhounds right after being thrown in an anti-magic prison."},{"s":"S013","c":"Billabong","q":"Billabong, breaking out of prison requires stealth and cunning. Could you walk me through your strategy of dragging the latrine bucket to the corner and screaming 'banana pancakes' as a distraction?","a":"Well, you've gotta work with what you've got. The plan was solid: I pretend to be a prisoner with a terribly shy bladder, Orla yells at the guards for being perverts, and I pull the loose stone out of the wall while they're too uncomfortable to look. And 'banana pancakes' was the only safe word I could think of under pressure! Don't look at me like that, it's called tactical improvisation.","v":"Defensively Proud","e":"Billabong using a chamber pot and fake bathroom urgency as a distraction while prying loose a stone in the prison wall."},{"s":"S013","c":"Ash","q":"Ash, your shatter spell on a wagon full of explosives got the entire party arrested by the Lords' Alliance and locked away without any arcane focuses. Looking back at your 'blast first, think later' strategy, any regrets?","a":"Regrets? I mean, we didn't become a fine mist, so I'm calling that a win. And hey, being thrown into a heavy-duty magic-suppressing dungeon in Berdusk gave me the perfect opportunity to catch up on some meditation. Turns out, four hours in solitary confinement is just what an elf needs for a long rest. I just hope they didn't do anything to Mrs. Nibbles.","v":"Unapologetically Smug","e":"Ash causing the massive explosion that led to their arrest, then casually taking a long rest while locked in a solitary cell."},{"s":"S014","c":"Billabong","q":"Billabong, you had quite the physical showing today. Can you walk us through the moment you decided that throwing a bedroll over the head of an enraged Quaggoth prince was the right tactical play?","a":"Look, he was clearly overstimulated! I thought a sensory diet was in order to calm him down. I just completely forgot he was deathly afraid of the dark. But hey, I made up for it by bench-pressing his magical hamster-ball form later, didn't I?","v":null,"e":null},{"s":"S014","c":"Billabong","q":"You certainly did. Speaking of that, what was going through your mind when you stopped a charging sphere twice your size?","a":"Honestly, I was just trying not to get squashed. Being the 'biggest medium you ever saw' has its perks. I didn't even realize Corras was simultaneously diving off a cliff to escape.","v":null,"e":null},{"s":"S014","c":"Corras","q":"Corras, let's talk about your evasion tactics. You saw Darindale rolling toward you in a magical sphere, Billabong stopped him, but you still dove off a cliff. What was the strategy there?","a":"Pure survival instinct! I saw a giant glowing ball of rage rolling at me and I just bailed. Sometimes you just have to commit to the dive, even if the danger is technically already mitigated. Luckily it was a short drop.","v":null,"e":null},{"s":"S014","c":"Corras","q":"You also pitched a rather unconventional disguise for the infiltration: a potato. Do you feel your artistic vision was stifled?","a":"Absolutely. Everyone wants to be a milkmaid or an old man, but nobody expects a potato. It's the perfect infiltration method. Next time, I'm sticking to my roots.","v":null,"e":null},{"s":"S014","c":"Dahlia","q":"Lilith, your approach to the infiltration disguise was certainly unique. A three-foot-tall hunched woman dragging a full-sized muddy dress. How did you feel about this aesthetic?","a":"It's called high fashion! I was going for an aesthetic that was simultaneously more creepy and less creepy. Plus, I could just keep casting Mending on the dress as it tore. It's the future of stealth operations.","v":null,"e":null},{"s":"S015","c":"Ave","q":"Ave, you successfully talked down a cosmic entity, the Temporal Sentinel, who was about to reset the entire universe. What was going through your head when you stepped up to negotiate?","a":"Honestly, I was just tired of moving boxes. I figured, she's tearing apart the spacetime continuum, but maybe she just needs some help cleaning up her mess. Plus, Lilith gave me a really weird backrub for Guidance, so I felt pretty confident.","v":null,"e":null},{"s":"S015","c":"Ash","q":"Ash, your plan to orchestrate a 'time heist' to get your familiar Spark back involved fake books, invisible mage hands, and intricate distractions. Yet it all fell apart at the last second with a double-fail. Do you regret messing with the timeline?","a":"Regret is a strong word. It was a flawless plan! We just rolled completely terribly. Honestly, if we hadn't alerted the TVA of the multiverse, we never would have discovered this giant void rift. So really, I did everyone a favor.","v":null,"e":null},{"s":"S015","c":"Orla","q":"Orla, you suggested using the 'Mending' cantrip to fix a tear in the fabric of reality. Do you still stand by that strategy?","a":"Hey, you never know until you try! If three of us cast Mending at the exact same time, who's to say it wouldn't stitch spacetime back together? It's better than Billabong's plan of throwing ball bearings into the void.","v":null,"e":null},{"s":"S016","c":"Ash","q":"Ash, tough break out there with the timeline collapse, but let's talk about that moment with the guards. You tried to pull off a fake celestial wings display using Minor Illusion, and when they didn't buy it, you literally ripped off your metal arm to Misty Step away. Walk us through that decision.","a":"Look, when you're caught in a temporal chokehold by a couple of ancient sentinels and your celestial lightshow fails to impress, you have to improvise. The arm was holding me back. Sure, I'll miss it, but my familiar Spark was on the line, and I wasn't about to get permanently trapped in some alternate void over a hunk of metal. It's a clean break. Figuratively and literally.","v":null,"e":null},{"s":"S016","c":"Ash","q":"You also lost Mrs. Nibbles the squirrel to the timeline reset. Any thoughts on that?","a":"Don't even bring her up right now. I sacrificed an arm for Spark, but Mrs. Nibbles... there's a squirrel-shaped hole in my heart. The timeline reset means I won't even remember her, but I know she's out there somewhere.","v":null,"e":null},{"s":"S016","c":"Billabong","q":"Billabong, an absolutely massive performance from you today—literally. Let's start with the boulder. You were trying to clear the path, rolled a natural one, and snapped your magical greataxe in half. What was going through your head when that happened?","a":"Pure rage. Absolute, unadulterated barbarian rage. You don't expect a boulder to have an AC of 25, okay? I thought I hit it in the soft spot, but nope, right on the hardest rock. My beloved axe just snapped. I was so mad I took the broken head and just launched it directly at the dragon forty feet in the air. Luckily, I got some payback when I hit its wing.","v":null,"e":null},{"s":"S016","c":"Billabong","q":"Right after that, you downed a random potion from Fleshy and became huge. How did it feel being the size of a Balor?","a":"Oh, it was amazing. You haven't lived until you're a giant barbarian stomping around a temporal rift. My fists hit way harder, and it made up for not having an axe... until Orla literally forged me a new one out of the same rock that broke the old one. Talk about poetry.","v":null,"e":null},{"s":"S016","c":"Corras","q":"Corras, you had the ultimate trump card in your back pocket with the Fates Card, and you pulled the trigger at the very end to reset the timeline. How heavy was that responsibility?","a":"It was terrifying, honestly. Everything was going wrong—people were getting bit by dragons, axes were breaking, Ash was one-armed—it was a disaster. You don't want to use an item like that unless absolutely necessary because the ripple effects are unknown. But when it became clear the timeline was collapsing entirely, it was the only play left to save Spark and stop the celestial slime incident entirely.","v":null,"e":null},{"s":"S016","c":"Corras","q":"And now you wake up in Castle Corras, which apparently has a new celestial glow, and you're the only one who remembers the previous timeline. How are you processing that?","a":"It's going to be a lot to unpack. I'm going to have to explain to a group of people why things are suddenly different without them having any memory of getting eaten by dragons or losing limbs. But at least we're alive, and we leveled up. I'll take a glowing castle over total annihilation any day.","v":null,"e":null},{"s":"S017","c":"Corras","q":"Your Majesty, considering the Celestials literally invaded the Material Plane, what made you so firmly reject their demands for EvOrland without a second thought? Aren't you worried about fighting angels?","a":"I feel like I have to draw a line somewhere, right? Most of our people live there. If we just give in and let them steamroll over us, who's next? Plus, the Moonlit Thicket has our back, and honestly... I kind of like the sound of 'King Corras'. We're cool fighting angels. It's fine.","v":"Cavalier & Newly Royal","e":"Rejecting the Celestials' demands for control over the road to EvOrland and declaring open war."},{"s":"S017","c":"Lilith","q":"Lilith, it seems like you've moved from scamming people to leading a full-blown religious commune. What's the ultimate goal of your new devoted followers?","a":"Oh, it's very simple. They're going to help me find the Fountain of Youth. I just want to be a child again! And once I am, we're securing a dwarven belt so I can finally grow a beard as a child. That's the beautiful end for me. I don't really have a reason to be running around fighting demons and angels anyway.","v":"Unapologetically Bizarre","e":"Retiring Lilith to lead her cult on a quest to become a bearded child forever."},{"s":"S017","c":"Billabong","q":"Billabong, a group of wandering merchants just handed you a completely unknown, lustrous metal helmet with ball bearings soldered onto it, insisting it's for 'your eyes only'. And you... just put it on?","a":"Yeah, I would like to wear the helmet. Look, they've increased the wealth of the region significantly, they said it was a gift to me, and they wanted me to be their leader. Plus, maybe it'll help me figure out how to multi-class into a Bard-barian. You never know until you put the mystery helmet on.","v":"Chaotically Trusting","e":"Immediately putting on a mysterious, magical helmet gifted by a band of wandering merchants."},{"s":"S018","c":"Dahlia","q":"Dahlia, walk us through the moment you dismissed your newly summoned axe beak. You essentially served it up to an ancient white dragon, and then took it away at the last second. What was going through your mind?","a":"Look, I panicked, alright? I just spent ten minutes casting Find Steed to get this perfect axe beak with its splayed toes for the snow, and suddenly a massive dragon bursts out of the ice to eat it. I thought, 'Not today!' and dismissed it. I didn't exactly consider that taking the dragon's lunch would make it look at us like we were the backup meal. Good thing I remembered to Bless everyone right after!","v":null,"e":null},{"s":"S018","c":"Orla","q":"Orla, you essentially built an ice bridge out of sheer willpower by spamming Shape Water while everyone army-crawled across a frozen lake. How exhausting was that?","a":"Oh, it was terrifying! We're talking about forty to sixty feet of sheer panic. I was just in gnome form, furiously casting Shape Water back-to-back while listening to Billabong slide behind me. When that dragon grabbed the massive trout right next to us, I thought we were done for. I'm just glad my Midwestern work ethic pulled us through.","v":null,"e":null},{"s":"S018","c":"Ash","q":"Ash, you walked away from the shop with a Ring of Spell Storing at a massive discount, and then immediately faced an ancient white dragon. How are you feeling about your purchases now?","a":"Honestly, the ring is great, but right now I'm wishing I bought a teleporter. I was so excited to store spells and help out Corras and Billabong, and the next thing I know we're on a frozen lake with an ancient dragon flying off with a trout the size of two horses. Next time we go shopping, I'm buying dragon bait.","v":null,"e":null},{"s":"S019","c":"Orla","q":"Orla, walk us through that moment inside the ice block. You stuck your lips out of a tiny gap to speak to the Frost Giant, but it didn't quite work out. What was going through your head?","a":"I really thought we could be friends! The Yeti was just staring at me like a pet. I tried to say 'giant that hurt us', but I guess my lips were frozen. In hindsight, diplomacy by poking your face out of a magical igloo isn't the best strategy.","v":null,"e":null},{"s":"S019","c":"Orla","q":"Would you do it again?","a":"Probably, but maybe with a better performance check next time.","v":null,"e":null},{"s":"S019","c":"Corras","q":"Corras, the DM laid out this elaborate, respectful Frost Giant ritual involving untouched snow and enduring the cold. Your immediate response was 'Bamboozle them with an exploding keg.' Why?","a":"Listen, taking off your clothes in a blizzard for an endurance challenge just isn't my style. We had a keg of alchemist fire and Ash has Scatter. It's just simple math. Why freeze to death when you can blow up your problems and teleport away?","v":null,"e":null},{"s":"S019","c":"Ash","q":"Ash, you carried a lot of the magical utility today, from Leomund's Tiny Hut to trying to set up a slap-based Contingency spell. How exhausting is it keeping this party alive?","a":"You have no idea. One minute I'm trying to figure out how to dimension door us out of a giant ice cube, the next they're trying to burn down an abandoned cabin on stilts. I'm just grateful the short rest mechanics are as complicated as they are, it gives me a break to think.","v":null,"e":null},{"s":"S020","c":"Corras","q":"Corras, you managed to single-handedly trigger a golem ambush and a party-wiping explosion in the span of five minutes. Walk me through your thought process when you saw that glowing orb in the ruined cabin.","a":"Look, if people don't want their glowing artifacts touched, they shouldn't leave them out in the open. It was warm! It felt inviting! How was I supposed to know it was going to deal 118 points of radiant damage and instantly vaporize us? I'm just looking for Zibblebottom's robot assistant, okay? At least my ghost form remembered where the ring was.","v":"Defensive but unashamed","e":"Corras picking up the radiant explosive device that killed three party members."},{"s":"S020","c":"Billabong","q":"Billabong, you lost several of your beloved gnominions tonight—some to wolves, and a few were literally thrown by you up a 20-foot chasm. How are you holding up with these losses?","a":"Listen, I had to make some hard decisions. It was just me and, you know, five children out in the snow, surrounded by wolves. Sometimes you just have to sacrifice a few to the circle of life. Besides, I ordered more in the mail. They're guaranteed delivery. And hey, they successfully retrieved the resurrection ring, so they did their jobs! The magic missile gnomes keep flying.","v":"Callous but pragmatic","e":"Billabong using and losing her gnome minions to wolves and physics while fetching the ring."},{"s":"S020","c":"Ash","q":"Ash, what's it like being dead and having to communicate complex resurrection instructions to Billabong while sharing ghost space with an annoying undead named Cyril?","a":"It was incredibly inconvenient. I was just trying to find some way to exorcise this annoying guy by hitting him with things, and meanwhile Billabong is asking exactly five questions to figure out how to save our lives. It had nothing to do with helping us in any way, I just wanted to get rid of him. I'm just glad her plan wasn't hinging on us being capable ghosts.","v":"Exasperated","e":"Ash's ghost attempting to give Billabong instructions while being annoyed by Cyril's spirit."},{"s":"S021","c":"Billabong","q":"Billabong, after getting into that fight, you kept screaming about 'baby legs' on that Umber Hulk. What exactly was your strategy there?","a":"Listen, man, when you hit a bug with a big hammer, you expect it to squish, not grow back cute little stubbly baby legs! It was disgusting but honestly hilarious. I'm just here to rage and collect weird limbs at this point.","v":"Amused and Chaotic","e":"Billabong raging and attacking the Umber Hulk, only to watch its severed legs grow back as 'baby legs'."},{"s":"S021","c":"SavannahBelle","q":"SavannahBelle, getting stuck in that magical web right before the ambush must have been terrifying. How are you holding up?","a":"Oh my goodness, it was awful! One minute I'm just trying to squeeze through like the rest of the group, and the next I'm fully wrapped up like a spider's dinner. Luckily, a quick Firebolt cleared that right up, but I'm going to be smelling burnt hair and web for weeks.","v":"Flustered but resilient","e":"Failing the dexterity save and getting cocooned in the Drow's web trap, then breaking out with a Firebolt."},{"s":"S021","c":"Ash","q":"Ash, your Shadow Spirit really seemed to put the Drow Mage on the back foot. Was that part of the plan, or just a happy accident?","a":"Of course it was the plan. Shadows are a specialty of mine, and honestly, letting Corras try to talk his way out of an ambush with a fanatic of Lolth was never going to last. I just prefer to let the spirits do the rending while I keep a safe distance.","v":"Smug and Calculated","e":"Summoning a Shadow Spirit to cast 'Weight of Sorrow' and Chilling Rend on the Drow Mage."},{"s":"S022","c":"Ave","q":"AnnAvelle, walk us through that Wall of Fire. The Drow Mage and the Umber Hulk were instantly reduced to ash—but you also managed to detonate it directly on top of yourself. Was that... intentional?","a":"I would never! Look, the arcane weave is a delicate thing. It's not my fault that when you're casting twin elemental walls of searing death in a cramped, panic-inducing underdark tunnel, occasionally the backblast catches your robes. The imPortent thing is they're dead. I'm just a little crispy.","v":"Defensive and Singed","e":"AnnAvelle clumsily casting a double Wall of Fire that incinerated the enemies but also caught her in the blast."},{"s":"S022","c":"Orla","q":"Orla, you joined the fray late, but your first major contribution was convincing a horde of Underdark spiders to sit on your friends' heads. How did you know they'd be so accommodating?","a":"You just have to talk to them like people! They were very polite, actually. Everyone was stressing out about finding spider-themed disguises to infiltrate Web's Edge, and I thought, why wear fake spiders when the real ones are right here? They left their families to help us. I just hope Billabong doesn't squish his by accident.","v":"Earnest and slightly terrifying","e":"Orla using Speak with Small Beasts to convince live spiders to act as Lolth-follower disguises for the party."},{"s":"S022","c":"Dahlia","q":"Dahlia, we have to ask about your summons. You sent a magical panther into a deadly web trap, and then later lit those same webs on fire with the panther still inside. Do you feel any remorse?","a":"They're just my fodder. It's fine! Look, it's a very successful business arrangement we have. He has full hit points, he takes a nap, maybe he gets a little singed by my flame sword, and then he goes back to whatever plane he came from. It builds character.","v":"Pragmatic and Unapologetic","e":"Dahlia treating her summoned panther mount as expendable hazard-clearance fodder in the webs."},{"s":"S023","c":"Orla","q":"Orla, walk us through the moment you decided to negotiate with the giant toad right before it swallowed you whole.","a":"I honestly thought we were having a breakthrough! I asked if it had ever had a friend, and it gave me this huge lick. Next thing I know, I'm inside a dark, sticky, but weirdly safe space, and it's rolling away. I think we might be legally married now, which wasn't on my bingo card today, but honestly, it could be worse!","v":"Optimistic","e":"Orla successfully persuaded the giant demon toad, who then swallowed her whole and rolled away with her safely inside."},{"s":"S023","c":"Dahlia","q":"Dahlia, that execution of the winged demon was absolutely brutal. Was the overkill really necessary?","a":"It had wings. It triggered me. I saw those wings and I just thought about the celestials that destroyed my village, and my oath took over. Slicing its head clean off with a flaming sword and cauterizing the wound was the only appropriate response. Plus, I got to keep its tusk rings, so it was a productive use of my time.","v":"Intense","e":"Dahlia rolled a natural 20 to decapitate the winged demon with her flaming sword after being triggered by its angelic appearance."},{"s":"S023","c":"Corras","q":"Corras, while the others were dealing with demons and giant toads, you seemed to focus heavily on retreating. What was the tactical thought process there?","a":"Look, I brought out the New Age Corras today—I've been burning incense, getting my chakras aligned. When that creepy guy locked eyes with me, my inner peace said 'run 60 feet in the opposite direction.' Sometimes the best strategy is simply not being in the room when the trouble starts.","v":"Defensive","e":"Corras used his full movement and a dash action to retreat 60 feet away from the dangerous mage."},{"s":"S024","c":"Ash","q":"Ash, you were pinned under a boulder, a cavern collapsing, an army of spiders and a dragon bearing down. Talk us through the decision to use the ancient Planar Alignment scroll right there.","a":"Look, I was literally face down on the ground, concussed, with rocks crushing my spine. I didn't have a lot of great tactical options, okay? The scroll was old, it was supposed to take us *to* the Underdark originally, I think. But honestly, when you're caught between a giant spider-dragon, thousands of little spiders, and an actual cyclops we just adopted... anywhere is better than there. Morty's dining table seemed like a great place to crash. Literally.","v":"Exhausted and Relieved","e":"Teleporting the entire party out of a collapsing cavern using an ancient scroll."},{"s":"S024","c":"Orla","q":"Orla, you spent a good portion of the escape inside the mouth of a massive demon toad, and then tried to teach it the meaning of friendship. How do you feel that went?","a":"I think it went really well! You just have to set clear boundaries. I told him he can't just pick people up in his mouth—even if he thinks he's helping. He had a really hard time understanding why two friends wasn't enough, but once SavannahBelle gave him a severed tentacle, he really calmed down and listened. He even gave us sending stones! I think we really made a breakthrough today.","v":"Optimistic and Slime-Covered","e":"Convincing the Hezrou demon toad to not eat the party and wait for them to escape."},{"s":"S024","c":"Dahlia","q":"Dahlia, the moment you landed safely on the dining room table, you immediately started violently wrestling SavannahBelle for an amulet. What was going through your head?","a":"I had just forgiven my new giant sister Gertrude for dislocating my arm, survived a cave-in, and teleported through planar space. The *last* thing I needed was SavannahBelle swiping my contraband magic amulet while we were falling! It's mine. I found it in a dark cave. If I have to tackle her onto a pile of Morty's roasted pheasant to get it back, I will.","v":"Fiercely Protective","e":"Tackling SavannahBelle on Corras's dining table to retrieve the anti-magic amulet."},{"s":"S025","c":"Ash","q":"Ash, you've essentially proposed a magical surveillance state for the BWB Federation. How do you respond to critics who say this violates Corras's decree of freedom?","a":"Well, what Corras doesn't explicitly forbid, I will quietly manage. We have the Cult of the Dark Embrace and the Queen of Air and Darkness to worry about. A little 'big brother' action is just proactive kingdom management. Plus, I don't trust Valtor further than I can throw him.","v":null,"e":null},{"s":"S025","c":"Dahlia","q":"Dahlia, your proposed Bastion strategy involves bringing suspects into a nice basement with hot chocolate, right before the shakedowns. Walk us through this good cop, bad cop routine.","a":"It's all about the aesthetic! You have to give them the hot chocolate first. It lowers their defenses. Then, when the aura catches them in a lie, I get to punch them in the face. It's really the best of both worlds, hospitality and interrogation!","v":null,"e":null},{"s":"S025","c":"Corras","q":"Corras, as the leader of this burgeoning federation, how do you handle your allies openly discussing torture chambers and mass espionage?","a":"Honestly, it's a classic BWB Tuesday. I try to establish a utopia where people are free to live their own lives, and my closest allies immediately build spy networks and secret police. You know, you just have to lean into it. As long as they keep me somewhat in the dark so I have plausible deniability, we're golden.","v":null,"e":null},{"s":"S026","c":"Orla","q":"Orla, Billabong, that was a tense escape. Let's talk about the doorway incident. Orla, what made you look at your frog companion and think 'Ah yes, industrial lubricant'?","a":"(Laughs) Listen, when you're in a pinch and an oversized booger tree is stuck by her loincloth, you use the resources at hand! My frog buddy has drool to spare. Sure, it's slightly acidic and smells terrible, but it gets the job done!","v":null,"e":null},{"s":"S026","c":"Billabong","q":"Billabong, you seemed less than thrilled about this plan. How long do you think it will take to wash that smell off?","a":"(Gags slightly) I don't want to talk about it. I was literally pulling handfuls of toxic goop and slapping it on a giant lady. It was foul. But hey, we got her out, right? I'm taking a three-day bath as soon as we find an inn.","v":null,"e":null},{"s":"S026","c":"Ash","q":"Ash, you pulled off a magnificent Dimension Door to escape the pocket dimension with the artifacts, only to immediately get crushed by a rock. Walk us through those thirty seconds.","a":"Oh my god, it was an emotional rollercoaster. One second I'm grabbing Corras's hand like an action hero, zipping us down the tunnel away from a furious Spider Dragon. The next, the ceiling comes down. I have 53 health, I thought I was fine! But no, boom, rock on my head. Trapped. Honestly, very humbling.","v":null,"e":null},{"s":"S026","c":"Ash","q":"You were stuck next to Dahlia under that boulder. Did you two have time for a chat?","a":"Barely! She was mostly just telling me I had a plus-five from her aura, which obviously didn't save me from rolling terribly. But it's nice knowing she's got my back, even when we're pancaked.","v":null,"e":null},{"s":"S026","c":"Dahlia","q":"Dahlia, 'Sisterhood is a concept' has become the quote of the day. You really bonded with Gertrude back there.","a":"Absolutely! I mean, I have poison resistance, so slathering her in frog drool wasn't even gross to me. I would do anything for my sister! We pulled her through that door, she patted our heads with her pinky... it was a beautiful moment of solidarity.","v":null,"e":null},{"s":"S026","c":"Dahlia","q":"The DM turned off all the automations today. How did that change the dynamic for you as a Paladin?","a":"It definitely kept me on my toes! I had to actually yell out 'Hey, don't forget my Aura of Courage!' and calculate my spell DC manually. It felt a little more old-school, but I kind of liked shouting out the buffs. Sisterhood means doing the math together!","v":null,"e":null},{"s":"S027","c":"Orla","q":"Orla, you relied heavily on your Wand of Fireballs today, despite the tight quarters in the Forge of Souls. Walk us through your tactical mindset when you saw your allies in the blast radius.","a":"Listen, when you have a Wand of Fireballs, everything looks like it needs to be burned to a crisp. Sure, I caught Billabong in the blast—twice, actually—but I promised her some Goodberry Wine afterwards, so I think it all balances out. Dahlia's immune to it anyway, so it's practically a victimless crime!","v":null,"e":null},{"s":"S027","c":"Orla","q":"Billabong was paralyzed at the time. Did that factor into your decision?","a":"Well, she couldn't run away from the blast, could she? I felt terrible, honestly, but those Revenants were closing in. You have to break a few eggs to make an omelet. Or, in this case, singe a few friends to roast some undead.","v":null,"e":null},{"s":"S027","c":"Dahlia","q":"Dahlia, that finishing move on the Revenant—shoving it so hard it impaled its eye on your Dead Man's Plate armor—was incredibly brutal. Were you trying to send a message?","a":"I just wanted a trophy, to be honest. It's not every day you get to assert dominance like that. The movement penalty from having a corpse stuck to my armor is a bit annoying, but the intimidation factor is absolutely through the roof.","v":null,"e":null},{"s":"S027","c":"Dahlia","q":"You also completely ignored Orla's fireballs. How does it feel to just stand in the inferno unaffected?","a":"It's the best feeling in the world. I have a ring that makes me immune to level four and below spells. I literally chose not to be affected. It's very empowering to just watch the chaos unfold around you while you focus on eating coagulated blood candies.","v":null,"e":null},{"s":"S027","c":"Billabong","q":"Billabong, you took an absolute beating today. You jumped off a cliff, got paralyzed, fireballed by your own teammate, and hacked by a Revenant. How did you stay standing at the end?","a":"Relentless Endurance, baby! I may have been prone, paralyzed, and on the brink of death, but I wasn't going to let some undead chumps—or Orla's trigger-happy wand—take me out. I'm an orc, I don't go down that easy.","v":null,"e":null},{"s":"S027","c":"Billabong","q":"Any hard feelings towards Orla for the friendly fire?","a":"She owes me a lot of Goodberry Wine. And maybe an apology. But mostly the wine. If I survive this cavern, I'm collecting on that debt.","v":null,"e":null},{"s":"S028","c":"Orla","q":"Orla, you essentially became the Alpha of a pack of Shadow Mastiffs today. Can you walk us through the decision to turn into a pink silverback gorilla to establish dominance?","a":"Well, you know, when a giant, terrifying, six-eyed shadow dog challenges you, you have to think on your feet. A silverback gorilla is already intimidating, but a pink one? That sends a message. It says, 'I am comfortable in my own skin, and I will still beat you up.' Plus, my teeth weren't big enough in my regular form.","v":null,"e":null},{"s":"S028","c":"Orla","q":"The staged fight with Billabong got a little out of hand when you knocked her unconscious. Did you pull your punches at all?","a":"I really tried! But Billabong is so tough, I thought she could take a solid Donkey Kong pound or two. I felt awful when she actually dropped, but you have to admit, it really sold the dominance display. The mastiffs respected the hustle. I gave her some Goodberry wine after to make up for it.","v":null,"e":null},{"s":"S028","c":"Billabong","q":"Billabong, you took quite a beating today, both from the revenants and from your own teammate. How are you holding up?","a":"Malchor provides. Pain is just weakness leaving the body, as Malchor says. Honestly, the fight with Orla was an honor. She's a gracious Alpha. Though I do wish she hadn't critted me while I was already at two hit points.","v":null,"e":null},{"s":"S028","c":"Billabong","q":"Speaking of Malchor, you seem to have a newfound obsession with this fiendish name after picking up that parchment. What are your plans for spreading his word?","a":"Malchor demands that his name be known. I plan to carve it into every wall, write it in every ash pile, and weave it into every conversation. Have I mentioned Malchor to you yet? He is the bringer of sorrow. Very cool guy. Malchor.","v":null,"e":null},{"s":"S028","c":"Dahlia","q":"Dahlia, your infinite bag of mincemeat pies essentially saved the party from being eaten by a pack of Shadow Mastiffs. Did you ever expect them to be this useful?","a":"Honestly, those pies have saved so many social situations at this point. When the gnominions built that contraption at Foehammer's forge, I thought it was just a fun quirk. But there's nothing that defuses tension quite like fresh meat. Like I always say, I have two things in this world: infinite steeds and infinite pies.","v":null,"e":null},{"s":"S028","c":"Dahlia","q":"You had to act as the primary healer today, constantly getting Billabong back on her feet. How exhausting is that?","a":"It's a full-time job. I literally just had to keep poking her on the nose to give her hit points back. But I'm happy to do it. Just please, nobody else pick up any cursed fiendish scrolls. My Lay on Hands pool isn't infinite, unlike the pies.","v":null,"e":null},{"s":"S029","c":"Ash","q":"Ash, walk us through the moment you decided to pick up the obviously cursed dwarven coin with your bare hands instead of the Mage Hand you'd literally just used for the dagger.","a":"Look, sometimes you just have to feel the magic, you know? The Mage Hand wasn't getting any weird vibes off the dagger, so I figured, hey, let's try the direct approach. Next thing I know, I'm plotting the murder of my coworkers in fluent Dwarvish. It's called being thorough.","v":"Defensive but smug","e":"Picking up the sentient coin and getting possessed by Ashkorth."},{"s":"S029","c":"Billabong","q":"Billabong, you spent the better part of the afternoon physically barricading a door against golems while completely unable to say anything except praises to 'Malchor'. How does that affect team communication?","a":"Honestly? Malchor provides. It really simplifies things. You don't have to overthink your responses when your vocabulary is literally just one guy's name. Plus, I think it really intimidated the doughboys. Praised be Malchor.","v":"Cheerfully brainwashed","e":"Holding the door while cursed to only say Malchor."},{"s":"S029","c":"SavannahBelle","q":"SavannahBelle, you were the one who finally figured out the ritual blood sacrifice had already happened. What was going through your head as everyone was volunteering to be guinea pigs for the cursed dagger?","a":"Absolute panic. I'm sitting there watching them try to hand a murder weapon to the intern, and then the coin to Dahlia, and I'm just thinking 'we don't have enough HR forms for this'. Thank the gods I finally connected the vision to the dagger's tip before someone lost a limb.","v":"Deeply stressed","e":"Realizing the ritual was already complete before the party killed each other."},{"s":"S030","c":"Dahlia","q":"Dahlia, let's talk about the... elephant in the room. You leaned in to drain the shadow creature's soul, and it kissed you back. What was going through your mind?","a":"I was just trying to be intimidating! I pursed my lips to suck out its soul, and suddenly this hideous beast with nostril-sockets is giving me a smooch. I was so startled I lost all the shadow essence. But you know what? I think I gave him a little happiness in his final moments. He was an 11 out of 10.","v":null,"e":null},{"s":"S030","c":"Dahlia","q":"You certainly redeemed yourself against the Ceaseless Maw. Talk us through that tail strike.","a":"Yeah, I misty-stepped right behind it and just let loose. Two attacks, double Divine Smites, hitting it for massive radiant damage. Paladins are just incredibly fun to play in those moments. It felt good to hack into its innards after the whole kissing debacle.","v":null,"e":null},{"s":"S030","c":"Billabong","q":"Billabong, you tried to intimidate the Ceaseless Maw using Ash's Portent. It was a flawless setup, but then... Legendary Resistance. How frustrating was that?","a":"Incredibly frustrating! We had the perfect roll, a three, and the DM just casually says it decides to succeed instead. This ancient horror just looked right through me. But hey, it was worth a shot. You miss 100% of the intimidation checks you don't take.","v":null,"e":null},{"s":"S030","c":"Billabong","q":"After that, you kind of stayed in the back while the others rushed in. Tactical decision?","a":"Look, SavannahBelle got grabbed by a giant tendril right out of the gate, and I made a demon pact, okay? I couldn't really help anyone anyway. I figured staying out of the way of the acid pool and letting Orla blind the thing was the safest play for everyone.","v":null,"e":null},{"s":"S030","c":"Orla","q":"Orla, you dealt 64 radiant damage with a Sunbeam straight to the Ceaseless Maw's eye, completely blinding it. How did that feel?","a":"It was amazing! It failed its constitution save and just took the full brunt of the light. Blinding it was huge because it disabled a lot of its scariest attacks. Plus, I got to follow it up with my Bear Spirit Totem to give everyone 18 temporary hit points. Honestly, I was just doing my job.","v":null,"e":null},{"s":"S030","c":"Orla","q":"Earlier, you had to kill a creature to harvest its essence and felt pretty bad about it. Did blinding this ancient horror help make up for that?","a":"Oh, absolutely. I'm Orla the Butcher when it comes to horrifying abyssal monsters, but I really didn't want to hurt the poor shadow guy earlier. Blasting the Maw felt completely justified. I'm just glad everyone survived the fight!","v":null,"e":null},{"s":"S031","c":"Billabong","q":"Billabong, rough session. You were mind-controlled into killing Ash, and then found yourself taking an acid bath. How are you holding up?","a":"I'm traumatized! I had no control over my body, I just watched myself smash her head in. And then to top it off, SavannahBelle revoked my shoe privileges. At least my Vrocks tried to help.","v":null,"e":null},{"s":"S031","c":"Billabong","q":"Speaking of the Vrocks, you had to get creative with your commands due to your pact. How hard is it to accidentally be a hero?","a":"It's a delicate balance. I can't just tell a demon to 'save my friends,' that's way too selfless. I have to tell them to attack the specific claws holding my friends for entirely selfish reasons. It's a logistical nightmare.","v":null,"e":null},{"s":"S031","c":"SavannahBelle","q":"SavannahBelle, you unleashed a massive Thunder spell that absolutely wrecked the Ceaseless Maw. Walk us through that play.","a":"Well, I knew it resisted fire from my Wall of Fire, so I used my Innate Sorcery to convert it to Thunder. Nothing says 'avenging your best friend' like ripping a monster's spine out with a 32-damage thunderclap.","v":null,"e":null},{"s":"S031","c":"SavannahBelle","q":"You had some strong words for Billabong after Ash's death. Do you really think she's a murderer, or was that just the heat of battle?","a":"I know she was mind-controlled, but seeing her do that to Ash... it changes things. The shoe ban stands. For now. But honestly, I'm just focused on getting Ash to Lilith in Sigil so we can fix this mess.","v":null,"e":null},{"s":"S031","c":"Ezrella","q":"Ezrella, you were waiting at the Bastion for some highly capable adventurers, and instead, a deeply traumatized group walked in carrying a frozen head in a bag. What was your first impression?","a":"Honestly, it was a bit of a buzzkill. We had a great party going in the fighting pit, and then these guys show up crying about Dementors and dead best friends. But hey, they seem to know their way around powerful enchantments, so I'll take what I can get.","v":null,"e":null},{"s":"S031","c":"Ezrella","q":"You mentioned investigating smuggled goods from the Red Wizards of Thay. Are you confident this group is up to the task?","a":"Well, the smart one is currently on ice in a Bag of Holding, and their self-proclaimed 'think brain' is a guy they call the Idiot King. So, confidence is a strong word. But they survived whatever ate their friend, so they've got grit.","v":null,"e":null},{"s":"S032","c":"Dahlia","q":"Dahlia, creating a fake 'dockworker sweepstakes' on the spot to distract the guards was certainly a bold strategy. Did you have that planned out, or were you flying by the seat of your pants?","a":"Planned? Of course it was planned! Nothing says 'totally not suspicious' like a highly enthusiastic person wielding calligrapher's supplies and demanding signatures. I mean, sure, the chant ('Go, go, dockworkers go...') needed work, but the people love a chance at a prize. Even if the prize is just me letting them live.","v":"Proud but Defensive","e":"Dahlia starting a fake sweepstakes to distract the warehouse guards."},{"s":"S032","c":"Ezrella","q":"Ezrella, your disguise as a wheezing old man was quite convincing, especially the part where you started poking people in the chest. What was your inspiration for that?","a":"Listen, when you're disguised as a fragile old man, you have to lean into the entitlement. The minute that kid started worrying about my health and tried to get the foreman, I knew I had to escalate. It's not just a disguise; it's a lifestyle. Also, it was really fun to poke Corras and call him a whippersnapper.","v":"Smug and Theatrical","e":"Ezrella using Disguise Self to play a wheezing old man and yelling at a helpful dockworker."},{"s":"S032","c":"Orla","q":"Orla, while the others were making a huge scene out front, you decided to turn into a rat and slip inside the warehouse. How was the view from down there?","a":"It was... dusty. And surprisingly complicated. Do you know how hard it is to move a giant pile of hay with tiny rat paws without leaving a trace? I found a fancy silk glove in there, which definitely doesn't belong to a dockworker. But mostly I was just trying not to sneeze.","v":"Practical and Slightly Annoyed","e":"Orla Wild Shaping into a rat to investigate the inside of the locked warehouse and searching a haystack."},{"s":"S033","c":"Dahlia","q":"Dahlia, you went from an incredibly decisive 'smash or pass' combat loop to literally asking if we should try 'benevolence' with the lich. What prompted that change of heart?","a":"Well, it was the bees. Ezrella brought up the very valid point that we skipped the 'befriend' and 'bamboozle' stages and went straight to beating them senselessly. Honestly, my directive comes straight from King Corras. When he says smash, I smash. But if there's an opportunity to try benevolence with an eyeless creature controlling zombies, I have to keep an open mind.","v":null,"e":null},{"s":"S033","c":"Dahlia","q":"Do you have any regrets about immediately decapitating the wizard?","a":"Regrets? No. It was a clean hit, very therapeutic.","v":null,"e":null},{"s":"S033","c":"Billabong","q":"Billabong, you were recently mind-controlled by a hostile entity to lay down your weapons and surrender to a wizard. What goes through your mind when something like that takes hold?","a":"Pure rage. Literally. The second I snapped out of it, I was absolutely furious. I am usually the one dominating people, so being told to obey some weird guy in a robe was a massive red flag.","v":null,"e":null},{"s":"S033","c":"Billabong","q":"So your response was to throw your dwarven hammer at a zombie's skull?","a":"Exactly. Sometimes a girl's just got to do some therapeutic thunking. And honestly, smacking that zombie so hard its head dropped to its knees was exactly what I needed to process the trauma of the domination spell.","v":null,"e":null},{"s":"S033","c":"Corras","q":"King Corras, you negotiated a truce, successfully deceived the lich into believing you, and then readied an action to stab him the second he tried to bind you. Care to comment on your diplomatic strategy?","a":"Look, I wasn't willing to make any promises until Orla and SavannahBelle were safe. The lich wanted to play games, so I told him what he wanted to hear. The minute he brought out the manacles, the deal was off.","v":null,"e":null},{"s":"S033","c":"Corras","q":"The party seemed a little conflicted about whether to keep fighting or talk it out.","a":"Well, SavannahBelle cast a fourth-level fireball into the warehouse, so I think that resolved the negotiation phase pretty quickly. Now we just have to worry about the building burning down.","v":null,"e":null},{"s":"S034","c":"SavannahBelle","q":"SavannahBelle, you managed to secure the party's stolen gear not with magic or steel, but by... acting as a therapist for a giant trash-eating monster in the sewer. Can you walk us through that strategy?","a":"I mean, he was just spiraling! Everybody was projecting their trauma onto him and calling him unsanitary. Sometimes a monster doesn't want to eat you, they just want you to validate their emotional warfare and share the muck. We set some really healthy boundaries, I apologized for my emotional hostage-taking, and he gave me all our stuff back. Friendship really is the real magic.","v":"Emotionally Validated","e":"Therapy session with Wally the Otyug"},{"s":"S034","c":"Corras","q":"Corras, after weeks of your evil twin Sarek impersonating you and ruining your reputation, you finally confronted him. And then... you absorbed his soul into your own body. How are you feeling with a second person living inside you?","a":"Honestly? A little crowded, but the dexterity boost is insane. Look, the guy had it coming after he tried to steal Ezrella's bag of holding while pretending to be me. Now he's just a voice in the back of my head complaining about my life choices. I think I'll buy a new dragon turtle hood just to annoy him.","v":"Casually Fused","e":"Absorbing Sarek via the Twin Formation"},{"s":"S034","c":"Dahlia","q":"Dahlia, the party was struggling against Asnar the Crimson, a powerful undead lich. Then you stepped up and completely obliterated him with a massive Divine Smite. What was going through your head in that moment?","a":"I was mostly just thinking about how much I wanted those screaming black silk boxers he was wearing. You don't just pass up legendary loot like that. Honestly, the lich was being a little dramatic with his whole ritual, so I just introduced him to the bright side. And now I have a half-written breakup letter to Vecna for my scrapbook!","v":"Loot-Motivated Righteousness","e":"Crit smiting the Lich Asnar"},{"s":"S035","c":"Ezrella","q":"Ezrella, as you stepped into the infamous Death House, your first instinct upon finding a hanging corpse was to poke it with a silver sword. What was going through your mind?","a":"Look, we're high-level adventurers. We've fought ancient beings and literal gods. I'm not about to let some mundane haunted house trick me with a fake corpse. Plus, I don't trust any of this wizard nonsense Mordenkainen sent us into. Poke first, ask questions later! We're the BWB, we don't have time for ghost babies.","v":null,"e":null},{"s":"S035","c":"Orla","q":"Orla, you were quite vocal about your desire to simply fireball the entire Death House and everything inside it. Why the scorched-earth policy?","a":"Honestly, who leaves unattended kids in locked rooms in a house full of dead bodies and screaming ghost babies? It's a massive safety hazard! Seven charges of a wand of fireballs just seemed like the most efficient way to clean up the neighborhood. We've got a schedule to keep and I'm not doing any dumb puzzles.","v":null,"e":null},{"s":"S035","c":"SavannahBelle","q":"SavannahBelle, while the rest of the party was upstairs investigating the baby's cries, you seemed to wander off on your own and even declared yourself to be the baby. Care to explain your investigative technique?","a":"I don't have time for fear. If you just embrace the weirdness of the haunted house, it loses its power over you. Besides, everyone else was making such a fuss over a little crying, I figured I'd go find the real wizard shit hidden in the corners. Best to just start yanking on doors and see what happens.","v":null,"e":null},{"s":"S036","c":"SavannahBelle","q":"SavannahBelle, that was quite the trip into the abyss. You looked Strahd straight in his pale face and drank a chalice of what turned out to be blood. Was that bravery, or did you legitimately just want to try the local vintage?","a":"Look, when a mysterious house bleeds on you and a pale guy in a fancy illusion offers you a drink, it's rude to decline! I just assumed it was wizard nonsense. I hate wizards! Now I'm apparently ripped and suffering extreme paranoia, so I'd say the review of the vintage is a solid 1 out of 10. Would not recommend.","v":null,"e":null},{"s":"S036","c":"Corras","q":"Corras, you practically one-shot an invisible hurricane of death with your blades early on, but later found yourself completely paralyzed and one turn away from having your soul sucked into a cultist's hand tattoo. Walk us through that emotional rollercoaster.","a":"It's the duality of the blade song, man. One minute you're dealing 60 psychic damage to the literal wind, and the next you're locked in place watching a fleshy cultist grow a baby Deadpool hand after Dahlia chopped his main one off. I was just standing there accepting my fate. Honestly, I owe Orla a drink for carrying that skin-bomb out of the blast radius, too.","v":null,"e":null},{"s":"S036","c":"Ezrella","q":"Ezrella, you were on the receiving end of some horrific attacks tonight—getting your life drained by a wraith and then bitten in the neck by a molting cultist. How are you holding up physically, and more importantly, mentally?","a":"I'm literally bleeding out of my neck and cursed with vampiric corruption. Every time we killed those cultists, they just peeled like rotten onions and came back stronger! I'm doing terribly, thanks for asking. Also, I take full responsibility for poking that fleshy coin purse. That was a mistake.","v":null,"e":null},{"s":"S037","c":"Orla","q":"Orla, you were literally engulfed by a Shambling Mound today. What was going through your mind in there?","a":"At first, I thought, 'Oh, this is cozy! It smells like my friend Billabong's restroom.' But then I realized I couldn't breathe, and my Lilypad Sun Hat was getting absolutely ruined. It was actually a terrible time.","v":"Traumatized but fashion-conscious","e":"Getting swallowed by the Shambling Mound and losing HP/oxygen."},{"s":"S037","c":"Dahlia","q":"Dahlia, that finishing blow on the cultist was brutal. You basically turned him into a salad. Any regrets?","a":"Regrets? Are you kidding? I crit, smote him for 62 damage, and sliced him up like Gordon Ramsay. If anything, I'm just upset the Crimson Abbot showed up and ruined my post-kill intimidation glare.","v":"Smug and bloodthirsty","e":"Dealing 62 damage to a cultist and dicing him into pieces."},{"s":"S037","c":"Corras","q":"Corras, you managed to break Orla out of the Shambling Mound with a massive critical hit. Walk us through that.","a":"Look, someone had to do it. The thing smelled like a swamp, and I was not about to let Orla's hat get digested. Just a casual slice and dice to hold the line, you know?","v":"Casual heroics","e":"Landing a natural 20 on the Shambling Mound to free Orla."},{"s":"S038","c":"SavannahBelle","q":"SavannahBelle, you made it out of the Death House by the skin of your teeth. And what was the first thing you did upon escaping?","a":"Oh, I just launched several twin spell fireballs right at the house. I was tired of its nonsense. And I told the group I'd just take a long rest and keep launching fireballs at it until it learned its lesson.","v":null,"e":null},{"s":"S038","c":"SavannahBelle","q":"You also offered some, let's say, 'unique' medical assistance during the ghostly childbirth in the master suite. Care to explain?","a":"Listen, I'm a worm-like being. I have mucus, I have eye tendrils. I figured I could fit into a one-inch crevice and push the baby out from the inside. It's just basic medicine!","v":null,"e":null},{"s":"S038","c":"Orla","q":"Orla, you were the first to successfully escape the shifting brick wall of the Death House. How did it feel to leave your friends behind?","a":"It was terrifying! I flew out, but the house started showing me distorted visions of what my friends were going through. I tried my best to guide them telepathically with my five-word limit, but it's hard to explain childbirth contractions in five words.","v":null,"e":null},{"s":"S038","c":"Orla","q":"Speaking of which, your advice of 'baby stillbirth, contractions, slow blades' seemed to cause some confusion among the group.","a":"I panicked! Time was dilating, the blades were spinning, and half the group didn't know whether you push during a contraction or not. It was chaos.","v":null,"e":null},{"s":"S038","c":"Corras","q":"Corras, you missed escaping through the brick wall by a hair, but you later managed to fly a carpet up the stairwell. What was going through your mind?","a":"Honestly? I thought it was a level 15 solution to a level 5 problem. When the existential dread hit us on the carpet, I almost turned us around, but thanks to some quick thinking and counter charms, we made it. I was ready to do a backflip through the spinning scythe blades if it came to it.","v":null,"e":null},{"s":"S039","c":"SavannahBelle","q":"SavannahBelle, that was quite the performance trying to charm the wagon girl. Where did the 'ignorant southerner with two left feet' routine come from?","a":"Look, I had to work with what I had. They already thought we were cursed and bringing the wrath of the old gods. I figured playing the helpless, clumsy traveler was our best bet. I just forgot that randomly bringing up annoying wizards when people are terrified of magic might backfire a tiny bit.","v":null,"e":null},{"s":"S039","c":"SavannahBelle","q":"Your Wall of Stone perfectly trapped the direwolves. How satisfying was it to just put them in a box?","a":"Oh, incredibly satisfying. We were debating running or fighting, and I realized I could just put them in time-out. Pulling ten massive stone panels out of the ground to form a perfect little wolf-prison while Ash grabbed the bag was definitely the highlight of my night.","v":null,"e":null},{"s":"S039","c":"Ash","q":"Ash, you grabbed the bag only to find a demon goat with pure black hourglass eyes. What went through your mind in that moment?","a":"Utter horror, mostly. I expected an artifact or something, not a bleeding goat kid surrounded by offal. And then Orla immediately imprints on it and declares it her best friend. I guess we're hauling a demonic goat around Barovia now.","v":null,"e":null},{"s":"S039","c":"Ash","q":"You also got pickpocketed for a healing potion while sleeping. How annoying is that?","a":"So annoying! We're sleeping in horse dung under a wagon to hide from zombies, and the one person trying to 'help' us robs me blind. I couldn't even catch her doing it. Just one more reason not to trust anyone in this awful place.","v":null,"e":null},{"s":"S039","c":"Corras","q":"Corras, you rolled a Natural 1 on your Arcana check trying to make an illusion to protect the party, and instead summoned a zombie-attracting beacon. Care to explain?","a":"Yeah, that was not my finest moment. I thought I could replicate the shimmering barrier the wagons had. Instead, I accidentally made a glowing neon sign saying 'Fresh meat under the wagon' for the local zombies. At least the session ended before we had to fight them!","v":null,"e":null},{"s":"S040","c":"Corras","q":"Corras, you had the Deck of Many Things, Madam Eva was trapped in a time stop, and she offered you a high-stakes gamble for your friends' lives. What was going through your mind?","a":"I bested her fair and square at her own game. She was asleep, I did the switcheroo, I caught the bottle. That deck was mine. She wanted to gamble? Fine, I picked one card. She just didn't like that I picked the tarot deck instead of the literal deck of many things. I wasn't about to get played after I did all the hard work.","v":"Smug and Defiant","e":"Corras refusing to give up the Deck of Many Things and opting to draw a single tarot card instead of risking the deck."},{"s":"S040","c":"Dahlia","q":"Dahlia, the moment Madam Eva put up that invisible wall and counterspelled the Dimension Doors, it was absolute chaos. How did you react?","a":"Look, the second I realized we were trapped in a tiny hut with an angry, immensely powerful fortune teller, my only thought was grabbing whoever I could and Dimension Dooring the hell out of there. The fact that SavannahBelle got counterspelled on her counterspell... well, it's just the icing on the terrible cake. And no, I did not want to be seduced.","v":"Exasperated","e":"Dahlia attempting to Dimension Door out of the hut, only for Madam Eva to counterspell the escapes."},{"s":"S040","c":"Ezrella","q":"Ezrella, you were standing outside the hut while Madam Eva tried to use you as a bargaining chip to get Corras to return the Deck. Were you worried he'd fold?","a":"Oh, absolutely not. I know Corras. He would never, ever give up a legendary artifact like that just for my life. That's not a read on him, it's just a fact. Madam Eva really thought she was doing something there, but it was honestly the worst ploy she could have possibly come up with.","v":"Matter-of-fact","e":"Madam Eva using Sending to tell Corras to trade the Deck for his friends' lives, which Ezrella knew would never work."},{"s":"S041","c":"SavannahBelle","q":"SavannahBelle, you saw a chalice full of swirling, ominous blood inside Strahd's coffin and your very first instinct was to chug it. Walk me through your thought process there.","a":"Listen, I opened the coffin, I saw the shiny chalice, and I was just a confused child who didn't know what they were doing wrong. I thought, 'Hey, maybe if I drink it, the bad magic goes away!' I did not expect my orifices to start leaking sanguine mist, and I certainly didn't expect my best friend to turn around and violently stab me to death while I was paralyzed. One star, would not recommend.","v":"Betrayed and leaking","e":"Drinking the profane blood from the chalice and being executed by a mind-controlled Ezrella before turning into a vampire spawn."},{"s":"S041","c":"Ezrella","q":"Ezrella, you put on the glowing evil crown, got mind-controlled by Strahd, and proceeded to brutally crit your paralyzed party member. How are you feeling about your tactical decisions today?","a":"Okay, in my defense, she was already full of evil blood! I genuinely thought that if I poked a few holes in her with my rapier, the bad blood would just leak out and she'd be fine. I didn't know I was going to automatically crit her into oblivion! I mean, sure, the crown made me do it, but there was logic there. Somewhat. Sort of.","v":"Mortified but rationalizing","e":"Getting mind-controlled by the crown and executing the paralyzed SavannahBelle."},{"s":"S041","c":"Orla","q":"Orla, early on you drank from a magic goblet that cured your curse but forced you to lie about anything important. How hard was it to function after that?","a":"Oh, it wasn't a problem at all. I hate these guys, so I didn't care. Wait, no, that's the lie talking! Or is it? Honestly, I just picked up an empty cup, it magically filled with water, and I figured 'harm no harm, here we go.' Next thing I know, I have to gaslight SavannahBelle about using her fancy Robe of Stars as a pillowcase. Definitely cursed myself twice in one day.","v":"Defensively gaslighting","e":"Drinking from the cursed goblet in Madame Eva's tent."},{"s":"S042","c":"Izzy","q":"Izzy, incredible performance out there tonight. Walk us through those final moments with Rahadin. You really took the 'Dragon Ball Z' approach, didn't you?","a":"Look, when you're avenging fallen kin, you don't hold back. I was wailing on him, crushing his skull in. He tried to get some last words in about dusk elves, but I wasn't having it. His head just exploded. Job done.","v":null,"e":null},{"s":"S042","c":"Izzy","q":"And when the souls swirling in his blade were released, you didn't hesitate to destroy it.","a":"I shut that down real fast. No way I was keeping that cursed scimitar around after what it did to Meg.","v":null,"e":null},{"s":"S042","c":"Shrum","q":"Shrum, early in the fight you found yourself in a... unique engagement with a wooden door. Can you explain the strategy there?","a":"It wasn't an engagement, it was a message. My trident got stuck in the door after a miss, and I figured, why waste the radiant damage from Spirit Shroud? So I blasted the door to let them know 'Shrum is here'.","v":null,"e":null},{"s":"S042","c":"Shrum","q":"It certainly sent a message. You also vaporized a Barovian Witch shortly after.","a":"Yeah, Savage Attacker goes crazy. Once I got the Spectral Trident going, it was lights out. Take that.","v":null,"e":null},{"s":"S042","c":"Lydia","q":"Lydia, you took a massive hit early on, catching fire from Immolation and suffering the Curse of the Damned. How did you manage to bounce back?","a":"Honestly, I just trusted the process. I used Disappearing Step, hid in a corner while invisible, and downed a healing potion. Plus, my Slaad minion put in some serious work while I was recovering.","v":null,"e":null},{"s":"S042","c":"Lydia","q":"That Slaad really came in clutch, rolling double 16s with advantage.","a":"He's the good kind of aberration! Once I was healed up, I dropped invisibility and got right back to Eldritch Blasting. Standard warlock things.","v":null,"e":null},{"s":"S043","c":"Corras","q":"Lord Corras, it appeared that the 'sleep study' for Lord Neverember and Isteval escalated rather quickly into a forced necrotic stasis and a subtle coup. Do you regret losing the Paladins as allies against the Fey?","a":"Look, they came at us first! We were just sitting there trying to figure out how to stretch our rations, and the guy commits three strikes of treason in a row by calling us absentee leaders. We're the people who gave them the magic obsidian shield in the first place! Honestly, there's only room for one paladin in this castle anyway. If they want to volunteer for a sleep study, that's just good science.","v":"Defensive & Smug","e":"The party casting Mass Suggestion on their political rivals to drink a stasis potion after Lord Neverember insulted them."},{"s":"S043","c":"Ash","q":"Ash, you were the only one who seemed to identify the true, terrifying necrotic nature of the Matron's stasis potion. How does it feel watching your party members immediately decide to Essence Drain the incapacitated lords?","a":"I literally cast Identify, felt the disgusting necrotic abomination flowing through that sludge, warned them that the victims would become mindless thralls to the Matron, and their first instinct was 'Oh great, can we start draining their life essence while they're asleep?' I just had to throw my hands up and take a walk. I mean, we've always been the bad guys, but sometimes it really hits you all over again.","v":"Exhausted & Resigned","e":"Ash learning the grim truth of the Matron's potion via Arcana/Identify, only for Dahlia to immediately start Essence Draining the victims."},{"s":"S043","c":"Orla","q":"Orla, while the rest of the group was busy committing what the UN might consider a war crime in the council room, you snuck out to talk to Raydoth the Druid about the dying land. What did you learn?","a":"Yeah, things got a little intense with the mind-control sludge, so I just awkward-saluted and slipped out. Raydoth is turning into a tree, which is weird, and he said the poison is deep underground. Between the refugees and the lack of infrastructure, honestly, I'm pretty sure it's just the mountains of poop. Like, we have thousands of people here and no plumbing. It's not always a magical curse, sometimes it's just sanitation.","v":"Pragmatic & Awkward","e":"Orla abandoning the political coup to investigate the corrupted land with the Emerald Enclave druid."},{"s":"S044","c":"Dahlia","q":"Dahlia, congratulations on completing another... let's call it a 'morally complex' session. Can you walk me through the thought process behind waking up a highly dangerous blood-mage prisoner in a makeshift spa?","a":"Thank you! I just felt like, you know, we had him tied up in his underwear earlier, and that's not how King Corras’s court should operate. We wanted him to wake up refreshed. Soft flute music, a plush robe, cucumber slices. We're not animals.","v":null,"e":null},{"s":"S044","c":"Dahlia","q":"Right, not animals. But you did amputate his leg with a flaming greatsword moments after he woke up.","a":"Well, he broke three of his fingers to draw a blood rune on his thigh! I panicked. But let the record show I used the flame-tongued greatsword specifically to cauterize the wound instantly. It was the most humane emergency amputation possible. I even offered to get him a chrome replacement leg from the blacksmith.","v":null,"e":null},{"s":"S044","c":"Dahlia","q":"Did he appreciate the chrome leg offer?","a":"He pledged his allegiance to King Corras right after, so I'd say the spa treatment worked flawlessly.","v":null,"e":null},{"s":"S044","c":"SavannahBelle","q":"SavannahBelle, things have escalated quickly. You walked into a mob of angry Lord's Alliance soldiers who had just lost their leader, flashed Lord Neverember's ring, and accidentally became their new commander. How does that happen?","a":"I was just trying to keep them busy! I told them we needed to prepare a funeral because the Matron clearly murdered everyone, which she totally did, by the way. And then this sergeant just looks at the ring I looted—I mean, recovered—and pledges half the army to me. Honestly, these big city politics are wild.","v":null,"e":null},{"s":"S044","c":"SavannahBelle","q":"You also seem to have casually forgotten that you got your teammate, Ash, banished to the Feywild.","a":"Look, I was stressed, there were Paladins throwing tears at us, and I used a tiny bit of magic that may have accidentally triggered a banishment. But Ash is a wizard! She knows how to get back. Eventually. Probably.","v":null,"e":null},{"s":"S044","c":"SavannahBelle","q":"She was gone for what felt like months to her.","a":"A nice vacation! I'm sure she enjoyed the fresh air.","v":null,"e":null},{"s":"S044","c":"Ash","q":"Ash, welcome back to the material plane. How was your impromptu, months-long survival trip in the Feywild?","a":"It was... character-building. I was hunted by the Wild Hunt, turned into a ghoul, forced to speak only the absolute truth for months, and had to negotiate my familiar's release from an ancient green dragon named Thorn who smelled like chlorine gas. So, you know, a typical Tuesday.","v":null,"e":null},{"s":"S044","c":"Ash","q":"How do you feel about SavannahBelle, whose instructions directly led to your banishment?","a":"I spent a significant portion of those early months simply cursing her name. I am trying to let it go, but knowing she was out here accidentally becoming a warlord while I was hiding under a rock from displacer beasts is going to require some therapy. Or at least a very long bath.","v":null,"e":null},{"s":"S044","c":"Ash","q":"Well, you're back now. Right in time for the castle to be divided by a brewing civil war.","a":"Honestly? I might just turn around and walk back to the green dragon.","v":null,"e":null},{"s":"S045","c":"Corras","q":"King Corras, how did it feel to instantly turn a rioting mob into your loyal subjects with just a wave of your rod?","a":"It was only natural. I am their King. The fact that I had to use a magical rod to remind them of that is honestly a bit insulting, but they saw the light eventually. As for the others... well, gravity is a harsh mistress.","v":"Smug","e":"Using the Rod of Rulership to charm the rioting crowd and then watching the reverse gravity spell get dispelled."},{"s":"S045","c":"SavannahBelle","q":"SavannahBelle, you lifted hundreds of people into the air, and then Lord Isteval dropped them to their deaths. Do you feel responsible?","a":"Responsible? I put them in a safe, floating bubble! They were perfectly fine up there! Isteval is the murderer who decided to cut the strings. And then to crash Lord Neverember's funeral right after and drop my ring in the mud... it's been a very stressful day for my PR team.","v":"Defensive","e":"Casting Reverse Gravity, which Isteval failed to dispel correctly, killing the peasants, and then fumbling the ring at the funeral."},{"s":"S045","c":"Ash","q":"Ash, your eulogy for Lord Neverember was... unique. Can you translate what you said in Sylvan?","a":"I panicked! I haven't done public speaking in years. I just recited Humpty Dumpty. It sounded really sad and profound if you didn't know the translation. You can't make an omelet without breaking an egg, right? That felt fitting for everything that happened today.","v":"Embarrassed","e":"Reciting Humpty Dumpty in Sylvan during Lord Neverember's funeral procession because of panic."},{"s":"S046","c":"Corras","q":"Corras, you just handed over your entire domain and the Ring of Neverember to a terrifying Matron. How are you feeling about this unconditional surrender?","a":"Look, it's not a surrender, it's a... strategic delegation. Sure, I'm basically leaving my baby with Mother Gothel, but what's the worst that could happen? In a thousand years my castle is full of her minions? I've dealt with worse. Probably.","v":"Mildly Panicked","e":"Handing over the kingdom to the Matron"},{"s":"S046","c":"Ash","q":"Ash, your Augury spell essentially greenlit giving absolute power to the Matron. Do you actually trust this plan?","a":"Trust has absolutely nothing to do with it. The bones said it was 'sound given the circumstances,' which is divination-speak for 'you have no other choice so stop complaining.' If she decides to betray us, well... that's a problem for Future Ash.","v":"Resigned but Logical","e":"Casting Augury to confirm the Matron's deal"},{"s":"S046","c":"Zibblebottom","q":"Zibblebottom, you've cracked open a Red Wizard construct and built the Ziblomatic Integrity Monitoring Array Mark 47b. What's the secret to your genius?","a":"Oh, it's all about ethically sourced unicorn hooves and completely ignoring the previous 46 failures! Only 12 of them resulted in hospitalizations, which frankly are excellent numbers. Also, I may be taking constant psychic damage from the dome, but Gerald the hamster is doing great!","v":"Manic Inventor","e":"Explaining his new inventions and the construct's memory crystal"}];
+
+const PLAYER_COLORS = {
+  Gradles:"#4A90D9",HT:"#E57373",Mary:"#81C784",
+  Christie:"#BA68C8",Lucy:"#FFB74D",Tenderbittle:"#4DB6AC",
+  Meijinx:"#FF8A65",Drenek:"#7986CB"
+};
+const PLAYER_CHARS = {
+  Corras:"Gradles",Ash:"HT",Billabong:"Mary",
+  Dahlia:"Christie",Lilith:"Christie",Orla:"Lucy",
+  SavannahBelle:"Tenderbittle",Ave:"Meijinx",Drenek:"Drenek",
+  Ezrella:"HT",Zibblebottom:"Gradles",Sarlumon:"Drenek",
+  Izzy:"Lucy",Shrum:"Meijinx",Lydia:"Mary",AnnAvelle:"Meijinx"
+};
+
+function cc(c){const p=PLAYER_CHARS[c];return p?PLAYER_COLORS[p]:"#9494bf"}
+function ci(c){if(!c)return"?";if(c.length<=3)return c;return c.slice(0,2).toUpperCase()}
+
+// State
+let curSession=null,curChar=null,curQAIdx=0;
+let filterChar=null,filterVibe=null;
+let autoTimer=null,autoActive=false,showAll=false;
+
+// Derived
+const sessions=[...new Set(RAW.map(d=>d.s))].sort();
+const allChars={};
+RAW.forEach(d=>{
+  if(!allChars[d.c])allChars[d.c]={count:0,sessions:new Set(),vibes:new Set()};
+  allChars[d.c].count++;allChars[d.c].sessions.add(d.s);
+  if(d.v)allChars[d.c].vibes.add(d.v);
+});
+const charOrder=Object.entries(allChars).sort((a,b)=>b[1].count-a[1].count).map(d=>d[0]);
+const vibeStats={};
+RAW.forEach(d=>{
+  if(d.v){
+    if(!vibeStats[d.v])vibeStats[d.v]={count:0,chars:{}};
+    vibeStats[d.v].count++;
+    vibeStats[d.v].chars[d.c]=(vibeStats[d.v].chars[d.c]||0)+1;
+  }
+});
+
+function getFiltered(){
+  let d=RAW;
+  if(filterChar)d=d.filter(x=>x.c===filterChar);
+  if(filterVibe)d=d.filter(x=>x.v&&x.v.toLowerCase().includes(filterVibe.toLowerCase()));
+  if(curSession)d=d.filter(x=>x.s===curSession);
+  if(curChar)d=d.filter(x=>x.c===curChar);
+  return d;
+}
+function getGlobalFiltered(){
+  let d=RAW;
+  if(filterChar)d=d.filter(x=>x.c===filterChar);
+  if(filterVibe)d=d.filter(x=>x.v&&x.v.toLowerCase().includes(filterVibe.toLowerCase()));
+  return d;
+}
+
+function updateFilterBar(){
+  const bar=document.getElementById('filter-bar'),val=document.getElementById('filter-value');
+  if(filterChar||filterVibe){
+    bar.classList.add('active');
+    const p=[];
+    if(filterChar)p.push('Character: '+filterChar);
+    if(filterVibe)p.push('Mood: '+filterVibe);
+    val.textContent=p.join(' | ');
+  }else bar.classList.remove('active');
+}
+function clearAllFilters(){
+  filterChar=null;filterVibe=null;
+  document.querySelectorAll('.char-card').forEach(c=>c.classList.remove('active'));
+  document.querySelector('.char-card-all')?.classList.add('active');
+  updateFilterBar();renderSessionStrip();
+  if(curSession)selectSession(curSession);
+  buildVibeCloud();
+}
+
+function renderStats(){
+  const bar=document.getElementById('stats-bar');
+  const mc=charOrder[0],mcc=allChars[mc].count;
+  let topV='',topVC=0;
+  Object.entries(vibeStats).forEach(([v,s])=>{if(s.count>topVC){topV=v;topVC=s.count}});
+  let rangeC='',rangeN=0;
+  Object.entries(allChars).forEach(([c,s])=>{if(s.vibes.size>rangeN){rangeC=c;rangeN=s.vibes.size}});
+  bar.innerHTML=`
+    <div class="stat-item"><div class="stat-value">${RAW.length}</div><div class="stat-label">Total Q&amp;A</div></div>
+    <div class="stat-item"><div class="stat-value">${sessions.length}</div><div class="stat-label">Sessions</div></div>
+    <div class="stat-item"><div class="stat-value" style="color:${cc(mc)}">${mc}</div><div class="stat-label">Most Interviewed (${mcc})</div></div>
+    <div class="stat-item"><div class="stat-value" style="font-size:18px">${topV}</div><div class="stat-label">Top Mood (${topVC})</div></div>
+    <div class="stat-item"><div class="stat-value" style="color:${cc(rangeC)}">${rangeC}</div><div class="stat-label">Most Range (${rangeN} moods)</div></div>`;
+}
+
+function renderSessionStrip(){
+  const strip=document.getElementById('session-strip');
+  const gf=getGlobalFiltered();
+  const hasData=new Set(gf.map(d=>d.s));
+  strip.innerHTML=sessions.map(s=>{
+    const has=hasData.has(s),act=s===curSession;
+    let cls='session-btn';
+    if(act)cls+=' active';
+    if(has)cls+=' has-data';
+    if(!has)cls+=' dimmed';
+    return `<button class="${cls}" onclick="selectSession('${s}')">${s}</button>`;
+  }).join('');
+}
+
+function renderGallery(){
+  const g=document.getElementById('char-gallery');
+  let h=`<div class="gallery-title">Characters</div>`;
+  h+=`<div class="char-card char-card-all active" onclick="filterByChar(null)">
+    <div class="char-avatar" style="background:var(--bg-surface);color:var(--text-muted)">ALL</div>
+    <div class="char-info"><div class="char-name" style="color:var(--text-secondary)">All Characters</div>
+    <div class="char-count">${RAW.length} interviews</div></div></div>`;
+  charOrder.forEach(c=>{
+    const info=allChars[c],col=cc(c);
+    h+=`<div class="char-card" data-char="${c}" onclick="filterByChar('${c}')">
+      <div class="char-avatar" style="background:${col}22;color:${col}">${ci(c)}</div>
+      <div class="char-info"><div class="char-name" style="color:${col}">${c}</div>
+      <div class="char-count">${info.count} across ${info.sessions.size} sessions</div></div></div>`;
+  });
+  g.innerHTML=h;
+}
+
+function filterByChar(c){
+  filterChar=c;
+  document.querySelectorAll('.char-card').forEach(card=>{
+    card.classList.remove('active');
+    if(!c&&card.classList.contains('char-card-all'))card.classList.add('active');
+    if(c&&card.dataset.char===c)card.classList.add('active');
+  });
+  updateFilterBar();renderSessionStrip();
+  // Find first session with data for this filter
+  const gf=getGlobalFiltered();
+  const availSessions=new Set(gf.map(d=>d.s));
+  if(curSession&&availSessions.has(curSession)){
+    selectSession(curSession);
+  }else if(gf.length>0){
+    selectSession(gf[0].s);
+  }
+}
+
+function selectSession(sid){
+  stopAutoplay();
+  curSession=sid;curChar=null;curQAIdx=0;
+  document.querySelectorAll('.session-btn').forEach(b=>b.classList.toggle('active',b.textContent===sid));
+  document.getElementById('stage-session').textContent='SESSION '+sid.replace('S','');
+
+  let data=RAW.filter(d=>d.s===sid);
+  if(filterChar)data=data.filter(d=>d.c===filterChar);
+  if(filterVibe)data=data.filter(d=>d.v&&d.v.toLowerCase().includes(filterVibe.toLowerCase()));
+
+  const charsIn=[...new Set(data.map(d=>d.c))];
+  const tabs=document.getElementById('char-tabs');
+  if(charsIn.length>1){
+    let th=`<div class="char-tab active" onclick="selectCharTab(null)" data-char="all">ALL</div>`;
+    charsIn.forEach(c=>{
+      th+=`<div class="char-tab" onclick="selectCharTab('${c}')" data-char="${c}" style="color:${cc(c)}">${c}</div>`;
+    });
+    tabs.innerHTML=th;tabs.style.display='flex';
+  }else{tabs.style.display='none';tabs.innerHTML=''}
+  renderInterviews();
+}
+
+function selectCharTab(c){
+  curChar=c;curQAIdx=0;stopAutoplay();
+  document.querySelectorAll('.char-tab').forEach(t=>{
+    t.classList.toggle('active',(!c&&t.dataset.char==='all')||(c&&t.dataset.char===c));
+  });
+  renderInterviews();
+}
+
+function renderInterviews(){
+  const content=document.getElementById('interview-content');
+  const counter=document.getElementById('qa-counter');
+  const data=getFiltered();
+
+  if(!data.length){
+    content.innerHTML=`<div class="empty-state"><div class="empty-icon">&#128566;</div>
+      <div class="empty-text">No interviews match current filters</div></div>`;
+    counter.textContent='';
+    document.getElementById('btn-prev').disabled=true;
+    document.getElementById('btn-next').disabled=true;
+    return;
+  }
+
+  if(showAll){
+    // Show all Q&A for this session/filter
+    let html='';
+    data.forEach((d,i)=>{
+      if(i>0)html+='<hr class="qa-separator">';
+      html+=buildQAPair(d,i);
+    });
+    content.innerHTML=html;
+    counter.textContent=data.length+' Q&A';
+    document.getElementById('btn-prev').disabled=true;
+    document.getElementById('btn-next').disabled=true;
+  }else{
+    if(curQAIdx>=data.length)curQAIdx=data.length-1;
+    if(curQAIdx<0)curQAIdx=0;
+    content.innerHTML=buildQAPair(data[curQAIdx],0);
+    counter.textContent=(curQAIdx+1)+' / '+data.length;
+    document.getElementById('btn-prev').disabled=curQAIdx===0;
+    document.getElementById('btn-next').disabled=curQAIdx>=data.length-1;
+  }
+}
+
+function buildQAPair(d,idx){
+  const col=cc(d.c);
+  let h=`<div class="qa-pair" style="animation-delay:${Math.min(idx*.08,.4)}s">`;
+  h+=`<div class="question-bubble">
+    <div class="reporter-icon">R</div>
+    <div class="question-text">${esc(d.q)}</div></div>`;
+  h+=`<div class="answer-bubble">
+    <div class="answer-text" style="border-color:${col}33">
+      <span class="answer-text::before" style="background:${col}"></span>
+      <span class="answer-char-name" style="color:${col}">${esc(d.c)}</span>
+      ${esc(d.a)}`;
+  if(d.v)h+=`<div class="vibe-badge" style="color:${col};border-color:${col}44">${esc(d.v)}</div>`;
+  if(d.e)h+=`<div class="event-ref">${esc(d.e)}</div>`;
+  h+=`</div><div class="answer-avatar" style="background:${col}22;color:${col}">${ci(d.c)}</div></div></div>`;
+  return h;
+}
+
+function esc(s){
+  if(!s)return'';
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*([^*]+)\*/g,'<em style="opacity:.85">$1</em>');
+}
+
+function prevQA(){if(curQAIdx>0){curQAIdx--;renderInterviews()}}
+function nextQA(){
+  const d=getFiltered();
+  if(curQAIdx<d.length-1){curQAIdx++;renderInterviews()}
+  else if(autoActive)stopAutoplay();
+}
+function toggleShowAll(){
+  showAll=!showAll;
+  document.getElementById('btn-showall').classList.toggle('active',showAll);
+  if(showAll)stopAutoplay();
+  renderInterviews();
+}
+function toggleAutoplay(){autoActive?stopAutoplay():startAutoplay()}
+function startAutoplay(){
+  if(showAll){showAll=false;document.getElementById('btn-showall').classList.remove('active')}
+  autoActive=true;
+  document.getElementById('btn-auto').classList.add('active');
+  document.getElementById('autoplay-bar').classList.add('active');
+  advanceAuto();
+}
+function stopAutoplay(){
+  autoActive=false;
+  document.getElementById('btn-auto').classList.remove('active');
+  document.getElementById('autoplay-bar').classList.remove('active');
+  if(autoTimer){clearTimeout(autoTimer);autoTimer=null}
+  const p=document.getElementById('autoplay-progress');
+  p.style.transition='none';p.style.width='0%';
+}
+function advanceAuto(){
+  if(!autoActive)return;
+  const d=getFiltered();
+  if(curQAIdx>=d.length-1){stopAutoplay();return}
+  const p=document.getElementById('autoplay-progress');
+  const dur=4000;
+  p.style.transition='none';p.style.width='0%';
+  requestAnimationFrame(()=>{p.style.transition=`width ${dur}ms linear`;p.style.width='100%'});
+  autoTimer=setTimeout(()=>{curQAIdx++;renderInterviews();advanceAuto()},dur);
+}
+
+// Vibe cloud
+function buildVibeCloud(){
+  const el=document.getElementById('vibe-cloud');
+  el.innerHTML='';
+  const W=el.clientWidth||800,H=300;
+  const vibes=Object.entries(vibeStats).map(([tag,info])=>{
+    let topC='',topN=0;
+    Object.entries(info.chars).forEach(([c,n])=>{if(n>topN){topC=c;topN=n}});
+    return{tag,count:info.count,topChar:topC,color:cc(topC)};
+  }).sort((a,b)=>b.count-a.count);
+  if(!vibes.length)return;
+
+  const svg=d3.select(el).append('svg').attr('width',W).attr('height',H);
+  const sz=d3.scaleSqrt().domain([1,d3.max(vibes,d=>d.count)]).range([10,24]);
+  const nodes=vibes.map(d=>({
+    ...d,fontSize:sz(d.count),
+    x:W/2+(Math.random()-.5)*W*.6,
+    y:H/2+(Math.random()-.5)*H*.5
+  }));
+
+  // Measure text
+  const tmp=svg.append('g').attr('opacity',0);
+  nodes.forEach(n=>{
+    const t=tmp.append('text').attr('font-family','Barlow Condensed')
+      .attr('font-size',n.fontSize+'px').attr('font-weight',600).text(n.tag);
+    const bb=t.node().getBBox();
+    n.width=bb.width+14;n.height=bb.height+6;
+  });
+  tmp.remove();
+
+  const sim=d3.forceSimulation(nodes)
+    .force('center',d3.forceCenter(W/2,H/2))
+    .force('charge',d3.forceManyBody().strength(1))
+    .force('collide',d3.forceCollide().radius(d=>Math.max(d.width,d.height)/2+4))
+    .force('x',d3.forceX(W/2).strength(.04))
+    .force('y',d3.forceY(H/2).strength(.07))
+    .stop();
+  for(let i=0;i<250;i++)sim.tick();
+
+  const tags=svg.selectAll('.vt').data(nodes).enter().append('g')
+    .attr('class','vibe-cloud-tag')
+    .attr('transform',d=>`translate(${d.x},${d.y})`)
+    .on('click',(e,d)=>{
+      filterVibe=filterVibe===d.tag?null:d.tag;
+      updateFilterBar();renderSessionStrip();
+      if(curSession)selectSession(curSession);
+    });
+  tags.append('text').attr('text-anchor','middle').attr('dominant-baseline','central')
+    .attr('font-family','Barlow Condensed').attr('font-weight',600)
+    .attr('letter-spacing','1px').attr('font-size',d=>d.fontSize+'px')
+    .attr('fill',d=>d.color).attr('opacity',d=>Math.min(.4+d.count*.2,1))
+    .text(d=>d.tag);
+  tags.append('title').text(d=>d.tag+'\n'+d.count+'x | Most: '+d.topChar);
+}
+
+// Keyboard nav
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowLeft')prevQA();
+  else if(e.key==='ArrowRight')nextQA();
+  else if(e.key===' '&&curSession){e.preventDefault();toggleAutoplay()}
+});
+
+// Init
+renderStats();renderSessionStrip();renderGallery();buildVibeCloud();
+selectSession('S001');
+window.addEventListener('resize',()=>{clearTimeout(window._vr);window._vr=setTimeout(buildVibeCloud,300)});
+</script>
+</body>
+</html>

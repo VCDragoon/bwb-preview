@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RELATIONSHIP TIDES | BWB Campaign Analytics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@300;400;600;700&family=Barlow:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow-x:hidden}
+body{background:#06060c;color:#c8c8e0;font-family:'Barlow',sans-serif}
+body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(255,255,255,0.015) 2px,rgba(255,255,255,0.015) 4px);pointer-events:none;z-index:9999}
+
+.main-container{max-width:1500px;margin:0 auto;padding:32px 24px 60px}
+
+/* ── TITLE ── */
+.title-block{text-align:center;margin-bottom:6px}
+.title-block h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(40px,5.5vw,64px);letter-spacing:8px;background:linear-gradient(135deg,#4DB6AC 0%,#26C6DA 40%,#00BCD4 70%,#0097A7 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 24px rgba(0,188,212,0.45));line-height:1.1}
+.title-block .subtitle{font-family:'Barlow Condensed',sans-serif;font-size:14px;color:#4a6a6e;letter-spacing:4px;text-transform:uppercase;margin-top:2px}
+
+/* ── SESSION HEADER ── */
+.session-header{text-align:center;margin-bottom:12px;min-height:48px}
+.session-id{font-family:'JetBrains Mono',monospace;font-size:13px;color:#26C6DA;letter-spacing:2px}
+.session-title{font-family:'Barlow Condensed',sans-serif;font-size:18px;color:#6ec6cc;letter-spacing:1px;min-height:22px;margin-top:2px;opacity:0.8}
+
+/* ── HERO LAYOUT ── */
+.hero{display:grid;grid-template-columns:1fr 320px;gap:24px;margin-bottom:20px;align-items:start}
+@media(max-width:1000px){.hero{grid-template-columns:1fr}.side-panel{order:2}}
+
+/* ── ARC CONTAINER ── */
+.arc-container{position:relative;background:linear-gradient(180deg,#0a0a18 0%,#0e0e1e 100%);border:1px solid #1a1a30;border-radius:12px;overflow:hidden;min-height:420px}
+.arc-container::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#4DB6AC,#26C6DA,#00BCD4)}
+
+/* ── SIDE PANEL ── */
+.side-panel{display:flex;flex-direction:column;gap:14px}
+.panel-card{background:linear-gradient(135deg,#12121e 0%,#0e0e1a 100%);border:1px solid #2a2a40;border-radius:10px;padding:14px 18px;position:relative;overflow:hidden}
+.panel-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.panel-card.accent-teal::before{background:linear-gradient(90deg,#4DB6AC,#26C6DA)}
+.panel-card.accent-amber::before{background:linear-gradient(90deg,#f59e0b,#fbbf24)}
+.panel-card.accent-rose::before{background:linear-gradient(90deg,#f43f5e,#fb7185)}
+.panel-card.accent-indigo::before{background:linear-gradient(90deg,#6366f1,#818cf8)}
+.panel-card.accent-emerald::before{background:linear-gradient(90deg,#10b981,#34d399)}
+.panel-label{font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#5a5a7a;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px}
+.panel-value{font-family:'JetBrains Mono',monospace;font-size:13px;color:#c8c8e0;line-height:1.6}
+.panel-value .highlight{color:#26C6DA;text-shadow:0 0 8px rgba(38,198,218,0.3)}
+.panel-value .char-name{font-family:'Cinzel',serif;font-size:12px;color:#ddd}
+.panel-value .dim{color:#4a4a60;font-size:11px}
+.panel-value .score{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:500}
+
+.type-dist{display:flex;flex-direction:column;gap:4px}
+.type-row{display:flex;align-items:center;gap:8px}
+.type-bar-track{flex:1;height:6px;background:#1a1a2e;border-radius:3px;overflow:hidden}
+.type-bar-fill{height:100%;border-radius:3px;transition:width 0.6s ease}
+.type-name{font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#8888a8;width:110px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.type-count{font-family:'JetBrains Mono',monospace;font-size:10px;color:#6b6b8a;width:20px;text-align:right;flex-shrink:0}
+
+/* ── CONTROLS ── */
+.controls-bar{display:flex;align-items:center;gap:16px;justify-content:center;flex-wrap:wrap;margin-bottom:20px}
+.slider-wrap{display:flex;align-items:center;gap:12px;flex:1;max-width:600px}
+.slider-wrap input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:4px;background:#1a1a30;border-radius:2px;outline:none;cursor:pointer}
+.slider-wrap input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;border-radius:50%;background:#26C6DA;cursor:pointer;box-shadow:0 0 10px rgba(38,198,218,0.5)}
+.slider-wrap input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#26C6DA;cursor:pointer;border:none;box-shadow:0 0 10px rgba(38,198,218,0.5)}
+.slider-label{font-family:'JetBrains Mono',monospace;font-size:12px;color:#26C6DA;letter-spacing:1px;min-width:38px}
+
+.btn{font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:1px;text-transform:uppercase;padding:6px 14px;border:1px solid #2a2a40;border-radius:6px;background:#12121e;color:#8888a8;cursor:pointer;transition:all 0.2s}
+.btn:hover{border-color:#26C6DA;color:#26C6DA;box-shadow:0 0 8px rgba(38,198,218,0.2)}
+.btn.active{border-color:#26C6DA;color:#26C6DA;background:#0e1e22;box-shadow:0 0 12px rgba(38,198,218,0.15)}
+.speed-group{display:flex;gap:4px}
+
+.toggle-row{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:16px}
+.toggle-label{font-family:'Barlow Condensed',sans-serif;font-size:12px;color:#5a5a7a;letter-spacing:1px;text-transform:uppercase}
+.toggle-switch{position:relative;width:36px;height:20px;cursor:pointer}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-track{position:absolute;inset:0;background:#1a1a30;border-radius:10px;transition:background 0.3s}
+.toggle-switch input:checked + .toggle-track{background:#0e3a3e}
+.toggle-knob{position:absolute;top:2px;left:2px;width:16px;height:16px;background:#4a4a60;border-radius:50%;transition:all 0.3s}
+.toggle-switch input:checked + .toggle-track .toggle-knob{left:18px;background:#26C6DA;box-shadow:0 0 8px rgba(38,198,218,0.5)}
+
+/* ── STATS BAR ── */
+.stats-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:20px}
+@media(max-width:800px){.stats-bar{grid-template-columns:repeat(2,1fr)}}
+.stat-card{background:linear-gradient(135deg,#12121e 0%,#0e0e1a 100%);border:1px solid #2a2a40;border-radius:8px;padding:12px 16px;text-align:center;position:relative;overflow:hidden}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#4DB6AC,#26C6DA)}
+.stat-card-label{font-family:'Barlow Condensed',sans-serif;font-size:10px;color:#5a5a7a;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px}
+.stat-card-value{font-family:'Cinzel',serif;font-size:13px;color:#c8c8e0}
+.stat-card-sub{font-family:'JetBrains Mono',monospace;font-size:18px;color:#26C6DA;text-shadow:0 0 12px rgba(38,198,218,0.3);margin-top:2px}
+
+/* ── TOOLTIP ── */
+.arc-tooltip{position:absolute;pointer-events:none;background:rgba(10,10,24,0.95);border:1px solid #26C6DA;border-radius:8px;padding:10px 14px;font-family:'Barlow',sans-serif;font-size:12px;color:#c8c8e0;z-index:100;opacity:0;transition:opacity 0.2s;backdrop-filter:blur(8px);max-width:260px;box-shadow:0 0 20px rgba(38,198,218,0.15)}
+.arc-tooltip .tt-pair{font-family:'Cinzel',serif;font-size:13px;color:#fff;margin-bottom:4px}
+.arc-tooltip .tt-type{color:#26C6DA;font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+.arc-tooltip .tt-row{display:flex;justify-content:space-between;gap:12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#8888a8}
+.arc-tooltip .tt-row span:last-child{color:#c8c8e0}
+
+/* ── LEGEND ── */
+.legend-bar{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-top:16px;padding:10px;background:linear-gradient(135deg,#0e0e1a 0%,#12121e 100%);border:1px solid #1a1a30;border-radius:8px}
+.legend-item{display:flex;align-items:center;gap:6px;font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#6b6b8a;letter-spacing:0.5px}
+.legend-swatch{width:20px;height:3px;border-radius:2px}
+</style>
+</head>
+<body>
+
+<div class="main-container">
+  <div class="title-block">
+    <h1>RELATIONSHIP TIDES</h1>
+    <div class="subtitle">Party Chemistry Across 46 Sessions</div>
+  </div>
+
+  <div class="session-header">
+    <div class="session-id" id="sessionId">SESSION S001</div>
+    <div class="session-title" id="sessionTitle"></div>
+  </div>
+
+  <div class="controls-bar">
+    <button class="btn" id="btnPlay" title="Play/Pause">&#9654; PLAY</button>
+    <div class="slider-wrap">
+      <span class="slider-label" id="sliderLabel">S001</span>
+      <input type="range" id="sessionSlider" min="1" max="46" value="1">
+      <span class="slider-label">S046</span>
+    </div>
+    <div class="speed-group">
+      <button class="btn active" data-speed="1">1x</button>
+      <button class="btn" data-speed="2">2x</button>
+      <button class="btn" data-speed="4">4x</button>
+    </div>
+  </div>
+
+  <div class="toggle-row">
+    <span class="toggle-label">Campaign Average Overlay</span>
+    <label class="toggle-switch">
+      <input type="checkbox" id="overlayToggle">
+      <div class="toggle-track"><div class="toggle-knob"></div></div>
+    </label>
+  </div>
+
+  <div class="hero">
+    <div class="arc-container" id="arcContainer">
+      <svg id="arcSvg"></svg>
+      <div class="arc-tooltip" id="arcTooltip"></div>
+    </div>
+    <div class="side-panel" id="sidePanel">
+      <div class="panel-card accent-teal">
+        <div class="panel-label">Strongest Pair</div>
+        <div class="panel-value" id="strongestPair">--</div>
+      </div>
+      <div class="panel-card accent-rose">
+        <div class="panel-label">Weakest Pair</div>
+        <div class="panel-value" id="weakestPair">--</div>
+      </div>
+      <div class="panel-card accent-amber">
+        <div class="panel-label">Session Stats</div>
+        <div class="panel-value" id="sessionStats">--</div>
+      </div>
+      <div class="panel-card accent-indigo">
+        <div class="panel-label">Chemistry Type Distribution</div>
+        <div class="type-dist" id="typeDist"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stats-bar" id="statsBar">
+    <div class="stat-card">
+      <div class="stat-card-label">Strongest Pair Overall</div>
+      <div class="stat-card-value" id="statStrongest">--</div>
+      <div class="stat-card-sub" id="statStrongestVal">--</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-label">Most Volatile Pair</div>
+      <div class="stat-card-value" id="statVolatile">--</div>
+      <div class="stat-card-sub" id="statVolatileVal">--</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-label">Most Common Type</div>
+      <div class="stat-card-value" id="statCommonType">--</div>
+      <div class="stat-card-sub" id="statCommonTypeVal">--</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-label">Campaign Average Chemistry</div>
+      <div class="stat-card-value" id="statCampaignAvg" style="font-family:'JetBrains Mono',monospace;font-size:14px">--</div>
+      <div class="stat-card-sub" id="statCampaignAvgVal">--</div>
+    </div>
+  </div>
+
+  <div class="legend-bar" id="legendBar"></div>
+</div>
+
+<script>
+// ─── DATA ───
+const SESSIONS = {"S001":{"session_id":"S001","session_label":"Castle Corras Introduction and Lumin Visit","pairs":[{"pa":"Gradles","pb":"HT","cs":7.5,"ct":"The Brain Trust","te":9},{"pa":"Gradles","pb":"Mary","cs":7.0,"ct":"Loyal Companions","te":7},{"pa":"Gradles","pb":"Christie","cs":6.5,"ct":"Volatile Mix","te":11},{"pa":"Gradles","pb":"Lucy","cs":5.5,"ct":"New Acquaintances","te":5},{"pa":"HT","pb":"Mary","cs":6.0,"ct":"Comic Relief Duo","te":4},{"pa":"HT","pb":"Christie","cs":5.5,"ct":"Rivals","te":7},{"pa":"HT","pb":"Lucy","cs":6.5,"ct":"Mentor & Student","te":5},{"pa":"Mary","pb":"Christie","cs":7.0,"ct":"Comic Relief Duo","te":7},{"pa":"Mary","pb":"Lucy","cs":6.5,"ct":"Battle Siblings","te":4},{"pa":"Christie","pb":"Lucy","cs":7.0,"ct":"Unspoken Bond","te":6}]},
+"S002":{"session_id":"S002","session_label":"Castle Management and Mine Exploration","pairs":[{"pa":"Gradles","pb":"HT","cs":7.5,"ct":"The Brain Trust","te":11},{"pa":"Gradles","pb":"Christie","cs":5.0,"ct":"New Acquaintances","te":7},{"pa":"Gradles","pb":"Lucy","cs":5.0,"ct":"New Acquaintances","te":5},{"pa":"Gradles","pb":"Tenderbittle","cs":3.0,"ct":"Ships Passing","te":0},{"pa":"Gradles","pb":"Meijinx","cs":8.0,"ct":"Chaos Partners","te":9},{"pa":"HT","pb":"Christie","cs":4.5,"ct":"Rivals","te":7},{"pa":"HT","pb":"Lucy","cs":5.0,"ct":"New Acquaintances","te":5},{"pa":"HT","pb":"Tenderbittle","cs":3.0,"ct":"Ships Passing","te":0},{"pa":"HT","pb":"Meijinx","cs":7.0,"ct":"Battle Siblings","te":7},{"pa":"Christie","pb":"Lucy","cs":4.5,"ct":"New Acquaintances","te":3},{"pa":"Christie","pb":"Tenderbittle","cs":3.0,"ct":"Ships Passing","te":0},{"pa":"Christie","pb":"Meijinx","cs":4.5,"ct":"New Acquaintances","te":3},{"pa":"Lucy","pb":"Tenderbittle","cs":3.0,"ct":"Ships Passing","te":0},{"pa":"Lucy","pb":"Meijinx","cs":4.5,"ct":"New Acquaintances","te":2},{"pa":"Tenderbittle","pb":"Meijinx","cs":3.0,"ct":"Ships Passing","te":0}]},
+"S003":{"session_id":"S003","session_label":"","pairs":[{"pa":"Gradles","pb":"HT","cs":7.5,"ct":"The Brain Trust","te":22},{"pa":"Gradles","pb":"Mary","cs":5.0,"ct":"New Acquaintances","te":14},{"pa":"Gradles","pb":"Christie","cs":6.0,"ct":"Volatile Mix","te":19},{"pa":"Gradles","pb":"Lucy","cs":5.5,"ct":"New Acquaintances","te":15},{"pa":"Gradles","pb":"Meijinx","cs":5.0,"ct":"New Acquaintances","te":11},{"pa":"HT","pb":"Mary","cs":4.5,"ct":"New Acquaintances","te":9},{"pa":"HT","pb":"Christie","cs":8.5,"ct":"Loyal Companions","te":29},{"pa":"HT","pb":"Lucy","cs":7.0,"ct":"Battle Siblings","te":15},{"pa":"HT","pb":"Meijinx","cs":7.5,"ct":"Comic Relief Duo","te":17},{"pa":"Mary","pb":"Christie","cs":6.5,"ct":"Comic Relief Duo","te":13},{"pa":"Mary","pb":"Lucy","cs":5.0,"ct":"New Acquaintances","te":11},{"pa":"Mary","pb":"Meijinx","cs":4.0,"ct":"New Acquaintances","te":7},{"pa":"Christie","pb":"Lucy","cs":7.0,"ct":"Loyal Companions","te":17},{"pa":"Christie","pb":"Meijinx","cs":7.5,"ct":"Comic Relief Duo","te":19},{"pa":"Lucy","pb":"Meijinx","cs":5.5,"ct":"New Acquaintances","te":11}]},
+"S004":{"session_id":"S004","session_label":"","pairs":[{"pa":"Gradles","pb":"HT","cs":7.5,"ct":"The Brain Trust","te":18},{"pa":"Gradles","pb":"Mary","cs":7.0,"ct":"Battle Siblings","te":9},{"pa":"Gradles","pb":"Christie","cs":5.0,"ct":"New Acquaintances","te":5},{"pa":"Gradles","pb":"Lucy","cs":6.5,"ct":"Unspoken Bond","te":11},{"pa":"Gradles","pb":"Meijinx","cs":6.0,"ct":"Loyal Companions","te":7},{"pa":"HT","pb":"Mary","cs":6.5,"ct":"The Odd Couple","te":13},{"pa":"HT","pb":"Christie","cs":8.0,"ct":"Mentor & Student","te":15},{"pa":"HT","pb":"Lucy","cs":8.5,"ct":"Comic Relief Duo","te":17},{"pa":"HT","pb":"Meijinx","cs":6.0,"ct":"Loyal Companions","te":9},{"pa":"Mary","pb":"Christie","cs":7.0,"ct":"Battle Siblings","te":7},{"pa":"Mary","pb":"Lucy","cs":7.5,"ct":"Comic Relief Duo","te":11},{"pa":"Mary","pb":"Meijinx","cs":7.0,"ct":"Battle Siblings","te":9},{"pa":"Christie","pb":"Lucy","cs":5.0,"ct":"New Acquaintances","te":5},{"pa":"Christie","pb":"Meijinx","cs":6.5,"ct":"Loyal Companions","te":7},{"pa":"Lucy","pb":"Meijinx","cs":7.0,"ct":"Comic Relief Duo","te":9}]},
+"S005":{"session_id":"S005","session_label":"","pairs":[{"pa":"Gradles","pb":"HT","cs":8.5,"ct":"The Brain Trust","te":22},{"pa":"Gradles","pb":"Mary","cs":8.0,"ct":"Battle Siblings","te":14},{"pa":"Gradles","pb":"Christie","cs":7.5,"ct":"Chaos Partners","te":27},{"pa":"Gradles","pb":"Lucy","cs":6.0,"ct":"New Acquaintances","te":18},{"pa":"Gradles","pb":"Meijinx","cs":5.0,"ct":"Ships Passing","te":9},{"pa":"HT","pb":"Mary","cs":6.0,"ct":"New Acquaintances","te":12},{"pa":"HT","pb":"Christie","cs":7.0,"ct":"The Brain Trust","te":17},{"pa":"HT","pb":"Lucy","cs":5.5,"ct":"New Acquaintances","te":11},{"pa":"HT","pb":"Meijinx","cs":5.0,"ct":"Ships Passing","te":7},{"pa":"Mary","pb":"Christie","cs":7.5,"ct":"Comic Relief Duo","te":15},{"pa":"Mary","pb":"Lucy","cs":6.0,"ct":"New Acquaintances","te":9},{"pa":"Mary","pb":"Meijinx","cs":4.5,"ct":"Ships Passing","te":5},{"pa":"Christie","pb":"Lucy","cs":7.0,"ct":"Mentor & Student","te":19},{"pa":"Christie","pb":"Meijinx","cs":6.0,"ct":"New Acquaintances","te":11},{"pa":"Lucy","pb":"Meijinx","cs":5.0,"ct":"Ships Passing","te":7}]},
+"S006":{"session_id":"S006","session_label":"","pairs":[{"pa":"Gradles","pb":"HT","cs":7.5,"ct":"The Brain Trust","te":27},{"pa":"Gradles","pb":"Mary","cs":5.0,"ct":"New Acquaintances","te":18},{"pa":"Gradles","pb":"Christie","cs":4.5,"ct":"Ships Passing","te":21},{"pa":"Gradles","pb":"Lucy","cs":4.0,"ct":"New Acquaintances","te":11},{"pa":"Gradles","pb":"Meijinx","cs":3.5,"ct":"Ships Passing","te":7},{"pa":"HT","pb":"Mary","cs":7.0,"ct":"Battle Siblings","te":18},{"pa":"HT","pb":"Christie","cs":8.0,"ct":"The Brain Trust","te":25},{"pa":"HT","pb":"Lucy","cs":5.5,"ct":"New Acquaintances","te":13},{"pa":"HT","pb":"Meijinx","cs":4.0,"ct":"Ships Passing","te":9},{"pa":"Mary","pb":"Christie","cs":7.5,"ct":"Battle Siblings","te":16},{"pa":"Mary","pb":"Lucy","cs":5.0,"ct":"New Acquaintances","te":11},{"pa":"Mary","pb":"Meijinx","cs":3.0,"ct":"Ships Passing","te":5},{"pa":"Christie","pb":"Lucy","cs":6.0,"ct":"New Acquaintances","te":15},{"pa":"Christie","pb":"Meijinx","cs":4.5,"ct":"Ships Passing","te":7},{"pa":"Lucy","pb":"Meijinx","cs":3.0,"ct":"Ships Passing","te":3}]},
+"S007":{"session_id":"S007","session_label":"Time Travel Heist at Castle Corras","pairs":[{"pa":"Gradles","pb":"HT","cs":7.5,"ct":"The Brain Trust","te":11},{"pa":"Gradles","pb":"Mary","cs":4.0,"ct":"New Acquaintances","te":5},{"pa":"Gradles","pb":"Christie","cs":6.5,"ct":"Loyal Companions","te":7},{"pa":"Gradles","pb":"Lucy","cs":3.5,"ct":"New Acquaintances","te":4},{"pa":"Gradles","pb":"Meijinx","cs":2.0,"ct":"Ships Passing","te":2},{"pa":"HT","pb":"Mary","cs":4.5,"ct":"New Acquaintances","te":5},{"pa":"HT","pb":"Christie","cs":8.0,"ct":"The Brain Trust / Comic Relief Duo","te":15},{"pa":"HT","pb":"Lucy","cs":3.0,"ct":"New Acquaintances","te":3},{"pa":"HT","pb":"Meijinx","cs":2.5,"ct":"Ships Passing","te":2},{"pa":"Mary","pb":"Christie","cs":7.0,"ct":"Comic Relief Duo","te":9},{"pa":"Mary","pb":"Lucy","cs":3.0,"ct":"New Acquaintances","te":2},{"pa":"Mary","pb":"Meijinx","cs":1.0,"ct":"Ships Passing","te":0},{"pa":"Christie","pb":"Lucy","cs":4.0,"ct":"Volatile Mix","te":4},{"pa":"Christie","pb":"Meijinx","cs":2.0,"ct":"Ships Passing","te":2},{"pa":"Lucy","pb":"Meijinx","cs":1.0,"ct":"Ships Passing","te":0}]},
+"S008":{"session_id":"S008","session_label":"","pairs":[{"pa":"Gradles","pb":"HT","cs":5.5,"ct":"Rivals","te":22},{"pa":"Gradles","pb":"Mary","cs":4.0,"ct":"New Acquaintances","te":14},{"pa":"Gradles","pb":"Christie","cs":3.5,"ct":"Ships Passing","te":9},{"pa":"Gradles","pb":"Lucy","cs":4.0,"ct":"New Acquaintances","te":12},{"pa":"Gradles","pb":"Meijinx","cs":4.0,"ct":"New Acquaintances","te":10},{"pa":"HT","pb":"Mary","cs":6.0,"ct":"The Odd Couple","te":16},{"pa":"HT","pb":"Christie","cs":5.0,"ct":"Volatile Mix","te":14},{"pa":"HT","pb":"Lucy","cs":7.5,"ct":"The Brain Trust","te":18},{"pa":"HT","pb":"Meijinx","cs":4.5,"ct":"New Acquaintances","te":12},{"pa":"Mary","pb":"Christie","cs":8.0,"ct":"Comic Relief Duo","te":27},{"pa":"Mary","pb":"Lucy","cs":4.0,"ct":"New Acquaintances","te":10},{"pa":"Mary","pb":"Meijinx","cs":4.0,"ct":"New Acquaintances","te":8},{"pa":"Christie","pb":"Lucy","cs":4.0,"ct":"Ships Passing","te":12},{"pa":"Christie","pb":"Meijinx","cs":4.5,"ct":"New Acquaintances","te":10},{"pa":"Lucy","pb":"Meijinx","cs":4.0,"ct":"New Acquaintances","te":8}]},
+"S009":{"session_id":"S009","session_label":"Inventory reconciliation, downtime, and encounters with Eoman and Grimslick","pairs":[{"pa":"Gradles","pb":"HT","cs":7.5,"ct":"The Brain Trust","te":22},{"pa":"Gradles","pb":"Mary","cs":5.0,"ct":"New Acquaintances","te":15},{"pa":"Gradles","pb":"Christie","cs":7.0,"ct":"Loyal Companions","te":19},{"pa":"Gradles","pb":"Lucy","cs":4.0,"ct":"Ships Passing","te":11},{"pa":"Gradles","pb":"Meijinx","cs":4.5,"ct":"New Acquaintances","te":7},{"pa":"HT","pb":"Mary","cs":6.5,"ct":"Comic Relief Duo","te":17},{"pa":"HT","pb":"Christie","cs":6.0,"ct":"Volatile Mix","te":21},{"pa":"HT","pb":"Lucy","cs":6.0,"ct":"Unspoken Bond","te":13},{"pa":"HT","pb":"Meijinx","cs":4.0,"ct":"Ships Passing","te":9},{"pa":"Mary","pb":"Christie","cs":5.0,"ct":"New Acquaintances","te":11},{"pa":"Mary","pb":"Lucy","cs":6.0,"ct":"Comic Relief Duo","te":13},{"pa":"Mary","pb":"Meijinx","cs":3.5,"ct":"Ships Passing","te":5},{"pa":"Christie","pb":"Lucy","cs":4.0,"ct":"Ships Passing","te":7},{"pa":"Christie","pb":"Meijinx","cs":7.0,"ct":"Battle Siblings","te":15},{"pa":"Lucy","pb":"Meijinx","cs":3.0,"ct":"Ships Passing","te":3}]},
+"S010":{"session_id":"S010","session_label":"Cave Approach and Combat","pairs":[{"pa":"Gradles","pb":"HT","cs":6.5,"ct":"The Brain Trust","te":14},{"pa":"Gradles","pb":"Mary","cs":3.5,"ct":"New Acquaintances","te":3},{"pa":"Gradles","pb":"Christie","cs":5.5,"ct":"Volatile Mix","te":18},{"pa":"Gradles","pb":"Lucy","cs":7.0,"ct":"Comic Relief Duo","te":11},{"pa":"Gradles","pb":"Drenek","cs":7.5,"ct":"Battle Siblings","te":13},{"pa":"HT","pb":"Mary","cs":2.5,"ct":"Ships Passing","te":1},{"pa":"HT","pb":"Christie","cs":6.0,"ct":"The Brain Trust","te":16},{"pa":"HT","pb":"Lucy","cs":8.5,"ct":"Mentor & Student","te":22},{"pa":"HT","pb":"Drenek","cs":4.0,"ct":"New Acquaintances","te":9},{"pa":"Mary","pb":"Christie","cs":2.5,"ct":"Ships Passing","te":1},{"pa":"Mary","pb":"Lucy","cs":2.0,"ct":"Ships Passing","te":0},{"pa":"Mary","pb":"Drenek","cs":2.0,"ct":"Ships Passing","te":0},{"pa":"Christie","pb":"Lucy","cs":6.0,"ct":"Unspoken Bond","te":11},{"pa":"Christie","pb":"Drenek","cs":7.0,"ct":"Loyal Companions","te":13},{"pa":"Lucy","pb":"Drenek","cs":4.5,"ct":"New Acquaintances","te":7}]},
+"S011":{"session_id":"S011","session_label":"","pairs":[{"pa":"Gradles","pb":"HT","cs":7.5,"ct":"The Brain Trust","te":9},{"pa":"Gradles","pb":"Mary","cs":4.0,"ct":"New Acquaintances","te":5},{"pa":"Gradles","pb":"Christie","cs":8.0,"ct":"Loyal Companions","te":11},{"pa":"Gradles","pb":"Lucy","cs":5.0,"ct":"New Acquaintances","te":7},{"pa":"Gradles","pb":"Drenek","cs":5.5,"ct":"Rivals","te":9},{"pa":"HT","pb":"Mary","cs":3.0,"ct":"Ships Passing","te":3},{"pa":"HT","pb":"Christie","cs":8.5,"ct":"Loyal Companions","te":13},{"pa":"HT","pb":"Lucy","cs":7.0,"ct":"The Brain Trust","te":7},{"pa":"HT","pb":"Drenek","cs":4.5,"ct":"Rivals","te":5},{"pa":"Mary","pb":"Christie","cs":3.0,"ct":"Ships Passing","te":2},{"pa":"Mary","pb":"Lucy","cs":3.0,"ct":"Ships Passing","te":2},{"pa":"Mary","pb":"Drenek","cs":4.0,"ct":"New Acquaintances","te":3},{"pa":"Christie","pb":"Lucy","cs":7.0,"ct":"Mentor & Student","te":9},{"pa":"Christie","pb":"Drenek","cs":5.0,"ct":"New Acquaintances","te":7},{"pa":"Lucy","pb":"Drenek","cs":4.0,"ct":"New Acquaintances","te":5}]},
+"S012":{"session_id":"S012","session_label":"","pairs":[{"pa":"HT","pb":"Lucy","cs":8.5,"ct":"Battle Siblings","te":27},{"pa":"HT","pb":"Mary","cs":5.0,"ct":"New Acquaintances","te":14},{"pa":"HT","pb":"Christie","cs":7.0,"ct":"Comic Relief Duo","te":9},{"pa":"HT","pb":"Gradles","cs":7.5,"ct":"The Brain Trust","te":13},{"pa":"HT","pb":"Meijinx","cs":4.0,"ct":"Ships Passing","te":5},{"pa":"Lucy","pb":"Mary","cs":5.5,"ct":"New Acquaintances","te":7},{"pa":"Lucy","pb":"Christie","cs":8.0,"ct":"Comic Relief Duo","te":11},{"pa":"Lucy","pb":"Gradles","cs":7.0,"ct":"Loyal Companions","te":9},{"pa":"Lucy","pb":"Meijinx","cs":4.0,"ct":"Ships Passing","te":3},{"pa":"Mary","pb":"Christie","cs":5.0,"ct":"New Acquaintances","te":5},{"pa":"Mary","pb":"Gradles","cs":4.0,"ct":"Ships Passing","te":3},{"pa":"Mary","pb":"Meijinx","cs":4.5,"ct":"Volatile Mix","te":7},{"pa":"Christie","pb":"Gradles","cs":6.5,"ct":"The Odd Couple","te":13},{"pa":"Christie","pb":"Meijinx","cs":7.0,"ct":"Chaos Partners","te":18},{"pa":"Gradles","pb":"Meijinx","cs":4.0,"ct":"Ships Passing","te":5}]},
+"S013":{"session_id":"S013","session_label":"Prison Break and Demon Pact","pairs":[{"pa":"Gradles","pb":"HT","cs":7.5,"ct":"The Brain Trust","te":27},{"pa":"Gradles","pb":"Lucy","cs":5.0,"ct":"New Acquaintances","te":18},{"pa":"Gradles","pb":"Mary","cs":3.0,"ct":"Ships Passing","te":8},{"pa":"Gradles","pb":"Christie","cs":1.0,"ct":"Ships Passing","te":0},{"pa":"HT","pb":"Lucy","cs":8.0,"ct":"Loyal Companions","te":38},{"pa":"HT","pb":"Mary","cs":2.5,"ct":"Ships Passing","te":6},{"pa":"HT","pb":"Christie","cs":1.0,"ct":"Ships Passing","te":0},{"pa":"Lucy","pb":"Mary","cs":4.5,"ct":"New Acquaintances","te":10},{"pa":"Lucy","pb":"Christie","cs":1.0,"ct":"Ships Passing","te":0},{"pa":"Mary","pb":"Christie","cs":1.0,"ct":"Ships Passing","te":0}]},
+"S014":{"session_id":"S014","session_label":"","pairs":[]},
+"S015":{"session_id":"S015","session_label":"","pairs":[{"pa":"Gradles","pb":"HT","cs":8.5,"ct":"The Brain Trust","te":33},{"pa":"Gradles","pb":"Mary","cs":7.0,"ct":"Comic Relief Duo","te":22},{"pa":"Gradles","pb":"Christie","cs":7.5,"ct":"Loyal Companions","te":26},{"pa":"Gradles","pb":"Lucy","cs":6.0,"ct":"New Acquaintances","te":17},{"pa":"Gradles","pb":"Meijinx","cs":8.0,"ct":"Battle Siblings","te":28},{"pa":"HT","pb":"Mary","cs":6.5,"ct":"Comic Relief Duo","te":20},{"pa":"HT","pb":"Christie","cs":8.0,"ct":"The Brain Trust","te":34},{"pa":"HT","pb":"Lucy","cs":6.0,"ct":"New Acquaintances","te":15},{"pa":"HT","pb":"Meijinx","cs":7.5,"ct":"Strategic Partners","te":22},{"pa":"Mary","pb":"Christie","cs":8.0,"ct":"Comic Relief Duo","te":28},{"pa":"Mary","pb":"Lucy","cs":5.5,"ct":"New Acquaintances","te":13},{"pa":"Mary","pb":"Meijinx","cs":6.5,"ct":"Comic Relief Duo","te":17},{"pa":"Christie","pb":"Lucy","cs":7.0,"ct":"Loyal Companions","te":19},{"pa":"Christie","pb":"Meijinx","cs":7.5,"ct":"Strategic Partners","te":23},{"pa":"Lucy","pb":"Meijinx","cs":6.0,"ct":"New Acquaintances","te":15}]},
+"S016":{"session_id":"S016","session_label":"Temporal Rift Crisis","pairs":[{"pa":"Gradles","pb":"HT","cs":7.5,"ct":"The Brain Trust","te":7},{"pa":"Gradles","pb":"Mary","cs":4.0,"ct":"New Acquaintances","te":3},{"pa":"Gradles","pb":"Christie","cs":3.5,"ct":"Ships Passing","te":3},{"pa":"Gradles","pb":"Lucy","cs":6.5,"ct":"Comic Relief Duo","te":5},{"pa":"Gradles","pb":"Meijinx","cs":3.0,"ct":"Ships Passing","te":2},{"pa":"HT","pb":"Mary","cs":4.5,"ct":"New Acquaintances","te":5},{"pa":"HT","pb":"Christie","cs":6.0,"ct":"The Brain Trust / Volatile Mix","te":7},{"pa":"HT","pb":"Lucy","cs":7.0,"ct":"Comic Relief Duo","te":9},{"pa":"HT","pb":"Meijinx","cs":4.0,"ct":"Ships Passing","te":4},{"pa":"Mary","pb":"Christie","cs":8.5,"ct":"Battle Siblings","te":7},{"pa":"Mary","pb":"Lucy","cs":7.0,"ct":"Loyal Companions","te":7},{"pa":"Mary","pb":"Meijinx","cs":5.0,"ct":"New Acquaintances","te":4},{"pa":"Christie","pb":"Lucy","cs":6.5,"ct":"The Odd Couple","te":7},{"pa":"Christie","pb":"Meijinx","cs":3.5,"ct":"Ships Passing","te":3},{"pa":"Lucy","pb":"Meijinx","cs":3.0,"ct":"Ships Passing","te":2}]},
+"S017":{"session_id":"S017","session_label":"Branching Narratives and World Reshaping","pairs":[{"pa":"Gradles","pb":"HT","cs":7.5,"ct":"The Brain Trust","te":9},{"pa":"Gradles","pb":"Mary","cs":6.0,"ct":"Loyal Companions","te":5},{"pa":"Gradles","pb":"Christie","cs":4.5,"ct":"Ships Passing","te":7},{"pa":"Gradles","pb":"Lucy","cs":8.0,"ct":"Battle Siblings","te":11},{"pa":"Gradles","pb":"Tenderbittle","cs":3.0,"ct":"New Acquaintances","te":0},{"pa":"HT","pb":"Mary","cs":6.5,"ct":"Comic Relief Duo","te":7},{"pa":"HT","pb":"Christie","cs":7.0,"ct":"Unspoken Bond","te":9},{"pa":"HT","pb":"Lucy","cs":6.0,"ct":"The Brain Trust","te":5},{"pa":"HT","pb":"Tenderbittle","cs":3.0,"ct":"New Acquaintances","te":0},{"pa":"Mary","pb":"Christie","cs":5.5,"ct":"Comic Relief Duo","te":3},{"pa":"Mary","pb":"Lucy","cs":7.0,"ct":"Chaos Partners","te":7},{"pa":"Mary","pb":"Tenderbittle","cs":3.0,"ct":"New Acquaintances","te":0},{"pa":"Christie","pb":"Lucy","cs":6.0,"ct":"Loyal Companions","te":5},{"pa":"Christie","pb":"Tenderbittle","cs":3.0,"ct":"New Acquaintances","te":0},{"pa":"Lucy","pb":"Tenderbittle","cs":3.0,"ct":"New Acquaintances","te":0}]},
+"S018":{"session_id":"S018","session_label":"","pairs":[{"pa":"Gradles","pb":"HT","cs":7.5,"ct":"The Brain Trust","te":27},{"pa":"Gradles","pb":"Mary","cs":6.5,"ct":"Loyal Companions","te":18},{"pa":"Gradles","pb":"Christie","cs":5.5,"ct":"New Acquaintances","te":22},{"pa":"Gradles","pb":"Lucy","cs":8.0,"ct":"Battle Siblings","te":25},{"pa":"HT","pb":"Mary","cs":7.0,"ct":"Comic Relief Duo","te":16},{"pa":"HT","pb":"Christie","cs":5.0,"ct":"New Acquaintances","te":14},{"pa":"HT","pb":"Lucy","cs":6.5,"ct":"The Brain Trust","te":19},{"pa":"Mary","pb":"Christie","cs":7.5,"ct":"Chaos Partners","te":20},{"pa":"Mary","pb":"Lucy","cs":4.5,"ct":"New Acquaintances","te":13},{"pa":"Christie","pb":"Lucy","cs":5.0,"ct":"New Acquaintances","te":15}]},
+"S019":{"session_id":"S019","session_label":"","pairs":[{"pa":"Gradles","pb":"HT","cs":7.5,"ct":"The Brain Trust","te":33},{"pa":"Gradles","pb":"Mary","cs":4.0,"ct":"New Acquaintances","te":18},{"pa":"Gradles","pb":"Christie","cs":6.0,"ct":"Strategic Allies","te":21},{"pa":"Gradles","pb":"Lucy","cs":6.5,"ct":"Comic Relief Duo","te":21},{"pa":"HT","pb":"Mary","cs":6.0,"ct":"Battle Siblings","te":13},{"pa":"HT","pb":"Christie","cs":6.5,"ct":"The Odd Couple","te":26},{"pa":"HT","pb":"Lucy","cs":8.0,"ct":"Loyal Companions","te":30},{"pa":"Mary","pb":"Christie","cs":6.5,"ct":"Battle Siblings","te":17},{"pa":"Mary","pb":"Lucy","cs":5.0,"ct":"Chaos Partners","te":13},{"pa":"Christie","pb":"Lucy","cs":7.0,"ct":"Unspoken Bond","te":24}]},
+"S020":{"session_id":"S020","session_label":"","pairs":[{"pa":"Gradles","pb":"HT","cs":7.5,"ct":"Battle Siblings","te":11},{"pa":"Gradles","pb":"Mary","cs":4.5,"ct":"New Acquaintances","te":5},{"pa":"Gradles","pb":"Christie","cs":6.0,"ct":"Loyal Companions","te":3},{"pa":"Gradles","pb":"Lucy","cs":6.5,"ct":"The Brain Trust","te":7},{"pa":"HT","pb":"Mary","cs":3.5,"ct":"Volatile Mix","te":3},{"pa":"HT","pb":"Christie","cs":4.0,"ct":"New Acquaintances","te":2},{"pa":"HT","pb":"Lucy","cs":6.0,"ct":"Comic Relief Duo","te":5},{"pa":"Mary","pb":"Christie","cs":3.0,"ct":"Ships Passing","te":1},{"pa":"Mary","pb":"Lucy","cs":5.5,"ct":"Chaos Partners","te":3},{"pa":"Christie","pb":"Lucy","cs":4.0,"ct":"New Acquaintances","te":2}]},
+"S021":{"session_id":"S021","session_label":"Underdark Infiltration and Drow Encounter","pairs":[{"pa":"Gradles","pb":"HT","cs":8.0,"ct":"The Brain Trust","te":9},{"pa":"Gradles","pb":"Mary","cs":4.0,"ct":"New Acquaintances","te":3},{"pa":"Gradles","pb":"Christie","cs":7.0,"ct":"Loyal Companions","te":5},{"pa":"Gradles","pb":"Tenderbittle","cs":6.0,"ct":"Chaos Partners","te":7},{"pa":"Gradles","pb":"Lucy","cs":3.0,"ct":"Ships Passing","te":0},{"pa":"HT","pb":"Mary","cs":4.0,"ct":"New Acquaintances","te":3},{"pa":"HT","pb":"Christie","cs":7.0,"ct":"Loyal Companions","te":5},{"pa":"HT","pb":"Tenderbittle","cs":7.0,"ct":"Comic Relief Duo","te":7},{"pa":"HT","pb":"Lucy","cs":3.0,"ct":"Ships Passing","te":0},{"pa":"Mary","pb":"Christie","cs":4.0,"ct":"New Acquaintances","te":3},{"pa":"Mary","pb":"Tenderbittle","cs":5.0,"ct":"Volatile Mix","te":3},{"pa":"Mary","pb":"Lucy","cs":3.0,"ct":"Ships Passing","te":0},{"pa":"Christie","pb":"Tenderbittle","cs":7.0,"ct":"Battle Siblings","te":5},{"pa":"Christie","pb":"Lucy","cs":3.0,"ct":"Ships Passing","te":0},{"pa":"Tenderbittle","pb":"Lucy","cs":3.0,"ct":"Ships Passing","te":0}]},
+"S022":{"session_id":"S022","session_label":"","pairs":[{"pa":"Gradles","pb":"HT","cs":8.0,"ct":"The Brain Trust","te":9},{"pa":"Gradles","pb":"Mary","cs":7.0,"ct":"Battle Siblings","te":5},{"pa":"Gradles","pb":"Christie","cs":7.5,"ct":"Loyal Companions","te":7},{"pa":"Gradles","pb":"Lucy","cs":6.0,"ct":"New Acquaintances","te":4},{"pa":"Gradles","pb":"Tenderbittle","cs":5.5,"ct":"Ships Passing","te":5},{"pa":"HT","pb":"Mary","cs":5.0,"ct":"Ships Passing","te":3},{"pa":"HT","pb":"Christie","cs":6.5,"ct":"The Odd Couple","te":7},{"pa":"HT","pb":"Lucy","cs":5.0,"ct":"New Acquaintances","te":2},{"pa":"HT","pb":"Tenderbittle","cs":7.0,"ct":"Battle Siblings","te":5},{"pa":"Mary","pb":"Christie","cs":7.0,"ct":"Loyal Companions","te":4},{"pa":"Mary","pb":"Lucy","cs":4.5,"ct":"Volatile Mix","te":2},{"pa":"Mary","pb":"Tenderbittle","cs":5.0,"ct":"Ships Passing","te":2},{"pa":"Christie","pb":"Lucy","cs":6.0,"ct":"New Acquaintances","te":4},{"pa":"Christie","pb":"Tenderbittle","cs":6.0,"ct":"The Odd Couple","te":5},{"pa":"Lucy","pb":"Tenderbittle","cs":5.0,"ct":"Ships Passing","te":2}]},
+"S023":{"session_id":"S023","session_label":"","pairs":[{"pa":"Gradles","pb":"HT","cs":7.5,"ct":"The Brain Trust","te":18},{"pa":"Gradles","pb":"Mary","cs":6.5,"ct":"Chaos Partners","te":13},{"pa":"Gradles","pb":"Christie","cs":5.0,"ct":"New Acquaintances","te":9},{"pa":"Gradles","pb":"Lucy","cs":4.0,"ct":"Ships Passing","te":7},{"pa":"Gradles","pb":"Tenderbittle","cs":7.0,"ct":"Comic Relief Duo","te":13},{"pa":"HT","pb":"Mary","cs":7.0,"ct":"Battle Siblings","te":17},{"pa":"HT","pb":"Christie","cs":5.5,"ct":"New Acquaintances","te":11},{"pa":"HT","pb":"Lucy","cs":4.5,"ct":"Ships Passing","te":9},{"pa":"HT","pb":"Tenderbittle","cs":8.0,"ct":"The Brain Trust","te":22},{"pa":"Mary","pb":"Christie","cs":7.5,"ct":"Loyal Companions","te":13},{"pa":"Mary","pb":"Lucy","cs":5.0,"ct":"New Acquaintances","te":9},{"pa":"Mary","pb":"Tenderbittle","cs":7.5,"ct":"Comic Relief Duo","te":17},{"pa":"Christie","pb":"Lucy","cs":4.0,"ct":"Ships Passing","te":7},{"pa":"Christie","pb":"Tenderbittle","cs":5.5,"ct":"New Acquaintances","te":13},{"pa":"Lucy","pb":"Tenderbittle","cs":4.5,"ct":"Ships Passing","te":9}]},
+"S024":{"session_id":"S024","session_label":"Web's Edge Escape","pairs":[{"pa":"Gradles","pb":"HT","cs":8.5,"ct":"The Brain Trust","te":22},{"pa":"Gradles","pb":"Mary","cs":4.0,"ct":"Ships Passing","te":5},{"pa":"Gradles","pb":"Christie","cs":5.5,"ct":"Rivals","te":7},{"pa":"Gradles","pb":"Lucy","cs":3.5,"ct":"New Acquaintances","te":3},{"pa":"Gradles","pb":"Tenderbittle","cs":3.0,"ct":"Ships Passing","te":2},{"pa":"HT","pb":"Mary","cs":4.0,"ct":"New Acquaintances","te":5},{"pa":"HT","pb":"Christie","cs":7.0,"ct":"Comic Relief Duo","te":9},{"pa":"HT","pb":"Lucy","cs":3.5,"ct":"Ships Passing","te":3},{"pa":"HT","pb":"Tenderbittle","cs":3.0,"ct":"New Acquaintances","te":2},{"pa":"Mary","pb":"Christie","cs":6.5,"ct":"Volatile Mix","te":15},{"pa":"Mary","pb":"Lucy","cs":7.0,"ct":"Loyal Companions","te":7},{"pa":"Mary","pb":"Tenderbittle","cs":8.0,"ct":"Battle Siblings","te":11},{"pa":"Christie","pb":"Lucy","cs":6.5,"ct":"Comic Relief Duo","te":9},{"pa":"Christie","pb":"Tenderbittle","cs":5.0,"ct":"Volatile Mix","te":13},{"pa":"Lucy","pb":"Tenderbittle","cs":4.5,"ct":"New Acquaintances","te":5}]},
+"S025":{"session_id":"S025","session_label":"","pairs":[]},
+"S026":{"session_id":"S026","session_label":"","pairs":[{"pa":"Gradles","pb":"HT","cs":7.5,"ct":"The Brain Trust","te":11},{"pa":"Gradles","pb":"Mary","cs":3.0,"ct":"Ships Passing","te":1},{"pa":"Gradles","pb":"Christie","cs":4.0,"ct":"Volatile Mix","te":3},{"pa":"Gradles","pb":"Lucy","cs":2.0,"ct":"Ships Passing","te":0},{"pa":"Gradles","pb":"Tenderbittle","cs":2.0,"ct":"Ships Passing","te":0},{"pa":"HT","pb":"Mary","cs":2.0,"ct":"Ships Passing","te":0},{"pa":"HT","pb":"Christie","cs":3.0,"ct":"New Acquaintances","te":1},{"pa":"HT","pb":"Lucy","cs":2.0,"ct":"Ships Passing","te":0},{"pa":"HT","pb":"Tenderbittle","cs":2.0,"ct":"Ships Passing","te":0},{"pa":"Mary","pb":"Christie","cs":6.0,"ct":"Chaos Partners","te":7},{"pa":"Mary","pb":"Lucy","cs":7.0,"ct":"Loyal Companions","te":5},{"pa":"Mary","pb":"Tenderbittle","cs":8.5,"ct":"Battle Siblings","te":9},{"pa":"Christie","pb":"Lucy","cs":7.0,"ct":"Loyal Companions","te":5},{"pa":"Christie","pb":"Tenderbittle","cs":5.0,"ct":"The Odd Couple","te":5},{"pa":"Lucy","pb":"Tenderbittle","cs":5.0,"ct":"New Acquaintances","te":3}]},
+"S027":{"session_id":"S027","session_label":"","pairs":[{"pa":"Gradles","pb":"HT","cs":7.5,"ct":"The Brain Trust","te":5},{"pa":"Gradles","pb":"Mary","cs":8.0,"ct":"Battle Siblings","te":3},{"pa":"Gradles","pb":"Christie","cs":8.5,"ct":"Chaos Partners","te":7},{"pa":"Gradles","pb":"Lucy","cs":5.0,"ct":"New Acquaintances","te":2},{"pa":"Gradles","pb":"Tenderbittle","cs":3.0,"ct":"Ships Passing","te":1},{"pa":"HT","pb":"Mary","cs":7.0,"ct":"Battle Siblings","te":3},{"pa":"HT","pb":"Christie","cs":7.5,"ct":"Loyal Companions","te":5},{"pa":"HT","pb":"Lucy","cs":5.5,"ct":"New Acquaintances","te":2},{"pa":"HT","pb":"Tenderbittle","cs":4.0,"ct":"Ships Passing","te":3},{"pa":"Mary","pb":"Christie","cs":8.0,"ct":"Battle Siblings","te":5},{"pa":"Mary","pb":"Lucy","cs":4.5,"ct":"New Acquaintances","te":2},{"pa":"Mary","pb":"Tenderbittle","cs":4.0,"ct":"Ships Passing","te":2},{"pa":"Christie","pb":"Lucy","cs":6.5,"ct":"Loyal Companions","te":4},{"pa":"Christie","pb":"Tenderbittle","cs":4.0,"ct":"Ships Passing","te":2},{"pa":"Lucy","pb":"Tenderbittle","cs":4.5,"ct":"New Acquaintances","te":2}]},
+"S028":{"session_id":"S028","session_label":"Bastion planning and exploration of Wave Echo Cave","pairs":[{"pa":"Gradles","pb":"HT","cs":7.5,"ct":"The Brain Trust","te":22},{"pa":"Gradles","pb":"Mary","cs":5.0,"ct":"New Acquaintances","te":15},{"pa":"Gradles","pb":"Christie","cs":6.0,"ct":"Volatile Mix","te":27},{"pa":"Gradles","pb":"Lucy","cs":5.5,"ct":"New Acquaintances","te":11},{"pa":"Gradles","pb":"Tenderbittle","cs":4.0,"ct":"Ships Passing","te":7},{"pa":"HT","pb":"Mary","cs":8.0,"ct":"Loyal Companions","te":29},{"pa":"HT","pb":"Christie","cs":7.0,"ct":"The Brain Trust","te":21},{"pa":"HT","pb":"Lucy","cs":6.5,"ct":"Mentor & Student","te":17},{"pa":"HT","pb":"Tenderbittle","cs":4.5,"ct":"Ships Passing","te":9},{"pa":"Mary","pb":"Christie","cs":8.5,"ct":"Comic Relief Duo","te":38},{"pa":"Mary","pb":"Lucy","cs":7.0,"ct":"Battle Siblings","te":22},{"pa":"Mary","pb":"Tenderbittle","cs":5.0,"ct":"New Acquaintances","te":11},{"pa":"Christie","pb":"Lucy","cs":8.0,"ct":"Loyal Companions","te":27},{"pa":"Christie","pb":"Tenderbittle","cs":4.5,"ct":"Ships Passing","te":13},{"pa":"Lucy","pb":"Tenderbittle","cs":6.5,"ct":"Unspoken Bond","te":17}]},
+"S029":{"session_id":"S029","session_label":"Soulforge Investigation and Infernal Pact","pairs":[{"pa":"Gradles","pb":"HT","cs":7.5,"ct":"The Brain Trust","te":33},{"pa":"Gradles","pb":"Mary","cs":4.0,"ct":"New Acquaintances","te":18},{"pa":"Gradles","pb":"Christie","cs":3.0,"ct":"Ships Passing","te":9},{"pa":"Gradles","pb":"Lucy","cs":4.5,"ct":"New Acquaintances","te":13},{"pa":"Gradles","pb":"Tenderbittle","cs":7.0,"ct":"Chaos Partners","te":22},{"pa":"HT","pb":"Mary","cs":4.5,"ct":"New Acquaintances","te":17},{"pa":"HT","pb":"Christie","cs":2.5,"ct":"Ships Passing","te":7},{"pa":"HT","pb":"Lucy","cs":5.0,"ct":"New Acquaintances","te":13},{"pa":"HT","pb":"Tenderbittle","cs":8.0,"ct":"The Odd Couple","te":29},{"pa":"Mary","pb":"Christie","cs":6.5,"ct":"Battle Siblings","te":11},{"pa":"Mary","pb":"Lucy","cs":4.0,"ct":"New Acquaintances","te":11},{"pa":"Mary","pb":"Tenderbittle","cs":5.0,"ct":"New Acquaintances","te":15},{"pa":"Christie","pb":"Lucy","cs":2.0,"ct":"Ships Passing","te":7},{"pa":"Christie","pb":"Tenderbittle","cs":3.0,"ct":"Ships Passing","te":9},{"pa":"Lucy","pb":"Tenderbittle","cs":5.5,"ct":"New Acquaintances","te":13}]},
+"S030":{"session_id":"S030","session_label":"Training with the Harbinger and battle with the Ceaseless Maww","pairs":[{"pa":"Gradles","pb":"HT","cs":7.5,"ct":"The Brain Trust","te":22},{"pa":"Gradles","pb":"Mary","cs":5.0,"ct":"New Acquaintances","te":17},{"pa":"Gradles","pb":"Christie","cs":6.5,"ct":"Chaos Partners","te":21},{"pa":"Gradles","pb":"Lucy","cs":5.0,"ct":"New Acquaintances","te":13},{"pa":"Gradles","pb":"Tenderbittle","cs":6.0,"ct":"Comic Relief Duo","te":17},{"pa":"HT","pb":"Mary","cs":7.0,"ct":"Battle Siblings","te":23},{"pa":"HT","pb":"Christie","cs":7.0,"ct":"The Odd Couple","te":27},{"pa":"HT","pb":"Lucy","cs":5.5,"ct":"New Acquaintances","te":15},{"pa":"HT","pb":"Tenderbittle","cs":6.5,"ct":"Comic Relief Duo","te":19},{"pa":"Mary","pb":"Christie","cs":8.0,"ct":"Loyal Companions","te":25},{"pa":"Mary","pb":"Lucy","cs":4.5,"ct":"New Acquaintances","te":11},{"pa":"Mary","pb":"Tenderbittle","cs":6.5,"ct":"Comic Relief Duo","te":19},{"pa":"Christie","pb":"Lucy","cs":5.5,"ct":"New Acquaintances","te":13},{"pa":"Christie","pb":"Tenderbittle","cs":7.0,"ct":"Chaos Partners","te":23},{"pa":"Lucy","pb":"Tenderbittle","cs":4.0,"ct":"New Acquaintances","te":9}]},
+"S031":{"session_id":"S031","session_label":"","pairs":[{"pa":"Gradles","pb":"HT","cs":8.5,"ct":"Loyal Companions","te":18},{"pa":"Gradles","pb":"Mary","cs":7.0,"ct":"The Odd Couple","te":22},{"pa":"Gradles","pb":"Christie","cs":9.0,"ct":"Battle Siblings","te":27},{"pa":"Gradles","pb":"Lucy","cs":6.5,"ct":"New Acquaintances","te":15},{"pa":"Gradles","pb":"Tenderbittle","cs":5.5,"ct":"Ships Passing","te":17},{"pa":"HT","pb":"Mary","cs":6.0,"ct":"Volatile Mix","te":11},{"pa":"HT","pb":"Christie","cs":8.0,"ct":"Loyal Companions","te":13},{"pa":"HT","pb":"Lucy","cs":6.0,"ct":"New Acquaintances","te":9},{"pa":"HT","pb":"Tenderbittle","cs":4.5,"ct":"Ships Passing","te":7},{"pa":"Mary","pb":"Christie","cs":6.5,"ct":"Rivals","te":19},{"pa":"Mary","pb":"Lucy","cs":6.0,"ct":"New Acquaintances","te":13},{"pa":"Mary","pb":"Tenderbittle","cs":5.5,"ct":"Volatile Mix","te":15},{"pa":"Christie","pb":"Lucy","cs":7.5,"ct":"Loyal Companions","te":17},{"pa":"Christie","pb":"Tenderbittle","cs":5.0,"ct":"Ships Passing","te":11},{"pa":"Lucy","pb":"Tenderbittle","cs":4.5,"ct":"Ships Passing","te":9}]},
+"S032":{"session_id":"S032","session_label":"Warehouse 17 Investigation","pairs":[{"pa":"Gradles","pb":"HT","cs":7.5,"ct":"The Brain Trust","te":22},{"pa":"Gradles","pb":"Christie","cs":6.5,"ct":"Loyal Companions","te":17},{"pa":"Gradles","pb":"Lucy","cs":5.0,"ct":"New Acquaintances","te":13},{"pa":"Gradles","pb":"Tenderbittle","cs":3.5,"ct":"Ships Passing","te":9},{"pa":"HT","pb":"Christie","cs":8.0,"ct":"Comic Relief Duo","te":21},{"pa":"HT","pb":"Lucy","cs":6.0,"ct":"Unspoken Bond","te":17},{"pa":"HT","pb":"Tenderbittle","cs":4.5,"ct":"Volatile Mix","te":13},{"pa":"Christie","pb":"Lucy","cs":5.5,"ct":"New Acquaintances","te":11},{"pa":"Christie","pb":"Tenderbittle","cs":3.0,"ct":"Ships Passing","te":7},{"pa":"Lucy","pb":"Tenderbittle","cs":4.5,"ct":"New Acquaintances","te":7}]},
+"S033":{"session_id":"S033","session_label":"","pairs":[{"pa":"Gradles","pb":"HT","cs":7.5,"ct":"Battle Siblings","te":22},{"pa":"Gradles","pb":"Mary","cs":6.0,"ct":"Loyal Companions","te":15},{"pa":"Gradles","pb":"Christie","cs":8.0,"ct":"Mentor & Student","te":29},{"pa":"Gradles","pb":"Lucy","cs":5.0,"ct":"New Acquaintances","te":11},{"pa":"Gradles","pb":"Tenderbittle","cs":3.0,"ct":"Ships Passing","te":7},{"pa":"HT","pb":"Mary","cs":6.5,"ct":"Comic Relief Duo","te":17},{"pa":"HT","pb":"Christie","cs":7.0,"ct":"The Brain Trust","te":25},{"pa":"HT","pb":"Lucy","cs":5.5,"ct":"New Acquaintances","te":13},{"pa":"HT","pb":"Tenderbittle","cs":4.0,"ct":"Ships Passing","te":9},{"pa":"Mary","pb":"Christie","cs":7.0,"ct":"Unspoken Bond","te":21},{"pa":"Mary","pb":"Lucy","cs":4.5,"ct":"New Acquaintances","te":11},{"pa":"Mary","pb":"Tenderbittle","cs":3.0,"ct":"Ships Passing","te":5},{"pa":"Christie","pb":"Lucy","cs":5.5,"ct":"New Acquaintances","te":15},{"pa":"Christie","pb":"Tenderbittle","cs":3.5,"ct":"Ships Passing","te":7},{"pa":"Lucy","pb":"Tenderbittle","cs":3.0,"ct":"Ships Passing","te":5}]},
+"S034":{"session_id":"S034","session_label":"","pairs":[{"pa":"Gradles","pb":"Christie","cs":4.5,"ct":"Rivals","te":27},{"pa":"Gradles","pb":"HT","cs":3.0,"ct":"Volatile Mix","te":18},{"pa":"Gradles","pb":"Lucy","cs":7.0,"ct":"Loyal Companions","te":22},{"pa":"Gradles","pb":"Tenderbittle","cs":3.0,"ct":"Ships Passing","te":9},{"pa":"Gradles","pb":"Mary","cs":2.0,"ct":"New Acquaintances","te":3},{"pa":"Christie","pb":"HT","cs":7.5,"ct":"The Brain Trust","te":15},{"pa":"Christie","pb":"Lucy","cs":6.5,"ct":"Loyal Companions","te":11},{"pa":"Christie","pb":"Tenderbittle","cs":3.5,"ct":"New Acquaintances","te":7},{"pa":"Christie","pb":"Mary","cs":2.5,"ct":"New Acquaintances","te":5},{"pa":"HT","pb":"Lucy","cs":7.0,"ct":"The Brain Trust","te":13},{"pa":"HT","pb":"Tenderbittle","cs":6.0,"ct":"Comic Relief Duo","te":9},{"pa":"HT","pb":"Mary","cs":2.0,"ct":"New Acquaintances","te":3},{"pa":"Lucy","pb":"Tenderbittle","cs":3.0,"ct":"New Acquaintances","te":5},{"pa":"Lucy","pb":"Mary","cs":2.0,"ct":"New Acquaintances","te":3},{"pa":"Tenderbittle","pb":"Mary","cs":2.0,"ct":"New Acquaintances","te":2}]},
+"S035":{"session_id":"S035","session_label":"Barovia Entry & Death House Exploration","pairs":[{"pa":"Gradles","pb":"HT","cs":8.5,"ct":"Battle Siblings","te":22},{"pa":"Gradles","pb":"Tenderbittle","cs":5.0,"ct":"New Acquaintances","te":9},{"pa":"Gradles","pb":"Lucy","cs":7.0,"ct":"Loyal Companions","te":11},{"pa":"Gradles","pb":"Christie","cs":3.0,"ct":"Ships Passing","te":0},{"pa":"HT","pb":"Tenderbittle","cs":6.5,"ct":"Comic Relief Duo","te":7},{"pa":"HT","pb":"Lucy","cs":8.0,"ct":"The Brain Trust","te":15},{"pa":"HT","pb":"Christie","cs":3.0,"ct":"Ships Passing","te":0},{"pa":"Tenderbittle","pb":"Lucy","cs":4.5,"ct":"New Acquaintances","te":5},{"pa":"Tenderbittle","pb":"Christie","cs":3.0,"ct":"Ships Passing","te":0},{"pa":"Lucy","pb":"Christie","cs":3.0,"ct":"Ships Passing","te":0}]},
+"S036":{"session_id":"S036","session_label":"Death House in Barovia","pairs":[{"pa":"Gradles","pb":"HT","cs":8.5,"ct":"Battle Siblings","te":15},{"pa":"Gradles","pb":"Mary","cs":2.0,"ct":"Ships Passing","te":0},{"pa":"Gradles","pb":"Christie","cs":7.5,"ct":"Loyal Companions","te":9},{"pa":"Gradles","pb":"Lucy","cs":5.0,"ct":"New Acquaintances","te":5},{"pa":"Gradles","pb":"Tenderbittle","cs":6.5,"ct":"Chaos Partners","te":7},{"pa":"HT","pb":"Mary","cs":2.0,"ct":"Ships Passing","te":0},{"pa":"HT","pb":"Christie","cs":8.0,"ct":"The Brain Trust","te":11},{"pa":"HT","pb":"Lucy","cs":5.0,"ct":"New Acquaintances","te":3},{"pa":"HT","pb":"Tenderbittle","cs":7.5,"ct":"Comic Relief Duo","te":13},{"pa":"Mary","pb":"Christie","cs":2.0,"ct":"Ships Passing","te":0},{"pa":"Mary","pb":"Lucy","cs":2.0,"ct":"Ships Passing","te":0},{"pa":"Mary","pb":"Tenderbittle","cs":2.0,"ct":"Ships Passing","te":0},{"pa":"Christie","pb":"Lucy","cs":5.0,"ct":"New Acquaintances","te":5},{"pa":"Christie","pb":"Tenderbittle","cs":7.5,"ct":"Battle Siblings","te":9},{"pa":"Lucy","pb":"Tenderbittle","cs":5.0,"ct":"New Acquaintances","te":3}]},
+"S037":{"session_id":"S037","session_label":"","pairs":[{"pa":"Gradles","pb":"Christie","cs":7.5,"ct":"Loyal Companions","te":27},{"pa":"Gradles","pb":"Lucy","cs":5.0,"ct":"New Acquaintances","te":18},{"pa":"Gradles","pb":"Tenderbittle","cs":6.5,"ct":"Chaos Partners","te":19},{"pa":"Gradles","pb":"HT","cs":4.0,"ct":"Ships Passing","te":11},{"pa":"Christie","pb":"Lucy","cs":5.0,"ct":"New Acquaintances","te":15},{"pa":"Christie","pb":"Tenderbittle","cs":5.5,"ct":"Volatile Mix","te":20},{"pa":"Christie","pb":"HT","cs":4.0,"ct":"Ships Passing","te":11},{"pa":"Lucy","pb":"Tenderbittle","cs":5.0,"ct":"New Acquaintances","te":15},{"pa":"Lucy","pb":"HT","cs":4.0,"ct":"Ships Passing","te":9},{"pa":"Tenderbittle","pb":"HT","cs":4.0,"ct":"Ships Passing","te":11}]},
+"S038":{"session_id":"S038","session_label":"","pairs":[{"pa":"Gradles","pb":"HT","cs":7.5,"ct":"The Brain Trust","te":15},{"pa":"Gradles","pb":"Mary","cs":3.0,"ct":"Ships Passing","te":3},{"pa":"Gradles","pb":"Christie","cs":8.0,"ct":"Loyal Companions","te":19},{"pa":"Gradles","pb":"Lucy","cs":7.0,"ct":"Unspoken Bond","te":11},{"pa":"Gradles","pb":"Tenderbittle","cs":6.5,"ct":"Comic Relief Duo","te":13},{"pa":"HT","pb":"Mary","cs":2.0,"ct":"Ships Passing","te":1},{"pa":"HT","pb":"Christie","cs":7.0,"ct":"Battle Siblings","te":15},{"pa":"HT","pb":"Lucy","cs":6.0,"ct":"Mentor & Student","te":9},{"pa":"HT","pb":"Tenderbittle","cs":6.5,"ct":"Chaos Partners","te":11},{"pa":"Mary","pb":"Christie","cs":3.0,"ct":"Ships Passing","te":3},{"pa":"Mary","pb":"Lucy","cs":2.0,"ct":"Ships Passing","te":1},{"pa":"Mary","pb":"Tenderbittle","cs":2.0,"ct":"Ships Passing","te":1},{"pa":"Christie","pb":"Lucy","cs":7.5,"ct":"Loyal Companions","te":13},{"pa":"Christie","pb":"Tenderbittle","cs":8.0,"ct":"Comic Relief Duo","te":17},{"pa":"Lucy","pb":"Tenderbittle","cs":6.0,"ct":"Unspoken Bond","te":9}]},
+"S039":{"session_id":"S039","session_label":"","pairs":[{"pa":"Gradles","pb":"HT","cs":7.5,"ct":"Battle Siblings","te":9},{"pa":"Gradles","pb":"Mary","cs":3.0,"ct":"Ships Passing","te":0},{"pa":"Gradles","pb":"Christie","cs":4.0,"ct":"New Acquaintances","te":3},{"pa":"Gradles","pb":"Lucy","cs":8.0,"ct":"Loyal Companions","te":11},{"pa":"Gradles","pb":"Tenderbittle","cs":6.5,"ct":"Comic Relief Duo","te":7},{"pa":"HT","pb":"Mary","cs":3.0,"ct":"Ships Passing","te":0},{"pa":"HT","pb":"Christie","cs":7.0,"ct":"The Brain Trust","te":5},{"pa":"HT","pb":"Lucy","cs":5.5,"ct":"Volatile Mix","te":9},{"pa":"HT","pb":"Tenderbittle","cs":7.0,"ct":"The Odd Couple","te":9},{"pa":"Mary","pb":"Christie","cs":3.0,"ct":"Ships Passing","te":0},{"pa":"Mary","pb":"Lucy","cs":3.0,"ct":"Ships Passing","te":0},{"pa":"Mary","pb":"Tenderbittle","cs":3.0,"ct":"Ships Passing","te":0},{"pa":"Christie","pb":"Lucy","cs":4.0,"ct":"New Acquaintances","te":3},{"pa":"Christie","pb":"Tenderbittle","cs":6.5,"ct":"Loyal Companions","te":5},{"pa":"Lucy","pb":"Tenderbittle","cs":6.0,"ct":"Chaos Partners","te":7}]},
+"S040":{"session_id":"S040","session_label":"","pairs":[{"pa":"Gradles","pb":"HT","cs":7.5,"ct":"The Brain Trust","te":15},{"pa":"Gradles","pb":"Mary","cs":3.0,"ct":"Ships Passing","te":0},{"pa":"Gradles","pb":"Christie","cs":6.0,"ct":"Volatile Mix","te":11},{"pa":"Gradles","pb":"Lucy","cs":7.0,"ct":"Loyal Companions","te":7},{"pa":"Gradles","pb":"Tenderbittle","cs":5.0,"ct":"New Acquaintances","te":9},{"pa":"HT","pb":"Mary","cs":3.0,"ct":"Ships Passing","te":0},{"pa":"HT","pb":"Christie","cs":8.0,"ct":"Comic Relief Duo","te":13},{"pa":"HT","pb":"Lucy","cs":7.0,"ct":"Loyal Companions","te":9},{"pa":"HT","pb":"Tenderbittle","cs":6.0,"ct":"New Acquaintances","te":11},{"pa":"Mary","pb":"Christie","cs":3.0,"ct":"Ships Passing","te":0},{"pa":"Mary","pb":"Lucy","cs":3.0,"ct":"Ships Passing","te":0},{"pa":"Mary","pb":"Tenderbittle","cs":3.0,"ct":"Ships Passing","te":0},{"pa":"Christie","pb":"Lucy","cs":7.0,"ct":"Comic Relief Duo","te":7},{"pa":"Christie","pb":"Tenderbittle","cs":6.5,"ct":"Chaos Partners","te":9},{"pa":"Lucy","pb":"Tenderbittle","cs":5.0,"ct":"New Acquaintances","te":5}]},
+"S041":{"session_id":"S041","session_label":"Confrontation with Strahd","pairs":[{"pa":"Gradles","pb":"HT","cs":8.5,"ct":"The Brain Trust","te":15},{"pa":"Gradles","pb":"Mary","cs":1.0,"ct":"Ships Passing","te":0},{"pa":"Gradles","pb":"Christie","cs":4.0,"ct":"Volatile Mix","te":9},{"pa":"Gradles","pb":"Lucy","cs":7.5,"ct":"Loyal Companions","te":11},{"pa":"Gradles","pb":"Tenderbittle","cs":6.5,"ct":"Chaos Partners","te":13},{"pa":"HT","pb":"Mary","cs":1.0,"ct":"Ships Passing","te":0},{"pa":"HT","pb":"Christie","cs":3.0,"ct":"New Acquaintances","te":5},{"pa":"HT","pb":"Lucy","cs":6.0,"ct":"Comic Relief Duo","te":7},{"pa":"HT","pb":"Tenderbittle","cs":7.0,"ct":"Unspoken Bond","te":9},{"pa":"Mary","pb":"Christie","cs":1.0,"ct":"Ships Passing","te":0},{"pa":"Mary","pb":"Lucy","cs":1.0,"ct":"Ships Passing","te":0},{"pa":"Mary","pb":"Tenderbittle","cs":1.0,"ct":"Ships Passing","te":0},{"pa":"Christie","pb":"Lucy","cs":3.5,"ct":"Rivals","te":5},{"pa":"Christie","pb":"Tenderbittle","cs":7.0,"ct":"Battle Siblings","te":7},{"pa":"Lucy","pb":"Tenderbittle","cs":6.5,"ct":"Comic Relief Duo","te":9}]},
+"S042":{"session_id":"S042","session_label":"Curse of Strahd Finale - Rahadin & Heart of Sorrow","pairs":[{"pa":"Gradles","pb":"HT","cs":7.5,"ct":"Battle Siblings","te":9},{"pa":"Gradles","pb":"Mary","cs":4.0,"ct":"New Acquaintances","te":5},{"pa":"Gradles","pb":"Christie","cs":8.0,"ct":"Strategic Partners","te":11},{"pa":"Gradles","pb":"Lucy","cs":6.5,"ct":"Comic Relief Duo","te":7},{"pa":"Gradles","pb":"Tenderbittle","cs":3.0,"ct":"Ships Passing","te":3},{"pa":"HT","pb":"Mary","cs":3.5,"ct":"New Acquaintances","te":2},{"pa":"HT","pb":"Christie","cs":8.5,"ct":"Loyal Companions","te":13},{"pa":"HT","pb":"Lucy","cs":7.0,"ct":"The Brain Trust","te":9},{"pa":"HT","pb":"Tenderbittle","cs":2.5,"ct":"Ships Passing","te":1},{"pa":"Mary","pb":"Christie","cs":4.0,"ct":"New Acquaintances","te":4},{"pa":"Mary","pb":"Lucy","cs":3.5,"ct":"New Acquaintances","te":2},{"pa":"Mary","pb":"Tenderbittle","cs":2.0,"ct":"Ships Passing","te":0},{"pa":"Christie","pb":"Lucy","cs":8.0,"ct":"Mentor & Student","te":15},{"pa":"Christie","pb":"Tenderbittle","cs":2.5,"ct":"Ships Passing","te":1},{"pa":"Lucy","pb":"Tenderbittle","cs":2.0,"ct":"Ships Passing","te":0}]},
+"S043":{"session_id":"S043","session_label":"Return to Castle Corras - Fae Siege and Political Turmoil","pairs":[{"pa":"Gradles","pb":"HT","cs":7.5,"ct":"The Brain Trust","te":27},{"pa":"Gradles","pb":"Christie","cs":8.0,"ct":"Loyal Companions","te":34},{"pa":"Gradles","pb":"Lucy","cs":6.0,"ct":"New Acquaintances","te":15},{"pa":"Gradles","pb":"Tenderbittle","cs":7.0,"ct":"Chaos Partners","te":19},{"pa":"HT","pb":"Christie","cs":7.0,"ct":"The Odd Couple","te":22},{"pa":"HT","pb":"Lucy","cs":5.5,"ct":"New Acquaintances","te":11},{"pa":"HT","pb":"Tenderbittle","cs":6.0,"ct":"Rivals","te":17},{"pa":"Christie","pb":"Lucy","cs":7.5,"ct":"Comic Relief Duo","te":13},{"pa":"Christie","pb":"Tenderbittle","cs":8.0,"ct":"Chaos Partners","te":26},{"pa":"Lucy","pb":"Tenderbittle","cs":5.5,"ct":"New Acquaintances","te":9}]},
+"S044":{"session_id":"S044","session_label":"Political Fallout and Feywild Intrigue","pairs":[{"pa":"Gradles","pb":"Christie","cs":8.5,"ct":"Loyal Companions","te":29},{"pa":"Gradles","pb":"HT","cs":7.0,"ct":"The Brain Trust","te":15},{"pa":"Gradles","pb":"Lucy","cs":5.0,"ct":"New Acquaintances","te":9},{"pa":"Gradles","pb":"Tenderbittle","cs":6.5,"ct":"Chaos Partners","te":11},{"pa":"Christie","pb":"HT","cs":8.0,"ct":"Battle Siblings","te":17},{"pa":"Christie","pb":"Lucy","cs":4.5,"ct":"New Acquaintances","te":7},{"pa":"Christie","pb":"Tenderbittle","cs":5.5,"ct":"Volatile Mix","te":13},{"pa":"HT","pb":"Lucy","cs":4.0,"ct":"New Acquaintances","te":5},{"pa":"HT","pb":"Tenderbittle","cs":7.0,"ct":"The Odd Couple","te":19},{"pa":"Lucy","pb":"Tenderbittle","cs":7.5,"ct":"Comic Relief Duo","te":15}]},
+"S045":{"session_id":"S045","session_label":"The Red Council Aftermath","pairs":[{"pa":"Gradles","pb":"HT","cs":7.5,"ct":"The Brain Trust","te":9},{"pa":"Gradles","pb":"Mary","cs":3.0,"ct":"Ships Passing","te":0},{"pa":"Gradles","pb":"Christie","cs":8.0,"ct":"Loyal Companions","te":11},{"pa":"Gradles","pb":"Lucy","cs":5.0,"ct":"New Acquaintances","te":5},{"pa":"Gradles","pb":"Tenderbittle","cs":7.0,"ct":"Battle Siblings","te":7},{"pa":"HT","pb":"Mary","cs":3.0,"ct":"Ships Passing","te":0},{"pa":"HT","pb":"Christie","cs":6.5,"ct":"The Odd Couple","te":7},{"pa":"HT","pb":"Lucy","cs":5.0,"ct":"New Acquaintances","te":4},{"pa":"HT","pb":"Tenderbittle","cs":6.0,"ct":"Chaos Partners","te":5},{"pa":"Mary","pb":"Christie","cs":3.0,"ct":"Ships Passing","te":0},{"pa":"Mary","pb":"Lucy","cs":3.0,"ct":"Ships Passing","te":0},{"pa":"Mary","pb":"Tenderbittle","cs":3.0,"ct":"Ships Passing","te":0},{"pa":"Christie","pb":"Lucy","cs":4.5,"ct":"New Acquaintances","te":3},{"pa":"Christie","pb":"Tenderbittle","cs":5.5,"ct":"Volatile Mix","te":5},{"pa":"Lucy","pb":"Tenderbittle","cs":4.5,"ct":"New Acquaintances","te":3}]},
+"S046":{"session_id":"S046","session_label":"","pairs":[{"pa":"Gradles","pb":"HT","cs":7.5,"ct":"The Brain Trust","te":27},{"pa":"Gradles","pb":"Tenderbittle","cs":4.0,"ct":"Volatile Mix","te":18},{"pa":"Gradles","pb":"Lucy","cs":6.5,"ct":"Loyal Companions","te":15},{"pa":"Gradles","pb":"Christie","cs":3.0,"ct":"New Acquaintances","te":9},{"pa":"HT","pb":"Tenderbittle","cs":5.5,"ct":"The Odd Couple","te":22},{"pa":"HT","pb":"Lucy","cs":7.0,"ct":"Mentor & Student","te":17},{"pa":"HT","pb":"Christie","cs":3.5,"ct":"New Acquaintances","te":7},{"pa":"Tenderbittle","pb":"Lucy","cs":6.0,"ct":"Comic Relief Duo","te":13},{"pa":"Tenderbittle","pb":"Christie","cs":2.5,"ct":"Ships Passing","te":5},{"pa":"Lucy","pb":"Christie","cs":3.0,"ct":"New Acquaintances","te":7}]}};
+
+const PLAYER_COLORS = {
+  Gradles:"#4A90D9", HT:"#E57373", Mary:"#81C784",
+  Christie:"#BA68C8", Lucy:"#FFB74D", Tenderbittle:"#4DB6AC",
+  Meijinx:"#FF8A65", Drenek:"#7986CB"
+};
+const PLAYER_CHARS = {
+  Gradles:"Corras", HT:"Ash", Mary:"Billabong",
+  Christie:"Dahlia", Lucy:"Orla", Tenderbittle:"SavannahBelle",
+  Meijinx:"Ave", Drenek:"Drenek"
+};
+const PLAYERS = ["Gradles","HT","Mary","Christie","Lucy","Tenderbittle","Meijinx","Drenek"];
+
+// ─── NORMALIZE PAIR KEYS ───
+function pairKey(a, b) {
+  return [a, b].sort().join("|");
+}
+
+// ─── PRECOMPUTE CAMPAIGN AVERAGES & STATS ───
+const pairAccum = {}; // key -> {scores:[], exchanges:[], types:[]}
+let allTypeCounts = {};
+let allScores = [];
+
+Object.values(SESSIONS).forEach(s => {
+  s.pairs.forEach(p => {
+    const k = pairKey(p.pa, p.pb);
+    if (!pairAccum[k]) pairAccum[k] = {scores:[], exchanges:[], types:[], pa: [p.pa,p.pb].sort()[0], pb: [p.pa,p.pb].sort()[1]};
+    pairAccum[k].scores.push(p.cs);
+    pairAccum[k].exchanges.push(p.te);
+    pairAccum[k].types.push(p.ct);
+    allScores.push(p.cs);
+    const baseType = p.ct.split("/")[0].trim();
+    allTypeCounts[baseType] = (allTypeCounts[baseType]||0) + 1;
+  });
+});
+
+const campaignAvg = {};
+const pairMeans = {};
+const pairVariances = {};
+Object.entries(pairAccum).forEach(([k, v]) => {
+  const mean = d3.mean(v.scores);
+  const meanExch = d3.mean(v.exchanges);
+  campaignAvg[k] = {cs: mean, te: meanExch};
+  pairMeans[k] = mean;
+  pairVariances[k] = d3.variance(v.scores) || 0;
+});
+
+// Campaign stats
+const strongestPairOverall = Object.entries(pairMeans).sort((a,b) => b[1]-a[1])[0];
+const mostVolatilePair = Object.entries(pairVariances).sort((a,b) => b[1]-a[1])[0];
+const mostCommonType = Object.entries(allTypeCounts).sort((a,b) => b[1]-a[1])[0];
+const campaignMeanChem = d3.mean(allScores);
+
+function playerLabel(p) { return PLAYER_CHARS[p] || p; }
+
+// Populate campaign stats bar
+document.getElementById("statStrongest").textContent = strongestPairOverall[0].split("|").map(playerLabel).join(" & ");
+document.getElementById("statStrongestVal").textContent = strongestPairOverall[1].toFixed(1);
+document.getElementById("statVolatile").textContent = mostVolatilePair[0].split("|").map(playerLabel).join(" & ");
+document.getElementById("statVolatileVal").textContent = "\u03C3\u00B2 " + mostVolatilePair[1].toFixed(2);
+document.getElementById("statCommonType").textContent = mostCommonType[0];
+document.getElementById("statCommonTypeVal").textContent = mostCommonType[1] + "x";
+document.getElementById("statCampaignAvg").textContent = "across all sessions";
+document.getElementById("statCampaignAvgVal").textContent = campaignMeanChem.toFixed(1);
+
+// ─── SVG SETUP ───
+const container = document.getElementById("arcContainer");
+const svg = d3.select("#arcSvg");
+const tooltip = document.getElementById("arcTooltip");
+let W, H;
+const BASELINE_Y_RATIO = 0.82;
+const MAX_ARC_HEIGHT = 220;
+const NODE_RADIUS = 22;
+
+function resize() {
+  W = container.clientWidth;
+  H = Math.max(420, W * 0.36);
+  container.style.height = H + "px";
+  svg.attr("width", W).attr("height", H).attr("viewBox", `0 0 ${W} ${H}`);
+  drawNodes();
+  updateArcs(currentSession, false);
+}
+
+// ─── NODE POSITIONS ───
+let nodePositions = {};
+function drawNodes() {
+  const baseY = H * BASELINE_Y_RATIO;
+  // Always show all 8 players but position active ones prominently
+  const activeInAny = new Set();
+  Object.values(SESSIONS).forEach(s => s.pairs.forEach(p => { activeInAny.add(p.pa); activeInAny.add(p.pb); }));
+  const activePlayers = PLAYERS.filter(p => activeInAny.has(p));
+  const n = activePlayers.length;
+  const padX = 60;
+  const usableW = W - padX * 2;
+  const spacing = usableW / (n - 1);
+
+  nodePositions = {};
+  activePlayers.forEach((p, i) => {
+    nodePositions[p] = { x: padX + i * spacing, y: baseY };
+  });
+
+  svg.selectAll(".node-group").remove();
+  const groups = svg.selectAll(".node-group")
+    .data(activePlayers)
+    .enter().append("g")
+    .attr("class", "node-group")
+    .attr("transform", d => `translate(${nodePositions[d].x},${nodePositions[d].y})`);
+
+  // Glow filter
+  let defs = svg.select("defs");
+  if (defs.empty()) defs = svg.append("defs");
+  defs.selectAll("*").remove();
+
+  // Node glow
+  const glow = defs.append("filter").attr("id","nodeGlow").attr("x","-50%").attr("y","-50%").attr("width","200%").attr("height","200%");
+  glow.append("feGaussianBlur").attr("stdDeviation","4").attr("result","blur");
+  glow.append("feMerge").selectAll("feMergeNode").data(["blur","SourceGraphic"]).enter().append("feMergeNode").attr("in",d=>d);
+
+  // Arc glow
+  const arcGlow = defs.append("filter").attr("id","arcGlow").attr("x","-20%").attr("y","-20%").attr("width","140%").attr("height","140%");
+  arcGlow.append("feGaussianBlur").attr("stdDeviation","3").attr("result","blur");
+  arcGlow.append("feMerge").selectAll("feMergeNode").data(["blur","SourceGraphic"]).enter().append("feMergeNode").attr("in",d=>d);
+
+  // Golden glow filter
+  const goldenGlow = defs.append("filter").attr("id","goldenGlow").attr("x","-30%").attr("y","-30%").attr("width","160%").attr("height","160%");
+  goldenGlow.append("feGaussianBlur").attr("stdDeviation","5").attr("result","blur");
+  const goldenMerge = goldenGlow.append("feMerge");
+  goldenMerge.append("feMergeNode").attr("in","blur");
+  goldenMerge.append("feMergeNode").attr("in","SourceGraphic");
+
+  groups.append("circle")
+    .attr("r", NODE_RADIUS)
+    .attr("fill", d => PLAYER_COLORS[d])
+    .attr("fill-opacity", 0.15)
+    .attr("stroke", d => PLAYER_COLORS[d])
+    .attr("stroke-width", 1.5)
+    .attr("filter", "url(#nodeGlow)");
+
+  groups.append("circle")
+    .attr("r", 4)
+    .attr("fill", d => PLAYER_COLORS[d])
+    .attr("fill-opacity", 0.8);
+
+  groups.append("text")
+    .attr("y", NODE_RADIUS + 16)
+    .attr("text-anchor", "middle")
+    .attr("font-family", "'Cinzel', serif")
+    .attr("font-size", "11px")
+    .attr("fill", d => PLAYER_COLORS[d])
+    .attr("fill-opacity", 0.9)
+    .text(d => PLAYER_CHARS[d] || d);
+
+  groups.append("text")
+    .attr("y", NODE_RADIUS + 28)
+    .attr("text-anchor", "middle")
+    .attr("font-family", "'JetBrains Mono', monospace")
+    .attr("font-size", "9px")
+    .attr("fill", "#4a4a60")
+    .text(d => d);
+
+  // Baseline
+  svg.selectAll(".baseline").remove();
+  svg.append("line")
+    .attr("class", "baseline")
+    .attr("x1", padX - 30)
+    .attr("x2", W - padX + 30)
+    .attr("y1", baseY)
+    .attr("y2", baseY)
+    .attr("stroke", "#1a1a30")
+    .attr("stroke-width", 1);
+}
+
+// ─── ARC RENDERING ───
+function blendColors(c1, c2, opacity) {
+  const rgb1 = d3.color(c1);
+  const rgb2 = d3.color(c2);
+  const r = (rgb1.r + rgb2.r) / 2;
+  const g = (rgb1.g + rgb2.g) / 2;
+  const b = (rgb1.b + rgb2.b) / 2;
+  return `rgba(${Math.round(r)},${Math.round(g)},${Math.round(b)},${opacity})`;
+}
+
+function arcPath(x1, x2, height) {
+  const mx = (x1 + x2) / 2;
+  const baseY = H * BASELINE_Y_RATIO;
+  const topY = baseY - height;
+  // Quadratic bezier arc above baseline
+  return `M ${x1} ${baseY} Q ${mx} ${topY} ${x2} ${baseY}`;
+}
+
+function chemistryDash(type) {
+  const t = type.toLowerCase();
+  if (t.includes("brain trust")) return "none";
+  if (t.includes("battle sibling")) return "8,4";
+  if (t.includes("comic relief")) return "3,3";
+  if (t.includes("ships passing")) return "2,6";
+  return "none";
+}
+
+function chemistryFilter(type) {
+  const t = type.toLowerCase();
+  if (t.includes("loyal companion")) return "url(#goldenGlow)";
+  return "url(#arcGlow)";
+}
+
+function chemistryOpacity(type) {
+  const t = type.toLowerCase();
+  if (t.includes("ships passing")) return 0.15;
+  if (t.includes("rival") || t.includes("volatile")) return 0.55;
+  return 0.40;
+}
+
+function chemistryColorOverride(type, baseColor) {
+  const t = type.toLowerCase();
+  if (t.includes("rival") || t.includes("volatile")) {
+    // Tint toward red
+    const c = d3.color(baseColor);
+    return `rgba(${Math.min(255, c.r + 80)},${Math.max(0, c.g - 30)},${Math.max(0, c.b - 30)},${chemistryOpacity(type)})`;
+  }
+  if (t.includes("loyal companion")) {
+    const c = d3.color(baseColor);
+    return `rgba(${Math.min(255, c.r + 40)},${Math.min(255, c.g + 20)},${Math.max(0, c.b - 20)},0.55)`;
+  }
+  return null;
+}
+
+let currentSession = 1;
+let showOverlay = false;
+
+function updateArcs(sessionNum, animate = true) {
+  const sid = `S${String(sessionNum).padStart(3, "0")}`;
+  const session = SESSIONS[sid];
+  if (!session) return;
+
+  const duration = animate ? 600 : 0;
+  const baseY = H * BASELINE_Y_RATIO;
+
+  // Prepare data with normalized keys
+  const pairsData = session.pairs.map(p => {
+    const k = pairKey(p.pa, p.pb);
+    const pa = [p.pa, p.pb].sort()[0];
+    const pb = [p.pa, p.pb].sort()[1];
+    return {
+      key: k, pa, pb,
+      cs: p.cs, ct: p.ct, te: p.te,
+      x1: nodePositions[pa] ? nodePositions[pa].x : 0,
+      x2: nodePositions[pb] ? nodePositions[pb].x : 0,
+      height: (p.cs / 10) * MAX_ARC_HEIGHT,
+      thickness: 1 + (Math.min(p.te, 40) / 40) * 5,
+      baseColor: blendColors(PLAYER_COLORS[pa] || "#666", PLAYER_COLORS[pb] || "#666", chemistryOpacity(p.ct))
+    };
+  }).filter(d => nodePositions[d.pa] && nodePositions[d.pb]);
+
+  // Campaign overlay arcs
+  const overlayGroup = svg.selectAll(".overlay-group").data([0]);
+  overlayGroup.enter().append("g").attr("class", "overlay-group").lower();
+
+  if (showOverlay) {
+    const overlayData = Object.entries(campaignAvg).map(([k, v]) => {
+      const [pa, pb] = k.split("|");
+      return {
+        key: k, pa, pb,
+        height: (v.cs / 10) * MAX_ARC_HEIGHT,
+        thickness: 1 + (Math.min(v.te, 40) / 40) * 3,
+        x1: nodePositions[pa] ? nodePositions[pa].x : 0,
+        x2: nodePositions[pb] ? nodePositions[pb].x : 0
+      };
+    }).filter(d => nodePositions[d.pa] && nodePositions[d.pb]);
+
+    const overlays = svg.select(".overlay-group").selectAll(".overlay-arc").data(overlayData, d => d.key);
+
+    overlays.enter()
+      .append("path")
+      .attr("class", "overlay-arc")
+      .attr("fill", "none")
+      .attr("stroke", "rgba(100,100,140,0.12)")
+      .attr("stroke-width", d => d.thickness)
+      .attr("stroke-dasharray", "4,4")
+      .attr("d", d => arcPath(d.x1, d.x2, d.height))
+      .attr("opacity", 0)
+      .transition().duration(400)
+      .attr("opacity", 1);
+
+    overlays.transition().duration(duration)
+      .attr("d", d => arcPath(d.x1, d.x2, d.height))
+      .attr("stroke-width", d => d.thickness);
+
+    overlays.exit().transition().duration(300).attr("opacity", 0).remove();
+  } else {
+    svg.select(".overlay-group").selectAll(".overlay-arc").transition().duration(300).attr("opacity", 0).remove();
+  }
+
+  // Session arcs
+  const arcs = svg.selectAll(".chem-arc").data(pairsData, d => d.key);
+
+  // Enter
+  arcs.enter()
+    .append("path")
+    .attr("class", "chem-arc")
+    .attr("fill", "none")
+    .attr("d", d => arcPath(d.x1, d.x2, 0))
+    .attr("stroke", d => chemistryColorOverride(d.ct, d.baseColor) || d.baseColor)
+    .attr("stroke-width", d => d.thickness)
+    .attr("stroke-dasharray", d => chemistryDash(d.ct))
+    .attr("filter", d => chemistryFilter(d.ct))
+    .attr("opacity", 0)
+    .on("mouseenter", function(event, d) { showTooltip(event, d); })
+    .on("mousemove", function(event, d) { moveTooltip(event); })
+    .on("mouseleave", hideTooltip)
+    .transition().duration(duration).ease(d3.easeCubicOut)
+    .attr("d", d => arcPath(d.x1, d.x2, d.height))
+    .attr("opacity", 1);
+
+  // Update
+  arcs.transition().duration(duration).ease(d3.easeCubicInOut)
+    .attr("d", d => arcPath(d.x1, d.x2, d.height))
+    .attr("stroke", d => chemistryColorOverride(d.ct, d.baseColor) || d.baseColor)
+    .attr("stroke-width", d => d.thickness)
+    .attr("stroke-dasharray", d => chemistryDash(d.ct))
+    .attr("filter", d => chemistryFilter(d.ct))
+    .attr("opacity", 1);
+
+  // Rebind events on update
+  arcs.on("mouseenter", function(event, d) { showTooltip(event, d); })
+    .on("mousemove", function(event, d) { moveTooltip(event); })
+    .on("mouseleave", hideTooltip);
+
+  // Exit
+  arcs.exit().transition().duration(duration / 2)
+    .attr("d", d => arcPath(d.x1, d.x2, 0))
+    .attr("opacity", 0)
+    .remove();
+
+  // Update side panel
+  updateSidePanel(session, pairsData);
+
+  // Update header
+  document.getElementById("sessionId").textContent = `SESSION ${sid}`;
+  document.getElementById("sessionTitle").textContent = session.session_label || "";
+  document.getElementById("sliderLabel").textContent = sid;
+}
+
+// ─── TOOLTIP ───
+function showTooltip(event, d) {
+  const avgForPair = campaignAvg[d.key];
+  const delta = avgForPair ? (d.cs - avgForPair.cs).toFixed(1) : "--";
+  const deltaSign = avgForPair && d.cs >= avgForPair.cs ? "+" : "";
+  tooltip.innerHTML = `
+    <div class="tt-pair">${playerLabel(d.pa)} & ${playerLabel(d.pb)}</div>
+    <div class="tt-type">${d.ct}</div>
+    <div class="tt-row"><span>Chemistry</span><span>${d.cs.toFixed(1)}</span></div>
+    <div class="tt-row"><span>Exchanges</span><span>${d.te}</span></div>
+    <div class="tt-row"><span>vs Campaign Avg</span><span style="color:${d.cs >= (avgForPair?.cs||0) ? '#4DB6AC' : '#E57373'}">${deltaSign}${delta}</span></div>
+  `;
+  tooltip.style.opacity = 1;
+  moveTooltip(event);
+}
+function moveTooltip(event) {
+  const rect = container.getBoundingClientRect();
+  let x = event.clientX - rect.left + 15;
+  let y = event.clientY - rect.top - 10;
+  if (x + 240 > rect.width) x = event.clientX - rect.left - 250;
+  if (y < 10) y = 10;
+  tooltip.style.left = x + "px";
+  tooltip.style.top = y + "px";
+}
+function hideTooltip() {
+  tooltip.style.opacity = 0;
+}
+
+// ─── SIDE PANEL ───
+function updateSidePanel(session, pairsData) {
+  if (pairsData.length === 0) {
+    document.getElementById("strongestPair").innerHTML = '<span class="dim">No data for this session</span>';
+    document.getElementById("weakestPair").innerHTML = '<span class="dim">--</span>';
+    document.getElementById("sessionStats").innerHTML = '<span class="dim">--</span>';
+    document.getElementById("typeDist").innerHTML = "";
+    return;
+  }
+
+  const sorted = [...pairsData].sort((a,b) => b.cs - a.cs);
+  const strongest = sorted[0];
+  const weakest = sorted[sorted.length - 1];
+  const meanCS = d3.mean(pairsData.map(d => d.cs));
+  const totalExch = d3.sum(pairsData.map(d => d.te));
+
+  document.getElementById("strongestPair").innerHTML = `
+    <span class="char-name">${playerLabel(strongest.pa)} & ${playerLabel(strongest.pb)}</span><br>
+    <span class="score highlight">${strongest.cs.toFixed(1)}</span>
+    <span class="dim"> / ${strongest.ct}</span>
+  `;
+  document.getElementById("weakestPair").innerHTML = `
+    <span class="char-name">${playerLabel(weakest.pa)} & ${playerLabel(weakest.pb)}</span><br>
+    <span class="score" style="color:#E57373;text-shadow:0 0 8px rgba(229,115,115,0.3)">${weakest.cs.toFixed(1)}</span>
+    <span class="dim"> / ${weakest.ct}</span>
+  `;
+  document.getElementById("sessionStats").innerHTML = `
+    <div style="display:flex;gap:20px">
+      <div><div class="dim">Mean Chemistry</div><span class="highlight" style="font-size:20px">${meanCS.toFixed(1)}</span></div>
+      <div><div class="dim">Total Exchanges</div><span class="highlight" style="font-size:20px">${totalExch}</span></div>
+      <div><div class="dim">Active Pairs</div><span class="highlight" style="font-size:20px">${pairsData.length}</span></div>
+    </div>
+  `;
+
+  // Type distribution
+  const typeCounts = {};
+  pairsData.forEach(d => {
+    const base = d.ct.split("/")[0].trim();
+    typeCounts[base] = (typeCounts[base] || 0) + 1;
+  });
+  const sortedTypes = Object.entries(typeCounts).sort((a,b) => b[1] - a[1]);
+  const maxCount = sortedTypes[0] ? sortedTypes[0][1] : 1;
+
+  const typeColors = {
+    "The Brain Trust": "#4A90D9",
+    "Battle Siblings": "#E57373",
+    "Comic Relief Duo": "#FFB74D",
+    "Loyal Companions": "#fbbf24",
+    "Rivals": "#f43f5e",
+    "Volatile Mix": "#f43f5e",
+    "Ships Passing": "#3a3a50",
+    "Chaos Partners": "#FF8A65",
+    "Mentor & Student": "#81C784",
+    "Unspoken Bond": "#BA68C8",
+    "The Odd Couple": "#7986CB",
+    "New Acquaintances": "#4a6a6e",
+    "Strategic Partners": "#4DB6AC",
+    "Strategic Allies": "#4DB6AC"
+  };
+
+  document.getElementById("typeDist").innerHTML = sortedTypes.map(([type, count]) => {
+    const color = typeColors[type] || "#6b6b8a";
+    const pct = (count / maxCount) * 100;
+    return `<div class="type-row">
+      <span class="type-name">${type}</span>
+      <div class="type-bar-track"><div class="type-bar-fill" style="width:${pct}%;background:${color};box-shadow:0 0 6px ${color}"></div></div>
+      <span class="type-count">${count}</span>
+    </div>`;
+  }).join("");
+}
+
+// ─── LEGEND ───
+(function buildLegend() {
+  const items = [
+    {label:"Brain Trust", dash:"none", color:"#4A90D9"},
+    {label:"Battle Siblings", dash:"8,4", color:"#E57373"},
+    {label:"Comic Relief Duo", dash:"3,3", color:"#FFB74D"},
+    {label:"Loyal Companions", dash:"none", color:"#fbbf24", glow:true},
+    {label:"Rivals / Volatile", dash:"none", color:"#f43f5e"},
+    {label:"Ships Passing", dash:"2,6", color:"#3a3a50"},
+  ];
+  const bar = document.getElementById("legendBar");
+  items.forEach(item => {
+    const el = document.createElement("div");
+    el.className = "legend-item";
+    const svgNS = "http://www.w3.org/2000/svg";
+    const s = document.createElementNS(svgNS, "svg");
+    s.setAttribute("width", "24");
+    s.setAttribute("height", "6");
+    const line = document.createElementNS(svgNS, "line");
+    line.setAttribute("x1","0");line.setAttribute("y1","3");
+    line.setAttribute("x2","24");line.setAttribute("y2","3");
+    line.setAttribute("stroke", item.color);
+    line.setAttribute("stroke-width", "2");
+    if (item.dash !== "none") line.setAttribute("stroke-dasharray", item.dash);
+    s.appendChild(line);
+    el.appendChild(s);
+    el.appendChild(document.createTextNode(item.label));
+    bar.appendChild(el);
+  });
+})();
+
+// ─── CONTROLS ───
+const slider = document.getElementById("sessionSlider");
+const btnPlay = document.getElementById("btnPlay");
+let playing = false;
+let playInterval = null;
+let speed = 1;
+
+slider.addEventListener("input", () => {
+  currentSession = parseInt(slider.value);
+  updateArcs(currentSession);
+});
+
+btnPlay.addEventListener("click", () => {
+  playing = !playing;
+  btnPlay.innerHTML = playing ? "&#10074;&#10074; PAUSE" : "&#9654; PLAY";
+  btnPlay.classList.toggle("active", playing);
+  if (playing) startAutoplay();
+  else stopAutoplay();
+});
+
+function startAutoplay() {
+  stopAutoplay();
+  const interval = Math.max(200, 1200 / speed);
+  playInterval = setInterval(() => {
+    currentSession++;
+    if (currentSession > 46) { currentSession = 1; }
+    slider.value = currentSession;
+    updateArcs(currentSession);
+  }, interval);
+}
+function stopAutoplay() {
+  if (playInterval) { clearInterval(playInterval); playInterval = null; }
+}
+
+document.querySelectorAll("[data-speed]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    speed = parseInt(btn.dataset.speed);
+    document.querySelectorAll("[data-speed]").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    if (playing) startAutoplay();
+  });
+});
+
+document.getElementById("overlayToggle").addEventListener("change", (e) => {
+  showOverlay = e.target.checked;
+  updateArcs(currentSession);
+});
+
+// ─── KEYBOARD ───
+document.addEventListener("keydown", (e) => {
+  if (e.key === "ArrowRight" && currentSession < 46) {
+    currentSession++;
+    slider.value = currentSession;
+    updateArcs(currentSession);
+  } else if (e.key === "ArrowLeft" && currentSession > 1) {
+    currentSession--;
+    slider.value = currentSession;
+    updateArcs(currentSession);
+  } else if (e.key === " ") {
+    e.preventDefault();
+    btnPlay.click();
+  }
+});
+
+// ─── INIT ───
+window.addEventListener("resize", resize);
+resize();
+</script>
+</body>
+</html>

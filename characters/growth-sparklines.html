@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CHARACTER GROWTH TRAJECTORIES — BWB Campaign</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;500;600;700;800&family=Barlow:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&family=Cinzel:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg-deep: #06060c;
+      --bg-primary: #0a0a14;
+      --bg-card: #0f1020;
+      --bg-surface: #1a1a2e;
+      --bg-elevated: #22223a;
+      --border: #2a2a4a;
+      --text-primary: #eef0ff;
+      --text-secondary: #9494bf;
+      --text-muted: #8a8ab5;
+      --accent-blue: #00d4ff;
+      --accent-gold: #ffd700;
+      --accent-red: #ff4444;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      font-family: 'Barlow', sans-serif;
+      line-height: 1.5;
+      overflow-x: hidden;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Scanline overlay */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        0deg, transparent, transparent 2px,
+        rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px
+      );
+    }
+
+    /* Ambient background glow */
+    .ambient-glow {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background:
+        radial-gradient(ellipse at 50% 30%, rgba(0,212,255,0.04) 0%, transparent 60%),
+        radial-gradient(ellipse at 20% 70%, rgba(255,183,77,0.03) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 60%, rgba(129,199,132,0.03) 0%, transparent 50%);
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 1500px;
+      padding: 40px 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .header-label {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 600;
+      font-size: 13px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--accent-blue);
+      text-shadow: 0 0 12px rgba(0,212,255,0.4);
+      margin-bottom: 4px;
+    }
+    .header h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(32px, 5vw, 52px);
+      letter-spacing: 4px;
+      color: var(--text-primary);
+      text-shadow: 0 0 30px rgba(0,212,255,0.12);
+      line-height: 1.1;
+    }
+    .header-sub {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 400;
+      font-size: 15px;
+      color: var(--text-secondary);
+      margin-top: 6px;
+      letter-spacing: 1px;
+    }
+
+    /* Grid panel */
+    .grid-panel {
+      background: linear-gradient(135deg, var(--bg-card), var(--bg-surface));
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px 16px 16px 16px;
+      position: relative;
+      overflow: hidden;
+      width: 100%;
+    }
+    .grid-panel::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent-blue), var(--accent-gold), #81C784);
+    }
+
+    /* Grid table */
+    .sparkline-grid {
+      display: grid;
+      width: 100%;
+      gap: 0;
+    }
+
+    /* Character name column */
+    .char-name-cell {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 12px 4px 0;
+      border-bottom: 1px solid rgba(42,42,74,0.4);
+    }
+    .char-swatch {
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+    .char-label {
+      font-family: 'Cinzel', serif;
+      font-weight: 600;
+      font-size: 12px;
+      color: var(--text-primary);
+      white-space: nowrap;
+    }
+
+    /* Net growth badge */
+    .net-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 3px;
+      white-space: nowrap;
+      margin-left: auto;
+    }
+    .net-positive {
+      background: rgba(129,199,132,0.15);
+      color: #81C784;
+      border: 1px solid rgba(129,199,132,0.3);
+    }
+    .net-negative {
+      background: rgba(255,68,68,0.15);
+      color: #ff6666;
+      border: 1px solid rgba(255,68,68,0.3);
+    }
+
+    /* Trait header */
+    .trait-header {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 11px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      text-align: center;
+      padding: 0 2px 8px 2px;
+      border-bottom: 1px solid var(--border);
+      writing-mode: horizontal-tb;
+    }
+
+    /* Sparkline cell */
+    .spark-cell {
+      padding: 3px 2px;
+      border-bottom: 1px solid rgba(42,42,74,0.3);
+      position: relative;
+    }
+    .spark-cell:hover {
+      background: rgba(255,255,255,0.02);
+    }
+
+    /* Tooltip */
+    .tooltip {
+      position: fixed;
+      pointer-events: none;
+      z-index: 1000;
+      background: rgba(10,10,20,0.95);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-family: 'Barlow', sans-serif;
+      font-size: 12px;
+      color: var(--text-primary);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      opacity: 0;
+      transition: opacity 0.12s ease;
+      white-space: nowrap;
+    }
+    .tooltip.visible { opacity: 1; }
+    .tooltip-name {
+      font-family: 'Cinzel', serif;
+      font-weight: 700;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+    .tooltip-row {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+    .tooltip-val {
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    /* Data source */
+    .data-source {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 20px;
+      text-align: center;
+      opacity: 0.6;
+    }
+
+    /* Jump dot marker */
+    .jump-dot {
+      cursor: pointer;
+    }
+
+    /* Legend */
+    .legend-row {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 16px;
+      padding: 8px 16px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent-gold);
+    }
+    .legend-line {
+      width: 16px;
+      height: 2px;
+      background: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="ambient-glow"></div>
+  <div class="container">
+    <div class="header">
+      <div class="header-label">Character Development</div>
+      <h1>CHARACTER GROWTH TRAJECTORIES</h1>
+      <div class="header-sub">8 traits tracked across 46 sessions &mdash; sparklines show end-of-session values [1-10]</div>
+    </div>
+    <div class="legend-row">
+      <div class="legend-item"><div class="legend-line"></div> Trait value over time</div>
+      <div class="legend-item"><div class="legend-dot"></div> Jump of &plusmn;3 or more in one session</div>
+    </div>
+    <div class="grid-panel">
+      <div id="sparkline-grid" class="sparkline-grid"></div>
+    </div>
+    <div class="data-source">Data: Growth Report Cards &mdash; all 46 sessions (S001&ndash;S046)</div>
+  </div>
+  <div class="tooltip" id="tooltip"></div>
+
+  <script>
+    // === REAL DATA from Growth Report Cards ===
+    const rawData = {"Corras":{"1":{"confidence":8,"trust_in_others":6,"moral_compass":5,"emotional_state":7,"goals_purpose":8,"connection_to_party":7,"combat_instincts":5,"self_awareness":5},"2":{"confidence":8,"trust_in_others":7,"moral_compass":5,"emotional_state":5,"goals_purpose":8,"connection_to_party":8,"combat_instincts":7,"self_awareness":7},"3":{"confidence":7,"trust_in_others":5,"moral_compass":4,"emotional_state":5,"goals_purpose":7,"connection_to_party":5,"combat_instincts":8,"self_awareness":5},"4":{"confidence":9,"trust_in_others":8,"moral_compass":6,"emotional_state":7,"goals_purpose":8,"connection_to_party":9,"combat_instincts":9,"self_awareness":7},"5":{"confidence":8,"trust_in_others":7,"moral_compass":5,"emotional_state":6,"goals_purpose":7,"connection_to_party":8,"combat_instincts":8,"self_awareness":6},"6":{"confidence":7,"trust_in_others":6,"moral_compass":4,"emotional_state":6,"goals_purpose":7,"connection_to_party":6,"combat_instincts":8,"self_awareness":5},"7":{"confidence":8,"trust_in_others":7,"moral_compass":5,"emotional_state":5,"goals_purpose":8,"connection_to_party":7,"combat_instincts":8,"self_awareness":6},"8":{"confidence":6,"trust_in_others":5,"moral_compass":4,"emotional_state":5,"goals_purpose":8,"connection_to_party":7,"combat_instincts":7,"self_awareness":6},"9":{"confidence":7,"trust_in_others":5,"moral_compass":5,"emotional_state":5,"goals_purpose":8,"connection_to_party":8,"combat_instincts":5,"self_awareness":7},"10":{"confidence":6,"trust_in_others":6,"moral_compass":5,"emotional_state":5,"goals_purpose":8,"connection_to_party":7,"combat_instincts":6,"self_awareness":6},"11":{"confidence":7,"trust_in_others":6,"moral_compass":5,"emotional_state":6,"goals_purpose":7,"connection_to_party":7,"combat_instincts":5,"self_awareness":5},"12":{"confidence":8,"trust_in_others":7,"moral_compass":6,"emotional_state":7,"goals_purpose":9,"connection_to_party":7,"combat_instincts":8,"self_awareness":8},"13":{"confidence":8,"trust_in_others":5,"moral_compass":5,"emotional_state":6,"goals_purpose":7,"connection_to_party":7,"combat_instincts":6,"self_awareness":7},"14":{"confidence":7,"trust_in_others":6,"moral_compass":5,"emotional_state":6,"goals_purpose":7,"connection_to_party":7,"combat_instincts":7,"self_awareness":6},"15":{"confidence":7,"trust_in_others":8,"moral_compass":5,"emotional_state":5,"goals_purpose":8,"connection_to_party":8,"combat_instincts":6,"self_awareness":6},"16":{"confidence":6,"trust_in_others":7,"moral_compass":5,"emotional_state":5,"goals_purpose":8,"connection_to_party":8,"combat_instincts":5,"self_awareness":7},"17":{"confidence":8,"trust_in_others":5,"moral_compass":7,"emotional_state":6,"goals_purpose":8,"connection_to_party":9,"combat_instincts":7,"self_awareness":8},"18":{"confidence":7,"trust_in_others":7,"moral_compass":6,"emotional_state":6,"goals_purpose":8,"connection_to_party":8,"combat_instincts":6,"self_awareness":7},"19":{"confidence":7,"trust_in_others":6,"moral_compass":5,"emotional_state":6,"goals_purpose":7,"connection_to_party":6,"combat_instincts":5,"self_awareness":7},"20":{"confidence":7,"trust_in_others":6,"moral_compass":5,"emotional_state":6,"goals_purpose":7,"connection_to_party":7,"combat_instincts":6,"self_awareness":5},"21":{"confidence":8,"trust_in_others":6,"moral_compass":5,"emotional_state":6,"goals_purpose":8,"connection_to_party":7,"combat_instincts":8,"self_awareness":7},"22":{"confidence":9,"trust_in_others":6,"moral_compass":6,"emotional_state":7,"goals_purpose":9,"connection_to_party":7,"combat_instincts":9,"self_awareness":6},"23":{"confidence":5,"trust_in_others":4,"moral_compass":5,"emotional_state":3,"goals_purpose":8,"connection_to_party":7,"combat_instincts":6,"self_awareness":7},"24":{"confidence":7,"trust_in_others":8,"moral_compass":5,"emotional_state":6,"goals_purpose":9,"connection_to_party":8,"combat_instincts":7,"self_awareness":6},"25":{"confidence":5,"trust_in_others":5,"moral_compass":5,"emotional_state":5,"goals_purpose":5,"connection_to_party":5,"combat_instincts":5,"self_awareness":5},"26":{"confidence":8,"trust_in_others":7,"moral_compass":5,"emotional_state":6,"goals_purpose":8,"connection_to_party":8,"combat_instincts":7,"self_awareness":7},"27":{"confidence":8,"trust_in_others":7,"moral_compass":5,"emotional_state":6,"goals_purpose":8,"connection_to_party":7,"combat_instincts":8,"self_awareness":7},"28":{"confidence":7,"trust_in_others":6,"moral_compass":5,"emotional_state":5,"goals_purpose":7,"connection_to_party":7,"combat_instincts":7,"self_awareness":6},"29":{"confidence":9,"trust_in_others":8,"moral_compass":6,"emotional_state":7,"goals_purpose":8,"connection_to_party":9,"combat_instincts":7,"self_awareness":7},"30":{"confidence":8,"trust_in_others":7,"moral_compass":5,"emotional_state":7,"goals_purpose":8,"connection_to_party":8,"combat_instincts":9,"self_awareness":6},"31":{"confidence":8,"trust_in_others":8,"moral_compass":7,"emotional_state":7,"goals_purpose":8,"connection_to_party":9,"combat_instincts":8,"self_awareness":8},"32":{"confidence":7,"trust_in_others":7,"moral_compass":6,"emotional_state":6,"goals_purpose":8,"connection_to_party":8,"combat_instincts":8,"self_awareness":7},"33":{"confidence":6,"trust_in_others":5,"moral_compass":6,"emotional_state":4,"goals_purpose":8,"connection_to_party":9,"combat_instincts":7,"self_awareness":6},"34":{"confidence":8,"trust_in_others":4,"moral_compass":6,"emotional_state":7,"goals_purpose":8,"connection_to_party":5,"combat_instincts":9,"self_awareness":7},"35":{"confidence":8,"trust_in_others":5,"moral_compass":6,"emotional_state":7,"goals_purpose":8,"connection_to_party":8,"combat_instincts":7,"self_awareness":7},"36":{"confidence":7,"trust_in_others":8,"moral_compass":6,"emotional_state":6,"goals_purpose":8,"connection_to_party":8,"combat_instincts":9,"self_awareness":7},"37":{"confidence":8,"trust_in_others":5,"moral_compass":4,"emotional_state":6,"goals_purpose":8,"connection_to_party":7,"combat_instincts":8,"self_awareness":7},"38":{"confidence":9,"trust_in_others":8,"moral_compass":5,"emotional_state":7,"goals_purpose":8,"connection_to_party":9,"combat_instincts":8,"self_awareness":8},"39":{"confidence":7,"trust_in_others":7,"moral_compass":8,"emotional_state":6,"goals_purpose":7,"connection_to_party":8,"combat_instincts":7,"self_awareness":7},"40":{"confidence":7,"trust_in_others":4,"moral_compass":3,"emotional_state":5,"goals_purpose":9,"connection_to_party":5,"combat_instincts":8,"self_awareness":4},"41":{"confidence":7,"trust_in_others":5,"moral_compass":4,"emotional_state":6,"goals_purpose":9,"connection_to_party":6,"combat_instincts":9,"self_awareness":6},"42":{"confidence":8,"trust_in_others":9,"moral_compass":8,"emotional_state":7,"goals_purpose":9,"connection_to_party":9,"combat_instincts":10,"self_awareness":8},"43":{"confidence":8,"trust_in_others":4,"moral_compass":4,"emotional_state":5,"goals_purpose":8,"connection_to_party":8,"combat_instincts":7,"self_awareness":5},"44":{"confidence":9,"trust_in_others":3,"moral_compass":4,"emotional_state":5,"goals_purpose":8,"connection_to_party":8,"combat_instincts":6,"self_awareness":7},"45":{"confidence":9,"trust_in_others":4,"moral_compass":5,"emotional_state":6,"goals_purpose":8,"connection_to_party":7,"combat_instincts":8,"self_awareness":6},"46":{"confidence":7,"trust_in_others":3,"moral_compass":4,"emotional_state":5,"goals_purpose":6,"connection_to_party":8,"combat_instincts":7,"self_awareness":5}},"Ash":{"1":{"confidence":6,"trust_in_others":5,"moral_compass":5,"emotional_state":5,"goals_purpose":8,"connection_to_party":5,"combat_instincts":5,"self_awareness":4},"2":{"confidence":5,"trust_in_others":6,"moral_compass":5,"emotional_state":4,"goals_purpose":8,"connection_to_party":7,"combat_instincts":5,"self_awareness":7},"3":{"confidence":6,"trust_in_others":7,"moral_compass":5,"emotional_state":5,"goals_purpose":8,"connection_to_party":7,"combat_instincts":6,"self_awareness":6},"4":{"confidence":8,"trust_in_others":7,"moral_compass":5,"emotional_state":7,"goals_purpose":8,"connection_to_party":8,"combat_instincts":7,"self_awareness":7},"5":{"confidence":8,"trust_in_others":6,"moral_compass":5,"emotional_state":5,"goals_purpose":6,"connection_to_party":7,"combat_instincts":7,"self_awareness":5},"6":{"confidence":8,"trust_in_others":6,"moral_compass":5,"emotional_state":7,"goals_purpose":8,"connection_to_party":7,"combat_instincts":8,"self_awareness":6},"7":{"confidence":7,"trust_in_others":7,"moral_compass":6,"emotional_state":6,"goals_purpose":8,"connection_to_party":8,"combat_instincts":5,"self_awareness":7},"8":{"confidence":9,"trust_in_others":6,"moral_compass":6,"emotional_state":7,"goals_purpose":9,"connection_to_party":8,"combat_instincts":8,"self_awareness":8},"9":{"confidence":8,"trust_in_others":7,"moral_compass":6,"emotional_state":6,"goals_purpose":8,"connection_to_party":8,"combat_instincts":5,"self_awareness":8},"10":{"confidence":7,"trust_in_others":7,"moral_compass":5,"emotional_state":6,"goals_purpose":8,"connection_to_party":8,"combat_instincts":7,"self_awareness":6},"11":{"confidence":5,"trust_in_others":6,"moral_compass":6,"emotional_state":4,"goals_purpose":7,"connection_to_party":7,"combat_instincts":5,"self_awareness":6},"12":{"confidence":7,"trust_in_others":7,"moral_compass":6,"emotional_state":5,"goals_purpose":8,"connection_to_party":8,"combat_instincts":6,"self_awareness":7},"13":{"confidence":7,"trust_in_others":6,"moral_compass":4,"emotional_state":5,"goals_purpose":8,"connection_to_party":7,"combat_instincts":5,"self_awareness":6},"14":{"confidence":8,"trust_in_others":6,"moral_compass":5,"emotional_state":7,"goals_purpose":8,"connection_to_party":7,"combat_instincts":7,"self_awareness":8},"15":{"confidence":6,"trust_in_others":7,"moral_compass":5,"emotional_state":5,"goals_purpose":8,"connection_to_party":8,"combat_instincts":5,"self_awareness":6},"16":{"confidence":7,"trust_in_others":6,"moral_compass":6,"emotional_state":6,"goals_purpose":8,"connection_to_party":7,"combat_instincts":6,"self_awareness":7},"17":{"confidence":7,"trust_in_others":6,"moral_compass":7,"emotional_state":7,"goals_purpose":8,"connection_to_party":7,"combat_instincts":5,"self_awareness":8},"18":{"confidence":8,"trust_in_others":7,"moral_compass":5,"emotional_state":6,"goals_purpose":8,"connection_to_party":8,"combat_instincts":7,"self_awareness":7},"19":{"confidence":8,"trust_in_others":5,"moral_compass":4,"emotional_state":6,"goals_purpose":7,"connection_to_party":6,"combat_instincts":4,"self_awareness":7},"20":{"confidence":8,"trust_in_others":7,"moral_compass":6,"emotional_state":6,"goals_purpose":8,"connection_to_party":8,"combat_instincts":9,"self_awareness":7},"21":{"confidence":7,"trust_in_others":7,"moral_compass":6,"emotional_state":6,"goals_purpose":8,"connection_to_party":7,"combat_instincts":7,"self_awareness":7},"22":{"confidence":7,"trust_in_others":6,"moral_compass":7,"emotional_state":6,"goals_purpose":8,"connection_to_party":7,"combat_instincts":8,"self_awareness":7},"23":{"confidence":7,"trust_in_others":5,"moral_compass":6,"emotional_state":5,"goals_purpose":9,"connection_to_party":7,"combat_instincts":7,"self_awareness":8},"24":{"confidence":8,"trust_in_others":6,"moral_compass":4,"emotional_state":7,"goals_purpose":9,"connection_to_party":8,"combat_instincts":7,"self_awareness":7},"25":{"confidence":5,"trust_in_others":5,"moral_compass":5,"emotional_state":5,"goals_purpose":5,"connection_to_party":5,"combat_instincts":5,"self_awareness":5},"26":{"confidence":8,"trust_in_others":8,"moral_compass":5,"emotional_state":7,"goals_purpose":8,"connection_to_party":8,"combat_instincts":7,"self_awareness":8},"27":{"confidence":7,"trust_in_others":8,"moral_compass":5,"emotional_state":5,"goals_purpose":7,"connection_to_party":8,"combat_instincts":7,"self_awareness":7},"28":{"confidence":8,"trust_in_others":7,"moral_compass":6,"emotional_state":7,"goals_purpose":8,"connection_to_party":8,"combat_instincts":7,"self_awareness":7},"29":{"confidence":7,"trust_in_others":6,"moral_compass":6,"emotional_state":5,"goals_purpose":7,"connection_to_party":8,"combat_instincts":6,"self_awareness":7},"30":{"confidence":7,"trust_in_others":6,"moral_compass":6,"emotional_state":6,"goals_purpose":7,"connection_to_party":7,"combat_instincts":7,"self_awareness":7},"39":{"confidence":7,"trust_in_others":8,"moral_compass":7,"emotional_state":6,"goals_purpose":7,"connection_to_party":8,"combat_instincts":7,"self_awareness":7},"42":{"confidence":7,"trust_in_others":8,"moral_compass":7,"emotional_state":7,"goals_purpose":8,"connection_to_party":9,"combat_instincts":8,"self_awareness":7},"43":{"confidence":7,"trust_in_others":5,"moral_compass":6,"emotional_state":4,"goals_purpose":7,"connection_to_party":7,"combat_instincts":6,"self_awareness":6},"44":{"confidence":7,"trust_in_others":4,"moral_compass":4,"emotional_state":6,"goals_purpose":7,"connection_to_party":7,"combat_instincts":5,"self_awareness":8},"45":{"confidence":8,"trust_in_others":6,"moral_compass":5,"emotional_state":6,"goals_purpose":7,"connection_to_party":8,"combat_instincts":8,"self_awareness":6},"46":{"confidence":6,"trust_in_others":4,"moral_compass":5,"emotional_state":4,"goals_purpose":7,"connection_to_party":7,"combat_instincts":6,"self_awareness":6}},"Billabong":{"1":{"confidence":8,"trust_in_others":7,"moral_compass":6,"emotional_state":8,"goals_purpose":7,"connection_to_party":8,"combat_instincts":8,"self_awareness":6},"3":{"confidence":10,"trust_in_others":7,"moral_compass":6,"emotional_state":9,"goals_purpose":8,"connection_to_party":8,"combat_instincts":9,"self_awareness":6},"4":{"confidence":9,"trust_in_others":7,"moral_compass":5,"emotional_state":8,"goals_purpose":7,"connection_to_party":8,"combat_instincts":9,"self_awareness":5},"5":{"confidence":6,"trust_in_others":8,"moral_compass":4,"emotional_state":7,"goals_purpose":5,"connection_to_party":8,"combat_instincts":7,"self_awareness":5},"6":{"confidence":9,"trust_in_others":7,"moral_compass":6,"emotional_state":8,"goals_purpose":7,"connection_to_party":8,"combat_instincts":9,"self_awareness":5},"7":{"confidence":6,"trust_in_others":7,"moral_compass":6,"emotional_state":5,"goals_purpose":6,"connection_to_party":7,"combat_instincts":7,"self_awareness":4},"8":{"confidence":7,"trust_in_others":5,"moral_compass":4,"emotional_state":8,"goals_purpose":6,"connection_to_party":6,"combat_instincts":7,"self_awareness":3},"9":{"confidence":7,"trust_in_others":6,"moral_compass":5,"emotional_state":6,"goals_purpose":6,"connection_to_party":7,"combat_instincts":8,"self_awareness":6},"12":{"confidence":9,"trust_in_others":8,"moral_compass":7,"emotional_state":6,"goals_purpose":7,"connection_to_party":9,"combat_instincts":8,"self_awareness":5},"13":{"confidence":6,"trust_in_others":7,"moral_compass":5,"emotional_state":6,"goals_purpose":5,"connection_to_party":7,"combat_instincts":7,"self_awareness":5},"14":{"confidence":9,"trust_in_others":8,"moral_compass":6,"emotional_state":8,"goals_purpose":7,"connection_to_party":9,"combat_instincts":9,"self_awareness":6},"15":{"confidence":7,"trust_in_others":8,"moral_compass":6,"emotional_state":6,"goals_purpose":7,"connection_to_party":9,"combat_instincts":9,"self_awareness":5},"16":{"confidence":9,"trust_in_others":8,"moral_compass":7,"emotional_state":8,"goals_purpose":9,"connection_to_party":9,"combat_instincts":10,"self_awareness":7},"17":{"confidence":9,"trust_in_others":7,"moral_compass":6,"emotional_state":8,"goals_purpose":7,"connection_to_party":8,"combat_instincts":8,"self_awareness":6},"18":{"confidence":7,"trust_in_others":7,"moral_compass":5,"emotional_state":6,"goals_purpose":7,"connection_to_party":8,"combat_instincts":8,"self_awareness":6},"19":{"confidence":8,"trust_in_others":6,"moral_compass":4,"emotional_state":7,"goals_purpose":5,"connection_to_party":7,"combat_instincts":9,"self_awareness":5},"20":{"confidence":9,"trust_in_others":8,"moral_compass":8,"emotional_state":7,"goals_purpose":8,"connection_to_party":9,"combat_instincts":5,"self_awareness":7},"21":{"confidence":8,"trust_in_others":6,"moral_compass":5,"emotional_state":7,"goals_purpose":7,"connection_to_party":7,"combat_instincts":9,"self_awareness":5},"22":{"confidence":9,"trust_in_others":8,"moral_compass":7,"emotional_state":8,"goals_purpose":7,"connection_to_party":9,"combat_instincts":8,"self_awareness":6},"23":{"confidence":7,"trust_in_others":5,"moral_compass":4,"emotional_state":5,"goals_purpose":7,"connection_to_party":6,"combat_instincts":8,"self_awareness":5},"24":{"confidence":8,"trust_in_others":5,"moral_compass":4,"emotional_state":6,"goals_purpose":8,"connection_to_party":7,"combat_instincts":9,"self_awareness":5},"26":{"confidence":7,"trust_in_others":5,"moral_compass":4,"emotional_state":6,"goals_purpose":7,"connection_to_party":6,"combat_instincts":9,"self_awareness":5},"27":{"confidence":7,"trust_in_others":7,"moral_compass":6,"emotional_state":5,"goals_purpose":8,"connection_to_party":8,"combat_instincts":7,"self_awareness":7},"28":{"confidence":6,"trust_in_others":5,"moral_compass":4,"emotional_state":4,"goals_purpose":5,"connection_to_party":6,"combat_instincts":8,"self_awareness":3},"29":{"confidence":9,"trust_in_others":7,"moral_compass":4,"emotional_state":8,"goals_purpose":8,"connection_to_party":7,"combat_instincts":8,"self_awareness":7},"30":{"confidence":7,"trust_in_others":5,"moral_compass":4,"emotional_state":6,"goals_purpose":6,"connection_to_party":5,"combat_instincts":7,"self_awareness":4},"31":{"confidence":5,"trust_in_others":6,"moral_compass":7,"emotional_state":4,"goals_purpose":6,"connection_to_party":7,"combat_instincts":7,"self_awareness":7},"33":{"confidence":6,"trust_in_others":4,"moral_compass":5,"emotional_state":3,"goals_purpose":6,"connection_to_party":7,"combat_instincts":8,"self_awareness":4},"34":{"confidence":5,"trust_in_others":6,"moral_compass":6,"emotional_state":4,"goals_purpose":5,"connection_to_party":6,"combat_instincts":7,"self_awareness":5}},"Dahlia":{"1":{"confidence":7,"trust_in_others":5,"moral_compass":6,"emotional_state":6,"goals_purpose":8,"connection_to_party":6,"combat_instincts":7,"self_awareness":6},"6":{"confidence":8,"trust_in_others":6,"moral_compass":8,"emotional_state":7,"goals_purpose":8,"connection_to_party":7,"combat_instincts":8,"self_awareness":6},"10":{"confidence":7,"trust_in_others":6,"moral_compass":8,"emotional_state":6,"goals_purpose":9,"connection_to_party":7,"combat_instincts":7,"self_awareness":5},"11":{"confidence":7,"trust_in_others":6,"moral_compass":8,"emotional_state":5,"goals_purpose":8,"connection_to_party":7,"combat_instincts":7,"self_awareness":5},"12":{"confidence":7,"trust_in_others":6,"moral_compass":5,"emotional_state":6,"goals_purpose":8,"connection_to_party":7,"combat_instincts":6,"self_awareness":7},"14":{"confidence":7,"trust_in_others":5,"moral_compass":8,"emotional_state":6,"goals_purpose":9,"connection_to_party":6,"combat_instincts":8,"self_awareness":6},"15":{"confidence":8,"trust_in_others":8,"moral_compass":7,"emotional_state":6,"goals_purpose":9,"connection_to_party":9,"combat_instincts":7,"self_awareness":6},"16":{"confidence":8,"trust_in_others":7,"moral_compass":9,"emotional_state":7,"goals_purpose":9,"connection_to_party":8,"combat_instincts":7,"self_awareness":7},"18":{"confidence":8,"trust_in_others":7,"moral_compass":8,"emotional_state":7,"goals_purpose":9,"connection_to_party":8,"combat_instincts":7,"self_awareness":7},"19":{"confidence":7,"trust_in_others":6,"moral_compass":7,"emotional_state":6,"goals_purpose":8,"connection_to_party":7,"combat_instincts":6,"self_awareness":6},"20":{"confidence":7,"trust_in_others":8,"moral_compass":8,"emotional_state":6,"goals_purpose":7,"connection_to_party":8,"combat_instincts":7,"self_awareness":6},"21":{"confidence":7,"trust_in_others":6,"moral_compass":8,"emotional_state":6,"goals_purpose":9,"connection_to_party":7,"combat_instincts":8,"self_awareness":6},"22":{"confidence":8,"trust_in_others":7,"moral_compass":9,"emotional_state":7,"goals_purpose":8,"connection_to_party":8,"combat_instincts":8,"self_awareness":7},"23":{"confidence":9,"trust_in_others":6,"moral_compass":8,"emotional_state":7,"goals_purpose":9,"connection_to_party":7,"combat_instincts":8,"self_awareness":8},"24":{"confidence":8,"trust_in_others":4,"moral_compass":5,"emotional_state":5,"goals_purpose":7,"connection_to_party":6,"combat_instincts":8,"self_awareness":6},"25":{"confidence":5,"trust_in_others":5,"moral_compass":5,"emotional_state":5,"goals_purpose":5,"connection_to_party":5,"combat_instincts":5,"self_awareness":5},"26":{"confidence":6,"trust_in_others":5,"moral_compass":6,"emotional_state":5,"goals_purpose":8,"connection_to_party":6,"combat_instincts":8,"self_awareness":5},"27":{"confidence":9,"trust_in_others":6,"moral_compass":4,"emotional_state":6,"goals_purpose":8,"connection_to_party":8,"combat_instincts":9,"self_awareness":8},"28":{"confidence":6,"trust_in_others":5,"moral_compass":7,"emotional_state":5,"goals_purpose":6,"connection_to_party":6,"combat_instincts":7,"self_awareness":5},"29":{"confidence":8,"trust_in_others":7,"moral_compass":9,"emotional_state":6,"goals_purpose":8,"connection_to_party":8,"combat_instincts":8,"self_awareness":6},"30":{"confidence":9,"trust_in_others":5,"moral_compass":7,"emotional_state":7,"goals_purpose":8,"connection_to_party":6,"combat_instincts":9,"self_awareness":5},"31":{"confidence":7,"trust_in_others":8,"moral_compass":8,"emotional_state":7,"goals_purpose":8,"connection_to_party":9,"combat_instincts":7,"self_awareness":8},"32":{"confidence":9,"trust_in_others":7,"moral_compass":8,"emotional_state":8,"goals_purpose":9,"connection_to_party":8,"combat_instincts":8,"self_awareness":7},"33":{"confidence":7,"trust_in_others":5,"moral_compass":9,"emotional_state":5,"goals_purpose":8,"connection_to_party":8,"combat_instincts":8,"self_awareness":6},"34":{"confidence":8,"trust_in_others":5,"moral_compass":8,"emotional_state":6,"goals_purpose":8,"connection_to_party":7,"combat_instincts":8,"self_awareness":7},"36":{"confidence":9,"trust_in_others":7,"moral_compass":8,"emotional_state":7,"goals_purpose":9,"connection_to_party":8,"combat_instincts":9,"self_awareness":7},"37":{"confidence":9,"trust_in_others":7,"moral_compass":8,"emotional_state":7,"goals_purpose":9,"connection_to_party":9,"combat_instincts":9,"self_awareness":7},"38":{"confidence":8,"trust_in_others":8,"moral_compass":6,"emotional_state":7,"goals_purpose":8,"connection_to_party":9,"combat_instincts":7,"self_awareness":7},"39":{"confidence":8,"trust_in_others":7,"moral_compass":9,"emotional_state":7,"goals_purpose":9,"connection_to_party":7,"combat_instincts":8,"self_awareness":8},"40":{"confidence":8,"trust_in_others":6,"moral_compass":9,"emotional_state":7,"goals_purpose":9,"connection_to_party":8,"combat_instincts":7,"self_awareness":7},"41":{"confidence":10,"trust_in_others":8,"moral_compass":9,"emotional_state":7,"goals_purpose":10,"connection_to_party":9,"combat_instincts":9,"self_awareness":8},"42":{"confidence":9,"trust_in_others":8,"moral_compass":10,"emotional_state":8,"goals_purpose":10,"connection_to_party":9,"combat_instincts":9,"self_awareness":7},"43":{"confidence":9,"trust_in_others":3,"moral_compass":3,"emotional_state":5,"goals_purpose":8,"connection_to_party":7,"combat_instincts":8,"self_awareness":4},"44":{"confidence":8,"trust_in_others":4,"moral_compass":5,"emotional_state":5,"goals_purpose":8,"connection_to_party":9,"combat_instincts":8,"self_awareness":6},"45":{"confidence":9,"trust_in_others":3,"moral_compass":6,"emotional_state":5,"goals_purpose":8,"connection_to_party":7,"combat_instincts":9,"self_awareness":6},"46":{"confidence":6,"trust_in_others":6,"moral_compass":8,"emotional_state":5,"goals_purpose":7,"connection_to_party":7,"combat_instincts":7,"self_awareness":6}},"Orla":{"1":{"confidence":7,"trust_in_others":8,"moral_compass":8,"emotional_state":7,"goals_purpose":7,"connection_to_party":8,"combat_instincts":6,"self_awareness":7},"2":{"confidence":8,"trust_in_others":8,"moral_compass":9,"emotional_state":8,"goals_purpose":8,"connection_to_party":9,"combat_instincts":7,"self_awareness":8},"3":{"confidence":7,"trust_in_others":8,"moral_compass":7,"emotional_state":6,"goals_purpose":7,"connection_to_party":8,"combat_instincts":6,"self_awareness":6},"4":{"confidence":7,"trust_in_others":8,"moral_compass":8,"emotional_state":7,"goals_purpose":8,"connection_to_party":8,"combat_instincts":6,"self_awareness":8},"5":{"confidence":6,"trust_in_others":8,"moral_compass":7,"emotional_state":5,"goals_purpose":6,"connection_to_party":9,"combat_instincts":6,"self_awareness":5},"6":{"confidence":6,"trust_in_others":7,"moral_compass":7,"emotional_state":6,"goals_purpose":7,"connection_to_party":7,"combat_instincts":7,"self_awareness":6},"7":{"confidence":6,"trust_in_others":6,"moral_compass":6,"emotional_state":5,"goals_purpose":6,"connection_to_party":6,"combat_instincts":7,"self_awareness":5},"8":{"confidence":8,"trust_in_others":9,"moral_compass":7,"emotional_state":7,"goals_purpose":8,"connection_to_party":9,"combat_instincts":6,"self_awareness":8},"9":{"confidence":6,"trust_in_others":8,"moral_compass":7,"emotional_state":6,"goals_purpose":7,"connection_to_party":8,"combat_instincts":5,"self_awareness":7},"10":{"confidence":8,"trust_in_others":7,"moral_compass":7,"emotional_state":7,"goals_purpose":8,"connection_to_party":8,"combat_instincts":8,"self_awareness":7},"11":{"confidence":7,"trust_in_others":7,"moral_compass":5,"emotional_state":6,"goals_purpose":6,"connection_to_party":8,"combat_instincts":5,"self_awareness":6},"12":{"confidence":8,"trust_in_others":9,"moral_compass":8,"emotional_state":6,"goals_purpose":8,"connection_to_party":9,"combat_instincts":8,"self_awareness":8},"13":{"confidence":6,"trust_in_others":7,"moral_compass":6,"emotional_state":6,"goals_purpose":6,"connection_to_party":8,"combat_instincts":4,"self_awareness":6},"14":{"confidence":7,"trust_in_others":8,"moral_compass":7,"emotional_state":8,"goals_purpose":7,"connection_to_party":9,"combat_instincts":6,"self_awareness":7},"15":{"confidence":8,"trust_in_others":9,"moral_compass":6,"emotional_state":7,"goals_purpose":9,"connection_to_party":9,"combat_instincts":6,"self_awareness":7},"16":{"confidence":7,"trust_in_others":8,"moral_compass":8,"emotional_state":7,"goals_purpose":8,"connection_to_party":9,"combat_instincts":6,"self_awareness":7},"17":{"confidence":8,"trust_in_others":8,"moral_compass":9,"emotional_state":7,"goals_purpose":9,"connection_to_party":9,"combat_instincts":7,"self_awareness":8},"18":{"confidence":8,"trust_in_others":8,"moral_compass":8,"emotional_state":7,"goals_purpose":8,"connection_to_party":9,"combat_instincts":7,"self_awareness":8},"19":{"confidence":6,"trust_in_others":7,"moral_compass":6,"emotional_state":7,"goals_purpose":5,"connection_to_party":7,"combat_instincts":4,"self_awareness":6},"20":{"confidence":6,"trust_in_others":7,"moral_compass":7,"emotional_state":6,"goals_purpose":7,"connection_to_party":8,"combat_instincts":6,"self_awareness":6},"22":{"confidence":6,"trust_in_others":8,"moral_compass":8,"emotional_state":7,"goals_purpose":8,"connection_to_party":7,"combat_instincts":6,"self_awareness":7},"23":{"confidence":7,"trust_in_others":8,"moral_compass":6,"emotional_state":6,"goals_purpose":7,"connection_to_party":8,"combat_instincts":6,"self_awareness":8},"24":{"confidence":7,"trust_in_others":7,"moral_compass":7,"emotional_state":6,"goals_purpose":8,"connection_to_party":9,"combat_instincts":6,"self_awareness":7},"25":{"confidence":5,"trust_in_others":5,"moral_compass":5,"emotional_state":5,"goals_purpose":5,"connection_to_party":5,"combat_instincts":5,"self_awareness":5},"26":{"confidence":8,"trust_in_others":8,"moral_compass":8,"emotional_state":8,"goals_purpose":8,"connection_to_party":9,"combat_instincts":7,"self_awareness":8},"27":{"confidence":7,"trust_in_others":8,"moral_compass":6,"emotional_state":6,"goals_purpose":7,"connection_to_party":8,"combat_instincts":7,"self_awareness":7},"28":{"confidence":8,"trust_in_others":8,"moral_compass":7,"emotional_state":8,"goals_purpose":8,"connection_to_party":9,"combat_instincts":7,"self_awareness":8},"29":{"confidence":7,"trust_in_others":8,"moral_compass":7,"emotional_state":7,"goals_purpose":7,"connection_to_party":9,"combat_instincts":7,"self_awareness":6},"30":{"confidence":8,"trust_in_others":8,"moral_compass":7,"emotional_state":7,"goals_purpose":7,"connection_to_party":8,"combat_instincts":8,"self_awareness":7},"31":{"confidence":7,"trust_in_others":8,"moral_compass":7,"emotional_state":7,"goals_purpose":8,"connection_to_party":9,"combat_instincts":7,"self_awareness":8},"32":{"confidence":6,"trust_in_others":8,"moral_compass":7,"emotional_state":5,"goals_purpose":7,"connection_to_party":8,"combat_instincts":6,"self_awareness":6},"33":{"confidence":4,"trust_in_others":7,"moral_compass":6,"emotional_state":4,"goals_purpose":6,"connection_to_party":8,"combat_instincts":5,"self_awareness":5},"34":{"confidence":6,"trust_in_others":6,"moral_compass":7,"emotional_state":5,"goals_purpose":7,"connection_to_party":8,"combat_instincts":7,"self_awareness":6},"35":{"confidence":6,"trust_in_others":8,"moral_compass":8,"emotional_state":6,"goals_purpose":7,"connection_to_party":8,"combat_instincts":5,"self_awareness":6},"36":{"confidence":7,"trust_in_others":8,"moral_compass":7,"emotional_state":6,"goals_purpose":8,"connection_to_party":9,"combat_instincts":7,"self_awareness":7},"37":{"confidence":7,"trust_in_others":8,"moral_compass":7,"emotional_state":7,"goals_purpose":7,"connection_to_party":9,"combat_instincts":7,"self_awareness":7},"38":{"confidence":8,"trust_in_others":8,"moral_compass":5,"emotional_state":7,"goals_purpose":8,"connection_to_party":9,"combat_instincts":6,"self_awareness":8},"39":{"confidence":8,"trust_in_others":8,"moral_compass":9,"emotional_state":7,"goals_purpose":8,"connection_to_party":9,"combat_instincts":6,"self_awareness":8},"40":{"confidence":5,"trust_in_others":8,"moral_compass":8,"emotional_state":6,"goals_purpose":6,"connection_to_party":8,"combat_instincts":5,"self_awareness":6},"41":{"confidence":7,"trust_in_others":8,"moral_compass":8,"emotional_state":6,"goals_purpose":8,"connection_to_party":9,"combat_instincts":7,"self_awareness":8},"42":{"confidence":7,"trust_in_others":9,"moral_compass":8,"emotional_state":8,"goals_purpose":8,"connection_to_party":10,"combat_instincts":7,"self_awareness":8},"43":{"confidence":6,"trust_in_others":5,"moral_compass":5,"emotional_state":4,"goals_purpose":7,"connection_to_party":7,"combat_instincts":6,"self_awareness":5},"44":{"confidence":6,"trust_in_others":7,"moral_compass":8,"emotional_state":7,"goals_purpose":8,"connection_to_party":8,"combat_instincts":4,"self_awareness":7},"45":{"confidence":7,"trust_in_others":7,"moral_compass":6,"emotional_state":7,"goals_purpose":7,"connection_to_party":8,"combat_instincts":7,"self_awareness":7},"46":{"confidence":5,"trust_in_others":7,"moral_compass":7,"emotional_state":4,"goals_purpose":7,"connection_to_party":8,"combat_instincts":6,"self_awareness":5}},"Lilith":{"2":{"confidence":6,"trust_in_others":7,"moral_compass":8,"emotional_state":6,"goals_purpose":7,"connection_to_party":8,"combat_instincts":6,"self_awareness":7},"3":{"confidence":8,"trust_in_others":6,"moral_compass":7,"emotional_state":6,"goals_purpose":8,"connection_to_party":7,"combat_instincts":6,"self_awareness":6},"4":{"confidence":7,"trust_in_others":6,"moral_compass":7,"emotional_state":6,"goals_purpose":9,"connection_to_party":7,"combat_instincts":7,"self_awareness":7},"5":{"confidence":7,"trust_in_others":5,"moral_compass":4,"emotional_state":6,"goals_purpose":6,"connection_to_party":7,"combat_instincts":7,"self_awareness":5},"7":{"confidence":7,"trust_in_others":5,"moral_compass":6,"emotional_state":6,"goals_purpose":6,"connection_to_party":6,"combat_instincts":6,"self_awareness":5},"8":{"confidence":9,"trust_in_others":4,"moral_compass":2,"emotional_state":8,"goals_purpose":8,"connection_to_party":6,"combat_instincts":5,"self_awareness":7},"9":{"confidence":9,"trust_in_others":5,"moral_compass":3,"emotional_state":7,"goals_purpose":8,"connection_to_party":7,"combat_instincts":9,"self_awareness":6},"13":{"confidence":6,"trust_in_others":4,"moral_compass":6,"emotional_state":5,"goals_purpose":7,"connection_to_party":6,"combat_instincts":5,"self_awareness":6},"17":{"confidence":8,"trust_in_others":4,"moral_compass":3,"emotional_state":6,"goals_purpose":9,"connection_to_party":7,"combat_instincts":6,"self_awareness":7}},"Ave":{"2":{"confidence":8,"trust_in_others":7,"moral_compass":5,"emotional_state":7,"goals_purpose":8,"connection_to_party":8,"combat_instincts":7,"self_awareness":7},"3":{"confidence":9,"trust_in_others":6,"moral_compass":6,"emotional_state":8,"goals_purpose":9,"connection_to_party":8,"combat_instincts":7,"self_awareness":7},"4":{"confidence":8,"trust_in_others":7,"moral_compass":5,"emotional_state":7,"goals_purpose":7,"connection_to_party":8,"combat_instincts":8,"self_awareness":7},"5":{"confidence":6,"trust_in_others":7,"moral_compass":5,"emotional_state":6,"goals_purpose":6,"connection_to_party":7,"combat_instincts":7,"self_awareness":6},"6":{"confidence":7,"trust_in_others":6,"moral_compass":5,"emotional_state":6,"goals_purpose":7,"connection_to_party":7,"combat_instincts":8,"self_awareness":6},"7":{"confidence":8,"trust_in_others":6,"moral_compass":5,"emotional_state":7,"goals_purpose":8,"connection_to_party":6,"combat_instincts":7,"self_awareness":7},"8":{"confidence":8,"trust_in_others":6,"moral_compass":6,"emotional_state":8,"goals_purpose":8,"connection_to_party":8,"combat_instincts":9,"self_awareness":7},"9":{"confidence":8,"trust_in_others":7,"moral_compass":5,"emotional_state":7,"goals_purpose":9,"connection_to_party":8,"combat_instincts":4,"self_awareness":7},"12":{"confidence":8,"trust_in_others":7,"moral_compass":6,"emotional_state":7,"goals_purpose":9,"connection_to_party":8,"combat_instincts":6,"self_awareness":7},"13":{"confidence":6,"trust_in_others":6,"moral_compass":5,"emotional_state":5,"goals_purpose":7,"connection_to_party":7,"combat_instincts":4,"self_awareness":6},"14":{"confidence":8,"trust_in_others":7,"moral_compass":5,"emotional_state":7,"goals_purpose":7,"connection_to_party":8,"combat_instincts":7,"self_awareness":6},"15":{"confidence":8,"trust_in_others":8,"moral_compass":6,"emotional_state":7,"goals_purpose":9,"connection_to_party":9,"combat_instincts":5,"self_awareness":7},"16":{"confidence":8,"trust_in_others":7,"moral_compass":6,"emotional_state":7,"goals_purpose":8,"connection_to_party":8,"combat_instincts":9,"self_awareness":7}},"Drenek":{"10":{"confidence":7,"trust_in_others":6,"moral_compass":4,"emotional_state":6,"goals_purpose":6,"connection_to_party":6,"combat_instincts":8,"self_awareness":5},"11":{"confidence":7,"trust_in_others":6,"moral_compass":5,"emotional_state":6,"goals_purpose":7,"connection_to_party":7,"combat_instincts":8,"self_awareness":5}},"SavannahBelle":{"21":{"confidence":5,"trust_in_others":6,"moral_compass":5,"emotional_state":5,"goals_purpose":7,"connection_to_party":7,"combat_instincts":6,"self_awareness":5},"22":{"confidence":7,"trust_in_others":6,"moral_compass":6,"emotional_state":6,"goals_purpose":7,"connection_to_party":6,"combat_instincts":8,"self_awareness":5},"23":{"confidence":8,"trust_in_others":6,"moral_compass":5,"emotional_state":7,"goals_purpose":7,"connection_to_party":7,"combat_instincts":9,"self_awareness":7},"24":{"confidence":5,"trust_in_others":8,"moral_compass":6,"emotional_state":4,"goals_purpose":7,"connection_to_party":9,"combat_instincts":5,"self_awareness":6},"26":{"confidence":5,"trust_in_others":7,"moral_compass":5,"emotional_state":4,"goals_purpose":6,"connection_to_party":7,"combat_instincts":4,"self_awareness":4},"27":{"confidence":7,"trust_in_others":7,"moral_compass":5,"emotional_state":6,"goals_purpose":7,"connection_to_party":7,"combat_instincts":8,"self_awareness":7},"28":{"confidence":7,"trust_in_others":7,"moral_compass":6,"emotional_state":7,"goals_purpose":7,"connection_to_party":7,"combat_instincts":7,"self_awareness":7},"29":{"confidence":8,"trust_in_others":7,"moral_compass":6,"emotional_state":7,"goals_purpose":7,"connection_to_party":8,"combat_instincts":7,"self_awareness":6},"30":{"confidence":6,"trust_in_others":6,"moral_compass":5,"emotional_state":6,"goals_purpose":6,"connection_to_party":6,"combat_instincts":7,"self_awareness":5},"31":{"confidence":8,"trust_in_others":6,"moral_compass":6,"emotional_state":5,"goals_purpose":8,"connection_to_party":7,"combat_instincts":8,"self_awareness":7},"32":{"confidence":7,"trust_in_others":6,"moral_compass":5,"emotional_state":6,"goals_purpose":7,"connection_to_party":7,"combat_instincts":8,"self_awareness":6},"33":{"confidence":3,"trust_in_others":5,"moral_compass":5,"emotional_state":2,"goals_purpose":6,"connection_to_party":5,"combat_instincts":6,"self_awareness":3},"34":{"confidence":6,"trust_in_others":4,"moral_compass":5,"emotional_state":5,"goals_purpose":6,"connection_to_party":5,"combat_instincts":6,"self_awareness":5},"35":{"confidence":8,"trust_in_others":3,"moral_compass":4,"emotional_state":5,"goals_purpose":6,"connection_to_party":5,"combat_instincts":8,"self_awareness":4},"36":{"confidence":6,"trust_in_others":5,"moral_compass":6,"emotional_state":5,"goals_purpose":8,"connection_to_party":6,"combat_instincts":8,"self_awareness":7},"37":{"confidence":5,"trust_in_others":8,"moral_compass":4,"emotional_state":7,"goals_purpose":5,"connection_to_party":4,"combat_instincts":8,"self_awareness":4},"38":{"confidence":7,"trust_in_others":7,"moral_compass":5,"emotional_state":6,"goals_purpose":8,"connection_to_party":8,"combat_instincts":7,"self_awareness":7},"39":{"confidence":8,"trust_in_others":7,"moral_compass":6,"emotional_state":6,"goals_purpose":7,"connection_to_party":8,"combat_instincts":8,"self_awareness":7},"40":{"confidence":7,"trust_in_others":3,"moral_compass":4,"emotional_state":6,"goals_purpose":7,"connection_to_party":5,"combat_instincts":6,"self_awareness":5},"41":{"confidence":3,"trust_in_others":2,"moral_compass":1,"emotional_state":2,"goals_purpose":1,"connection_to_party":1,"combat_instincts":5,"self_awareness":2},"42":{"confidence":8,"trust_in_others":7,"moral_compass":6,"emotional_state":7,"goals_purpose":8,"connection_to_party":8,"combat_instincts":9,"self_awareness":8},"43":{"confidence":8,"trust_in_others":4,"moral_compass":4,"emotional_state":5,"goals_purpose":8,"connection_to_party":7,"combat_instincts":7,"self_awareness":4},"44":{"confidence":8,"trust_in_others":5,"moral_compass":4,"emotional_state":6,"goals_purpose":8,"connection_to_party":8,"combat_instincts":7,"self_awareness":6},"45":{"confidence":8,"trust_in_others":4,"moral_compass":4,"emotional_state":5,"goals_purpose":7,"connection_to_party":6,"combat_instincts":8,"self_awareness":6},"46":{"confidence":8,"trust_in_others":3,"moral_compass":4,"emotional_state":7,"goals_purpose":6,"connection_to_party":6,"combat_instincts":8,"self_awareness":4}},"Ezrella":{"31":{"confidence":8,"trust_in_others":7,"moral_compass":7,"emotional_state":7,"goals_purpose":8,"connection_to_party":6,"combat_instincts":8,"self_awareness":7},"32":{"confidence":6,"trust_in_others":7,"moral_compass":6,"emotional_state":5,"goals_purpose":8,"connection_to_party":7,"combat_instincts":7,"self_awareness":6},"33":{"confidence":5,"trust_in_others":3,"moral_compass":4,"emotional_state":3,"goals_purpose":5,"connection_to_party":4,"combat_instincts":4,"self_awareness":2},"34":{"confidence":7,"trust_in_others":6,"moral_compass":6,"emotional_state":6,"goals_purpose":7,"connection_to_party":8,"combat_instincts":8,"self_awareness":7},"35":{"confidence":7,"trust_in_others":4,"moral_compass":6,"emotional_state":6,"goals_purpose":7,"connection_to_party":8,"combat_instincts":7,"self_awareness":8},"36":{"confidence":8,"trust_in_others":8,"moral_compass":7,"emotional_state":7,"goals_purpose":9,"connection_to_party":9,"combat_instincts":8,"self_awareness":8},"37":{"confidence":8,"trust_in_others":7,"moral_compass":6,"emotional_state":7,"goals_purpose":7,"connection_to_party":9,"combat_instincts":8,"self_awareness":7},"38":{"confidence":6,"trust_in_others":7,"moral_compass":5,"emotional_state":5,"goals_purpose":8,"connection_to_party":8,"combat_instincts":6,"self_awareness":7},"40":{"confidence":7,"trust_in_others":6,"moral_compass":7,"emotional_state":6,"goals_purpose":7,"connection_to_party":7,"combat_instincts":6,"self_awareness":6},"41":{"confidence":5,"trust_in_others":6,"moral_compass":7,"emotional_state":5,"goals_purpose":6,"connection_to_party":5,"combat_instincts":7,"self_awareness":4}}};
+
+    const netGrowth = {"Corras":87,"Ash":69,"Billabong":48,"Dahlia":56,"Orla":156,"Lilith":30,"Ave":67,"Drenek":6,"SavannahBelle":13,"Ezrella":-6};
+
+    const playerColors = {
+      "Corras": "#4A90D9",
+      "Ash": "#E57373",
+      "Billabong": "#81C784",
+      "Dahlia": "#E091E8",
+      "Orla": "#FFB74D",
+      "SavannahBelle": "#4DB6AC",
+      "Ave": "#FF8A65",
+      "Drenek": "#7986CB",
+      "Lilith": "#BA68C8",
+      "Ezrella": "#FFB347"
+    };
+
+    const traits = [
+      "confidence", "trust_in_others", "moral_compass", "emotional_state",
+      "goals_purpose", "connection_to_party", "combat_instincts", "self_awareness"
+    ];
+
+    const traitLabels = {
+      "confidence": "Confidence",
+      "trust_in_others": "Trust",
+      "moral_compass": "Moral Compass",
+      "emotional_state": "Emotional",
+      "goals_purpose": "Goals",
+      "connection_to_party": "Party Bond",
+      "combat_instincts": "Combat",
+      "self_awareness": "Self-Aware"
+    };
+
+    // Characters to display (ordered by session count, excluding Drenek with only 2 sessions)
+    const charOrder = ["Corras", "Orla", "Ash", "Dahlia", "Billabong", "SavannahBelle", "Ave", "Lilith"];
+
+    const totalSessions = 46;
+    const sessions = d3.range(1, totalSessions + 1);
+
+    // Sizing
+    const cellW = 130;
+    const cellH = 48;
+    const nameColW = 155;
+    const headerH = 40;
+
+    const tooltip = d3.select("#tooltip");
+
+    // Set up grid
+    const grid = d3.select("#sparkline-grid");
+    grid.style("grid-template-columns", `${nameColW}px repeat(${traits.length}, ${cellW}px)`);
+    grid.style("grid-template-rows", `${headerH}px repeat(${charOrder.length}, ${cellH}px)`);
+
+    // Header: empty corner cell
+    grid.append("div").style("border-bottom", "1px solid #2a2a4a");
+
+    // Header: trait names
+    traits.forEach(trait => {
+      grid.append("div")
+        .attr("class", "trait-header")
+        .text(traitLabels[trait]);
+    });
+
+    // Rows
+    charOrder.forEach(charName => {
+      const color = playerColors[charName];
+      const ng = netGrowth[charName] || 0;
+
+      // Name cell
+      const nameCell = grid.append("div").attr("class", "char-name-cell");
+      nameCell.append("div")
+        .attr("class", "char-swatch")
+        .style("background", color)
+        .style("box-shadow", `0 0 6px ${color}50`);
+      nameCell.append("span")
+        .attr("class", "char-label")
+        .text(charName);
+      nameCell.append("span")
+        .attr("class", `net-badge ${ng >= 0 ? 'net-positive' : 'net-negative'}`)
+        .text((ng >= 0 ? '+' : '') + ng);
+
+      // Sparkline cells
+      traits.forEach(trait => {
+        const cell = grid.append("div").attr("class", "spark-cell");
+        const charData = rawData[charName] || {};
+
+        // Build data points
+        const points = [];
+        sessions.forEach(s => {
+          if (charData[s] && charData[s][trait] !== undefined) {
+            points.push({ session: s, value: charData[s][trait] });
+          }
+        });
+
+        if (points.length === 0) return;
+
+        const sparkW = cellW - 4;
+        const sparkH = cellH - 6;
+
+        const svg = cell.append("svg")
+          .attr("width", sparkW)
+          .attr("height", sparkH)
+          .style("display", "block");
+
+        const x = d3.scaleLinear().domain([1, totalSessions]).range([4, sparkW - 4]);
+        const y = d3.scaleLinear().domain([1, 10]).range([sparkH - 3, 3]);
+
+        // Subtle horizontal guides at 3, 5, 7
+        [3, 5, 7].forEach(v => {
+          svg.append("line")
+            .attr("x1", 0).attr("y1", y(v))
+            .attr("x2", sparkW).attr("y2", y(v))
+            .attr("stroke", "#1a1a2e")
+            .attr("stroke-width", 0.5);
+        });
+
+        // Line
+        const lineGen = d3.line()
+          .x(d => x(d.session))
+          .y(d => y(d.value))
+          .defined(d => d.value != null);
+
+        // Split into segments (contiguous sessions)
+        const segments = [];
+        let currentSeg = [points[0]];
+        for (let i = 1; i < points.length; i++) {
+          if (points[i].session - points[i-1].session <= 2) {
+            currentSeg.push(points[i]);
+          } else {
+            segments.push(currentSeg);
+            currentSeg = [points[i]];
+          }
+        }
+        segments.push(currentSeg);
+
+        segments.forEach(seg => {
+          svg.append("path")
+            .datum(seg)
+            .attr("d", lineGen)
+            .attr("fill", "none")
+            .attr("stroke", color)
+            .attr("stroke-width", 1.5)
+            .attr("stroke-opacity", 0.8)
+            .style("filter", `drop-shadow(0 0 2px ${color}40)`);
+        });
+
+        // Jump dots (change of +-3 or more)
+        for (let i = 1; i < points.length; i++) {
+          const diff = points[i].value - points[i-1].value;
+          if (Math.abs(diff) >= 3) {
+            svg.append("circle")
+              .attr("class", "jump-dot")
+              .attr("cx", x(points[i].session))
+              .attr("cy", y(points[i].value))
+              .attr("r", 3)
+              .attr("fill", diff > 0 ? "#81C784" : "#ff6666")
+              .attr("stroke", "#06060c")
+              .attr("stroke-width", 1)
+              .style("filter", `drop-shadow(0 0 3px ${diff > 0 ? '#81C784' : '#ff6666'})`)
+              .on("mouseenter", function(event) {
+                showTip(event, charName, trait, points[i].session, points[i].value, diff);
+              })
+              .on("mouseleave", hideTip);
+          }
+        }
+
+        // Invisible hover targets for all points
+        points.forEach(pt => {
+          svg.append("circle")
+            .attr("cx", x(pt.session))
+            .attr("cy", y(pt.value))
+            .attr("r", 6)
+            .attr("fill", "transparent")
+            .style("cursor", "crosshair")
+            .on("mouseenter", function(event) {
+              // Find prev point for diff
+              const idx = points.indexOf(pt);
+              const diff = idx > 0 ? pt.value - points[idx-1].value : null;
+              showTip(event, charName, trait, pt.session, pt.value, diff);
+              // Show hover dot
+              svg.append("circle")
+                .attr("class", "hover-dot")
+                .attr("cx", x(pt.session))
+                .attr("cy", y(pt.value))
+                .attr("r", 3)
+                .attr("fill", color)
+                .attr("stroke", "#fff")
+                .attr("stroke-width", 1)
+                .style("pointer-events", "none");
+            })
+            .on("mouseleave", function() {
+              hideTip();
+              svg.selectAll(".hover-dot").remove();
+            });
+        });
+      });
+    });
+
+    function showTip(event, charName, trait, session, value, diff) {
+      let diffText = '';
+      if (diff !== null && diff !== undefined) {
+        const sign = diff > 0 ? '+' : '';
+        const color = diff > 0 ? '#81C784' : diff < 0 ? '#ff6666' : '#9494bf';
+        diffText = `<span style="color:${color}; margin-left: 6px">(${sign}${diff})</span>`;
+      }
+      tooltip.html(`
+        <div class="tooltip-name" style="color: ${playerColors[charName]}">${charName}</div>
+        <div class="tooltip-row">${traitLabels[trait]} &mdash; Session ${session}</div>
+        <div class="tooltip-row"><span class="tooltip-val" style="color: ${playerColors[charName]}">${value}</span> / 10 ${diffText}</div>
+      `).classed("visible", true);
+      let tx = event.clientX + 14;
+      let ty = event.clientY - 10;
+      if (tx + 200 > window.innerWidth) tx = event.clientX - 210;
+      if (ty + 80 > window.innerHeight) ty = window.innerHeight - 90;
+      tooltip.style("left", tx + "px").style("top", ty + "px");
+    }
+    function hideTip() {
+      tooltip.classed("visible", false);
+    }
+  </script>
+</body>
+</html>

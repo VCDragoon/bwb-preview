@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DM ATTENTION RADAR | BWB Campaign Analytics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@300;400;600&family=Barlow:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow-x:hidden}
+body{background:#06060c;color:#c8c8e0;font-family:'Barlow',sans-serif}
+body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(255,255,255,0.015) 2px,rgba(255,255,255,0.015) 4px);pointer-events:none;z-index:9999}
+
+.main-container{max-width:1440px;margin:0 auto;padding:32px 24px 60px}
+
+/* ── TITLE ── */
+.title-block{text-align:center;margin-bottom:8px}
+.title-block h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(36px,5vw,56px);letter-spacing:6px;background:linear-gradient(135deg,#a78bfa 0%,#818cf8 40%,#6366f1 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 20px rgba(99,102,241,0.4))}
+.title-block .subtitle{font-family:'Barlow Condensed',sans-serif;font-size:15px;color:#6b6b8a;letter-spacing:3px;text-transform:uppercase}
+
+/* ── SESSION HEADER ── */
+.session-header{text-align:center;margin-bottom:20px}
+.session-id{font-family:'JetBrains Mono',monospace;font-size:13px;color:#6366f1;letter-spacing:2px}
+.session-title{font-family:'Barlow Condensed',sans-serif;font-size:20px;color:#a78bfa;letter-spacing:1px;min-height:26px;margin-top:2px}
+
+/* ── HERO GRID ── */
+.hero{display:grid;grid-template-columns:1fr 380px;gap:24px;margin-bottom:24px;align-items:start}
+@media(max-width:1000px){.hero{grid-template-columns:1fr;}.side-panel{order:2}}
+
+/* ── RADAR ── */
+.radar-wrap{position:relative;display:flex;justify-content:center;align-items:center}
+#radar-svg{width:100%;max-width:640px;height:auto}
+.axis-label{font-family:'Barlow Condensed',sans-serif;font-size:13px;fill:#8888a8;letter-spacing:1px;text-transform:uppercase}
+.ring-label{font-family:'JetBrains Mono',monospace;font-size:10px;fill:#3a3a50}
+
+/* ── SIDE PANEL ── */
+.side-panel{display:flex;flex-direction:column;gap:16px}
+.panel-card{background:linear-gradient(135deg,#12121e 0%,#0e0e1a 100%);border:1px solid #2a2a40;border-radius:10px;padding:16px 20px;position:relative;overflow:hidden}
+.panel-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.panel-card.accent-indigo::before{background:linear-gradient(90deg,#6366f1,#818cf8)}
+.panel-card.accent-emerald::before{background:linear-gradient(90deg,#10b981,#34d399)}
+.panel-card.accent-amber::before{background:linear-gradient(90deg,#f59e0b,#fbbf24)}
+.panel-card.accent-rose::before{background:linear-gradient(90deg,#f43f5e,#fb7185)}
+.panel-label{font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#6b6b8a;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px}
+
+/* Fairness gauge */
+.fairness-row{display:flex;align-items:center;gap:16px}
+.fairness-score{font-family:'JetBrains Mono',monospace;font-size:44px;font-weight:500;line-height:1;transition:all 0.4s ease}
+.fairness-score.high{color:#34d399;text-shadow:0 0 20px rgba(52,211,153,0.4)}
+.fairness-score.mid{color:#fbbf24;text-shadow:0 0 20px rgba(251,191,36,0.4)}
+.fairness-score.low{color:#f87171;text-shadow:0 0 20px rgba(248,113,113,0.4)}
+.fairness-meta{display:flex;flex-direction:column;gap:2px}
+.fairness-meta-item{font-family:'JetBrains Mono',monospace;font-size:11px;color:#6b6b8a}
+.fairness-meta-val{color:#c8c8e0}
+
+/* Attention bars */
+.attn-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.attn-row:last-child{margin-bottom:0}
+.attn-name{font-family:'Cinzel',serif;font-size:11px;color:#c8c8e0;width:72px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.attn-track{flex:1;height:8px;background:#1a1a2e;border-radius:4px;overflow:hidden;position:relative}
+.attn-fill{height:100%;border-radius:4px;transition:width 0.8s cubic-bezier(0.4,0,0.2,1);position:relative}
+.attn-fill::after{content:'';position:absolute;inset:0;border-radius:4px;box-shadow:0 0 8px currentColor;opacity:0.5}
+.attn-val{font-family:'JetBrains Mono',monospace;font-size:11px;width:28px;text-align:right;flex-shrink:0}
+.attn-row.absent .attn-name{color:#3a3a50}
+.attn-row.absent .attn-val{color:#3a3a50}
+
+/* Pattern badges */
+.pattern-badges{display:flex;flex-wrap:wrap;gap:6px}
+.pattern-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:0.5px;border:1px solid;animation:patternPulse 3s ease-in-out infinite}
+.pattern-badge.squeaky{color:#fbbf24;border-color:rgba(251,191,36,0.3);background:rgba(251,191,36,0.06)}
+.pattern-badge.forgotten{color:#f87171;border-color:rgba(248,113,113,0.3);background:rgba(248,113,113,0.06)}
+.pattern-badge.combat-fav{color:#fb923c;border-color:rgba(251,146,60,0.3);background:rgba(251,146,60,0.06)}
+.pattern-badge.balanced{color:#34d399;border-color:rgba(52,211,153,0.3);background:rgba(52,211,153,0.06)}
+.pattern-badge .badge-icon{font-size:13px}
+.no-patterns{font-family:'Barlow',sans-serif;font-size:12px;color:#4a4a60;font-style:italic}
+@keyframes patternPulse{0%,100%{opacity:1}50%{opacity:0.7}}
+
+/* ── LEGEND ── */
+.legend{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 16px;margin-bottom:16px}
+.legend-item{display:flex;align-items:center;gap:6px;cursor:pointer;padding:4px 10px;border-radius:4px;border:1px solid transparent;transition:all 0.2s ease;user-select:none}
+.legend-item:hover{border-color:rgba(255,255,255,0.1);background:rgba(255,255,255,0.03)}
+.legend-item.disabled{opacity:0.3}
+.legend-dot{width:10px;height:10px;border-radius:50%;box-shadow:0 0 6px currentColor}
+.legend-name{font-family:'Cinzel',serif;font-size:12px;color:#c8c8e0;letter-spacing:0.5px}
+.legend-char{font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#6b6b8a}
+
+/* ── CONTROLS ── */
+.controls{background:linear-gradient(135deg,#12121e 0%,#1a1a2e 100%);border:1px solid #2a2a40;border-radius:10px;padding:14px 20px;margin-bottom:24px}
+.controls-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.play-btn{width:36px;height:36px;border-radius:50%;border:2px solid #6366f1;background:rgba(99,102,241,0.1);color:#a78bfa;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s ease;flex-shrink:0}
+.play-btn:hover{background:rgba(99,102,241,0.25);box-shadow:0 0 15px rgba(99,102,241,0.3)}
+.slider-container{flex:1;min-width:200px;display:flex;flex-direction:column;gap:3px}
+.slider-labels{display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:9px;color:#555570}
+input[type="range"]{-webkit-appearance:none;width:100%;height:5px;border-radius:3px;background:#1e1e32;outline:none;cursor:pointer}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#6366f1;box-shadow:0 0 10px rgba(99,102,241,0.5);cursor:pointer}
+input[type="range"]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#6366f1;box-shadow:0 0 10px rgba(99,102,241,0.5);cursor:pointer;border:none}
+.speed-group{display:flex;gap:4px;flex-shrink:0}
+.speed-btn{font-family:'JetBrains Mono',monospace;font-size:11px;color:#6b6b8a;background:rgba(255,255,255,0.04);border:1px solid #2a2a40;border-radius:4px;padding:3px 8px;cursor:pointer;transition:all 0.2s}
+.speed-btn:hover,.speed-btn.active{color:#a78bfa;border-color:#6366f1}
+
+/* ── SECTION HEADERS ── */
+.section-header{display:flex;align-items:center;gap:10px;margin-bottom:16px;margin-top:8px}
+.section-header::before{content:'';width:20px;height:2px;background:#6366f1;border-radius:1px}
+.section-header h2{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:3px;color:#c8c8e0}
+
+/* ── CAMPAIGN FAIRNESS PULSE ── */
+.pulse-container{margin-bottom:24px}
+.pulse-card{background:linear-gradient(135deg,#12121e 0%,#0e0e1a 100%);border:1px solid #2a2a40;border-radius:10px;padding:20px 24px;position:relative;overflow:hidden}
+.pulse-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#6366f1,#a78bfa,#6366f1)}
+#pulse-svg{width:100%;overflow:visible}
+.pulse-dot{fill:#a78bfa;filter:drop-shadow(0 0 4px rgba(167,139,250,0.6))}
+.pulse-dot.current{fill:#fff;filter:drop-shadow(0 0 8px rgba(255,255,255,0.8));r:5}
+.pulse-label{font-family:'JetBrains Mono',monospace;font-size:9px;fill:#555570}
+.pulse-line{fill:none;stroke:#6366f1;stroke-width:2}
+.pulse-area{fill:url(#pulse-gradient);opacity:0.3}
+.pulse-grid{stroke:#1a1a2e;stroke-width:0.5}
+.pulse-avg-line{stroke:#34d399;stroke-width:1;stroke-dasharray:4,4;opacity:0.5}
+.pulse-stats{display:flex;gap:24px;margin-top:12px;flex-wrap:wrap}
+.pulse-stat{display:flex;flex-direction:column}
+.pulse-stat-label{font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#6b6b8a;letter-spacing:1px;text-transform:uppercase}
+.pulse-stat-val{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:500}
+
+/* ── ATTENTION HEATMAP ── */
+.heatmap-container{margin-bottom:24px}
+.heatmap-card{background:linear-gradient(135deg,#12121e 0%,#0e0e1a 100%);border:1px solid #2a2a40;border-radius:10px;padding:20px 24px;overflow-x:auto;position:relative}
+.heatmap-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#f59e0b,#fbbf24,#f59e0b)}
+.heatmap-grid{display:grid;gap:2px}
+.heatmap-player-row{display:flex;align-items:center;gap:8px}
+.heatmap-player-label{font-family:'Cinzel',serif;font-size:11px;color:#8888a8;width:80px;flex-shrink:0;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.heatmap-cells{display:flex;gap:2px;flex:1}
+.heatmap-cell{width:100%;aspect-ratio:1;border-radius:2px;transition:all 0.15s ease;cursor:pointer;position:relative;min-width:8px}
+.heatmap-cell:hover{transform:scale(1.8);z-index:10;border-radius:3px}
+.heatmap-cell.current{outline:2px solid #a78bfa;outline-offset:1px;border-radius:3px}
+.heatmap-cell.absent{background:#0a0a14!important;opacity:0.3}
+.heatmap-session-labels{display:flex;gap:2px;margin-left:88px;margin-top:4px}
+.heatmap-session-label{flex:1;min-width:8px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:7px;color:#3a3a50}
+
+/* ── PLAYER SPARKLINES ── */
+.sparklines-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:24px}
+.spark-card{background:linear-gradient(135deg,#12121e 0%,#0e0e1a 100%);border:1px solid #2a2a40;border-radius:8px;padding:12px 14px;transition:all 0.3s ease;cursor:default;position:relative;overflow:hidden}
+.spark-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:2px 2px 0 0}
+.spark-card:hover{border-color:rgba(255,255,255,0.12);transform:translateY(-2px);box-shadow:0 4px 20px rgba(0,0,0,0.4)}
+.spark-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.spark-player{font-family:'Cinzel',serif;font-size:13px;font-weight:600;letter-spacing:0.5px}
+.spark-char{font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#6b6b8a}
+.spark-stats{display:flex;gap:12px;margin-top:6px}
+.spark-stat{display:flex;flex-direction:column}
+.spark-stat-label{font-family:'Barlow Condensed',sans-serif;font-size:9px;color:#555570;letter-spacing:1px;text-transform:uppercase}
+.spark-stat-val{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:500}
+#spark-svg{width:100%;height:40px}
+
+/* ── TOOLTIP ── */
+.tooltip{position:fixed;pointer-events:none;background:linear-gradient(135deg,#1a1a2e 0%,#12121e 100%);border:1px solid #3a3a55;border-radius:8px;padding:12px 16px;font-family:'Barlow',sans-serif;font-size:13px;color:#c8c8e0;z-index:10000;opacity:0;transition:opacity 0.15s;max-width:300px;box-shadow:0 8px 32px rgba(0,0,0,0.7)}
+.tooltip.visible{opacity:1}
+.tooltip-name{font-family:'Cinzel',serif;font-size:14px;font-weight:600;margin-bottom:6px}
+.tooltip-row{display:flex;justify-content:space-between;gap:20px;padding:2px 0}
+.tooltip-metric{font-family:'Barlow Condensed',sans-serif;color:#8888a8;font-size:12px;text-transform:uppercase;letter-spacing:0.5px}
+.tooltip-val{font-family:'JetBrains Mono',monospace;font-weight:500}
+.tooltip-divider{height:1px;background:#2a2a40;margin:6px 0}
+.tooltip-overall{display:flex;justify-content:space-between;align-items:center;padding:2px 0}
+.tooltip-overall-label{font-family:'Barlow Condensed',sans-serif;font-size:13px;color:#a78bfa;letter-spacing:1px;text-transform:uppercase}
+.tooltip-overall-val{font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:500}
+</style>
+</head>
+<body>
+<div class="main-container">
+  <div class="title-block">
+    <h1>DM ATTENTION RADAR</h1>
+    <div class="subtitle">Player Focus Distribution Across 46 Sessions</div>
+  </div>
+
+  <div class="session-header">
+    <div class="session-id" id="session-id">S001</div>
+    <div class="session-title" id="session-title"></div>
+  </div>
+
+  <div class="hero">
+    <div class="radar-wrap">
+      <svg id="radar-svg" viewBox="0 0 640 640"></svg>
+    </div>
+    <div class="side-panel">
+      <!-- Fairness Score -->
+      <div class="panel-card accent-emerald">
+        <div class="panel-label">Fairness Score</div>
+        <div class="fairness-row">
+          <div class="fairness-score high" id="fairness-value">--</div>
+          <div class="fairness-meta">
+            <div class="fairness-meta-item">Campaign Avg: <span class="fairness-meta-val" id="campaign-avg">--</span></div>
+            <div class="fairness-meta-item">Players: <span class="fairness-meta-val" id="player-count">--</span></div>
+            <div class="fairness-meta-item">Rank: <span class="fairness-meta-val" id="session-rank">--</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Attention Distribution -->
+      <div class="panel-card accent-indigo">
+        <div class="panel-label">Attention Distribution</div>
+        <div id="attn-bars"></div>
+      </div>
+
+      <!-- Pattern Detection -->
+      <div class="panel-card accent-amber">
+        <div class="panel-label">Pattern Detection</div>
+        <div class="pattern-badges" id="pattern-badges"></div>
+      </div>
+
+      <!-- Session Spotlight -->
+      <div class="panel-card accent-rose">
+        <div class="panel-label">Session Spotlight</div>
+        <div id="spotlight-content" style="font-size:13px;line-height:1.5;color:#9494bf"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend" id="legend"></div>
+
+  <div class="controls">
+    <div class="controls-row">
+      <button class="play-btn" id="play-btn" title="Play/Pause">&#9654;</button>
+      <div class="slider-container">
+        <input type="range" id="session-slider" min="1" max="46" value="1">
+        <div class="slider-labels"><span>S001</span><span>S023</span><span>S046</span></div>
+      </div>
+      <div class="speed-group">
+        <button class="speed-btn active" data-speed="1500">1x</button>
+        <button class="speed-btn" data-speed="800">2x</button>
+        <button class="speed-btn" data-speed="400">4x</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="pulse-container">
+    <div class="section-header"><h2>Campaign Fairness Pulse</h2></div>
+    <div class="pulse-card">
+      <svg id="pulse-svg"></svg>
+      <div class="pulse-stats" id="pulse-stats"></div>
+    </div>
+  </div>
+
+  <div class="heatmap-container">
+    <div class="section-header"><h2>Attention Heatmap</h2></div>
+    <div class="heatmap-card">
+      <div id="heatmap"></div>
+    </div>
+  </div>
+
+  <div class="section-header"><h2>Player Trajectories</h2></div>
+  <div class="sparklines-grid" id="sparklines"></div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════════════
+const DM_DATA = {"S001":{"sid":"S001","label":"Castle Corras Introduction and Lumin Encounter","fairness_score":7.5,"players":[{"p":"Gradles","c":"Corras","da":10.0,"ni":8.0,"cf":0,"ps":7.0,"rd":9.0},{"p":"HT","c":"Ash","da":8.0,"ni":6.0,"cf":0,"ps":5.0,"rd":7.5},{"p":"Mary","c":"Billabong","da":6.0,"ni":4.0,"cf":0,"ps":3.0,"rd":6.0},{"p":"Christie","c":"Dahlia","da":8.8,"ni":7.0,"cf":0,"ps":8.0,"rd":8.0},{"p":"Lucy","c":"Orla","da":7.2,"ni":5.0,"cf":0,"ps":4.0,"rd":7.5}]},"S002":{"sid":"S002","label":"Castle Management and Mine Exploration","fairness_score":7.5,"players":[{"p":"Gradles","c":"Corras","da":8.0,"ni":9.0,"cf":0,"ps":7.0,"rd":9.0},{"p":"HT","c":"Ash","da":10.0,"ni":10.0,"cf":0,"ps":7.0,"rd":8.0},{"p":"Mary","c":"Billabong","da":2.0,"ni":1.0,"cf":0,"ps":3.0,"rd":6.0},{"p":"Christie","c":"Dahlia","da":6.0,"ni":8.0,"cf":0,"ps":7.0,"rd":7.0},{"p":"Lucy","c":"Orla","da":6.0,"ni":9.0,"cf":0,"ps":7.0,"rd":7.0},{"p":"Tenderbittle","c":"SavannahBelle","da":5.0,"ni":7.0,"cf":0,"ps":7.0,"rd":7.0},{"p":"Meijinx","c":"Ave","da":7.0,"ni":8.0,"cf":0,"ps":7.0,"rd":7.0},{"p":"Drenek","c":"Drenek","da":0,"ni":0,"cf":0,"ps":0,"rd":0}]},"S003":{"sid":"S003","label":"Castle Corras Under Siege","fairness_score":7.5,"players":[{"p":"Gradles","c":"Corras","da":7.0,"ni":6.0,"cf":5.0,"ps":6.0,"rd":7.0},{"p":"HT","c":"Ash","da":10.0,"ni":10.0,"cf":8.0,"ps":8.0,"rd":8.0},{"p":"Mary","c":"Billabong","da":6.0,"ni":7.0,"cf":3.0,"ps":6.0,"rd":8.0},{"p":"Christie","c":"Dahlia","da":8.0,"ni":8.0,"cf":5.0,"ps":8.0,"rd":8.0},{"p":"Lucy","c":"Orla","da":6.4,"ni":6.4,"cf":5.0,"ps":6.0,"rd":8.0},{"p":"Tenderbittle","c":"SavannahBelle","da":5.6,"ni":5.6,"cf":3.0,"ps":4.0,"rd":8.0},{"p":"Meijinx","c":"Ave","da":8.8,"ni":9.0,"cf":8.0,"ps":8.0,"rd":8.0}]},"S004":{"sid":"S004","label":"Goblin Ambush and Feywild Intrigue","fairness_score":8.2,"players":[{"p":"Gradles","c":"Corras","da":8.5,"ni":7.0,"cf":6.0,"ps":6.5,"rd":7.5},{"p":"HT","c":"Ash","da":7.5,"ni":6.5,"cf":3.0,"ps":6.0,"rd":7.0},{"p":"Mary","c":"Billabong","da":7.0,"ni":5.5,"cf":9.0,"ps":4.0,"rd":7.5},{"p":"Christie","c":"Lilith","da":10.0,"ni":10.0,"cf":10.0,"ps":10.0,"rd":8.0},{"p":"Lucy","c":"Orla","da":6.5,"ni":8.0,"cf":4.0,"ps":7.0,"rd":8.5},{"p":"Tenderbittle","c":"SavannahBelle","da":5.5,"ni":5.0,"cf":3.0,"ps":4.5,"rd":8.0},{"p":"Meijinx","c":"Ave","da":4.5,"ni":4.0,"cf":3.0,"ps":4.0,"rd":8.5}]},"S005":{"sid":"S005","label":"Castle Corras and Lumin Burial Site","fairness_score":8.2,"players":[{"p":"Gradles","c":"Corras","da":8.5,"ni":7.2,"cf":0,"ps":6.0,"rd":8.0},{"p":"HT","c":"Ash","da":7.5,"ni":6.3,"cf":8.0,"ps":4.0,"rd":8.5},{"p":"Mary","c":"Billabong","da":6.0,"ni":4.5,"cf":10.0,"ps":3.0,"rd":7.5},{"p":"Christie","c":"Dahlia","da":10.0,"ni":10.0,"cf":4.0,"ps":9.0,"rd":7.0},{"p":"Lucy","c":"Orla","da":9.0,"ni":9.0,"cf":5.0,"ps":10.0,"rd":8.0},{"p":"Tenderbittle","c":"SavannahBelle","da":5.0,"ni":3.2,"cf":0,"ps":2.0,"rd":6.5},{"p":"Meijinx","c":"Ave","da":4.0,"ni":4.1,"cf":2.0,"ps":5.0,"rd":5.5}]},"S006":{"sid":"S006","label":null,"fairness_score":0.0,"players":[]},"S007":{"sid":"S007","label":"Time Travel Heist at Castle Corras","fairness_score":8.2,"players":[{"p":"Gradles","c":"Corras","da":8.2,"ni":7.5,"cf":0,"ps":5.0,"rd":9.0},{"p":"HT","c":"Ash","da":10.0,"ni":10.0,"cf":0,"ps":8.0,"rd":8.5},{"p":"Mary","c":"Billabong","da":6.5,"ni":6.0,"cf":0,"ps":4.0,"rd":9.5},{"p":"Christie","c":"Dahlia","da":8.9,"ni":8.5,"cf":0,"ps":6.0,"rd":8.0},{"p":"Lucy","c":"Orla","da":7.1,"ni":7.0,"cf":0,"ps":5.5,"rd":9.0},{"p":"Tenderbittle","c":"SavannahBelle","da":5.4,"ni":5.0,"cf":0,"ps":3.0,"rd":10.0},{"p":"Meijinx","c":"Ave","da":4.3,"ni":4.0,"cf":0,"ps":5.0,"rd":10.0}]},"S008":{"sid":"S008","label":"Time Travel Shenanigans and Castle Intrigue","fairness_score":8.2,"players":[{"p":"Gradles","c":"Corras","da":10.0,"ni":10.0,"cf":8.3,"ps":9.0,"rd":9.5},{"p":"HT","c":"Ash","da":7.8,"ni":7.5,"cf":6.7,"ps":6.0,"rd":8.0},{"p":"Mary","c":"Billabong","da":6.7,"ni":5.8,"cf":4.2,"ps":6.0,"rd":7.0},{"p":"Christie","c":"Dahlia","da":5.6,"ni":6.7,"cf":0,"ps":6.0,"rd":6.5},{"p":"Lucy","c":"Orla","da":4.4,"ni":5.0,"cf":0,"ps":3.0,"rd":6.0},{"p":"Tenderbittle","c":"SavannahBelle","da":3.3,"ni":3.3,"cf":0,"ps":3.0,"rd":5.5}]},"S009":{"sid":"S009","label":"Inventory Reconciliation and Forest Encounters","fairness_score":8.5,"players":[{"p":"Gradles","c":"Corras","da":8.0,"ni":7.0,"cf":0,"ps":6.0,"rd":7.0},{"p":"HT","c":"Ash","da":10.0,"ni":8.0,"cf":0,"ps":5.0,"rd":8.0},{"p":"Mary","c":"Billabong","da":7.5,"ni":6.0,"cf":0,"ps":5.0,"rd":6.0},{"p":"Christie","c":"Dahlia","da":6.0,"ni":10.0,"cf":10.0,"ps":8.0,"rd":6.0},{"p":"Lucy","c":"Orla","da":5.0,"ni":7.5,"cf":0,"ps":5.0,"rd":5.0},{"p":"Tenderbittle","c":"SavannahBelle","da":4.0,"ni":4.0,"cf":0,"ps":5.0,"rd":5.0},{"p":"Meijinx","c":"Ave","da":7.0,"ni":6.0,"cf":0,"ps":8.0,"rd":7.0}]},"S010":{"sid":"S010","label":"Cult Camp Ambush","fairness_score":7.5,"players":[{"p":"Gradles","c":"Corras","da":8.5,"ni":7.2,"cf":6.3,"ps":8.0,"rd":7.5},{"p":"HT","c":"Ash","da":7.8,"ni":6.7,"cf":5.0,"ps":5.0,"rd":8.1},{"p":"Mary","c":"Billabong","da":6.5,"ni":5.8,"cf":8.3,"ps":5.0,"rd":8.6},{"p":"Christie","c":"Dahlia","da":8.0,"ni":7.1,"cf":8.4,"ps":5.0,"rd":8.2},{"p":"Lucy","c":"Orla","da":7.2,"ni":9.8,"cf":10.0,"ps":5.0,"rd":8.7},{"p":"Tenderbittle","c":"SavannahBelle","da":5.6,"ni":4.5,"cf":4.2,"ps":5.0,"rd":9.2}]},"S011":{"sid":"S011","label":"Journey to the Cult of Eternal Flame","fairness_score":7.5,"players":[{"p":"Gradles","c":"Corras","da":7.2,"ni":7.5,"cf":0,"ps":6.0,"rd":7.2},{"p":"HT","c":"Ash","da":10.0,"ni":10.0,"cf":10.0,"ps":10.0,"rd":10.0},{"p":"Mary","c":"Billabong","da":6.0,"ni":6.3,"cf":0,"ps":4.0,"rd":6.0},{"p":"Christie","c":"Dahlia","da":8.0,"ni":8.8,"cf":0,"ps":6.0,"rd":8.0},{"p":"Lucy","c":"Orla","da":8.8,"ni":9.4,"cf":0,"ps":6.0,"rd":8.8}]},"S012":{"sid":"S012","label":"Session 12: Explosive Consequences","fairness_score":7.5,"players":[{"p":"Gradles","c":"Corras","da":6.0,"ni":7.0,"cf":0,"ps":8.0,"rd":6.0},{"p":"HT","c":"Ash","da":10.0,"ni":10.0,"cf":10.0,"ps":9.0,"rd":10.0},{"p":"Mary","c":"Billabong","da":3.0,"ni":3.0,"cf":7.5,"ps":2.0,"rd":6.0},{"p":"Christie","c":"Dahlia","da":6.0,"ni":6.0,"cf":0,"ps":7.0,"rd":6.0},{"p":"Lucy","c":"Orla","da":8.0,"ni":8.0,"cf":5.0,"ps":7.0,"rd":7.5},{"p":"Tenderbittle","c":"SavannahBelle","da":0,"ni":0,"cf":0,"ps":0,"rd":0},{"p":"Meijinx","c":"Ave","da":5.0,"ni":5.0,"cf":0,"ps":6.0,"rd":6.0},{"p":"Drenek","c":"Drenek","da":0,"ni":0,"cf":0,"ps":0,"rd":0}]},"S013":{"sid":"S013","label":"Prison Break and Demon Pacts","fairness_score":7.5,"players":[{"p":"Gradles","c":"Corras","da":8.0,"ni":7.5,"cf":0,"ps":6.0,"rd":8.5},{"p":"HT","c":"Ash","da":10.0,"ni":10.0,"cf":0,"ps":8.0,"rd":9.0},{"p":"Mary","c":"Billabong","da":5.7,"ni":6.25,"cf":0,"ps":4.0,"rd":7.5},{"p":"Christie","c":"Dahlia","da":0,"ni":0,"cf":0,"ps":0,"rd":0},{"p":"Lucy","c":"Orla","da":8.6,"ni":8.0,"cf":0,"ps":6.0,"rd":8.0},{"p":"Tenderbittle","c":"SavannahBelle","da":0,"ni":0,"cf":0,"ps":0,"rd":0},{"p":"Meijinx","c":"Ave","da":4.3,"ni":5.0,"cf":0,"ps":6.0,"rd":6.0},{"p":"Drenek","c":"Drenek","da":0,"ni":0,"cf":0,"ps":0,"rd":0}]},"S014":{"sid":"S014","label":"Time Heist Planning & Quaggoth Rage","fairness_score":7.5,"players":[{"p":"Gradles","c":"Corras","da":8.5,"ni":7.0,"cf":6.0,"ps":6.0,"rd":7.5},{"p":"HT","c":"Ash","da":10.0,"ni":8.5,"cf":4.0,"ps":8.0,"rd":9.0},{"p":"Mary","c":"Billabong","da":6.5,"ni":5.5,"cf":10.0,"ps":4.0,"rd":6.0},{"p":"Christie","c":"Dahlia","da":6.0,"ni":5.0,"cf":5.0,"ps":5.5,"rd":6.5},{"p":"Lucy","c":"Orla","da":5.5,"ni":4.5,"cf":6.0,"ps":4.0,"rd":5.5},{"p":"Meijinx","c":"Ave","da":4.5,"ni":4.0,"cf":4.0,"ps":3.5,"rd":5.0}]},"S015":{"sid":"S015","label":"Castle Corras Time Heist","fairness_score":8.5,"players":[{"p":"Gradles","c":"Corras","da":10.0,"ni":8.0,"cf":0,"ps":7.0,"rd":9.0},{"p":"HT","c":"Ash","da":9.0,"ni":7.5,"cf":0,"ps":7.0,"rd":8.5},{"p":"Mary","c":"Billabong","da":7.5,"ni":6.0,"cf":0,"ps":5.0,"rd":7.5},{"p":"Christie","c":"Dahlia","da":8.0,"ni":7.0,"cf":0,"ps":8.0,"rd":8.0},{"p":"Lucy","c":"Orla","da":6.5,"ni":5.5,"cf":0,"ps":5.0,"rd":7.0},{"p":"Tenderbittle","c":"SavannahBelle","da":6.0,"ni":5.0,"cf":0,"ps":5.0,"rd":6.5},{"p":"Meijinx","c":"Ave","da":7.8,"ni":6.8,"cf":0,"ps":7.0,"rd":7.8}]},"S016":{"sid":"S016","label":"Temporal Rift Crisis","fairness_score":8.5,"players":[{"p":"Gradles","c":"Corras","da":8.0,"ni":7.0,"cf":2.0,"ps":8.0,"rd":9.0},{"p":"HT","c":"Ash","da":10.0,"ni":9.0,"cf":3.0,"ps":8.0,"rd":10.0},{"p":"Mary","c":"Billabong","da":9.0,"ni":8.0,"cf":10.0,"ps":5.0,"rd":9.0},{"p":"Christie","c":"Dahlia","da":8.0,"ni":7.0,"cf":8.0,"ps":7.0,"rd":8.0},{"p":"Lucy","c":"Orla","da":7.0,"ni":6.0,"cf":6.0,"ps":5.0,"rd":7.0},{"p":"Tenderbittle","c":"SavannahBelle","da":6.0,"ni":5.0,"cf":9.0,"ps":4.0,"rd":6.0},{"p":"Meijinx","c":"Ave","da":7.0,"ni":5.0,"cf":10.0,"ps":4.0,"rd":7.0}]},"S017":{"sid":"S017","label":"Session 17: Timeline Reset and Branching Narratives","fairness_score":8.5,"players":[{"p":"Gradles","c":"Corras","da":10.0,"ni":8.0,"cf":0,"ps":9.0,"rd":9.0},{"p":"HT","c":"Ash","da":8.8,"ni":10.0,"cf":0,"ps":10.0,"rd":8.8},{"p":"Mary","c":"Billabong","da":8.0,"ni":6.0,"cf":0,"ps":7.0,"rd":7.0},{"p":"Christie","c":"Dahlia","da":9.6,"ni":8.7,"cf":0,"ps":9.0,"rd":8.5},{"p":"Lucy","c":"Orla","da":8.4,"ni":7.3,"cf":0,"ps":7.0,"rd":8.0}]},"S018":{"sid":"S018","label":"Triboar to the Mountains: Blizzard and Avalanche","fairness_score":8.5,"players":[{"p":"Gradles","c":"Corras","da":8.0,"ni":9.0,"cf":0,"ps":7.0,"rd":8.0},{"p":"HT","c":"Ash","da":7.0,"ni":6.0,"cf":0,"ps":4.0,"rd":6.0},{"p":"Mary","c":"Billabong","da":6.0,"ni":7.0,"cf":10.0,"ps":7.0,"rd":9.0},{"p":"Christie","c":"Dahlia","da":10.0,"ni":10.0,"cf":0,"ps":10.0,"rd":10.0},{"p":"Lucy","c":"Orla","da":5.0,"ni":6.0,"cf":0,"ps":5.0,"rd":5.0}]},"S019":{"sid":"S019","label":"Blizzard Camp and Frost Giant Encounter","fairness_score":7.5,"players":[{"p":"Gradles","c":"Corras","da":7.5,"ni":6.0,"cf":0,"ps":5.0,"rd":8.0},{"p":"HT","c":"Ash","da":9.0,"ni":7.33,"cf":0,"ps":3.0,"rd":10.0},{"p":"Mary","c":"Billabong","da":6.0,"ni":4.0,"cf":10.0,"ps":3.0,"rd":8.33},{"p":"Christie","c":"Dahlia","da":10.0,"ni":10.0,"cf":0,"ps":5.0,"rd":9.17},{"p":"Lucy","c":"Orla","da":8.5,"ni":8.0,"cf":8.0,"ps":3.0,"rd":8.89}]},"S020":{"sid":"S020","label":"Snowy Cabin Exploration and Summer Star Explosion","fairness_score":8.5,"players":[{"p":"Gradles","c":"Corras","da":8.5,"ni":9.0,"cf":6.0,"ps":7.0,"rd":8.0},{"p":"HT","c":"Ash","da":7.5,"ni":7.5,"cf":5.0,"ps":5.0,"rd":8.0},{"p":"Mary","c":"Billabong","da":7.0,"ni":7.0,"cf":4.0,"ps":6.0,"rd":7.5},{"p":"Christie","c":"Dahlia","da":6.5,"ni":6.5,"cf":10.0,"ps":5.0,"rd":7.0},{"p":"Lucy","c":"Orla","da":6.8,"ni":6.8,"cf":9.5,"ps":5.0,"rd":7.2}]},"S021":{"sid":"S021","label":"Underdark Infiltration and Boon Distribution","fairness_score":7.5,"players":[{"p":"Gradles","c":"Corras","da":8.0,"ni":9.0,"cf":7.0,"ps":7.0,"rd":8.0},{"p":"HT","c":"Ash","da":7.0,"ni":7.0,"cf":5.0,"ps":6.0,"rd":7.0},{"p":"Mary","c":"Billabong","da":6.0,"ni":5.0,"cf":8.0,"ps":4.0,"rd":6.0},{"p":"Christie","c":"Dahlia","da":10.0,"ni":10.0,"cf":8.0,"ps":9.0,"rd":10.0},{"p":"Lucy","c":"Orla","da":5.0,"ni":4.0,"cf":4.0,"ps":3.0,"rd":5.0},{"p":"Tenderbittle","c":"SavannahBelle","da":9.0,"ni":8.0,"cf":6.0,"ps":7.0,"rd":9.0}]},"S022":{"sid":"S022","label":"Underdark Infiltration","fairness_score":8.2,"players":[{"p":"Gradles","c":"Corras","da":10.0,"ni":10.0,"cf":8.3,"ps":8.0,"rd":9.0},{"p":"HT","c":"Ash","da":7.9,"ni":8.8,"cf":6.9,"ps":5.0,"rd":9.0},{"p":"Mary","c":"Billabong","da":7.1,"ni":7.5,"cf":10.0,"ps":5.0,"rd":9.0},{"p":"Christie","c":"Dahlia","da":8.9,"ni":9.4,"cf":8.3,"ps":5.0,"rd":9.6},{"p":"Lucy","c":"Orla","da":6.4,"ni":8.1,"cf":5.6,"ps":8.0,"rd":9.0},{"p":"Tenderbittle","c":"SavannahBelle","da":8.2,"ni":8.8,"cf":10.0,"ps":5.0,"rd":9.6}]},"S023":{"sid":"S023","label":"Web's Edge Prison Break","fairness_score":7.5,"players":[{"p":"Gradles","c":"Corras","da":8.5,"ni":7.3,"cf":6.7,"ps":6.0,"rd":7.5},{"p":"HT","c":"Ash","da":10.0,"ni":6.7,"cf":3.3,"ps":5.0,"rd":8.0},{"p":"Mary","c":"Billabong","da":7.3,"ni":6.0,"cf":8.3,"ps":4.0,"rd":6.0},{"p":"Christie","c":"Dahlia","da":8.2,"ni":10.0,"cf":8.0,"ps":10.0,"rd":7.7},{"p":"Lucy","c":"Orla","da":6.8,"ni":5.7,"cf":4.0,"ps":6.0,"rd":5.3},{"p":"Tenderbittle","c":"SavannahBelle","da":7.6,"ni":6.0,"cf":3.3,"ps":4.0,"rd":6.9}]},"S024":{"sid":"S024","label":"Web's Edge Escape","fairness_score":8.5,"players":[{"p":"Gradles","c":"Corras","da":8.0,"ni":7.0,"cf":6.0,"ps":6.0,"rd":8.0},{"p":"HT","c":"Ash","da":10.0,"ni":10.0,"cf":4.0,"ps":6.0,"rd":9.0},{"p":"Mary","c":"Billabong","da":6.0,"ni":5.0,"cf":8.0,"ps":4.0,"rd":7.0},{"p":"Christie","c":"Dahlia","da":9.0,"ni":9.0,"cf":10.0,"ps":10.0,"rd":10.0},{"p":"Lucy","c":"Orla","da":5.0,"ni":6.0,"cf":7.0,"ps":7.0,"rd":6.0},{"p":"Tenderbittle","c":"SavannahBelle","da":4.0,"ni":4.0,"cf":3.0,"ps":3.0,"rd":5.0}]},"S025":{"sid":"S025","label":"BWB Campaign Worldbuilding Session","fairness_score":8.5,"players":[{"p":"Gradles","c":"Corras","da":10.0,"ni":10.0,"cf":0,"ps":8.0,"rd":9.0},{"p":"HT","c":"Ash","da":7.5,"ni":8.0,"cf":0,"ps":9.0,"rd":7.5},{"p":"Mary","c":"Billabong","da":5.0,"ni":6.0,"cf":0,"ps":6.0,"rd":7.5},{"p":"Christie","c":"Dahlia","da":6.25,"ni":7.0,"cf":0,"ps":8.0,"rd":7.2},{"p":"Lucy","c":"Orla","da":5.5,"ni":6.4,"cf":0,"ps":6.0,"rd":7.3},{"p":"Tenderbittle","c":"SavannahBelle","da":4.5,"ni":7.6,"cf":0,"ps":8.0,"rd":7.8}]},"S026":{"sid":"S026","label":"Web's Edge Escape","fairness_score":8.5,"players":[{"p":"Gradles","c":"Corras","da":8.0,"ni":7.0,"cf":6.0,"ps":5.0,"rd":8.0},{"p":"HT","c":"Ash","da":10.0,"ni":10.0,"cf":5.0,"ps":6.0,"rd":10.0},{"p":"Mary","c":"Billabong","da":6.0,"ni":4.0,"cf":7.0,"ps":3.0,"rd":6.0},{"p":"Christie","c":"Dahlia","da":9.0,"ni":9.0,"cf":10.0,"ps":10.0,"rd":9.0},{"p":"Lucy","c":"Orla","da":7.0,"ni":6.0,"cf":6.0,"ps":7.0,"rd":7.0},{"p":"Tenderbittle","c":"SavannahBelle","da":5.0,"ni":3.0,"cf":4.0,"ps":4.0,"rd":5.0}]},"S027":{"sid":"S027","label":"Soul Forge Exploration and Combat","fairness_score":8.5,"players":[{"p":"Gradles","c":"Corras","da":8.0,"ni":7.0,"cf":6.0,"ps":7.0,"rd":9.0},{"p":"HT","c":"Ash","da":7.5,"ni":8.0,"cf":8.0,"ps":9.0,"rd":8.0},{"p":"Mary","c":"Billabong","da":6.5,"ni":5.0,"cf":10.0,"ps":5.0,"rd":7.0},{"p":"Christie","c":"Dahlia","da":10.0,"ni":10.0,"cf":9.0,"ps":8.0,"rd":8.5},{"p":"Lucy","c":"Orla","da":6.0,"ni":6.0,"cf":5.0,"ps":6.0,"rd":7.5},{"p":"Tenderbittle","c":"SavannahBelle","da":5.0,"ni":5.0,"cf":4.0,"ps":6.0,"rd":6.0}]},"S028":{"sid":"S028","label":"Bastion Planning and Soul Cavern Exploration","fairness_score":8.2,"players":[{"p":"Gradles","c":"Corras","da":7.5,"ni":6.0,"cf":6.0,"ps":7.0,"rd":8.0},{"p":"HT","c":"Ash","da":8.5,"ni":7.3,"cf":5.0,"ps":7.0,"rd":9.0},{"p":"Mary","c":"Billabong","da":10.0,"ni":8.7,"cf":10.0,"ps":9.0,"rd":9.5},{"p":"Christie","c":"Dahlia","da":8.0,"ni":6.7,"cf":8.3,"ps":7.0,"rd":9.0},{"p":"Lucy","c":"Orla","da":9.5,"ni":10.0,"cf":6.7,"ps":9.0,"rd":8.5},{"p":"Tenderbittle","c":"SavannahBelle","da":6.0,"ni":5.3,"cf":0,"ps":7.0,"rd":8.0}]},"S029":{"sid":"S029","label":"Soulforge Investigation and Infernal Node Activation","fairness_score":8.5,"players":[{"p":"Gradles","c":"Corras","da":8.0,"ni":9.0,"cf":0,"ps":7.0,"rd":8.0},{"p":"HT","c":"Ash","da":10.0,"ni":10.0,"cf":0,"ps":9.0,"rd":9.0},{"p":"Mary","c":"Billabong","da":9.0,"ni":7.0,"cf":0,"ps":6.0,"rd":6.0},{"p":"Christie","c":"Dahlia","da":7.0,"ni":5.0,"cf":0,"ps":5.0,"rd":7.0},{"p":"Lucy","c":"Orla","da":6.0,"ni":4.0,"cf":0,"ps":4.0,"rd":6.0},{"p":"Tenderbittle","c":"SavannahBelle","da":8.0,"ni":8.0,"cf":0,"ps":7.0,"rd":8.0}]},"S030":{"sid":"S030","label":"Training with the Harbinger and Ceaseless Maww Battle","fairness_score":8.5,"players":[{"p":"Gradles","c":"Corras","da":8.0,"ni":7.0,"cf":0,"ps":6.0,"rd":8.0},{"p":"HT","c":"Ash","da":9.0,"ni":8.0,"cf":5.0,"ps":6.0,"rd":9.0},{"p":"Mary","c":"Billabong","da":7.0,"ni":6.0,"cf":6.0,"ps":5.0,"rd":7.0},{"p":"Christie","c":"Dahlia","da":10.0,"ni":10.0,"cf":10.0,"ps":10.0,"rd":10.0},{"p":"Lucy","c":"Orla","da":6.0,"ni":7.0,"cf":4.0,"ps":6.0,"rd":6.0},{"p":"Tenderbittle","c":"SavannahBelle","da":5.0,"ni":5.0,"cf":8.0,"ps":5.0,"rd":5.0}]},"S031":{"sid":"S031","label":"Battle for Fertility Aftermath and Vrock Attack","fairness_score":7.5,"players":[{"p":"Gradles","c":"Corras","da":10.0,"ni":8.0,"cf":6.7,"ps":7.0,"rd":9.0},{"p":"HT","c":"Ash","da":6.0,"ni":5.0,"cf":3.3,"ps":5.0,"rd":7.0},{"p":"Mary","c":"Billabong","da":8.0,"ni":6.0,"cf":8.3,"ps":6.0,"rd":8.0},{"p":"Christie","c":"Dahlia","da":8.8,"ni":7.0,"cf":10.0,"ps":4.0,"rd":8.0},{"p":"Lucy","c":"Orla","da":7.2,"ni":6.0,"cf":8.3,"ps":4.0,"rd":8.0},{"p":"Tenderbittle","c":"SavannahBelle","da":8.0,"ni":6.0,"cf":6.7,"ps":4.0,"rd":7.0},{"p":"Meijinx","c":"Ave","da":0,"ni":0,"cf":0,"ps":0,"rd":0}]},"S032":{"sid":"S032","label":"Warehouse Investigation & Red Wizard Showdown","fairness_score":7.5,"players":[{"p":"Gradles","c":"Corras","da":9.2,"ni":8.5,"cf":8.3,"ps":9.0,"rd":8.0},{"p":"HT","c":"Ash","da":7.5,"ni":7.8,"cf":7.5,"ps":6.0,"rd":7.5},{"p":"Mary","c":"Billabong","da":3.0,"ni":4.0,"cf":2.5,"ps":3.0,"rd":5.0},{"p":"Christie","c":"Dahlia","da":10.0,"ni":10.0,"cf":9.2,"ps":7.0,"rd":10.0},{"p":"Lucy","c":"Orla","da":7.0,"ni":7.2,"cf":8.3,"ps":5.0,"rd":7.5},{"p":"Tenderbittle","c":"SavannahBelle","da":6.5,"ni":6.8,"cf":6.7,"ps":4.0,"rd":7.0},{"p":"Meijinx","c":"Ave","da":0,"ni":0,"cf":0,"ps":0,"rd":0}]},"S033":{"sid":"S033","label":"Warehouse Confrontation and Capture","fairness_score":7.5,"players":[{"p":"Gradles","c":"Corras","da":8.0,"ni":7.5,"cf":6.0,"ps":8.0,"rd":9.0},{"p":"HT","c":"Ash","da":7.0,"ni":6.5,"cf":5.5,"ps":5.0,"rd":8.0},{"p":"Mary","c":"Billabong","da":6.5,"ni":5.5,"cf":7.0,"ps":5.0,"rd":7.5},{"p":"Christie","c":"Dahlia","da":10.0,"ni":10.0,"cf":10.0,"ps":5.0,"rd":7.0},{"p":"Lucy","c":"Orla","da":5.0,"ni":4.0,"cf":3.0,"ps":5.0,"rd":6.0},{"p":"Tenderbittle","c":"SavannahBelle","da":4.0,"ni":3.0,"cf":2.0,"ps":5.0,"rd":7.0}]},"S034":{"sid":"S034","label":"Thay Prison Break & Twin Confrontation","fairness_score":8.2,"players":[{"p":"Gradles","c":"Corras","da":10.0,"ni":9.5,"cf":4.0,"ps":9.0,"rd":8.5},{"p":"Christie","c":"Dahlia","da":8.5,"ni":8.0,"cf":4.0,"ps":7.0,"rd":9.0},{"p":"HT","c":"Ash","da":7.5,"ni":6.0,"cf":4.0,"ps":5.0,"rd":8.0},{"p":"Lucy","c":"Orla","da":7.0,"ni":7.5,"cf":10.0,"ps":5.0,"rd":7.5},{"p":"Tenderbittle","c":"SavannahBelle","da":9.0,"ni":10.0,"cf":8.0,"ps":8.0,"rd":10.0}]},"S035":{"sid":"S035","label":"BWB in Barovia: Death House Revisited","fairness_score":8.2,"players":[{"p":"Gradles","c":"Corras","da":10.0,"ni":10.0,"cf":0,"ps":9.2,"rd":8.7},{"p":"HT","c":"Ash","da":9.0,"ni":9.1,"cf":0,"ps":7.5,"rd":8.5},{"p":"Mary","c":"Billabong","da":2.9,"ni":2.6,"cf":0,"ps":3.0,"rd":6.3},{"p":"Christie","c":"Dahlia","da":3.6,"ni":4.4,"cf":0,"ps":5.8,"rd":6.5},{"p":"Lucy","c":"Orla","da":8.3,"ni":8.1,"cf":0,"ps":7.5,"rd":8.0},{"p":"Tenderbittle","c":"SavannahBelle","da":6.7,"ni":6.9,"cf":0,"ps":7.5,"rd":7.5}]},"S036":{"sid":"S036","label":"Death House in Barovia","fairness_score":7.5,"players":[{"p":"Gradles","c":"Corras","da":8.0,"ni":7.3,"cf":7.5,"ps":5.0,"rd":7.8},{"p":"HT","c":"Ash","da":6.7,"ni":6.0,"cf":5.0,"ps":3.3,"rd":6.5},{"p":"Mary","c":"Billabong","da":5.0,"ni":4.7,"cf":8.0,"ps":3.3,"rd":5.0},{"p":"Christie","c":"Dahlia","da":9.2,"ni":9.3,"cf":10.0,"ps":8.3,"rd":8.0},{"p":"Lucy","c":"Orla","da":4.2,"ni":5.3,"cf":9.0,"ps":3.3,"rd":5.0},{"p":"Tenderbittle","c":"SavannahBelle","da":10.0,"ni":10.0,"cf":8.0,"ps":10.0,"rd":10.0}]},"S037":{"sid":"S037","label":"Death House Confrontation","fairness_score":8.2,"players":[{"p":"Gradles","c":"Corras","da":9.5,"ni":8.0,"cf":7.5,"ps":8.5,"rd":9.0},{"p":"HT","c":"Ash","da":7.0,"ni":6.0,"cf":6.0,"ps":6.5,"rd":7.5},{"p":"Mary","c":"Billabong","da":6.0,"ni":5.5,"cf":8.5,"ps":5.0,"rd":6.0},{"p":"Christie","c":"Dahlia","da":10.0,"ni":10.0,"cf":10.0,"ps":10.0,"rd":10.0},{"p":"Lucy","c":"Orla","da":8.5,"ni":8.0,"cf":7.0,"ps":8.0,"rd":8.5},{"p":"Tenderbittle","c":"SavannahBelle","da":7.5,"ni":7.0,"cf":6.5,"ps":6.0,"rd":7.0}]},"S038":{"sid":"S038","label":"Death House Escape","fairness_score":8.2,"players":[{"p":"Gradles","c":"Corras","da":8.5,"ni":7.2,"cf":6.0,"ps":5.0,"rd":8.0},{"p":"HT","c":"Ash","da":7.5,"ni":6.3,"cf":5.5,"ps":4.0,"rd":8.5},{"p":"Mary","c":"Billabong","da":6.5,"ni":5.4,"cf":4.0,"ps":4.0,"rd":7.5},{"p":"Christie","c":"Dahlia","da":10.0,"ni":10.0,"cf":7.0,"ps":8.0,"rd":9.0},{"p":"Lucy","c":"Orla","da":7.0,"ni":7.5,"cf":6.5,"ps":5.0,"rd":7.5},{"p":"Tenderbittle","c":"SavannahBelle","da":8.0,"ni":6.3,"cf":7.5,"ps":5.0,"rd":8.5}]},"S039":{"sid":"S039","label":"Barovia Village and Tser Pool Camp","fairness_score":8.2,"players":[{"p":"Gradles","c":"Corras","da":8.0,"ni":7.5,"cf":6.0,"ps":7.0,"rd":8.0},{"p":"HT","c":"Ash","da":7.0,"ni":6.0,"cf":4.0,"ps":5.0,"rd":7.5},{"p":"Mary","c":"Billabong","da":6.0,"ni":5.0,"cf":8.0,"ps":4.0,"rd":6.0},{"p":"Christie","c":"Dahlia","da":7.5,"ni":9.0,"cf":7.0,"ps":8.0,"rd":7.0},{"p":"Lucy","c":"Orla","da":10.0,"ni":10.0,"cf":5.0,"ps":10.0,"rd":8.5},{"p":"Tenderbittle","c":"SavannahBelle","da":9.0,"ni":8.0,"cf":3.0,"ps":7.0,"rd":8.0}]},"S040":{"sid":"S040","label":"BWB in Barovia: Tser Pool Camp and Madam Eva's Tent","fairness_score":7.5,"players":[{"p":"Gradles","c":"Corras","da":10.0,"ni":10.0,"cf":8.0,"ps":7.0,"rd":9.0},{"p":"HT","c":"Ash/Ezrella","da":6.7,"ni":6.7,"cf":0,"ps":5.0,"rd":6.7},{"p":"Mary","c":"Billabong","da":3.3,"ni":3.3,"cf":0,"ps":3.0,"rd":4.4},{"p":"Christie","c":"Dahlia","da":5.6,"ni":5.8,"cf":4.0,"ps":5.0,"rd":5.6},{"p":"Lucy","c":"Orla","da":2.2,"ni":2.5,"cf":0,"ps":3.0,"rd":3.3},{"p":"Tenderbittle","c":"SavannahBelle","da":4.4,"ni":5.0,"cf":10.0,"ps":5.0,"rd":5.0}]},"S041":{"sid":"S041","label":"Madam Eva's Tent & Castle Ravenloft Showdown","fairness_score":7.5,"players":[{"p":"Gradles","c":"Corras","da":10.0,"ni":8.5,"cf":9.0,"ps":8.0,"rd":9.5},{"p":"HT","c":"Ash","da":6.7,"ni":5.7,"cf":5.0,"ps":5.0,"rd":6.3},{"p":"Mary","c":"Billabong","da":5.6,"ni":5.3,"cf":10.0,"ps":3.0,"rd":5.8},{"p":"Christie","c":"Dahlia","da":8.9,"ni":10.0,"cf":8.0,"ps":10.0,"rd":8.4},{"p":"Lucy","c":"Orla","da":7.8,"ni":7.0,"cf":6.0,"ps":8.0,"rd":7.9},{"p":"Tenderbittle","c":"SavannahBelle","da":6.7,"ni":6.4,"cf":5.5,"ps":7.0,"rd":6.3}]},"S042":{"sid":"S042","label":"Curse of Strahd - Final Battle Prep","fairness_score":8.2,"players":[{"p":"Gradles","c":"Corras","da":8.5,"ni":7.3,"cf":6.0,"ps":5.0,"rd":9.0},{"p":"HT","c":"Ash","da":7.5,"ni":6.0,"cf":5.0,"ps":3.0,"rd":8.5},{"p":"Mary","c":"Billabong","da":6.0,"ni":5.3,"cf":10.0,"ps":3.0,"rd":7.0},{"p":"Christie","c":"Dahlia","da":10.0,"ni":10.0,"cf":8.0,"ps":8.0,"rd":10.0},{"p":"Lucy","c":"Orla","da":7.0,"ni":6.3,"cf":6.0,"ps":5.0,"rd":8.0},{"p":"Tenderbittle","c":"SavannahBelle","da":8.0,"ni":6.7,"cf":5.0,"ps":6.0,"rd":8.9}]},"S043":{"sid":"S043","label":"Return to Castle Corras: Fae Siege and Political Intrigue","fairness_score":7.5,"players":[{"p":"Gradles","c":"Corras","da":10.0,"ni":8.0,"cf":0,"ps":7.0,"rd":9.0},{"p":"HT","c":"Ash","da":7.14,"ni":6.0,"cf":0,"ps":6.0,"rd":8.0},{"p":"Mary","c":"Billabong","da":4.29,"ni":3.0,"cf":0,"ps":4.0,"rd":5.0},{"p":"Christie","c":"Dahlia","da":8.57,"ni":7.0,"cf":0,"ps":6.0,"rd":9.0},{"p":"Lucy","c":"Orla","da":5.71,"ni":5.0,"cf":0,"ps":7.0,"rd":7.0},{"p":"Tenderbittle","c":"SavannahBelle","da":7.14,"ni":6.0,"cf":0,"ps":5.0,"rd":8.0}]},"S044":{"sid":"S044","label":"Political Fallout and Famine Crisis","fairness_score":7.5,"players":[{"p":"Gradles","c":"Corras","da":9.0,"ni":8.0,"cf":0,"ps":7.0,"rd":8.5},{"p":"HT","c":"Ash","da":8.0,"ni":10.0,"cf":0,"ps":8.5,"rd":8.0},{"p":"Mary","c":"Billabong","da":2.22,"ni":1.33,"cf":0,"ps":1.0,"rd":3.53},{"p":"Christie","c":"Dahlia","da":10.0,"ni":9.0,"cf":0,"ps":10.0,"rd":10.0},{"p":"Lucy","c":"Orla","da":7.78,"ni":7.33,"cf":0,"ps":7.0,"rd":7.06},{"p":"Tenderbittle","c":"SavannahBelle","da":8.89,"ni":6.67,"cf":0,"ps":7.0,"rd":8.82}]},"S045":{"sid":"S045","label":"The Red Council Aftermath","fairness_score":8.5,"players":[{"p":"Gradles","c":"Corras","da":10.0,"ni":8.0,"cf":9.0,"ps":7.0,"rd":9.0},{"p":"HT","c":"Ash","da":8.0,"ni":5.3,"cf":6.0,"ps":6.0,"rd":7.0},{"p":"Mary","c":"Billabong","da":6.0,"ni":4.7,"cf":8.0,"ps":5.0,"rd":7.3},{"p":"Christie","c":"Dahlia","da":9.0,"ni":10.0,"cf":10.0,"ps":9.0,"rd":8.0},{"p":"Lucy","c":"Orla","da":7.2,"ni":6.7,"cf":7.0,"ps":7.0,"rd":7.2},{"p":"Tenderbittle","c":"SavannahBelle","da":8.8,"ni":7.3,"cf":8.0,"ps":7.0,"rd":7.3}]},"S046":{"sid":"S046","label":"Feywild Infiltration and the Wild Hunt","fairness_score":7.5,"players":[{"p":"Gradles","c":"Corras","da":8.5,"ni":7.0,"cf":0,"ps":6.0,"rd":9.0},{"p":"HT","c":"Ash","da":10.0,"ni":10.0,"cf":0,"ps":10.0,"rd":10.0},{"p":"Mary","c":"Billabong","da":5.0,"ni":4.0,"cf":0,"ps":3.0,"rd":6.0},{"p":"Christie","c":"Dahlia","da":7.0,"ni":6.0,"cf":0,"ps":5.0,"rd":7.0},{"p":"Lucy","c":"Orla","da":7.5,"ni":8.0,"cf":0,"ps":7.0,"rd":8.0},{"p":"Tenderbittle","c":"SavannahBelle","da":6.0,"ni":5.0,"cf":0,"ps":4.0,"rd":6.5}]}};
+
+// ═══════════════════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════════════════
+const PLAYER_COLORS = {
+  Gradles:"#4A90D9",HT:"#E57373",Mary:"#81C784",
+  Christie:"#BA68C8",Lucy:"#FFB74D",Tenderbittle:"#4DB6AC",
+  Meijinx:"#FF8A65",Drenek:"#7986CB"
+};
+const PLAYER_CHARS = {
+  Gradles:"Corras",HT:"Ash",Mary:"Billabong",
+  Christie:"Dahlia",Lucy:"Orla",Tenderbittle:"SavannahBelle",
+  Meijinx:"Ave",Drenek:"Drenek"
+};
+const ALL_PLAYERS = Object.keys(PLAYER_COLORS);
+const AXES = [
+  {key:"da",label:"Direct Address"},
+  {key:"ni",label:"Narrative Investment"},
+  {key:"cf",label:"Combat Focus"},
+  {key:"ps",label:"Personal Story"},
+  {key:"rd",label:"Response Depth"}
+];
+const MAX_VAL = 10;
+
+const SESSIONS = [];
+for (let i = 1; i <= 46; i++) {
+  const sid = "S" + String(i).padStart(3, "0");
+  if (DM_DATA[sid] && DM_DATA[sid].players.length > 0) SESSIONS.push(sid);
+}
+
+// ═══════════════════════════════════════════════════════════
+// COMPUTED CAMPAIGN DATA
+// ═══════════════════════════════════════════════════════════
+function playerAvg(p) {
+  const vals = [p.da, p.ni, p.ps, p.rd]; // exclude cf — often 0
+  return vals.reduce((s,v) => s + v, 0) / vals.length;
+}
+function playerFullAvg(p) {
+  return (p.da + p.ni + p.cf + p.ps + p.rd) / 5;
+}
+function isPresent(p) {
+  return (p.da + p.ni + p.cf + p.ps + p.rd) > 0;
+}
+
+// Fairness trend data
+const fairnessTrend = SESSIONS.map(sid => ({ sid, score: DM_DATA[sid].fairness_score }));
+const campaignAvgFairness = +(fairnessTrend.reduce((s,d) => s + d.score, 0) / fairnessTrend.length).toFixed(1);
+const fairnessRanks = [...fairnessTrend].sort((a,b) => b.score - a.score);
+
+// Per-player campaign stats
+const campaignPlayerStats = {};
+ALL_PLAYERS.forEach(player => {
+  const appearances = [];
+  SESSIONS.forEach((sid, idx) => {
+    const pd = DM_DATA[sid].players.find(p => p.p === player);
+    if (pd && isPresent(pd)) {
+      appearances.push({ sid, idx, avg: playerAvg(pd), fullAvg: playerFullAvg(pd), data: pd });
+    }
+  });
+  campaignPlayerStats[player] = {
+    appearances,
+    count: appearances.length,
+    avgScore: appearances.length > 0 ? +(appearances.reduce((s,d) => s + d.avg, 0) / appearances.length).toFixed(1) : 0,
+    peak: appearances.length > 0 ? Math.max(...appearances.map(d => d.avg)) : 0,
+    low: appearances.length > 0 ? Math.min(...appearances.map(d => d.avg)) : 0
+  };
+});
+
+// Pattern detection
+function detectPatterns(session) {
+  const present = session.players.filter(isPresent);
+  if (present.length < 2) return [];
+  const avgs = present.map(p => ({ player: p.p, char: p.c, avg: playerAvg(p) }));
+  const mean = avgs.reduce((s,d) => s + d.avg, 0) / avgs.length;
+  const sorted = [...avgs].sort((a,b) => b.avg - a.avg);
+  const patterns = [];
+
+  if (sorted[0].avg - mean > 1.8) {
+    patterns.push({ type:"squeaky_wheel", player: sorted[0].player, char: sorted[0].char, delta: +(sorted[0].avg - mean).toFixed(1) });
+  }
+  if (mean - sorted[sorted.length-1].avg > 1.8) {
+    patterns.push({ type:"forgotten_player", player: sorted[sorted.length-1].player, char: sorted[sorted.length-1].char, delta: +(mean - sorted[sorted.length-1].avg).toFixed(1) });
+  }
+  const cfPresent = present.filter(p => p.cf > 0);
+  if (cfPresent.length >= 2) {
+    const cfSorted = [...cfPresent].sort((a,b) => b.cf - a.cf);
+    if (cfSorted[0].cf - cfSorted[1].cf > 3.5) {
+      patterns.push({ type:"combat_fav", player: cfSorted[0].p, char: cfSorted[0].c, delta: +(cfSorted[0].cf - cfSorted[1].cf).toFixed(1) });
+    }
+  }
+  const spread = sorted[0].avg - sorted[sorted.length-1].avg;
+  if (spread < 2.0 && present.length >= 4) {
+    patterns.push({ type:"balanced", delta: +spread.toFixed(1) });
+  }
+  return patterns;
+}
+
+// ═══════════════════════════════════════════════════════════
+// RADAR CHART
+// ═══════════════════════════════════════════════════════════
+let currentSession = 0;
+let playing = false;
+let playInterval = null;
+let playSpeed = 1500;
+const disabledPlayers = new Set();
+
+const W = 640, H = 640;
+const cx = W/2, cy = W/2;
+const radius = 240;
+const svg = d3.select("#radar-svg");
+const defs = svg.append("defs");
+
+// Radial gradient background
+const bgGrad = defs.append("radialGradient").attr("id","bg-grad");
+bgGrad.append("stop").attr("offset","0%").attr("stop-color","#16162a");
+bgGrad.append("stop").attr("offset","100%").attr("stop-color","#06060c");
+svg.append("circle").attr("cx",cx).attr("cy",cy).attr("r",radius+50).attr("fill","url(#bg-grad)");
+
+// Animated sweep line
+const sweepGrad = defs.append("linearGradient").attr("id","sweep-grad").attr("gradientUnits","userSpaceOnUse");
+sweepGrad.append("stop").attr("offset","0%").attr("stop-color","rgba(99,102,241,0)");
+sweepGrad.append("stop").attr("offset","100%").attr("stop-color","rgba(99,102,241,0.3)");
+const sweepGroup = svg.append("g").attr("transform",`translate(${cx},${cy})`);
+const sweepArc = d3.arc().innerRadius(0).outerRadius(radius).startAngle(0).endAngle(Math.PI/4);
+const sweepPath = sweepGroup.append("path")
+  .attr("d", sweepArc())
+  .attr("fill","url(#sweep-grad)")
+  .attr("opacity",0.4);
+
+function animateSweep() {
+  sweepPath.attr("transform","rotate(0)")
+    .transition().duration(4000).ease(d3.easeLinear)
+    .attr("transform","rotate(360)")
+    .on("end", animateSweep);
+}
+animateSweep();
+
+// Outer glow ring
+svg.append("circle").attr("cx",cx).attr("cy",cy).attr("r",radius)
+  .attr("fill","none").attr("stroke","#6366f1").attr("stroke-width",1).attr("opacity",0.15)
+  .attr("filter","url(#ring-glow)");
+const glowFilter = defs.append("filter").attr("id","ring-glow");
+glowFilter.append("feGaussianBlur").attr("stdDeviation","6").attr("result","blur");
+glowFilter.append("feMerge").selectAll("feMergeNode").data(["blur","SourceGraphic"])
+  .enter().append("feMergeNode").attr("in",d=>d);
+
+// Concentric rings
+const rings = [2,4,6,8,10];
+const ringGroup = svg.append("g");
+rings.forEach(val => {
+  const r = (val/MAX_VAL)*radius;
+  ringGroup.append("circle")
+    .attr("cx",cx).attr("cy",cy).attr("r",r)
+    .attr("fill","none")
+    .attr("stroke", val===10?"#2a2a45":"#1a1a30")
+    .attr("stroke-width", val===10?1.5:0.8)
+    .attr("stroke-dasharray", val===10?"none":"3,3");
+  if (val % 2 === 0) {
+    ringGroup.append("text")
+      .attr("x",cx+4).attr("y",cy-r+12)
+      .attr("class","ring-label").text(val);
+  }
+});
+
+// Axis lines and labels
+const angleSlice = (2*Math.PI)/AXES.length;
+const axisGroup = svg.append("g");
+AXES.forEach((axis,i) => {
+  const angle = angleSlice*i - Math.PI/2;
+  const x2 = cx + radius*Math.cos(angle);
+  const y2 = cy + radius*Math.sin(angle);
+  axisGroup.append("line")
+    .attr("x1",cx).attr("y1",cy).attr("x2",x2).attr("y2",y2)
+    .attr("stroke","#1e1e35").attr("stroke-width",1);
+  const lx = cx + (radius+32)*Math.cos(angle);
+  const ly = cy + (radius+32)*Math.sin(angle);
+  const label = axisGroup.append("text")
+    .attr("x",lx).attr("y",ly)
+    .attr("class","axis-label")
+    .attr("text-anchor","middle")
+    .attr("dominant-baseline","middle");
+  const words = axis.label.split(" ");
+  if (words.length > 1) {
+    label.append("tspan").attr("x",lx).attr("dy","-0.5em").text(words[0]);
+    label.append("tspan").attr("x",lx).attr("dy","1.2em").text(words.slice(1).join(" "));
+  } else {
+    label.text(axis.label);
+  }
+});
+
+// Per-player gradient defs
+ALL_PLAYERS.forEach(player => {
+  const c = PLAYER_COLORS[player];
+  const grad = defs.append("radialGradient").attr("id","pg-"+player);
+  grad.append("stop").attr("offset","0%").attr("stop-color",c).attr("stop-opacity","0.35");
+  grad.append("stop").attr("offset","100%").attr("stop-color",c).attr("stop-opacity","0.05");
+});
+
+const polyGroup = svg.append("g");
+
+function getPolygonPoints(playerData) {
+  return AXES.map((axis,i) => {
+    const angle = angleSlice*i - Math.PI/2;
+    const val = playerData[axis.key] || 0;
+    const r = (val/MAX_VAL)*radius;
+    return [cx+r*Math.cos(angle), cy+r*Math.sin(angle)];
+  });
+}
+function pointsToPath(pts) {
+  return pts.map((p,i) => (i===0?"M":"L")+p[0]+","+p[1]).join("")+"Z";
+}
+
+// Center dot
+svg.append("circle").attr("cx",cx).attr("cy",cy).attr("r",3)
+  .attr("fill","#6366f1").attr("opacity",0.5);
+
+const tooltip = d3.select("#tooltip");
+
+// ═══════════════════════════════════════════════════════════
+// UPDATE FUNCTIONS
+// ═══════════════════════════════════════════════════════════
+function updateRadar(sessionIdx, animate) {
+  const sid = SESSIONS[sessionIdx];
+  const session = DM_DATA[sid];
+  if (!session) return;
+
+  // Header
+  document.getElementById("session-id").textContent = sid;
+  document.getElementById("session-title").textContent = session.label || "No data";
+
+  // Fairness
+  const fs = session.fairness_score || 0;
+  const fEl = document.getElementById("fairness-value");
+  fEl.textContent = fs ? fs.toFixed(1) : "--";
+  fEl.className = "fairness-score " + (fs >= 8 ? "high" : fs >= 6 ? "mid" : "low");
+
+  // Meta
+  const presentPlayers = session.players.filter(isPresent);
+  document.getElementById("campaign-avg").textContent = campaignAvgFairness;
+  document.getElementById("player-count").textContent = presentPlayers.length;
+  const rank = fairnessRanks.findIndex(d => d.sid === sid) + 1;
+  document.getElementById("session-rank").textContent = "#" + rank + " / " + SESSIONS.length;
+
+  document.getElementById("session-slider").value = sessionIdx + 1;
+
+  // Active players map
+  const activePlayers = new Map();
+  session.players.forEach(p => {
+    if (ALL_PLAYERS.includes(p.p)) activePlayers.set(p.p, p);
+  });
+
+  // Update legend
+  ALL_PLAYERS.forEach(player => {
+    const el = document.querySelector(`.legend-item[data-player="${player}"]`);
+    if (!el) return;
+    const charEl = el.querySelector(".legend-char");
+    if (activePlayers.has(player) && isPresent(activePlayers.get(player))) {
+      el.style.opacity = disabledPlayers.has(player) ? "0.3" : "1";
+      if (charEl) charEl.textContent = activePlayers.get(player).c || PLAYER_CHARS[player];
+    } else {
+      el.style.opacity = "0.15";
+      if (charEl) charEl.textContent = "absent";
+    }
+  });
+
+  // Radar polygons
+  const polyData = ALL_PLAYERS
+    .filter(p => activePlayers.has(p) && isPresent(activePlayers.get(p)) && !disabledPlayers.has(p))
+    .map(p => ({ player: p, data: activePlayers.get(p) }));
+
+  const dur = animate ? 600 : 0;
+
+  polyGroup.selectAll(".pp").data(polyData, d => d.player).exit()
+    .transition().duration(dur/2).attr("opacity",0).remove();
+
+  const enter = polyGroup.selectAll(".pp").data(polyData, d => d.player)
+    .enter().append("g").attr("class","pp").attr("opacity",0);
+  enter.append("path").attr("class","pf");
+  enter.append("path").attr("class","ps2");
+  enter.transition().duration(dur).attr("opacity",1);
+
+  const all = polyGroup.selectAll(".pp");
+
+  all.select(".pf")
+    .transition().duration(dur)
+    .attr("d",d => pointsToPath(getPolygonPoints(d.data)))
+    .attr("fill",d => "url(#pg-"+d.player+")")
+    .attr("stroke","none");
+
+  all.select(".ps2")
+    .transition().duration(dur)
+    .attr("d",d => pointsToPath(getPolygonPoints(d.data)))
+    .attr("fill","none")
+    .attr("stroke",d => PLAYER_COLORS[d.player])
+    .attr("stroke-width",2)
+    .attr("stroke-opacity",0.8);
+
+  // Vertex dots with pulse
+  all.each(function(d) {
+    const g = d3.select(this);
+    const pts = getPolygonPoints(d.data);
+    const dots = g.selectAll(".vd").data(pts);
+    dots.exit().remove();
+    const dotsEnter = dots.enter().append("circle").attr("class","vd")
+      .attr("r",4).attr("fill",PLAYER_COLORS[d.player])
+      .attr("stroke","#06060c").attr("stroke-width",1.5)
+      .style("filter","drop-shadow(0 0 4px "+PLAYER_COLORS[d.player]+")");
+    dotsEnter.merge(dots)
+      .transition().duration(dur)
+      .attr("cx",p=>p[0]).attr("cy",p=>p[1]);
+  });
+
+  // Hover interactions
+  all.on("mouseenter",function(event,d) {
+    this.parentNode.appendChild(this);
+    d3.select(this).select(".pf").transition().duration(200)
+      .attr("fill",PLAYER_COLORS[d.player]).attr("fill-opacity",0.2);
+    d3.select(this).select(".ps2").transition().duration(200)
+      .attr("stroke-width",3.5).attr("stroke-opacity",1);
+    d3.select(this).selectAll(".vd").transition().duration(200).attr("r",6);
+    const pd = d.data;
+    const c = PLAYER_COLORS[d.player];
+    const avg = playerAvg(pd);
+    tooltip.classed("visible",true).html(
+      '<div class="tooltip-name" style="color:'+c+'">'+d.player+' <span style="font-family:Barlow Condensed;font-size:12px;color:#6b6b8a">('+pd.c+')</span></div>'+
+      '<div class="tooltip-row"><span class="tooltip-metric">Direct Address</span><span class="tooltip-val" style="color:'+c+'">'+pd.da.toFixed(1)+'</span></div>'+
+      '<div class="tooltip-row"><span class="tooltip-metric">Narrative</span><span class="tooltip-val" style="color:'+c+'">'+pd.ni.toFixed(1)+'</span></div>'+
+      '<div class="tooltip-row"><span class="tooltip-metric">Combat</span><span class="tooltip-val" style="color:'+(pd.cf>0?c:'#3a3a50')+'">'+( pd.cf>0?pd.cf.toFixed(1):'N/A')+'</span></div>'+
+      '<div class="tooltip-row"><span class="tooltip-metric">Personal Story</span><span class="tooltip-val" style="color:'+c+'">'+pd.ps.toFixed(1)+'</span></div>'+
+      '<div class="tooltip-row"><span class="tooltip-metric">Response Depth</span><span class="tooltip-val" style="color:'+c+'">'+pd.rd.toFixed(1)+'</span></div>'+
+      '<div class="tooltip-divider"></div>'+
+      '<div class="tooltip-overall"><span class="tooltip-overall-label">Overall</span><span class="tooltip-overall-val" style="color:'+c+'">'+avg.toFixed(1)+'</span></div>'
+    );
+  })
+  .on("mousemove",function(event) {
+    const x = Math.min(event.clientX+16, window.innerWidth-310);
+    const y = Math.min(event.clientY-20, window.innerHeight-250);
+    tooltip.style("left",x+"px").style("top",y+"px");
+  })
+  .on("mouseleave",function(event,d) {
+    d3.select(this).select(".pf").transition().duration(200)
+      .attr("fill","url(#pg-"+d.player+")").attr("fill-opacity",1);
+    d3.select(this).select(".ps2").transition().duration(200)
+      .attr("stroke-width",2).attr("stroke-opacity",0.8);
+    d3.select(this).selectAll(".vd").transition().duration(200).attr("r",4);
+    tooltip.classed("visible",false);
+  });
+
+  // Side panel updates
+  updateAttentionBars(session, activePlayers, animate);
+  updatePatterns(session);
+  updateSpotlight(session, activePlayers);
+  updatePulseHighlight(sessionIdx);
+  updateHeatmapHighlight(sessionIdx);
+}
+
+// ═══════════════════════════════════════════════════════════
+// ATTENTION BARS
+// ═══════════════════════════════════════════════════════════
+function updateAttentionBars(session, activePlayers, animate) {
+  const container = document.getElementById("attn-bars");
+  container.innerHTML = "";
+  const coreOrder = ["Gradles","HT","Mary","Christie","Lucy","Tenderbittle","Meijinx","Drenek"];
+  const present = coreOrder.filter(p => activePlayers.has(p) && isPresent(activePlayers.get(p)));
+  const absent = coreOrder.filter(p => !activePlayers.has(p) || !isPresent(activePlayers.get(p)));
+
+  // Sort present by score descending
+  const scored = present.map(p => ({ player: p, data: activePlayers.get(p), avg: playerAvg(activePlayers.get(p)) }));
+  scored.sort((a,b) => b.avg - a.avg);
+
+  scored.forEach((item, i) => {
+    const row = document.createElement("div");
+    row.className = "attn-row";
+    const pct = (item.avg / 10) * 100;
+    row.innerHTML = `
+      <span class="attn-name" style="color:${PLAYER_COLORS[item.player]}">${item.player}</span>
+      <div class="attn-track">
+        <div class="attn-fill" style="width:0%;background:${PLAYER_COLORS[item.player]};color:${PLAYER_COLORS[item.player]}"></div>
+      </div>
+      <span class="attn-val" style="color:${PLAYER_COLORS[item.player]}">${item.avg.toFixed(1)}</span>
+    `;
+    container.appendChild(row);
+    // Animate
+    requestAnimationFrame(() => {
+      const fill = row.querySelector(".attn-fill");
+      fill.style.width = pct + "%";
+      fill.style.transitionDelay = (i * 60) + "ms";
+    });
+  });
+
+  absent.forEach(player => {
+    const row = document.createElement("div");
+    row.className = "attn-row absent";
+    row.innerHTML = `
+      <span class="attn-name">${player}</span>
+      <div class="attn-track"><div class="attn-fill" style="width:0%"></div></div>
+      <span class="attn-val">--</span>
+    `;
+    container.appendChild(row);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// PATTERN DETECTION
+// ═══════════════════════════════════════════════════════════
+function updatePatterns(session) {
+  const container = document.getElementById("pattern-badges");
+  const patterns = detectPatterns(session);
+  if (patterns.length === 0) {
+    container.innerHTML = '<span class="no-patterns">No notable patterns detected</span>';
+    return;
+  }
+  container.innerHTML = patterns.map(p => {
+    if (p.type === "squeaky_wheel") return `<span class="pattern-badge squeaky"><span class="badge-icon">&#9733;</span> Spotlight: ${p.player} (+${p.delta})</span>`;
+    if (p.type === "forgotten_player") return `<span class="pattern-badge forgotten"><span class="badge-icon">&#9888;</span> Underserved: ${p.player} (-${p.delta})</span>`;
+    if (p.type === "combat_fav") return `<span class="pattern-badge combat-fav"><span class="badge-icon">&#9876;</span> Combat Focus: ${p.player} (+${p.delta})</span>`;
+    if (p.type === "balanced") return `<span class="pattern-badge balanced"><span class="badge-icon">&#10003;</span> Well Balanced (${p.delta} spread)</span>`;
+    return "";
+  }).join("");
+}
+
+// ═══════════════════════════════════════════════════════════
+// SESSION SPOTLIGHT
+// ═══════════════════════════════════════════════════════════
+function updateSpotlight(session, activePlayers) {
+  const container = document.getElementById("spotlight-content");
+  const present = session.players.filter(isPresent);
+  if (present.length === 0) { container.innerHTML = "No data"; return; }
+
+  const sorted = [...present].map(p => ({ ...p, avg: playerAvg(p) })).sort((a,b) => b.avg - a.avg);
+  const top = sorted[0];
+  const bottom = sorted[sorted.length - 1];
+  const spread = (top.avg - bottom.avg).toFixed(1);
+
+  // Find who had highest combat
+  const combatSorted = [...present].filter(p => p.cf > 0).sort((a,b) => b.cf - a.cf);
+  const combatMvp = combatSorted.length > 0 ? combatSorted[0] : null;
+
+  let html = `<span style="color:${PLAYER_COLORS[top.p]};font-family:Cinzel;font-weight:600">${top.p}</span> commands the spotlight (${top.avg.toFixed(1)} avg).`;
+  if (spread > 3) {
+    html += ` Gap of <span style="color:#f87171;font-family:JetBrains Mono">${spread}</span> to <span style="color:${PLAYER_COLORS[bottom.p]};font-family:Cinzel">${bottom.p}</span>.`;
+  } else {
+    html += ` Tight spread of <span style="color:#34d399;font-family:JetBrains Mono">${spread}</span>.`;
+  }
+  if (combatMvp) {
+    html += ` <span style="color:${PLAYER_COLORS[combatMvp.p]};font-family:Cinzel">${combatMvp.p}</span> dominates combat (${combatMvp.cf.toFixed(1)}).`;
+  }
+  container.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════
+// LEGEND
+// ═══════════════════════════════════════════════════════════
+const legendEl = d3.select("#legend");
+ALL_PLAYERS.forEach(player => {
+  const item = legendEl.append("div")
+    .attr("class","legend-item").attr("data-player",player)
+    .on("click",function() {
+      if (disabledPlayers.has(player)) { disabledPlayers.delete(player); item.classed("disabled",false); }
+      else { disabledPlayers.add(player); item.classed("disabled",true); }
+      updateRadar(currentSession, true);
+    });
+  item.append("div").attr("class","legend-dot")
+    .style("background",PLAYER_COLORS[player]).style("color",PLAYER_COLORS[player]);
+  item.append("span").attr("class","legend-name").text(player);
+  item.append("span").attr("class","legend-char").text(PLAYER_CHARS[player]||"");
+});
+
+// ═══════════════════════════════════════════════════════════
+// CONTROLS
+// ═══════════════════════════════════════════════════════════
+document.getElementById("session-slider").addEventListener("input",function() {
+  currentSession = parseInt(this.value) - 1;
+  updateRadar(currentSession, true);
+});
+
+function startPlay() {
+  playing = true;
+  document.getElementById("play-btn").innerHTML = "&#10074;&#10074;";
+  playInterval = setInterval(() => {
+    currentSession = (currentSession + 1) % SESSIONS.length;
+    updateRadar(currentSession, true);
+    if (currentSession === SESSIONS.length - 1) stopPlay();
+  }, playSpeed);
+}
+function stopPlay() {
+  playing = false;
+  document.getElementById("play-btn").innerHTML = "&#9654;";
+  if (playInterval) clearInterval(playInterval);
+}
+document.getElementById("play-btn").addEventListener("click",() => {
+  if (playing) stopPlay(); else startPlay();
+});
+document.querySelectorAll(".speed-btn").forEach(btn => {
+  btn.addEventListener("click",function() {
+    document.querySelectorAll(".speed-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    playSpeed = parseInt(btn.dataset.speed);
+    if (playing) { stopPlay(); startPlay(); }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════
+// CAMPAIGN FAIRNESS PULSE
+// ═══════════════════════════════════════════════════════════
+(function buildPulse() {
+  const container = document.getElementById("pulse-svg");
+  const margin = { top: 20, right: 20, bottom: 28, left: 36 };
+  const pw = 900, ph = 140;
+  const iw = pw - margin.left - margin.right;
+  const ih = ph - margin.top - margin.bottom;
+
+  const psvg = d3.select(container)
+    .attr("viewBox",`0 0 ${pw} ${ph}`)
+    .attr("preserveAspectRatio","xMidYMid meet");
+
+  // Gradient for area
+  const areaGrad = psvg.append("defs").append("linearGradient")
+    .attr("id","pulse-gradient").attr("x1","0").attr("y1","0").attr("x2","0").attr("y2","1");
+  areaGrad.append("stop").attr("offset","0%").attr("stop-color","#6366f1").attr("stop-opacity","0.4");
+  areaGrad.append("stop").attr("offset","100%").attr("stop-color","#6366f1").attr("stop-opacity","0");
+
+  const g = psvg.append("g").attr("transform",`translate(${margin.left},${margin.top})`);
+
+  const x = d3.scaleLinear().domain([0, SESSIONS.length-1]).range([0, iw]);
+  const y = d3.scaleLinear().domain([6, 9]).range([ih, 0]);
+
+  // Grid lines
+  [6.5,7,7.5,8,8.5].forEach(val => {
+    g.append("line").attr("x1",0).attr("y1",y(val)).attr("x2",iw).attr("y2",y(val))
+      .attr("class","pulse-grid");
+    g.append("text").attr("x",-6).attr("y",y(val)+3)
+      .attr("text-anchor","end")
+      .style("font-family","JetBrains Mono").style("font-size","9px").style("fill","#3a3a50")
+      .text(val.toFixed(1));
+  });
+
+  // Average line
+  g.append("line")
+    .attr("x1",0).attr("y1",y(campaignAvgFairness)).attr("x2",iw).attr("y2",y(campaignAvgFairness))
+    .attr("class","pulse-avg-line");
+  g.append("text").attr("x",iw+4).attr("y",y(campaignAvgFairness)+3)
+    .style("font-family","JetBrains Mono").style("font-size","9px").style("fill","#34d399").style("opacity","0.7")
+    .text("avg");
+
+  // Area
+  const area = d3.area()
+    .x((d,i) => x(i)).y0(ih).y1(d => y(Math.max(6, Math.min(9, d.score))))
+    .curve(d3.curveMonotoneX);
+  g.append("path").datum(fairnessTrend).attr("d",area).attr("class","pulse-area");
+
+  // Line
+  const line = d3.line()
+    .x((d,i) => x(i)).y(d => y(Math.max(6, Math.min(9, d.score))))
+    .curve(d3.curveMonotoneX);
+  g.append("path").datum(fairnessTrend).attr("d",line).attr("class","pulse-line");
+
+  // Dots
+  g.selectAll(".pulse-dot").data(fairnessTrend).enter().append("circle")
+    .attr("class","pulse-dot")
+    .attr("cx",(d,i) => x(i)).attr("cy",d => y(Math.max(6, Math.min(9, d.score))))
+    .attr("r",3)
+    .attr("data-idx",(_,i) => i);
+
+  // Session labels (every 5th)
+  fairnessTrend.forEach((d,i) => {
+    if (i % 5 === 0 || i === fairnessTrend.length-1) {
+      g.append("text").attr("x",x(i)).attr("y",ih+16).attr("text-anchor","middle")
+        .attr("class","pulse-label").text(d.sid);
+    }
+  });
+
+  // Current session indicator
+  g.append("line").attr("class","pulse-cursor")
+    .attr("x1",0).attr("y1",0).attr("x2",0).attr("y2",ih)
+    .attr("stroke","#a78bfa").attr("stroke-width",1.5).attr("stroke-dasharray","3,3").attr("opacity",0.6);
+
+  // Click to navigate
+  g.append("rect").attr("width",iw).attr("height",ih).attr("fill","transparent").attr("cursor","pointer")
+    .on("click", function(event) {
+      const [mx] = d3.pointer(event);
+      const idx = Math.round(x.invert(mx));
+      if (idx >= 0 && idx < SESSIONS.length) {
+        currentSession = idx;
+        updateRadar(currentSession, true);
+      }
+    });
+
+  // Stats
+  const statsEl = document.getElementById("pulse-stats");
+  const best = fairnessRanks[0];
+  const worst = fairnessRanks[fairnessRanks.length - 1];
+  statsEl.innerHTML = `
+    <div class="pulse-stat"><span class="pulse-stat-label">Campaign Average</span><span class="pulse-stat-val" style="color:#a78bfa">${campaignAvgFairness}</span></div>
+    <div class="pulse-stat"><span class="pulse-stat-label">Best Session</span><span class="pulse-stat-val" style="color:#34d399">${best.sid} (${best.score})</span></div>
+    <div class="pulse-stat"><span class="pulse-stat-label">Lowest Session</span><span class="pulse-stat-val" style="color:#f87171">${worst.sid} (${worst.score})</span></div>
+    <div class="pulse-stat"><span class="pulse-stat-label">Sessions at 8+</span><span class="pulse-stat-val" style="color:#fbbf24">${fairnessTrend.filter(d=>d.score>=8).length} / ${SESSIONS.length}</span></div>
+  `;
+})();
+
+function updatePulseHighlight(idx) {
+  const iw = 900 - 36 - 20;
+  const x = d3.scaleLinear().domain([0, SESSIONS.length-1]).range([0, iw]);
+  d3.select(".pulse-cursor").attr("x1",x(idx)).attr("x2",x(idx));
+  d3.selectAll(".pulse-dot").classed("current", (_,i) => i === idx).attr("r", (_,i) => i===idx?5:3);
+}
+
+// ═══════════════════════════════════════════════════════════
+// ATTENTION HEATMAP
+// ═══════════════════════════════════════════════════════════
+(function buildHeatmap() {
+  const container = document.getElementById("heatmap");
+  const corePlayers = ["Gradles","HT","Mary","Christie","Lucy","Tenderbittle"];
+
+  // Build grid
+  corePlayers.forEach(player => {
+    const row = document.createElement("div");
+    row.className = "heatmap-player-row";
+    row.innerHTML = `<span class="heatmap-player-label" style="color:${PLAYER_COLORS[player]}">${player}</span><div class="heatmap-cells" data-player="${player}"></div>`;
+    container.appendChild(row);
+
+    const cellsContainer = row.querySelector(".heatmap-cells");
+    SESSIONS.forEach((sid, idx) => {
+      const session = DM_DATA[sid];
+      const pd = session.players.find(p => p.p === player);
+      const cell = document.createElement("div");
+      cell.className = "heatmap-cell";
+      cell.dataset.idx = idx;
+
+      if (pd && isPresent(pd)) {
+        const avg = playerAvg(pd);
+        const intensity = avg / 10;
+        const color = PLAYER_COLORS[player];
+        // Parse hex to rgb
+        const r = parseInt(color.slice(1,3),16);
+        const g = parseInt(color.slice(3,5),16);
+        const b = parseInt(color.slice(5,7),16);
+        cell.style.background = `rgba(${r},${g},${b},${0.15 + intensity * 0.7})`;
+        cell.title = `${sid}: ${avg.toFixed(1)}`;
+      } else {
+        cell.className += " absent";
+        cell.title = `${sid}: absent`;
+      }
+
+      cell.addEventListener("click", () => {
+        currentSession = idx;
+        updateRadar(currentSession, true);
+      });
+      cellsContainer.appendChild(cell);
+    });
+  });
+
+  // Session labels
+  const labelsRow = document.createElement("div");
+  labelsRow.className = "heatmap-session-labels";
+  SESSIONS.forEach((sid, i) => {
+    const label = document.createElement("span");
+    label.className = "heatmap-session-label";
+    label.textContent = (i % 5 === 0) ? sid.replace("S0","").replace("S","") : "";
+    labelsRow.appendChild(label);
+  });
+  container.appendChild(labelsRow);
+})();
+
+function updateHeatmapHighlight(idx) {
+  document.querySelectorAll(".heatmap-cell").forEach(cell => {
+    cell.classList.toggle("current", parseInt(cell.dataset.idx) === idx);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// PLAYER TRAJECTORY SPARKLINES
+// ═══════════════════════════════════════════════════════════
+(function buildSparklines() {
+  const container = document.getElementById("sparklines");
+  const corePlayers = ["Gradles","HT","Mary","Christie","Lucy","Tenderbittle"];
+
+  corePlayers.forEach(player => {
+    const stats = campaignPlayerStats[player];
+    const card = document.createElement("div");
+    card.className = "spark-card";
+    card.style.cssText = `--player-color:${PLAYER_COLORS[player]}`;
+    card.querySelector
+    card.innerHTML = `
+      <div style="position:absolute;top:0;left:0;right:0;height:2px;background:${PLAYER_COLORS[player]};border-radius:2px 2px 0 0;opacity:0.6"></div>
+      <div class="spark-header">
+        <span class="spark-player" style="color:${PLAYER_COLORS[player]}">${player}</span>
+        <span class="spark-char">${PLAYER_CHARS[player]} | ${stats.count} sessions</span>
+      </div>
+      <svg class="spark-svg" data-player="${player}" viewBox="0 0 200 40" preserveAspectRatio="none" style="width:100%;height:40px"></svg>
+      <div class="spark-stats">
+        <div class="spark-stat"><span class="spark-stat-label">Avg</span><span class="spark-stat-val" style="color:${PLAYER_COLORS[player]}">${stats.avgScore}</span></div>
+        <div class="spark-stat"><span class="spark-stat-label">Peak</span><span class="spark-stat-val" style="color:#34d399">${stats.peak.toFixed(1)}</span></div>
+        <div class="spark-stat"><span class="spark-stat-label">Low</span><span class="spark-stat-val" style="color:#f87171">${stats.low.toFixed(1)}</span></div>
+      </div>
+    `;
+    container.appendChild(card);
+
+    // Draw sparkline
+    const sparkSvg = d3.select(card.querySelector(".spark-svg"));
+    const sw = 200, sh = 40;
+    const sMargin = 2;
+
+    // Build data array with nulls for absences
+    const sparkData = SESSIONS.map((sid, i) => {
+      const pd = DM_DATA[sid].players.find(p => p.p === player);
+      return (pd && isPresent(pd)) ? { i, avg: playerAvg(pd) } : null;
+    }).filter(d => d !== null);
+
+    if (sparkData.length < 2) return;
+
+    const sx = d3.scaleLinear().domain([0, SESSIONS.length-1]).range([sMargin, sw-sMargin]);
+    const sy = d3.scaleLinear().domain([2, 10]).range([sh-sMargin, sMargin]);
+
+    // Area fill
+    const sparkArea = d3.area()
+      .x(d => sx(d.i)).y0(sh).y1(d => sy(d.avg))
+      .curve(d3.curveMonotoneX);
+
+    const color = PLAYER_COLORS[player];
+    const sparkGradId = "spark-grad-"+player;
+    const sparkGrad = sparkSvg.append("defs").append("linearGradient")
+      .attr("id",sparkGradId).attr("x1","0").attr("y1","0").attr("x2","0").attr("y2","1");
+    sparkGrad.append("stop").attr("offset","0%").attr("stop-color",color).attr("stop-opacity","0.3");
+    sparkGrad.append("stop").attr("offset","100%").attr("stop-color",color).attr("stop-opacity","0");
+
+    sparkSvg.append("path").datum(sparkData).attr("d",sparkArea)
+      .attr("fill","url(#"+sparkGradId+")");
+
+    // Line
+    const sparkLine = d3.line().x(d => sx(d.i)).y(d => sy(d.avg)).curve(d3.curveMonotoneX);
+    sparkSvg.append("path").datum(sparkData).attr("d",sparkLine)
+      .attr("fill","none").attr("stroke",color).attr("stroke-width",1.5).attr("opacity",0.8);
+
+    // Average line
+    sparkSvg.append("line")
+      .attr("x1",sMargin).attr("y1",sy(stats.avgScore))
+      .attr("x2",sw-sMargin).attr("y2",sy(stats.avgScore))
+      .attr("stroke",color).attr("stroke-width",0.5).attr("stroke-dasharray","2,2").attr("opacity",0.4);
+  });
+})();
+
+// ═══════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════
+updateRadar(0, false);
+</script>
+</body>
+</html>

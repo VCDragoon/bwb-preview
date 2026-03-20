@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SCENE MOSAIC</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@300;400;600;700&family=Barlow:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&family=Cinzel:wght@400;600;700&display=swap');
+
+  *{margin:0;padding:0;box-sizing:border-box}
+
+  body{
+    background:#06060c;color:#c8c8e0;font-family:'Barlow',sans-serif;
+    min-height:100vh;position:relative;overflow-x:hidden;
+  }
+
+  body::after{
+    content:'';position:fixed;top:0;left:0;right:0;bottom:0;
+    background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.06) 2px,rgba(0,0,0,.06) 4px);
+    pointer-events:none;z-index:9999;
+  }
+
+  .header{
+    text-align:center;padding:24px 20px 14px;position:relative;
+  }
+  .header::after{
+    content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);
+    width:80%;height:1px;
+    background:linear-gradient(90deg,transparent,#4DB6AC,#81C784,#4DB6AC,transparent);
+    opacity:.5;
+  }
+
+  .title{
+    font-family:'Bebas Neue',sans-serif;font-size:64px;letter-spacing:14px;line-height:1;
+    background:linear-gradient(135deg,#4DB6AC,#81C784);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+    filter:drop-shadow(0 0 30px rgba(77,182,172,.4)) drop-shadow(0 0 60px rgba(129,199,132,.2));
+    margin-bottom:2px;
+  }
+  .subtitle{
+    font-family:'Barlow Condensed',sans-serif;font-weight:300;font-size:13px;
+    letter-spacing:6px;text-transform:uppercase;color:#8888aa;
+  }
+
+  /* Stats Bar */
+  .stats-bar{
+    display:flex;gap:0;justify-content:center;align-items:stretch;
+    padding:12px 24px;flex-wrap:wrap;
+  }
+  .stat-card{
+    background:linear-gradient(135deg,#12121e,#1a1a2e);
+    border:1px solid #1e1e35;border-radius:0;
+    padding:10px 20px;text-align:center;min-width:140px;
+    position:relative;
+  }
+  .stat-card:first-child{border-radius:6px 0 0 6px}
+  .stat-card:last-child{border-radius:0 6px 6px 0}
+  .stat-card+.stat-card{border-left:none}
+  .stat-card::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:2px;
+    background:linear-gradient(90deg,#4DB6AC,#81C784);opacity:.6;
+  }
+  .stat-card:first-child::before{border-radius:6px 0 0 0}
+  .stat-card:last-child::before{border-radius:0 6px 0 0}
+  .stat-label{
+    font-family:'Barlow Condensed',sans-serif;font-weight:400;font-size:10px;
+    letter-spacing:3px;text-transform:uppercase;color:#6a6a88;margin-bottom:2px;
+  }
+  .stat-value{
+    font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:500;
+    color:#e0e0f0;
+    text-shadow:0 0 12px rgba(77,182,172,.3);
+  }
+  .stat-value.accent{color:#4DB6AC}
+
+  /* Stacked bar for scene types */
+  .type-bar-wrap{
+    display:flex;align-items:center;gap:10px;padding:4px 24px 8px;
+    justify-content:center;
+  }
+  .type-bar-label{
+    font-family:'Barlow Condensed',sans-serif;font-weight:400;font-size:10px;
+    letter-spacing:3px;text-transform:uppercase;color:#6a6a88;white-space:nowrap;
+  }
+  .type-bar{
+    display:flex;height:14px;border-radius:7px;overflow:hidden;
+    flex:1;max-width:700px;
+    box-shadow:0 0 8px rgba(0,0,0,.4);
+  }
+  .type-bar-seg{
+    transition:flex .6s ease;position:relative;cursor:pointer;
+  }
+  .type-bar-seg:hover{filter:brightness(1.3)}
+  .type-bar-seg:first-child{border-radius:7px 0 0 7px}
+  .type-bar-seg:last-child{border-radius:0 7px 7px 0}
+
+  /* Legend */
+  .legend{
+    display:flex;gap:14px;justify-content:center;flex-wrap:wrap;
+    padding:4px 24px 10px;
+  }
+  .legend-item{
+    display:flex;align-items:center;gap:5px;
+    font-family:'Barlow Condensed',sans-serif;font-size:12px;
+    color:#8888aa;letter-spacing:1px;
+  }
+  .legend-swatch{
+    width:10px;height:10px;border-radius:2px;
+    box-shadow:0 0 6px currentColor;
+  }
+
+  /* Breadcrumb */
+  .breadcrumb{
+    padding:6px 24px;display:flex;align-items:center;gap:6px;
+    font-family:'Barlow Condensed',sans-serif;font-size:13px;
+    letter-spacing:2px;color:#6a6a88;min-height:30px;
+  }
+  .breadcrumb span{cursor:pointer;transition:color .2s}
+  .breadcrumb span:hover{color:#4DB6AC}
+  .breadcrumb .bc-active{color:#c8c8e0;cursor:default}
+  .breadcrumb .bc-sep{color:#3a3a50;cursor:default}
+
+  /* Treemap container */
+  .treemap-wrap{
+    padding:0 20px 20px;display:flex;justify-content:center;
+  }
+  #treemap{
+    width:100%;max-width:1400px;
+    background:#0a0a14;
+    border:1px solid #1a1a2e;border-radius:8px;
+    position:relative;overflow:hidden;
+    box-shadow:0 0 40px rgba(0,0,0,.5),inset 0 0 60px rgba(0,0,0,.3);
+  }
+
+  /* Treemap tiles */
+  .tile{
+    position:absolute;overflow:hidden;cursor:pointer;
+    transition:opacity .3s ease;
+    border:0.5px solid rgba(6,6,12,.8);
+  }
+  .tile:hover{
+    filter:brightness(1.25);
+    z-index:10;
+  }
+  .tile-label{
+    position:absolute;top:0;left:0;right:0;bottom:0;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:4px 6px;text-align:center;overflow:hidden;
+    pointer-events:none;
+  }
+  .tile-label-sid{
+    font-family:'Bebas Neue',sans-serif;font-size:14px;
+    color:rgba(255,255,255,.85);letter-spacing:2px;line-height:1;
+    text-shadow:0 1px 4px rgba(0,0,0,.8);
+  }
+  .tile-label-name{
+    font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:300;
+    color:rgba(255,255,255,.55);line-height:1.1;margin-top:1px;
+    text-shadow:0 1px 3px rgba(0,0,0,.8);
+    max-height:22px;overflow:hidden;
+  }
+  .tile-label-scene{
+    font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:400;
+    color:rgba(255,255,255,.8);line-height:1.15;
+    text-shadow:0 1px 4px rgba(0,0,0,.9);
+    max-height:80%;overflow:hidden;
+  }
+  .tile-label-type{
+    font-family:'JetBrains Mono',monospace;font-size:8px;
+    color:rgba(255,255,255,.45);letter-spacing:1px;text-transform:uppercase;
+    margin-top:2px;
+    text-shadow:0 1px 3px rgba(0,0,0,.8);
+  }
+
+  /* Tooltip */
+  .tooltip{
+    position:fixed;pointer-events:none;z-index:10000;
+    background:rgba(10,10,20,.95);
+    border:1px solid #2a2a44;border-radius:6px;
+    padding:10px 14px;max-width:320px;
+    backdrop-filter:blur(10px);
+    box-shadow:0 4px 20px rgba(0,0,0,.6);
+    opacity:0;transition:opacity .15s;
+    font-size:13px;
+  }
+  .tooltip.visible{opacity:1}
+  .tooltip-title{
+    font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px;
+    margin-bottom:4px;line-height:1;
+  }
+  .tooltip-row{
+    display:flex;justify-content:space-between;gap:16px;
+    font-family:'Barlow',sans-serif;font-size:12px;color:#8888aa;
+    line-height:1.6;
+  }
+  .tooltip-row .val{
+    font-family:'JetBrains Mono',monospace;color:#c8c8e0;font-size:11px;
+  }
+  .tooltip-type{
+    display:inline-block;padding:1px 6px;border-radius:3px;
+    font-family:'JetBrains Mono',monospace;font-size:10px;
+    margin-top:4px;
+  }
+  .tooltip-energy-bar{
+    height:4px;border-radius:2px;margin-top:6px;
+    background:#1a1a2e;overflow:hidden;
+  }
+  .tooltip-energy-fill{
+    height:100%;border-radius:2px;
+    transition:width .3s;
+  }
+
+  /* Back button */
+  .back-btn{
+    position:absolute;top:8px;left:8px;z-index:100;
+    background:rgba(10,10,20,.8);border:1px solid #2a2a44;
+    color:#8888aa;font-family:'Barlow Condensed',sans-serif;
+    font-size:12px;letter-spacing:2px;text-transform:uppercase;
+    padding:4px 12px;border-radius:4px;cursor:pointer;
+    transition:all .2s;display:none;
+    backdrop-filter:blur(6px);
+  }
+  .back-btn:hover{color:#4DB6AC;border-color:#4DB6AC}
+  .back-btn.visible{display:block}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="title">SCENE MOSAIC</div>
+  <div class="subtitle">335 scenes across 46 sessions -- a campaign in stained glass</div>
+</div>
+
+<div class="stats-bar" id="statsBar"></div>
+<div class="type-bar-wrap">
+  <span class="type-bar-label">Scene type distribution</span>
+  <div class="type-bar" id="typeBar"></div>
+</div>
+<div class="legend" id="legend"></div>
+
+<div class="breadcrumb" id="breadcrumb">
+  <span class="bc-active">Campaign</span>
+</div>
+
+<div class="treemap-wrap">
+  <div id="treemap">
+    <div class="back-btn" id="backBtn">&#9664; Back</div>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script>
+// ── DATA ──
+const DATA = [{"session_id":"S001","session_label":"The Etten and the Royal Procession","scene_count":7,"estimated_runtime_minutes":241,"pace_classification":"Late Bloomer","overall_energy_average":5.9,"scenes":[{"scene_number":1,"scene_title":"Technical Troubles and Table Talk","scene_type":"Meta","line_count":98,"energy_score":3,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"The Caretaker Who Wouldn't Flush","scene_type":"Social_Encounter","line_count":240,"energy_score":6,"pace_tag":"STEADY"},{"scene_number":3,"scene_title":"Origami Gifts and Haunted Real Estate","scene_type":"Exploration","line_count":159,"energy_score":5,"pace_tag":"STEADY"},{"scene_number":4,"scene_title":"Spymasters and Surrogate Mothers","scene_type":"Exposition","line_count":135,"energy_score":5,"pace_tag":"VALLEY"},{"scene_number":5,"scene_title":"Pillows, Palanquins, and Purple Pebbles","scene_type":"Character_Management","line_count":207,"energy_score":6,"pace_tag":"STEADY"},{"scene_number":6,"scene_title":"The Etten Who Smashed and Apologized","scene_type":"Social_Encounter","line_count":573,"energy_score":9,"pace_tag":"PEAK"},{"scene_number":7,"scene_title":"Long Live the Royal Smasher","scene_type":"Exploration","line_count":35,"energy_score":4,"pace_tag":"COOL-DOWN"}],"total_lines":1447},{"session_id":"S002","session_label":"The Mines Beneath Castle Corras","scene_count":7,"estimated_runtime_minutes":150,"pace_classification":"Steady Climb","overall_energy_average":6.0,"scenes":[{"scene_number":1,"scene_title":"Castle Management Crash Course","scene_type":"Meta","line_count":95,"energy_score":3,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"Last Session Recap","scene_type":"Recap","line_count":5,"energy_score":4,"pace_tag":"WARM-UP"},{"scene_number":3,"scene_title":"The Brotherhood Balances Its Books","scene_type":"Character_Management","line_count":400,"energy_score":5,"pace_tag":"STEADY"},{"scene_number":4,"scene_title":"What Lies Beneath Castle Corras","scene_type":"Exposition","line_count":11,"energy_score":6,"pace_tag":"SOLID"},{"scene_number":5,"scene_title":"Ancient Runes and the Lonely Light","scene_type":"Exploration","line_count":215,"energy_score":8,"pace_tag":"PEAK"},{"scene_number":6,"scene_title":"The Great Troll Coin Heist","scene_type":"Skill_Challenge","line_count":143,"energy_score":9,"pace_tag":"PEAK"},{"scene_number":7,"scene_title":"Sealed In and Looking Ahead","scene_type":"Meta","line_count":31,"energy_score":6,"pace_tag":"COOL-DOWN"}],"total_lines":900},{"session_id":"S003","session_label":"The Beholder and the Solarum","scene_count":8,"estimated_runtime_minutes":278,"pace_classification":"Roller Coaster","overall_energy_average":7.4,"scenes":[{"scene_number":1,"scene_title":"Reuniting Beyond the Barrier","scene_type":"Exploration","line_count":199,"energy_score":5,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"Commune with Kelemvor","scene_type":"Ritual","line_count":141,"energy_score":6,"pace_tag":"STEADY"},{"scene_number":3,"scene_title":"Shadows and Shattered Nerves","scene_type":"Skill_Challenge","line_count":160,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":4,"scene_title":"The Eye of Midnight Speaks","scene_type":"Social_Encounter","line_count":140,"energy_score":8,"pace_tag":"PEAK"},{"scene_number":5,"scene_title":"Ave's Legendary Blade Dance","scene_type":"Skill_Challenge","line_count":120,"energy_score":10,"pace_tag":"PEAK"},{"scene_number":6,"scene_title":"Into the Maw of the Eldritch Slime","scene_type":"Combat","line_count":460,"energy_score":8,"pace_tag":"SOLID"},{"scene_number":7,"scene_title":"The Light That Chose Billabong","scene_type":"Ritual","line_count":200,"energy_score":9,"pace_tag":"PEAK"},{"scene_number":8,"scene_title":"Castle Corras Reborn","scene_type":"Exposition","line_count":249,"energy_score":6,"pace_tag":"COOL-DOWN"}],"total_lines":1669},{"session_id":"S004","session_label":"Blood and Steel at the Goblin Camp","scene_count":9,"estimated_runtime_minutes":186,"pace_classification":"Front-Loaded","overall_energy_average":6.6,"scenes":[{"scene_number":1,"scene_title":"Plotting Lilith's False Trail","scene_type":"Social_Encounter","line_count":38,"energy_score":5,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"Splash Page and Session Setup","scene_type":"Meta","line_count":32,"energy_score":4,"pace_tag":"WARM-UP"},{"scene_number":3,"scene_title":"Recap and the Goblin Horde Awaits","scene_type":"Recap","line_count":29,"energy_score":5,"pace_tag":"WARM-UP"},{"scene_number":4,"scene_title":"Blood and Steel at the Goblin Camp","scene_type":"Combat","line_count":536,"energy_score":10,"pace_tag":"PEAK"},{"scene_number":5,"scene_title":"Whispers in the Aftermath","scene_type":"Exploration","line_count":52,"energy_score":5,"pace_tag":"VALLEY"},{"scene_number":6,"scene_title":"The Seedling Song and the Shadow Tree","scene_type":"Ritual","line_count":70,"energy_score":6,"pace_tag":"STEADY"},{"scene_number":7,"scene_title":"The Chronicler's Mark","scene_type":"Exposition","line_count":113,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":8,"scene_title":"The Raven Who Lied","scene_type":"Social_Encounter","line_count":202,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":9,"scene_title":"Bones Beneath Lumin","scene_type":"Exploration","line_count":42,"energy_score":6,"pace_tag":"COOL-DOWN"}],"total_lines":1114},{"session_id":"S005","session_label":"The Hall of Whispers and the Bone Devil","scene_count":6,"estimated_runtime_minutes":243,"pace_classification":"Explosive Finale","overall_energy_average":6.8,"scenes":[{"scene_number":1,"scene_title":"Catching Up on Gloaming Court Revelation","scene_type":"Recap","line_count":56,"energy_score":4,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"The Cult of Lilith Descends","scene_type":"Social_Encounter","line_count":140,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":3,"scene_title":"The Great Druidic Review Caper","scene_type":"Skill_Challenge","line_count":405,"energy_score":8,"pace_tag":"PEAK"},{"scene_number":4,"scene_title":"Plague Spreads Across the Realm","scene_type":"Character_Management","line_count":127,"energy_score":5,"pace_tag":"VALLEY"},{"scene_number":5,"scene_title":"Secrets in the Hall of Whispers","scene_type":"Puzzle","line_count":257,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":6,"scene_title":"Bone Devil Brawl in the Crypt","scene_type":"Combat","line_count":470,"energy_score":9,"pace_tag":"PEAK"}],"total_lines":1455},{"session_id":"S006","session_label":"The Archmage's Crypt and the Buried Escape","scene_count":7,"estimated_runtime_minutes":240,"pace_classification":"Explosive Finale","overall_energy_average":6.9,"scenes":[{"scene_number":1,"scene_title":"Session Resumes Mid-Battle","scene_type":"Meta","line_count":5,"energy_score":3,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"The Archmage's Desperate Last Stand","scene_type":"Combat","line_count":870,"energy_score":9,"pace_tag":"PEAK"},{"scene_number":3,"scene_title":"A Well-Earned Breather","scene_type":"Off_Topic","line_count":21,"energy_score":3,"pace_tag":"VALLEY"},{"scene_number":4,"scene_title":"The Taunting Voice From Beyond","scene_type":"Exploration","line_count":202,"energy_score":6,"pace_tag":"STEADY"},{"scene_number":5,"scene_title":"Riddles, Loot, and a Dire Warning","scene_type":"Puzzle","line_count":83,"energy_score":8,"pace_tag":"SOLID"},{"scene_number":6,"scene_title":"Escape From the Collapsing Crypt","scene_type":"Skill_Challenge","line_count":87,"energy_score":9,"pace_tag":"PEAK"},{"scene_number":7,"scene_title":"Buried Alive and Planning Escape","scene_type":"Character_Management","line_count":231,"energy_score":6,"pace_tag":"COOL-DOWN"}],"total_lines":1499},{"session_id":"S007","session_label":"The Spark Rescue Time Heist","scene_count":7,"estimated_runtime_minutes":225,"pace_classification":"Steady Climb","overall_energy_average":6.6,"scenes":[{"scene_number":1,"scene_title":"Time Travel Rules and Paradoxes","scene_type":"Meta","line_count":140,"energy_score":5,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"Planning the Spark Rescue Heist","scene_type":"Exposition","line_count":234,"energy_score":6,"pace_tag":"STEADY"},{"scene_number":3,"scene_title":"Chronoport Into the Past","scene_type":"Ritual","line_count":153,"energy_score":8,"pace_tag":"SOLID"},{"scene_number":4,"scene_title":"Splitting Up at Castle Corras","scene_type":"Exploration","line_count":269,"energy_score":6,"pace_tag":"STEADY"},{"scene_number":5,"scene_title":"Infiltrating Their Own Castle","scene_type":"Skill_Challenge","line_count":293,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":6,"scene_title":"The Eyelash Heist and Showdown","scene_type":"Skill_Challenge","line_count":246,"energy_score":9,"pace_tag":"PEAK"},{"scene_number":7,"scene_title":"Session Wrap-Up and Debrief","scene_type":"Meta","line_count":34,"energy_score":4,"pace_tag":"COOL-DOWN"}],"total_lines":1369},{"session_id":"S008","session_label":"The Great Heist Beneath Castle Corras","scene_count":9,"estimated_runtime_minutes":255,"pace_classification":"Roller Coaster","overall_energy_average":6.4,"scenes":[{"scene_number":1,"scene_title":"The DM Reveals His AI Workshop","scene_type":"Meta","line_count":44,"energy_score":3,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"Spark Ambushes Corras in the Castle","scene_type":"Combat","line_count":155,"energy_score":8,"pace_tag":"PEAK"},{"scene_number":3,"scene_title":"Billabong and Lilith Play Happy Family","scene_type":"Social_Encounter","line_count":69,"energy_score":6,"pace_tag":"STEADY"},{"scene_number":4,"scene_title":"Madam Zilara's Tent of Dubious Fortunes","scene_type":"Social_Encounter","line_count":60,"energy_score":6,"pace_tag":"STEADY"},{"scene_number":5,"scene_title":"Corras Returns and Spins His Greatest Li","scene_type":"Social_Encounter","line_count":249,"energy_score":9,"pace_tag":"PEAK"},{"scene_number":6,"scene_title":"The Great Heist Beneath Castle Corras","scene_type":"Skill_Challenge","line_count":318,"energy_score":8,"pace_tag":"SOLID"},{"scene_number":7,"scene_title":"Simulacrum Ritual at the Lumin Circle","scene_type":"Character_Management","line_count":200,"energy_score":5,"pace_tag":"VALLEY"},{"scene_number":8,"scene_title":"An Injured Mercenary on the Road","scene_type":"Exposition","line_count":244,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":9,"scene_title":"Farewell and Final Coordinates","scene_type":"Meta","line_count":24,"energy_score":3,"pace_tag":"COOL-DOWN"}],"total_lines":1363},{"session_id":"S009","session_label":"Downtime, Death, and a Mimic Horse","scene_count":7,"estimated_runtime_minutes":230,"pace_classification":"Late Bloomer","overall_energy_average":5.7,"scenes":[{"scene_number":1,"scene_title":"Picking Up Where We Left Off","scene_type":"Recap","line_count":6,"energy_score":3,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"Inventory Reckoning at Castle Corras","scene_type":"Character_Management","line_count":574,"energy_score":4,"pace_tag":"VALLEY"},{"scene_number":3,"scene_title":"Return from Break","scene_type":"Meta","line_count":12,"energy_score":4,"pace_tag":"WARM-UP"},{"scene_number":4,"scene_title":"Potato Stew with a Dying Stranger","scene_type":"Social_Encounter","line_count":153,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":5,"scene_title":"The Hooded Figure at the Ritual","scene_type":"Social_Encounter","line_count":198,"energy_score":9,"pace_tag":"PEAK"},{"scene_number":6,"scene_title":"Whispers from the Latrine Bucket","scene_type":"Exposition","line_count":33,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":7,"scene_title":"Grimslick's Caravan and the Mimic Horse","scene_type":"Exploration","line_count":128,"energy_score":7,"pace_tag":"SOLID"}],"total_lines":1104},{"session_id":"S010","session_label":"Wrath of Nature at the Fire Cult Camp","scene_count":6,"estimated_runtime_minutes":145,"pace_classification":"Front-Loaded","overall_energy_average":6.5,"scenes":[{"scene_number":1,"scene_title":"Pre-Game Banter and Session Recap","scene_type":"Meta","line_count":41,"energy_score":4,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"Scouting the Cult Encampment","scene_type":"Exploration","line_count":45,"energy_score":5,"pace_tag":"WARM-UP"},{"scene_number":3,"scene_title":"Botched Stealth and Battle Stations","scene_type":"Skill_Challenge","line_count":109,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":4,"scene_title":"Wrath of Nature at the Fire Camp","scene_type":"Combat","line_count":644,"energy_score":9,"pace_tag":"PEAK"},{"scene_number":5,"scene_title":"The Demon Gate Revealed","scene_type":"Exposition","line_count":105,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":6,"scene_title":"Session Wrap-Up and Scheduling","scene_type":"Meta","line_count":34,"energy_score":3,"pace_tag":"COOL-DOWN"}],"total_lines":978},{"session_id":"S011","session_label":"Trevor's Toll and the Bridge Trap","scene_count":7,"estimated_runtime_minutes":123,"pace_classification":"Slow Burn","overall_energy_average":5.6,"scenes":[{"scene_number":1,"scene_title":"Pre-Game Chatter and Catching Up","scene_type":"Off_Topic","line_count":71,"energy_score":2,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"Recap and Departure From Triboar","scene_type":"Recap","line_count":50,"energy_score":4,"pace_tag":"WARM-UP"},{"scene_number":3,"scene_title":"Introductions on the Road","scene_type":"Social_Encounter","line_count":57,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":4,"scene_title":"Trevor's Toll Gate Hustle","scene_type":"Social_Encounter","line_count":112,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":5,"scene_title":"Marching Order Through the Hills","scene_type":"Character_Management","line_count":91,"energy_score":4,"pace_tag":"STEADY"},{"scene_number":6,"scene_title":"The Bridge Trap and the Earth Elemental","scene_type":"Skill_Challenge","line_count":310,"energy_score":9,"pace_tag":"PEAK"},{"scene_number":7,"scene_title":"Bio Break and California Travel Talk","scene_type":"Off_Topic","line_count":50,"energy_score":2,"pace_tag":"COOL-DOWN"}],"total_lines":741},{"session_id":"S012","session_label":"The Catastrophic Wagon and the Book's Curse","scene_count":8,"estimated_runtime_minutes":230,"pace_classification":"Front-Loaded","overall_energy_average":6.8,"scenes":[{"scene_number":1,"scene_title":"Pre-Game Banter and Setup","scene_type":"Off_Topic","line_count":87,"energy_score":2,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"Recap and Preparing for Battle","scene_type":"Recap","line_count":57,"energy_score":5,"pace_tag":"WARM-UP"},{"scene_number":3,"scene_title":"Grimslick's Caravan Erupts in Chaos","scene_type":"Combat","line_count":216,"energy_score":8,"pace_tag":"PEAK"},{"scene_number":4,"scene_title":"Catastrophic Explosion and Desperate Esc","scene_type":"Skill_Challenge","line_count":610,"energy_score":10,"pace_tag":"PEAK"},{"scene_number":5,"scene_title":"Herb Merchants Visit the Ritual Site","scene_type":"Social_Encounter","line_count":127,"energy_score":5,"pace_tag":"VALLEY"},{"scene_number":6,"scene_title":"Sending Messages Across the Realm","scene_type":"Exposition","line_count":70,"energy_score":6,"pace_tag":"STEADY"},{"scene_number":7,"scene_title":"Fleshy's Transformation and the Relic","scene_type":"Exploration","line_count":80,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":8,"scene_title":"The Book's Curse Deepens","scene_type":"Exposition","line_count":132,"energy_score":8,"pace_tag":"SOLID"}],"total_lines":1379},{"session_id":"S013","session_label":"The Demon's Bargain and the Reunion at Lumin","scene_count":7,"estimated_runtime_minutes":162,"pace_classification":"Steady Climb","overall_energy_average":6.1,"scenes":[{"scene_number":1,"scene_title":"Pre-Game Banter and Housekeeping","scene_type":"Off_Topic","line_count":41,"energy_score":2,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"Recap of Previous Catastrophic Session","scene_type":"Recap","line_count":9,"energy_score":5,"pace_tag":"WARM-UP"},{"scene_number":3,"scene_title":"Jail Cell Rests and Preparations","scene_type":"Character_Management","line_count":63,"energy_score":4,"pace_tag":"STEADY"},{"scene_number":4,"scene_title":"The Dungeons of Berdusk","scene_type":"Social_Encounter","line_count":514,"energy_score":9,"pace_tag":"PEAK"},{"scene_number":5,"scene_title":"Reunion at the Ritual Site","scene_type":"Social_Encounter","line_count":142,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":6,"scene_title":"Heist Planning at the Castle","scene_type":"Exploration","line_count":197,"energy_score":6,"pace_tag":"STEADY"},{"scene_number":7,"scene_title":"Session Wrap and New Year Farewells","scene_type":"Meta","line_count":8,"energy_score":3,"pace_tag":"COOL-DOWN"}],"total_lines":974},{"session_id":"S014","session_label":"The Great Spark Swap","scene_count":9,"estimated_runtime_minutes":282,"pace_classification":"Roller Coaster","overall_energy_average":5.7,"scenes":[{"scene_number":1,"scene_title":"Catching Up Before the Heist","scene_type":"Off_Topic","line_count":75,"energy_score":2,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"DM Recap and Spell Preparations","scene_type":"Recap","line_count":91,"energy_score":4,"pace_tag":"WARM-UP"},{"scene_number":3,"scene_title":"Planning the Great Spark Swap","scene_type":"Social_Encounter","line_count":201,"energy_score":6,"pace_tag":"STEADY"},{"scene_number":4,"scene_title":"A Scholar Stumbles From the Dark","scene_type":"Social_Encounter","line_count":236,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":5,"scene_title":"Darindale Rages Like a Giant Baby","scene_type":"Combat","line_count":514,"energy_score":9,"pace_tag":"PEAK"},{"scene_number":6,"scene_title":"Weddings, Ice Baths, and Real Talk","scene_type":"Off_Topic","line_count":181,"energy_score":2,"pace_tag":"VALLEY"},{"scene_number":7,"scene_title":"Leaving the Scholar With a Quaggoth","scene_type":"Social_Encounter","line_count":85,"energy_score":5,"pace_tag":"STEADY"},{"scene_number":8,"scene_title":"Infiltrating Castle Corras","scene_type":"Exploration","line_count":269,"energy_score":8,"pace_tag":"SOLID"},{"scene_number":9,"scene_title":"Session Wrap and Cliffhanger","scene_type":"Meta","line_count":38,"energy_score":5,"pace_tag":"COOL-DOWN"}],"total_lines":1690},{"session_id":"S015","session_label":"The Temporal Sentinel and the Multiverse Fracture","scene_count":8,"estimated_runtime_minutes":193,"pace_classification":"Explosive Finale","overall_energy_average":6.4,"scenes":[{"scene_number":1,"scene_title":"Pre-Game Banter and Check-Ins","scene_type":"Off_Topic","line_count":65,"energy_score":2,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"New Abilities and Session Recap","scene_type":"Recap","line_count":28,"energy_score":6,"pace_tag":"WARM-UP"},{"scene_number":3,"scene_title":"The Elaborate Spark Heist Plan","scene_type":"Social_Encounter","line_count":187,"energy_score":5,"pace_tag":"STEADY"},{"scene_number":4,"scene_title":"Executing the Swap Inside Castle Corras","scene_type":"Skill_Challenge","line_count":313,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":5,"scene_title":"The Greenhouse Ambush and Familiar Swap","scene_type":"Skill_Challenge","line_count":148,"energy_score":8,"pace_tag":"PEAK"},{"scene_number":6,"scene_title":"The Temporal Sentinel's Ultimatum","scene_type":"Exposition","line_count":135,"energy_score":10,"pace_tag":"PEAK"},{"scene_number":7,"scene_title":"Cartoon Network Nostalgia Break","scene_type":"Off_Topic","line_count":30,"energy_score":2,"pace_tag":"VALLEY"},{"scene_number":8,"scene_title":"Splitting Up to Save the Multiverse","scene_type":"Exploration","line_count":249,"energy_score":8,"pace_tag":"SOLID"}],"total_lines":1155},{"session_id":"S016","session_label":"Desperate Defense and the Fates Card","scene_count":7,"estimated_runtime_minutes":225,"pace_classification":"Explosive Finale","overall_energy_average":6.9,"scenes":[{"scene_number":1,"scene_title":"Pre-Game Weather Chat and Catching Up","scene_type":"Off_Topic","line_count":31,"energy_score":2,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"Recap and Dual Battlefield Briefing","scene_type":"Exposition","line_count":62,"energy_score":5,"pace_tag":"WARM-UP"},{"scene_number":3,"scene_title":"Desperate Defense at the Rift","scene_type":"Combat","line_count":364,"energy_score":8,"pace_tag":"PEAK"},{"scene_number":4,"scene_title":"Navigating the Temporal Vortexes","scene_type":"Skill_Challenge","line_count":40,"energy_score":7,"pace_tag":"STEADY"},{"scene_number":5,"scene_title":"Storm and Sacrifice Across Two Fronts","scene_type":"Combat","line_count":200,"energy_score":9,"pace_tag":"PEAK"},{"scene_number":6,"scene_title":"Undoing Fate at the Edge of Oblivion","scene_type":"Social_Encounter","line_count":112,"energy_score":8.5,"pace_tag":"PEAK"},{"scene_number":7,"scene_title":"A New Dawn in a Changed World","scene_type":"Exposition","line_count":24,"energy_score":7,"pace_tag":"COOL-DOWN"}],"total_lines":833},{"session_id":"S017","session_label":"Branching Fates and Empires Rise","scene_count":7,"estimated_runtime_minutes":220,"pace_classification":"Steady Climb","overall_energy_average":6.1,"scenes":[{"scene_number":1,"scene_title":"Greetings and Character Rebuild Discussi","scene_type":"Meta","line_count":117,"energy_score":4,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"Session Feedback and Pacing Review","scene_type":"Meta","line_count":131,"energy_score":3,"pace_tag":"VALLEY"},{"scene_number":3,"scene_title":"Tooling Demo and Copyright Tangent","scene_type":"Off_Topic","line_count":25,"energy_score":3,"pace_tag":"VALLEY"},{"scene_number":4,"scene_title":"The Cosmic War Reshapes Faerun","scene_type":"Exposition","line_count":32,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":5,"scene_title":"Branching Fates: Round One Choices","scene_type":"Character_Management","line_count":163,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":6,"scene_title":"Branching Fates: Empires and Alliances","scene_type":"Character_Management","line_count":119,"energy_score":9,"pace_tag":"PEAK"},{"scene_number":7,"scene_title":"The Forge of Souls Beckons","scene_type":"Exposition","line_count":25,"energy_score":6,"pace_tag":"COOL-DOWN"}],"total_lines":612},{"session_id":"S018","session_label":"Into the Storm Mountains","scene_count":7,"estimated_runtime_minutes":240,"pace_classification":"Late Bloomer","overall_energy_average":6.4,"scenes":[{"scene_number":1,"scene_title":"Gearing Up for the Journey","scene_type":"Character_Management","line_count":200,"energy_score":3,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"Dahlia Joins and Corras Briefs","scene_type":"Exposition","line_count":90,"energy_score":5,"pace_tag":"WARM-UP"},{"scene_number":3,"scene_title":"Triboar Gate and Foehammer's Forge","scene_type":"Social_Encounter","line_count":237,"energy_score":8,"pace_tag":"PEAK"},{"scene_number":4,"scene_title":"Marching Into the Storm Mountains","scene_type":"Exploration","line_count":133,"energy_score":5,"pace_tag":"STEADY"},{"scene_number":5,"scene_title":"Avalanche on the Mountainside","scene_type":"Skill_Challenge","line_count":229,"energy_score":8.5,"pace_tag":"PEAK"},{"scene_number":6,"scene_title":"Dragon on the Frozen Lake","scene_type":"Skill_Challenge","line_count":219,"energy_score":9.5,"pace_tag":"PEAK"},{"scene_number":7,"scene_title":"Session Wrap and Next Steps","scene_type":"Meta","line_count":76,"energy_score":6,"pace_tag":"COOL-DOWN"}],"total_lines":1184},{"session_id":"S019","session_label":"Frost Giants and the Alchemist Fire Gambit","scene_count":7,"estimated_runtime_minutes":255,"pace_classification":"Roller Coaster","overall_energy_average":6.7,"scenes":[{"scene_number":1,"scene_title":"Recap and Camp Logistics","scene_type":"Recap","line_count":62,"energy_score":4,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"Creatures Circle the Hut","scene_type":"Exposition","line_count":541,"energy_score":5,"pace_tag":"VALLEY"},{"scene_number":3,"scene_title":"Digging Out of the Snow","scene_type":"Exploration","line_count":64,"energy_score":6,"pace_tag":"STEADY"},{"scene_number":4,"scene_title":"Frost Giant Ambush","scene_type":"Combat","line_count":337,"energy_score":9,"pace_tag":"PEAK"},{"scene_number":5,"scene_title":"The Alchemist Fire Gambit","scene_type":"Skill_Challenge","line_count":284,"energy_score":10,"pace_tag":"PEAK"},{"scene_number":6,"scene_title":"Orphaned Yeti Tykes","scene_type":"Exploration","line_count":168,"energy_score":7,"pace_tag":"COOL-DOWN"},{"scene_number":7,"scene_title":"The Cabin on the Gorge","scene_type":"Exploration","line_count":77,"energy_score":6,"pace_tag":"COOL-DOWN"}],"total_lines":1533},{"session_id":"S020","session_label":"Summer Star Detonation and Billabong's Vigil","scene_count":7,"estimated_runtime_minutes":220,"pace_classification":"Front-Loaded","overall_energy_average":7.4,"scenes":[{"scene_number":1,"scene_title":"Latrine Aftermath and Silent Forest","scene_type":"Exploration","line_count":101,"energy_score":5,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"Scaling the Rickety Cabin","scene_type":"Skill_Challenge","line_count":224,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":3,"scene_title":"The Charred Cabin and Glowing Orb","scene_type":"Exploration","line_count":87,"energy_score":6,"pace_tag":"STEADY"},{"scene_number":4,"scene_title":"The Summer Star Detonation","scene_type":"Combat","line_count":239,"energy_score":10,"pace_tag":"PEAK"},{"scene_number":5,"scene_title":"Ghosts in the Chasm","scene_type":"Social_Encounter","line_count":119,"energy_score":8,"pace_tag":"SOLID"},{"scene_number":6,"scene_title":"Billabong's Lonely Vigil","scene_type":"Puzzle","line_count":191,"energy_score":9,"pace_tag":"PEAK"},{"scene_number":7,"scene_title":"Descent Into Dwarven Tunnels","scene_type":"Exploration","line_count":86,"energy_score":6,"pace_tag":"COOL-DOWN"}],"total_lines":1047},{"session_id":"S021","session_label":"Into the Underdark","scene_count":5,"estimated_runtime_minutes":103,"pace_classification":"Steady Climb","overall_energy_average":6.4,"scenes":[{"scene_number":1,"scene_title":"Dark Boons From the Binding Ritual","scene_type":"Character_Management","line_count":72,"energy_score":4,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"Webb's Edge Briefing and Sanctum Prepara","scene_type":"Exposition","line_count":130,"energy_score":5,"pace_tag":"STEADY"},{"scene_number":3,"scene_title":"Into the Underdark's Webbed Tunnels","scene_type":"Exploration","line_count":193,"energy_score":6,"pace_tag":"SOLID"},{"scene_number":4,"scene_title":"The Drow Mage's Test of Devotion","scene_type":"Social_Encounter","line_count":76,"energy_score":8,"pace_tag":"PEAK"},{"scene_number":5,"scene_title":"Umber Hulk Unleashed in the Dark","scene_type":"Combat","line_count":144,"energy_score":9,"pace_tag":"PEAK"}],"total_lines":615},{"session_id":"S022","session_label":"Wall of Fire and Web's Edge","scene_count":6,"estimated_runtime_minutes":88,"pace_classification":"Front-Loaded","overall_energy_average":5.8,"scenes":[{"scene_number":1,"scene_title":"Assembling the Party Online","scene_type":"Meta","line_count":17,"energy_score":2,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"Recapping the Road to the Underdark","scene_type":"Recap","line_count":71,"energy_score":5,"pace_tag":"WARM-UP"},{"scene_number":3,"scene_title":"Flames and Poison in the Underdark","scene_type":"Combat","line_count":115,"energy_score":9,"pace_tag":"PEAK"},{"scene_number":4,"scene_title":"Healing Wounds and Searching the Dead","scene_type":"Character_Management","line_count":100,"energy_score":5,"pace_tag":"COOL-DOWN"},{"scene_number":5,"scene_title":"Through Webs and Illusions to Web's Edge","scene_type":"Exploration","line_count":151,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":6,"scene_title":"Break and Character Sheet Housekeeping","scene_type":"Meta","line_count":29,"energy_score":2,"pace_tag":"COOL-DOWN"}],"total_lines":483},{"session_id":"S023","session_label":"The Nalfeshnee's Last Stand","scene_count":7,"estimated_runtime_minutes":245,"pace_classification":"Roller Coaster","overall_energy_average":7.0,"scenes":[{"scene_number":1,"scene_title":"Settling In and Session Recap","scene_type":"Recap","line_count":121,"energy_score":3,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"Dungeon Battle at the Prison Cells","scene_type":"Combat","line_count":284,"energy_score":8,"pace_tag":"PEAK"},{"scene_number":3,"scene_title":"Twin Fireballs Scorch the Prison","scene_type":"Combat","line_count":206,"energy_score":8,"pace_tag":"PEAK"},{"scene_number":4,"scene_title":"Rules Discussion and Spell Mechanics","scene_type":"Meta","line_count":42,"energy_score":3,"pace_tag":"VALLEY"},{"scene_number":5,"scene_title":"Pressing the Attack on the Nalfeshnee","scene_type":"Combat","line_count":348,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":6,"scene_title":"Orla Befriends the Demon Toad","scene_type":"Combat","line_count":267,"energy_score":9,"pace_tag":"PEAK"},{"scene_number":7,"scene_title":"Dahlia Executes the Nalfeshnee","scene_type":"Combat","line_count":38,"energy_score":10,"pace_tag":"PEAK"}],"total_lines":1306},{"session_id":"S024","session_label":"Escape from Web's Edge","scene_count":8,"estimated_runtime_minutes":235,"pace_classification":"Explosive Finale","overall_energy_average":6.8,"scenes":[{"scene_number":1,"scene_title":"Foundry Setup and Housekeeping","scene_type":"Meta","line_count":183,"energy_score":2,"pace_tag":"VALLEY"},{"scene_number":2,"scene_title":"Recap of Last Session","scene_type":"Recap","line_count":43,"energy_score":4,"pace_tag":"WARM-UP"},{"scene_number":3,"scene_title":"Freeing Gertrude and Taming the Toad","scene_type":"Social_Encounter","line_count":114,"energy_score":6,"pace_tag":"STEADY"},{"scene_number":4,"scene_title":"The Spider Dragon's Lair","scene_type":"Exploration","line_count":292,"energy_score":9,"pace_tag":"PEAK"},{"scene_number":5,"scene_title":"The Chase Through Web's Edge","scene_type":"Skill_Challenge","line_count":313,"energy_score":8,"pace_tag":"PEAK"},{"scene_number":6,"scene_title":"Corras Steals the Rod","scene_type":"Skill_Challenge","line_count":55,"energy_score":9,"pace_tag":"PEAK"},{"scene_number":7,"scene_title":"Escape from Web's Edge","scene_type":"Skill_Challenge","line_count":192,"energy_score":10,"pace_tag":"PEAK"},{"scene_number":8,"scene_title":"Lolth's Whisper at Castle Corras","scene_type":"Exposition","line_count":39,"energy_score":8,"pace_tag":"COOL-DOWN"}],"total_lines":1231},{"session_id":"S025","session_label":"Forging the Federation","scene_count":5,"estimated_runtime_minutes":118,"pace_classification":"Slow Burn","overall_energy_average":5.6,"scenes":[{"scene_number":1,"scene_title":"Pre-Session Banter and Podcast Talk","scene_type":"Off_Topic","line_count":55,"energy_score":3,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"Reshaping the Post-War Political Landsca","scene_type":"Exposition","line_count":58,"energy_score":5,"pace_tag":"STEADY"},{"scene_number":3,"scene_title":"Forging the Federation's Government","scene_type":"Exposition","line_count":70,"energy_score":6,"pace_tag":"STEADY"},{"scene_number":4,"scene_title":"Bastions and Roles Within the Federation","scene_type":"Character_Management","line_count":146,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":5,"scene_title":"Future Arcs and the Road Ahead","scene_type":"Meta","line_count":101,"energy_score":7,"pace_tag":"SOLID"}],"total_lines":430},{"session_id":"S026","session_label":"Escape from Web's Edge","scene_count":8,"estimated_runtime_minutes":202,"pace_classification":"Steady Climb","overall_energy_average":6.5,"scenes":[{"scene_number":1,"scene_title":"Foundry Setup and Inventory Housekeeping","scene_type":"Meta","line_count":184,"energy_score":2,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"Recap of the Web's Edge Siege","scene_type":"Recap","line_count":44,"energy_score":4,"pace_tag":"WARM-UP"},{"scene_number":3,"scene_title":"Sisters, Toads, and Sending Stones","scene_type":"Social_Encounter","line_count":113,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":4,"scene_title":"The Spider Dragon's Lair","scene_type":"Exploration","line_count":288,"energy_score":9,"pace_tag":"PEAK"},{"scene_number":5,"scene_title":"Gertrude's Squeeze and the Army Arrives","scene_type":"Skill_Challenge","line_count":70,"energy_score":6,"pace_tag":"STEADY"},{"scene_number":6,"scene_title":"The Chase Through Web's Edge","scene_type":"Skill_Challenge","line_count":239,"energy_score":8.5,"pace_tag":"PEAK"},{"scene_number":7,"scene_title":"Reunited Under a Collapsing Mountain","scene_type":"Skill_Challenge","line_count":236,"energy_score":9,"pace_tag":"PEAK"},{"scene_number":8,"scene_title":"Crash Landing at Castle Corras","scene_type":"Social_Encounter","line_count":38,"energy_score":7,"pace_tag":"COOL-DOWN"}],"total_lines":1212},{"session_id":"S027","session_label":"Battle of the Bridge Revenants","scene_count":6,"estimated_runtime_minutes":161,"pace_classification":"Late Bloomer","overall_energy_average":5.8,"scenes":[{"scene_number":1,"scene_title":"Pre-Session Chatter and Tech Talk","scene_type":"Off_Topic","line_count":11,"energy_score":2,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"State of the World Briefing","scene_type":"Recap","line_count":73,"energy_score":5,"pace_tag":"WARM-UP"},{"scene_number":3,"scene_title":"Character Sheets and Level-Up Fixes","scene_type":"Character_Management","line_count":27,"energy_score":2,"pace_tag":"VALLEY"},{"scene_number":4,"scene_title":"Descent Into the Soul Forge","scene_type":"Exploration","line_count":116,"energy_score":6,"pace_tag":"STEADY"},{"scene_number":5,"scene_title":"Battle of the Bridge Revenants","scene_type":"Combat","line_count":722,"energy_score":9,"pace_tag":"PEAK"},{"scene_number":6,"scene_title":"Cliffhanger and Thanksgiving Farewell","scene_type":"Meta","line_count":15,"energy_score":4,"pace_tag":"COOL-DOWN"}],"total_lines":964},{"session_id":"S028","session_label":"Pies, Puppies, and Curses Below","scene_count":6,"estimated_runtime_minutes":236,"pace_classification":"Roller Coaster","overall_energy_average":5.8,"scenes":[{"scene_number":1,"scene_title":"Bastions, Foundry, and Battle Recap","scene_type":"Meta","line_count":178,"energy_score":3,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"Revenants Fall and the Desperate Retreat","scene_type":"Combat","line_count":143,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":3,"scene_title":"Pies, Puppies, and Pack Dominance","scene_type":"Social_Encounter","line_count":400,"energy_score":9,"pace_tag":"PEAK"},{"scene_number":4,"scene_title":"Snacks, Wrestling Lore, and Intermission","scene_type":"Off_Topic","line_count":28,"energy_score":2,"pace_tag":"VALLEY"},{"scene_number":5,"scene_title":"Curses and Constructs Beneath the Temple","scene_type":"Exploration","line_count":641,"energy_score":7,"pace_tag":"STEADY"},{"scene_number":6,"scene_title":"Scheduling and Session Wrap-Up","scene_type":"Meta","line_count":26,"energy_score":2,"pace_tag":"COOL-DOWN"}],"total_lines":1416},{"session_id":"S029","session_label":"Malchor's Possession and the Infernal Node","scene_count":8,"estimated_runtime_minutes":211,"pace_classification":"Slow Burn","overall_energy_average":6.1,"scenes":[{"scene_number":1,"scene_title":"Pre-Game Chatter and Gen Con Plans","scene_type":"Off_Topic","line_count":35,"energy_score":3,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"Session Recap and Curse Reminders","scene_type":"Recap","line_count":65,"energy_score":4,"pace_tag":"WARM-UP"},{"scene_number":3,"scene_title":"Investigating the Cursed Coin and Dagger","scene_type":"Exploration","line_count":376,"energy_score":6,"pace_tag":"STEADY"},{"scene_number":4,"scene_title":"Malchor Seizes Control of Ash","scene_type":"Combat","line_count":120,"energy_score":9,"pace_tag":"PEAK"},{"scene_number":5,"scene_title":"Break and Pacing Discussion","scene_type":"Meta","line_count":118,"energy_score":3,"pace_tag":"VALLEY"},{"scene_number":6,"scene_title":"Exorcising Malchor and Deciphering the C","scene_type":"Skill_Challenge","line_count":243,"energy_score":9,"pace_tag":"PEAK"},{"scene_number":7,"scene_title":"Completing the Infernal Node Ritual","scene_type":"Ritual","line_count":286,"energy_score":8,"pace_tag":"SOLID"},{"scene_number":8,"scene_title":"Session Wrap-Up and Level Thirteen","scene_type":"Meta","line_count":25,"energy_score":5,"pace_tag":"COOL-DOWN"}],"total_lines":1268},{"session_id":"S030","session_label":"Shadow Powers and the Ceaseless Maw","scene_count":7,"estimated_runtime_minutes":245,"pace_classification":"Explosive Finale","overall_energy_average":7.0,"scenes":[{"scene_number":1,"scene_title":"The Harbinger's Bastion of Statues","scene_type":"Ritual","line_count":301,"energy_score":8,"pace_tag":"SOLID"},{"scene_number":2,"scene_title":"Training on the Chained Rift Stalker","scene_type":"Skill_Challenge","line_count":278,"energy_score":7,"pace_tag":"STEADY"},{"scene_number":3,"scene_title":"Tracking the Ceaseless Maw","scene_type":"Exploration","line_count":220,"energy_score":6,"pace_tag":"STEADY"},{"scene_number":4,"scene_title":"Break Chatter and Cat Stories","scene_type":"Off_Topic","line_count":17,"energy_score":2,"pace_tag":"VALLEY"},{"scene_number":5,"scene_title":"Descent Into the Daggerford Tomb","scene_type":"Exploration","line_count":103,"energy_score":6,"pace_tag":"WARM-UP"},{"scene_number":6,"scene_title":"Battle Against the Ceaseless Maw","scene_type":"Combat","line_count":320,"energy_score":8.5,"pace_tag":"PEAK"},{"scene_number":7,"scene_title":"Turning the Tide on the Maw","scene_type":"Combat","line_count":233,"energy_score":10,"pace_tag":"PEAK"}],"total_lines":1472},{"session_id":"S031","session_label":"The Maw Falls and Vrocks Return","scene_count":8,"estimated_runtime_minutes":243,"pace_classification":"Front-Loaded","overall_energy_average":6.5,"scenes":[{"scene_number":1,"scene_title":"Piecing Together Last Session's Carnage","scene_type":"Recap","line_count":63,"energy_score":5,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"Bringing Down the Maw","scene_type":"Combat","line_count":436,"energy_score":9,"pace_tag":"PEAK"},{"scene_number":3,"scene_title":"Escape from the Collapsing Cavern","scene_type":"Skill_Challenge","line_count":179,"energy_score":8,"pace_tag":"PEAK"},{"scene_number":4,"scene_title":"Stranded in the Mountains","scene_type":"Exploration","line_count":92,"energy_score":5,"pace_tag":"COOL-DOWN"},{"scene_number":5,"scene_title":"Grieving Ash and Preserving the Body","scene_type":"Social_Encounter","line_count":130,"energy_score":6,"pace_tag":"STEADY"},{"scene_number":6,"scene_title":"Ezrella's Warning of Dark Smugglers","scene_type":"Exposition","line_count":104,"energy_score":6,"pace_tag":"STEADY"},{"scene_number":7,"scene_title":"Vrocks on the Front Lawn","scene_type":"Combat","line_count":387,"energy_score":8,"pace_tag":"PEAK"},{"scene_number":8,"scene_title":"Level Fourteen and Looking Ahead","scene_type":"Meta","line_count":64,"energy_score":4,"pace_tag":"COOL-DOWN"}],"total_lines":1455},{"session_id":"S032","session_label":"Warehouse 17 and the Crimson Order","scene_count":7,"estimated_runtime_minutes":223,"pace_classification":"Explosive Finale","overall_energy_average":6.6,"scenes":[{"scene_number":1,"scene_title":"Recap and Ezrella's Mission Briefing","scene_type":"Recap","line_count":50,"energy_score":4,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"Feast and Preparations at the Bastion","scene_type":"Character_Management","line_count":227,"energy_score":4,"pace_tag":"VALLEY"},{"scene_number":3,"scene_title":"Infiltrating Warehouse Seventeen","scene_type":"Social_Encounter","line_count":232,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":4,"scene_title":"Searching the Enchanted Crates","scene_type":"Exploration","line_count":184,"energy_score":6,"pace_tag":"STEADY"},{"scene_number":5,"scene_title":"Dahlia Cons the Foreman","scene_type":"Social_Encounter","line_count":73,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":6,"scene_title":"Ambush of the Crimson Order","scene_type":"Combat","line_count":538,"energy_score":9,"pace_tag":"PEAK"},{"scene_number":7,"scene_title":"Cliffhanger and Strategic Deliberation","scene_type":"Meta","line_count":32,"energy_score":7,"pace_tag":"COOL-DOWN"}],"total_lines":1336},{"session_id":"S033","session_label":"Corras Surrenders to the Lich","scene_count":7,"estimated_runtime_minutes":204,"pace_classification":"Steady Climb","overall_energy_average":6.7,"scenes":[{"scene_number":1,"scene_title":"Catching Up Before the Storm","scene_type":"Recap","line_count":78,"energy_score":5,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"Technical Difficulties Halt the Battle","scene_type":"Meta","line_count":90,"energy_score":3,"pace_tag":"VALLEY"},{"scene_number":3,"scene_title":"Warehouse Brawl Against the Lich","scene_type":"Combat","line_count":363,"energy_score":8,"pace_tag":"PEAK"},{"scene_number":4,"scene_title":"Mid-Session Break and Rulings","scene_type":"Meta","line_count":138,"energy_score":4,"pace_tag":"VALLEY"},{"scene_number":5,"scene_title":"Diplomacy Unravels Into Betrayal","scene_type":"Combat","line_count":235,"energy_score":9,"pace_tag":"PEAK"},{"scene_number":6,"scene_title":"Corras Surrenders to Save His Friends","scene_type":"Social_Encounter","line_count":278,"energy_score":9,"pace_tag":"PEAK"},{"scene_number":7,"scene_title":"Prisoners of the Red Wizards","scene_type":"Exposition","line_count":44,"energy_score":7,"pace_tag":"COOL-DOWN"}],"total_lines":1226},{"session_id":"S034","session_label":"The Thayan Jailbreak and Twin Formation","scene_count":8,"estimated_runtime_minutes":216,"pace_classification":"Roller Coaster","overall_energy_average":6.9,"scenes":[{"scene_number":1,"scene_title":"Pre-Game Banter and Health Checks","scene_type":"Off_Topic","line_count":21,"energy_score":3,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"Recap of the Thayan Capture","scene_type":"Recap","line_count":67,"energy_score":5,"pace_tag":"WARM-UP"},{"scene_number":3,"scene_title":"Waking in the Thayan Dungeon","scene_type":"Exploration","line_count":64,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":4,"scene_title":"The Chaotic Jailbreak Begins","scene_type":"Exploration","line_count":331,"energy_score":8,"pace_tag":"PEAK"},{"scene_number":5,"scene_title":"SavannahBelle's Strange New Friends","scene_type":"Social_Encounter","line_count":134,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":6,"scene_title":"Wally the Otyugh's Truth Space","scene_type":"Social_Encounter","line_count":195,"energy_score":9,"pace_tag":"PEAK"},{"scene_number":7,"scene_title":"Battle at the Arcane Ritual Chamber","scene_type":"Combat","line_count":323,"energy_score":10,"pace_tag":"PEAK"},{"scene_number":8,"scene_title":"Twin Formation and Spoils of War","scene_type":"Character_Management","line_count":159,"energy_score":8,"pace_tag":"COOL-DOWN"}],"total_lines":1294},{"session_id":"S035","session_label":"Through the Portal to Barovia","scene_count":8,"estimated_runtime_minutes":223,"pace_classification":"Late Bloomer","overall_energy_average":5.9,"scenes":[{"scene_number":1,"scene_title":"Pre-Game Planning and House Rules","scene_type":"Meta","line_count":226,"energy_score":4,"pace_tag":"VALLEY"},{"scene_number":2,"scene_title":"Bastion Preparations and Crafting Orders","scene_type":"Character_Management","line_count":93,"energy_score":4,"pace_tag":"VALLEY"},{"scene_number":3,"scene_title":"Tense Reunion in Sigil's Sanctum","scene_type":"Social_Encounter","line_count":120,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":4,"scene_title":"Interrogating Mordenkainen's Deception","scene_type":"Exposition","line_count":120,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":5,"scene_title":"Gathering Scrolls and Stepping Through","scene_type":"Character_Management","line_count":199,"energy_score":5,"pace_tag":"STEADY"},{"scene_number":6,"scene_title":"The Children of Durst Manor","scene_type":"Social_Encounter","line_count":74,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":7,"scene_title":"Ransacking the Haunted Manor","scene_type":"Exploration","line_count":432,"energy_score":8,"pace_tag":"PEAK"},{"scene_number":8,"scene_title":"Post-Session Barovia Speculation","scene_type":"Meta","line_count":71,"energy_score":8,"pace_tag":"PEAK"}],"total_lines":1335},{"session_id":"S036","session_label":"Death House Attic Assault","scene_count":7,"estimated_runtime_minutes":176,"pace_classification":"Front-Loaded","overall_energy_average":6.4,"scenes":[{"scene_number":1,"scene_title":"Pre-Game Banter and Session Recap","scene_type":"Recap","line_count":51,"energy_score":4,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"Attic Ambush by Invisible Stalkers","scene_type":"Combat","line_count":457,"energy_score":8,"pace_tag":"PEAK"},{"scene_number":3,"scene_title":"Spiderwebs and the Marilith Emerges","scene_type":"Combat","line_count":120,"energy_score":9,"pace_tag":"PEAK"},{"scene_number":4,"scene_title":"The Inquisitor in the Dark","scene_type":"Social_Encounter","line_count":147,"energy_score":6,"pace_tag":"STEADY"},{"scene_number":5,"scene_title":"Descent Into the Bleeding Basement","scene_type":"Exploration","line_count":41,"energy_score":5,"pace_tag":"STEADY"},{"scene_number":6,"scene_title":"The Priests Who Would Not Die","scene_type":"Combat","line_count":227,"energy_score":8,"pace_tag":"PEAK"},{"scene_number":7,"scene_title":"Session Wrap and Farewells","scene_type":"Meta","line_count":11,"energy_score":3,"pace_tag":"COOL-DOWN"}],"total_lines":1054},{"session_id":"S037","session_label":"The Crimson Abbot and Strahd's Bargain","scene_count":8,"estimated_runtime_minutes":190,"pace_classification":"Explosive Finale","overall_energy_average":7.1,"scenes":[{"scene_number":1,"scene_title":"Catching Up in Barovia","scene_type":"Recap","line_count":65,"energy_score":4,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"Slaying the Priests of Osibis","scene_type":"Combat","line_count":168,"energy_score":8,"pace_tag":"PEAK"},{"scene_number":3,"scene_title":"Interrogating the Dead Cultist","scene_type":"Social_Encounter","line_count":89,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":4,"scene_title":"The Orb's Tempting Whisper","scene_type":"Exploration","line_count":77,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":5,"scene_title":"Reliquary and the Shambling Mound","scene_type":"Exploration","line_count":61,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":6,"scene_title":"The Crimson Abbot Descends","scene_type":"Combat","line_count":433,"energy_score":9,"pace_tag":"PEAK"},{"scene_number":7,"scene_title":"A Deal with Strahd von Zarovich","scene_type":"Social_Encounter","line_count":157,"energy_score":9.5,"pace_tag":"PEAK"},{"scene_number":8,"scene_title":"One Must Die, the House Demands","scene_type":"Skill_Challenge","line_count":89,"energy_score":7,"pace_tag":"SOLID"}],"total_lines":1139},{"session_id":"S038","session_label":"Escape from Death House","scene_count":6,"estimated_runtime_minutes":181,"pace_classification":"Roller Coaster","overall_energy_average":6.5,"scenes":[{"scene_number":1,"scene_title":"Pre-Game Banter and Praise for Craig","scene_type":"Off_Topic","line_count":5,"energy_score":3,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"Death House Skill Challenge Begins","scene_type":"Skill_Challenge","line_count":30,"energy_score":5,"pace_tag":"WARM-UP"},{"scene_number":3,"scene_title":"Desperate Flight Through Death House","scene_type":"Skill_Challenge","line_count":442,"energy_score":8,"pace_tag":"PEAK"},{"scene_number":4,"scene_title":"Crimbo and the Lorax Interlude","scene_type":"Off_Topic","line_count":44,"energy_score":3,"pace_tag":"VALLEY"},{"scene_number":5,"scene_title":"Escape From the Accursed Manor","scene_type":"Skill_Challenge","line_count":423,"energy_score":9,"pace_tag":"PEAK"},{"scene_number":6,"scene_title":"Strahd's Deal and the Ruined Village","scene_type":"Exposition","line_count":141,"energy_score":6,"pace_tag":"COOL-DOWN"}],"total_lines":1085},{"session_id":"S039","session_label":"The Cursed Goat of Barovia","scene_count":8,"estimated_runtime_minutes":106,"pace_classification":"Late Bloomer","overall_energy_average":5.4,"scenes":[{"scene_number":1,"scene_title":"Pre-Game Banter and Catching Up","scene_type":"Off_Topic","line_count":124,"energy_score":2,"pace_tag":"VALLEY"},{"scene_number":2,"scene_title":"Death House Retrospective and Recap","scene_type":"Meta","line_count":31,"energy_score":4,"pace_tag":"WARM-UP"},{"scene_number":3,"scene_title":"Arrival at the Village of Barovia","scene_type":"Exposition","line_count":44,"energy_score":6,"pace_tag":"STEADY"},{"scene_number":4,"scene_title":"Dire Wolf Standoff and Sack Rescue","scene_type":"Skill_Challenge","line_count":140,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":5,"scene_title":"Flight Over a Broken Village","scene_type":"Exploration","line_count":81,"energy_score":6,"pace_tag":"STEADY"},{"scene_number":6,"scene_title":"Terror at the Tser Pool","scene_type":"Social_Encounter","line_count":83,"energy_score":8,"pace_tag":"PEAK"},{"scene_number":7,"scene_title":"Bargaining for Shelter Under Wagons","scene_type":"Social_Encounter","line_count":101,"energy_score":5,"pace_tag":"STEADY"},{"scene_number":8,"scene_title":"Zombies at the Door and a Legendary Rumo","scene_type":"Exploration","line_count":30,"energy_score":6,"pace_tag":"COOL-DOWN"}],"total_lines":634},{"session_id":"S040","session_label":"Pilfering Madame Eva's Treasures","scene_count":7,"estimated_runtime_minutes":244,"pace_classification":"Steady Climb","overall_energy_average":6.6,"scenes":[{"scene_number":1,"scene_title":"Recap of Barovian Misadventures","scene_type":"Recap","line_count":128,"energy_score":4,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"Character Introductions and Campaign Leg","scene_type":"Meta","line_count":284,"energy_score":6,"pace_tag":"STEADY"},{"scene_number":3,"scene_title":"Zombie Skirmish at Tser Pool","scene_type":"Combat","line_count":94,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":4,"scene_title":"Rest and the Heist Begins","scene_type":"Exploration","line_count":88,"energy_score":5,"pace_tag":"WARM-UP"},{"scene_number":5,"scene_title":"Pilfering Madame Eva's Treasures","scene_type":"Skill_Challenge","line_count":275,"energy_score":8,"pace_tag":"PEAK"},{"scene_number":6,"scene_title":"Second Heist and Eva's Reckoning","scene_type":"Exploration","line_count":340,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":7,"scene_title":"Madame Eva's Gambit for the Deck","scene_type":"Social_Encounter","line_count":252,"energy_score":9,"pace_tag":"PEAK"}],"total_lines":1461},{"session_id":"S041","session_label":"Showdown With Madam Eva","scene_count":8,"estimated_runtime_minutes":248,"pace_classification":"Steady Climb","overall_energy_average":6.6,"scenes":[{"scene_number":1,"scene_title":"Pre-Game Banter and Catch-Up","scene_type":"Off_Topic","line_count":136,"energy_score":3,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"Recap and Resuming the Cliffhanger","scene_type":"Recap","line_count":85,"energy_score":5,"pace_tag":"WARM-UP"},{"scene_number":3,"scene_title":"Showdown With Madam Eva","scene_type":"Combat","line_count":272,"energy_score":8,"pace_tag":"PEAK"},{"scene_number":4,"scene_title":"Plundering Madam Eva's Tent","scene_type":"Exploration","line_count":305,"energy_score":6,"pace_tag":"STEADY"},{"scene_number":5,"scene_title":"Strahd's Warning and Broken Deal","scene_type":"Social_Encounter","line_count":103,"energy_score":8,"pace_tag":"PEAK"},{"scene_number":6,"scene_title":"Planning and the Flight to Ravenloft","scene_type":"Exploration","line_count":157,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":7,"scene_title":"The Heart of Castle Ravenloft","scene_type":"Combat","line_count":358,"energy_score":9,"pace_tag":"PEAK"},{"scene_number":8,"scene_title":"Cliffhanger and Session Wrap-Up","scene_type":"Meta","line_count":73,"energy_score":8,"pace_tag":"COOL-DOWN"}],"total_lines":1489},{"session_id":"S042","session_label":"The Final Battle Against Strahd","scene_count":6,"estimated_runtime_minutes":241,"pace_classification":"Explosive Finale","overall_energy_average":7.2,"scenes":[{"scene_number":1,"scene_title":"Pre-Game Banter and Life Updates","scene_type":"Off_Topic","line_count":117,"energy_score":3,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"Campaign Analytics Dashboard Reveal","scene_type":"Meta","line_count":190,"energy_score":6,"pace_tag":"STEADY"},{"scene_number":3,"scene_title":"Foundry Setup and Session Recap","scene_type":"Recap","line_count":108,"energy_score":5,"pace_tag":"WARM-UP"},{"scene_number":4,"scene_title":"Rahadin's Last Stand","scene_type":"Combat","line_count":520,"energy_score":9,"pace_tag":"PEAK"},{"scene_number":5,"scene_title":"Descent Into the Heart of Sorrow","scene_type":"Combat","line_count":228,"energy_score":9,"pace_tag":"PEAK"},{"scene_number":6,"scene_title":"The Final Battle Against Strahd","scene_type":"Combat","line_count":283,"energy_score":10,"pace_tag":"PEAK"}],"total_lines":1446},{"session_id":"S043","session_label":"The Red Council of Castle Corras","scene_count":8,"estimated_runtime_minutes":164,"pace_classification":"Late Bloomer","overall_energy_average":6.1,"scenes":[{"scene_number":1,"scene_title":"Pre-Game Chatter and Travel Stories","scene_type":"Off_Topic","line_count":150,"energy_score":3,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"Fae Invasion Recap and World State","scene_type":"Recap","line_count":27,"energy_score":5,"pace_tag":"WARM-UP"},{"scene_number":3,"scene_title":"Tier Four Rules and Character Setup","scene_type":"Meta","line_count":172,"energy_score":4,"pace_tag":"VALLEY"},{"scene_number":4,"scene_title":"The Siege Within the Walls","scene_type":"Exposition","line_count":23,"energy_score":6,"pace_tag":"STEADY"},{"scene_number":5,"scene_title":"The Council Debate Over Rations","scene_type":"Social_Encounter","line_count":137,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":6,"scene_title":"Mass Suggestion and the Matron's Ritual","scene_type":"Social_Encounter","line_count":172,"energy_score":9,"pace_tag":"PEAK"},{"scene_number":7,"scene_title":"Aftermath and the Cover-Up","scene_type":"Social_Encounter","line_count":263,"energy_score":8,"pace_tag":"PEAK"},{"scene_number":8,"scene_title":"The Druid's Warning at the Dome","scene_type":"Exploration","line_count":39,"energy_score":6,"pace_tag":"COOL-DOWN"}],"total_lines":983},{"session_id":"S044","session_label":"Propaganda Wars and the Master of Whispers","scene_count":10,"estimated_runtime_minutes":194,"pace_classification":"Roller Coaster","overall_energy_average":6.5,"scenes":[{"scene_number":1,"scene_title":"Pre-Game Banter and Session Recap","scene_type":"Recap","line_count":149,"energy_score":4,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"Council Room Cleanup and Cover-Up","scene_type":"Social_Encounter","line_count":136,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":3,"scene_title":"Orla Communes With the Dying Druid","scene_type":"Exposition","line_count":13,"energy_score":6,"pace_tag":"STEADY"},{"scene_number":4,"scene_title":"Waking the Master of Whispers","scene_type":"Social_Encounter","line_count":95,"energy_score":9,"pace_tag":"PEAK"},{"scene_number":5,"scene_title":"Propaganda War in the Refugee Camp","scene_type":"Social_Encounter","line_count":139,"energy_score":8,"pace_tag":"PEAK"},{"scene_number":6,"scene_title":"Gifts and a Gruesome Farewell","scene_type":"Character_Management","line_count":109,"energy_score":5,"pace_tag":"VALLEY"},{"scene_number":7,"scene_title":"Ash Hunts for Spark in the Feywild","scene_type":"Exploration","line_count":53,"energy_score":8,"pace_tag":"SOLID"},{"scene_number":8,"scene_title":"Rat Infiltration of the Warehouse","scene_type":"Exploration","line_count":93,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":9,"scene_title":"BWB Plans a Counter-Offensive","scene_type":"Character_Management","line_count":164,"energy_score":5,"pace_tag":"VALLEY"},{"scene_number":10,"scene_title":"Trial by Truth in the Courtyard","scene_type":"Social_Encounter","line_count":212,"energy_score":9,"pace_tag":"PEAK"}],"total_lines":1163},{"session_id":"S045","session_label":"Massacre in the Courtyard","scene_count":8,"estimated_runtime_minutes":194,"pace_classification":"Front-Loaded","overall_energy_average":6.8,"scenes":[{"scene_number":1,"scene_title":"Pre-Game Banter and Technical Setup","scene_type":"Off_Topic","line_count":120,"energy_score":3,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"The Red Council Recap","scene_type":"Recap","line_count":78,"energy_score":5,"pace_tag":"WARM-UP"},{"scene_number":3,"scene_title":"Trial by Crowd in the Courtyard","scene_type":"Social_Encounter","line_count":83,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":4,"scene_title":"Massacre in the Muddy Courtyard","scene_type":"Combat","line_count":423,"energy_score":10,"pace_tag":"PEAK"},{"scene_number":5,"scene_title":"Counting the Dead and Spoils","scene_type":"Character_Management","line_count":104,"energy_score":6,"pace_tag":"COOL-DOWN"},{"scene_number":6,"scene_title":"The Butcher Unmasked as a Construct","scene_type":"Exploration","line_count":140,"energy_score":8,"pace_tag":"PEAK"},{"scene_number":7,"scene_title":"The Warehouse Trail Goes Cold","scene_type":"Exploration","line_count":150,"energy_score":5,"pace_tag":"VALLEY"},{"scene_number":8,"scene_title":"Funeral, Cliffhanger, and the Matron's S","scene_type":"Social_Encounter","line_count":67,"energy_score":7,"pace_tag":"SOLID"}],"total_lines":1165},{"session_id":"S046","session_label":"Departure to the Feywild","scene_count":8,"estimated_runtime_minutes":164,"pace_classification":"Slow Burn","overall_energy_average":6.0,"scenes":[{"scene_number":1,"scene_title":"Pre-Game Politics and Real-World Talk","scene_type":"Off_Topic","line_count":80,"energy_score":3,"pace_tag":"WARM-UP"},{"scene_number":2,"scene_title":"Session Quiz and Recap","scene_type":"Recap","line_count":93,"energy_score":5,"pace_tag":"WARM-UP"},{"scene_number":3,"scene_title":"Confrontation with the Matron","scene_type":"Social_Encounter","line_count":293,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":4,"scene_title":"Sourdough Diplomacy During the Break","scene_type":"Off_Topic","line_count":74,"energy_score":3,"pace_tag":"VALLEY"},{"scene_number":5,"scene_title":"The Matron's Bargain for Power","scene_type":"Social_Encounter","line_count":72,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":6,"scene_title":"Zibblebottom's Revelations and Invention","scene_type":"Exposition","line_count":143,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":7,"scene_title":"Departure to the Feywild","scene_type":"Exploration","line_count":55,"energy_score":7,"pace_tag":"SOLID"},{"scene_number":8,"scene_title":"The Wild Hunt of Cernunnos","scene_type":"Skill_Challenge","line_count":174,"energy_score":9,"pace_tag":"PEAK"}],"total_lines":984}];
+
+// ── COLOR MAP ──
+const TYPE_COLORS = {
+  Combat:               '#ef4444',
+  Social_Encounter:     '#BA68C8',
+  Exploration:          '#4DB6AC',
+  Exposition:           '#4A90D9',
+  Skill_Challenge:      '#fbbf24',
+  Character_Management: '#81C784',
+  Ritual:               '#ad6bff',
+  Puzzle:               '#FF8A65',
+  Meta:                 '#3a3a50',
+  Off_Topic:            '#3a3a50',
+  Recap:                '#3a3a50'
+};
+
+const TYPE_LABELS = {
+  Combat: 'Combat',
+  Social_Encounter: 'Social',
+  Exploration: 'Exploration',
+  Exposition: 'Exposition',
+  Skill_Challenge: 'Skill Challenge',
+  Character_Management: 'Char Mgmt',
+  Ritual: 'Ritual',
+  Puzzle: 'Puzzle',
+  Meta: 'Meta',
+  Off_Topic: 'Off Topic',
+  Recap: 'Recap'
+};
+
+// ── STATS ──
+const totalScenes = DATA.reduce((a, s) => a + s.scene_count, 0);
+const totalLines = DATA.reduce((a, s) => a + s.total_lines, 0);
+const avgScenes = (totalScenes / DATA.length).toFixed(1);
+
+// Scene type counts
+const typeCounts = {};
+DATA.forEach(s => s.scenes.forEach(sc => {
+  typeCounts[sc.scene_type] = (typeCounts[sc.scene_type] || 0) + 1;
+}));
+const sortedTypes = Object.entries(typeCounts).sort((a, b) => b[1] - a[1]);
+const mostCommon = TYPE_LABELS[sortedTypes[0][0]] || sortedTypes[0][0];
+
+// Build stats bar
+const statsBar = document.getElementById('statsBar');
+const stats = [
+  { label: 'Total Scenes', value: totalScenes, accent: true },
+  { label: 'Sessions', value: DATA.length },
+  { label: 'Avg per Session', value: avgScenes },
+  { label: 'Total Lines', value: totalLines.toLocaleString() },
+  { label: 'Most Common', value: mostCommon },
+];
+stats.forEach(st => {
+  const card = document.createElement('div');
+  card.className = 'stat-card';
+  card.innerHTML = `<div class="stat-label">${st.label}</div><div class="stat-value ${st.accent ? 'accent' : ''}">${st.value}</div>`;
+  statsBar.appendChild(card);
+});
+
+// Build type bar
+const typeBar = document.getElementById('typeBar');
+sortedTypes.forEach(([type, count]) => {
+  const seg = document.createElement('div');
+  seg.className = 'type-bar-seg';
+  seg.style.flex = count;
+  seg.style.background = TYPE_COLORS[type] || '#3a3a50';
+  seg.title = `${TYPE_LABELS[type] || type}: ${count} scenes`;
+  typeBar.appendChild(seg);
+});
+
+// Build legend
+const legendEl = document.getElementById('legend');
+const legendOrder = ['Combat','Social_Encounter','Exploration','Exposition','Skill_Challenge','Character_Management','Ritual','Puzzle','Meta','Off_Topic','Recap'];
+legendOrder.forEach(type => {
+  if (!typeCounts[type]) return;
+  const item = document.createElement('div');
+  item.className = 'legend-item';
+  item.innerHTML = `<div class="legend-swatch" style="background:${TYPE_COLORS[type]};color:${TYPE_COLORS[type]}"></div>${TYPE_LABELS[type]} (${typeCounts[type]})`;
+  legendEl.appendChild(item);
+});
+
+// ── TREEMAP ──
+const container = document.getElementById('treemap');
+const backBtn = document.getElementById('backBtn');
+const tooltip = document.getElementById('tooltip');
+const breadcrumb = document.getElementById('breadcrumb');
+
+const TREEMAP_HEIGHT = 680;
+let containerWidth;
+let currentView = 'campaign'; // or session_id
+let currentSessionData = null;
+
+function getWidth() {
+  return container.clientWidth;
+}
+
+function energyToOpacity(energy, type) {
+  // Map energy 1-10 to opacity range
+  const dimTypes = ['Meta', 'Off_Topic', 'Recap'];
+  const minOp = dimTypes.includes(type) ? 0.25 : 0.35;
+  const maxOp = 1.0;
+  const e = Math.max(1, Math.min(10, energy));
+  return minOp + (maxOp - minOp) * ((e - 1) / 9);
+}
+
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return { r, g, b };
+}
+
+function buildCampaignView() {
+  currentView = 'campaign';
+  currentSessionData = null;
+  backBtn.classList.remove('visible');
+  breadcrumb.innerHTML = '<span class="bc-active">Campaign</span>';
+  container.style.height = TREEMAP_HEIGHT + 'px';
+
+  // Remove old tiles
+  container.querySelectorAll('.tile').forEach(t => t.remove());
+
+  const width = getWidth();
+
+  // Build hierarchy
+  const root = d3.hierarchy({
+    name: 'campaign',
+    children: DATA.map(s => ({
+      name: s.session_id,
+      label: s.session_label,
+      data: s,
+      value: s.total_lines
+    }))
+  }).sum(d => d.value).sort((a, b) => b.value - a.value);
+
+  d3.treemap()
+    .size([width, TREEMAP_HEIGHT])
+    .tile(d3.treemapSquarify.ratio(1.2))
+    .paddingOuter(2)
+    .paddingInner(2)
+    (root);
+
+  const leaves = root.leaves();
+
+  leaves.forEach((leaf, i) => {
+    const s = leaf.data.data;
+    const w = leaf.x1 - leaf.x0;
+    const h = leaf.y1 - leaf.y0;
+    if (w < 1 || h < 1) return;
+
+    // Compute dominant type color for the session
+    const typeLines = {};
+    s.scenes.forEach(sc => {
+      typeLines[sc.scene_type] = (typeLines[sc.scene_type] || 0) + sc.line_count;
+    });
+    const dominantType = Object.entries(typeLines).sort((a, b) => b[1] - a[1])[0][0];
+    const baseColor = TYPE_COLORS[dominantType] || '#3a3a50';
+    const rgb = hexToRgb(baseColor);
+    const op = energyToOpacity(s.overall_energy_average, dominantType);
+
+    const tile = document.createElement('div');
+    tile.className = 'tile';
+    tile.style.left = leaf.x0 + 'px';
+    tile.style.top = leaf.y0 + 'px';
+    tile.style.width = w + 'px';
+    tile.style.height = h + 'px';
+    tile.style.background = `rgba(${rgb.r},${rgb.g},${rgb.b},${op})`;
+    tile.style.boxShadow = `inset 0 0 ${Math.min(w,h)*0.3}px rgba(${rgb.r},${rgb.g},${rgb.b},0.15)`;
+    tile.style.opacity = 0;
+
+    // Label
+    const label = document.createElement('div');
+    label.className = 'tile-label';
+    const sidShort = s.session_id;
+    if (w > 45 && h > 28) {
+      label.innerHTML = `<div class="tile-label-sid">${sidShort}</div>`;
+      if (w > 80 && h > 48) {
+        const nameShort = s.session_label.length > 30 ? s.session_label.slice(0, 28) + '...' : s.session_label;
+        label.innerHTML += `<div class="tile-label-name">${nameShort}</div>`;
+      }
+    }
+    tile.appendChild(label);
+
+    // Hover
+    tile.addEventListener('mouseenter', (e) => showTooltip(e, 'session', s));
+    tile.addEventListener('mousemove', (e) => moveTooltip(e));
+    tile.addEventListener('mouseleave', hideTooltip);
+
+    // Click to zoom
+    tile.addEventListener('click', () => zoomToSession(s));
+
+    container.appendChild(tile);
+
+    // Stagger entrance
+    setTimeout(() => {
+      tile.style.opacity = 1;
+    }, 30 + i * 12);
+  });
+}
+
+function zoomToSession(session) {
+  currentView = session.session_id;
+  currentSessionData = session;
+  backBtn.classList.add('visible');
+  breadcrumb.innerHTML = `<span onclick="buildCampaignView()">Campaign</span><span class="bc-sep">&rsaquo;</span><span class="bc-active">${session.session_id}: ${session.session_label}</span>`;
+
+  // Remove old tiles
+  container.querySelectorAll('.tile').forEach(t => t.remove());
+
+  const width = getWidth();
+  container.style.height = TREEMAP_HEIGHT + 'px';
+
+  // Build hierarchy for this session's scenes
+  const root = d3.hierarchy({
+    name: session.session_id,
+    children: session.scenes.map(sc => ({
+      name: sc.scene_title,
+      data: sc,
+      value: sc.line_count
+    }))
+  }).sum(d => d.value).sort((a, b) => b.value - a.value);
+
+  d3.treemap()
+    .size([width, TREEMAP_HEIGHT])
+    .tile(d3.treemapSquarify.ratio(1.1))
+    .paddingOuter(4)
+    .paddingInner(3)
+    (root);
+
+  const leaves = root.leaves();
+
+  leaves.forEach((leaf, i) => {
+    const sc = leaf.data.data;
+    const w = leaf.x1 - leaf.x0;
+    const h = leaf.y1 - leaf.y0;
+    if (w < 1 || h < 1) return;
+
+    const baseColor = TYPE_COLORS[sc.scene_type] || '#3a3a50';
+    const rgb = hexToRgb(baseColor);
+    const op = energyToOpacity(sc.energy_score, sc.scene_type);
+
+    const tile = document.createElement('div');
+    tile.className = 'tile';
+    tile.style.left = leaf.x0 + 'px';
+    tile.style.top = leaf.y0 + 'px';
+    tile.style.width = w + 'px';
+    tile.style.height = h + 'px';
+    tile.style.background = `rgba(${rgb.r},${rgb.g},${rgb.b},${op})`;
+    tile.style.boxShadow = `inset 0 0 ${Math.min(w,h)*0.4}px rgba(${rgb.r},${rgb.g},${rgb.b},0.2), 0 0 ${op > 0.7 ? 8 : 0}px rgba(${rgb.r},${rgb.g},${rgb.b},${op * 0.3})`;
+    tile.style.opacity = 0;
+    tile.style.cursor = 'default';
+
+    // Label
+    const label = document.createElement('div');
+    label.className = 'tile-label';
+
+    if (w > 50 && h > 30) {
+      const maxChars = Math.floor(w / 6.5);
+      let title = sc.scene_title;
+      if (title.length > maxChars) title = title.slice(0, maxChars - 2) + '...';
+      label.innerHTML = `<div class="tile-label-scene">${title}</div>`;
+      if (w > 80 && h > 55) {
+        label.innerHTML += `<div class="tile-label-type">${TYPE_LABELS[sc.scene_type] || sc.scene_type}</div>`;
+      }
+    }
+
+    tile.appendChild(label);
+
+    // Hover
+    tile.addEventListener('mouseenter', (e) => showTooltip(e, 'scene', sc, session));
+    tile.addEventListener('mousemove', (e) => moveTooltip(e));
+    tile.addEventListener('mouseleave', hideTooltip);
+
+    container.appendChild(tile);
+
+    // Stagger entrance
+    setTimeout(() => {
+      tile.style.opacity = 1;
+    }, 40 + i * 30);
+  });
+}
+
+// ── TOOLTIP ──
+function showTooltip(e, level, data, session) {
+  let html = '';
+  if (level === 'session') {
+    const s = data;
+    const typeLines = {};
+    s.scenes.forEach(sc => { typeLines[sc.scene_type] = (typeLines[sc.scene_type] || 0) + sc.line_count; });
+    const dominant = Object.entries(typeLines).sort((a, b) => b[1] - a[1])[0][0];
+    html = `
+      <div class="tooltip-title" style="color:${TYPE_COLORS[dominant]}">${s.session_id}: ${s.session_label}</div>
+      <div class="tooltip-row"><span>Scenes</span><span class="val">${s.scene_count}</span></div>
+      <div class="tooltip-row"><span>Runtime</span><span class="val">${s.estimated_runtime_minutes} min</span></div>
+      <div class="tooltip-row"><span>Pace</span><span class="val">${s.pace_classification}</span></div>
+      <div class="tooltip-row"><span>Energy Avg</span><span class="val">${s.overall_energy_average}/10</span></div>
+      <div class="tooltip-row"><span>Total Lines</span><span class="val">${s.total_lines.toLocaleString()}</span></div>
+      <div class="tooltip-energy-bar"><div class="tooltip-energy-fill" style="width:${s.overall_energy_average * 10}%;background:${TYPE_COLORS[dominant]}"></div></div>
+      <div style="margin-top:6px;font-size:10px;color:#555;font-style:italic">Click to zoom in</div>
+    `;
+  } else {
+    const sc = data;
+    const color = TYPE_COLORS[sc.scene_type] || '#3a3a50';
+    html = `
+      <div class="tooltip-title" style="color:${color}">${sc.scene_title}</div>
+      <div class="tooltip-type" style="background:${color}33;color:${color};border:1px solid ${color}55">${TYPE_LABELS[sc.scene_type] || sc.scene_type}</div>
+      <div style="margin-top:6px">
+        <div class="tooltip-row"><span>Energy</span><span class="val">${sc.energy_score}/10</span></div>
+        <div class="tooltip-row"><span>Pace</span><span class="val">${sc.pace_tag}</span></div>
+        <div class="tooltip-row"><span>Lines</span><span class="val">${sc.line_count.toLocaleString()}</span></div>
+        <div class="tooltip-row"><span>Scene #</span><span class="val">${sc.scene_number}${session ? ' of ' + session.scene_count : ''}</span></div>
+      </div>
+      <div class="tooltip-energy-bar"><div class="tooltip-energy-fill" style="width:${sc.energy_score * 10}%;background:${color}"></div></div>
+    `;
+  }
+  tooltip.innerHTML = html;
+  tooltip.classList.add('visible');
+  moveTooltip(e);
+}
+
+function moveTooltip(e) {
+  const pad = 14;
+  let x = e.clientX + pad;
+  let y = e.clientY + pad;
+  const tw = tooltip.offsetWidth;
+  const th = tooltip.offsetHeight;
+  if (x + tw > window.innerWidth - 10) x = e.clientX - tw - pad;
+  if (y + th > window.innerHeight - 10) y = e.clientY - th - pad;
+  tooltip.style.left = x + 'px';
+  tooltip.style.top = y + 'px';
+}
+
+function hideTooltip() {
+  tooltip.classList.remove('visible');
+}
+
+// Back button
+backBtn.addEventListener('click', () => {
+  buildCampaignView();
+});
+
+// Keyboard
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && currentView !== 'campaign') {
+    buildCampaignView();
+  }
+});
+
+// Resize
+let resizeTimeout;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimeout);
+  resizeTimeout = setTimeout(() => {
+    if (currentView === 'campaign') buildCampaignView();
+    else if (currentSessionData) zoomToSession(currentSessionData);
+  }, 200);
+});
+
+// Initial render
+buildCampaignView();
+</script>
+
+</body>
+</html>

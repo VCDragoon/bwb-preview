@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Session Waveforms &mdash; BWB Campaign</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600&family=Barlow:wght@300;400;500&family=JetBrains+Mono:wght@400;500&family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{background:#06060c;color:#e0e0e8;font-family:'Barlow',sans-serif;overflow-x:hidden}
+body{min-height:100vh;background:#06060c;position:relative}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(255,255,255,0.015) 2px,rgba(255,255,255,0.015) 4px)}
+
+.header{padding:32px 40px 12px;position:relative;z-index:10}
+.header h1{font-family:'Bebas Neue',sans-serif;font-size:3.4rem;letter-spacing:8px;
+  background:linear-gradient(90deg,#FFD700,#FFA500,#FF6347);-webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;line-height:1}
+.header .subtitle{font-family:'Barlow Condensed',sans-serif;font-size:0.95rem;
+  color:#666680;letter-spacing:4px;text-transform:uppercase;margin-top:6px}
+.header .concept{font-family:'Barlow',sans-serif;font-size:0.75rem;color:#444460;
+  margin-top:4px;max-width:700px;line-height:1.5}
+
+.controls{display:flex;align-items:center;gap:12px;padding:10px 40px;
+  background:rgba(16,16,35,0.85);border-top:1px solid rgba(255,255,255,0.04);
+  border-bottom:1px solid rgba(255,255,255,0.04);position:sticky;top:0;z-index:100;
+  backdrop-filter:blur(16px)}
+.controls button{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);
+  color:#aaaacc;padding:5px 14px;border-radius:3px;cursor:pointer;
+  font-family:'Barlow Condensed',sans-serif;font-size:0.8rem;letter-spacing:1.5px;
+  text-transform:uppercase;transition:all 0.2s}
+.controls button:hover{background:rgba(255,215,0,0.12);border-color:rgba(255,215,0,0.4);color:#FFD700}
+.controls button.active{background:rgba(255,215,0,0.15);border-color:#FFD700;color:#FFD700;
+  box-shadow:0 0 10px rgba(255,215,0,0.15)}
+.time-display{font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:#FFD700;min-width:90px;text-align:center}
+.speed-label{font-family:'Barlow Condensed',sans-serif;color:#555570;font-size:0.75rem;letter-spacing:2px}
+.separator{width:1px;height:20px;background:rgba(255,255,255,0.06)}
+
+.overview-wrap{padding:12px 40px 8px;background:rgba(12,12,28,0.5)}
+.overview-title{font-family:'Barlow Condensed',sans-serif;font-size:0.7rem;color:#555570;
+  letter-spacing:3px;text-transform:uppercase;margin-bottom:4px}
+.overview-canvas-box{position:relative;border:1px solid rgba(255,255,255,0.03);border-radius:4px;overflow:hidden}
+#overview-canvas{width:100%;height:50px;display:block}
+#overview-playhead{position:absolute;top:0;bottom:0;width:2px;left:0;
+  background:linear-gradient(180deg,rgba(255,215,0,0.9),rgba(255,215,0,0.2));pointer-events:none;
+  transition:none;z-index:5}
+
+#main-container{position:relative}
+.track-wrapper{position:relative}
+.track-row{display:flex;align-items:stretch;position:relative;
+  border-bottom:1px solid rgba(255,255,255,0.015);cursor:pointer;
+  transition:background 0.3s ease}
+.track-row:nth-child(odd){background:rgba(255,255,255,0.008)}
+.track-row:hover{background:rgba(255,215,0,0.025)}
+.track-row.expanded{background:rgba(255,215,0,0.04);border-bottom-color:rgba(255,215,0,0.08)}
+
+.lbl-left{width:140px;min-width:140px;padding:0 14px;text-align:right;
+  display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:0;
+  background:inherit;position:relative;z-index:5}
+.lbl-left .sid{font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:#FFD700;font-weight:500;
+  text-shadow:0 0 8px rgba(255,215,0,0.3)}
+.lbl-left .sname{font-family:'Barlow',sans-serif;font-size:0.5rem;color:#444460;
+  max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.2}
+
+.canvas-wrap{flex:1;position:relative;overflow:hidden;min-width:0}
+.canvas-wrap canvas{display:block;width:100%}
+
+.lbl-right{width:120px;min-width:120px;padding:0 12px;
+  display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:0;
+  background:inherit;position:relative;z-index:5}
+.lbl-right .pace{font-family:'Barlow Condensed',sans-serif;font-size:0.6rem;color:#32CD32;
+  text-shadow:0 0 6px rgba(50,205,50,0.2)}
+.lbl-right .arc{font-family:'Barlow Condensed',sans-serif;font-size:0.55rem;color:#9370DB}
+
+.peak-flag{position:absolute;top:1px;z-index:10;pointer-events:none;transform:translateX(-50%)}
+.peak-flag svg{filter:drop-shadow(0 0 3px rgba(255,99,71,0.6))}
+
+.detail-panel{overflow:hidden;max-height:0;transition:max-height 0.5s cubic-bezier(0.4,0,0.2,1);
+  background:rgba(8,8,22,0.7)}
+.detail-panel.open{max-height:300px}
+.detail-inner{padding:10px 14px 10px 154px;display:flex;flex-wrap:wrap;gap:4px 10px;
+  border-top:1px solid rgba(255,215,0,0.06)}
+.detail-chip{font-family:'Barlow',sans-serif;font-size:0.6rem;color:#aaaacc;
+  padding:3px 8px;border-radius:12px;border:1px solid rgba(255,255,255,0.06);
+  display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,0.02);
+  transition:background 0.2s}
+.detail-chip:hover{background:rgba(255,255,255,0.06)}
+.detail-chip .cdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.detail-chip .cval{font-family:'JetBrains Mono',monospace;font-size:0.6rem;opacity:0.7}
+.detail-chip .clbl{max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.playhead-line{position:absolute;top:0;width:2px;pointer-events:none;z-index:50;
+  background:linear-gradient(180deg,rgba(255,215,0,0.8),rgba(255,215,0,0.1));
+  box-shadow:0 0 8px rgba(255,215,0,0.3)}
+
+.legend-bar{display:flex;flex-wrap:wrap;gap:6px 14px;padding:14px 40px;
+  background:rgba(12,12,28,0.4);border-top:1px solid rgba(255,255,255,0.03)}
+.legend-item{display:flex;align-items:center;gap:4px;font-family:'Barlow',sans-serif;
+  font-size:0.6rem;color:#666680}
+.legend-sw{width:14px;height:5px;border-radius:2px}
+
+.stats-footer{padding:18px 40px;display:flex;gap:28px;flex-wrap:wrap;
+  border-top:1px solid rgba(255,255,255,0.03);background:rgba(8,8,20,0.5)}
+.stat-box{text-align:center}
+.stat-box .sv{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:1px;
+  background:linear-gradient(135deg,#FFD700,#FF6347);-webkit-background-clip:text;
+  -webkit-text-fill-color:transparent}
+.stat-box .sl{font-family:'Barlow Condensed',sans-serif;font-size:0.6rem;
+  color:#555570;letter-spacing:2px;text-transform:uppercase}
+
+.tooltip{position:fixed;z-index:10000;pointer-events:none;
+  background:rgba(6,6,14,0.96);border:1px solid rgba(255,215,0,0.25);
+  border-radius:6px;padding:10px 14px;max-width:340px;
+  backdrop-filter:blur(16px);box-shadow:0 8px 32px rgba(0,0,0,0.7);display:none}
+.tooltip .tt-sid{font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:#FFD700;margin-bottom:2px}
+.tooltip .tt-win{font-family:'Bebas Neue',sans-serif;font-size:1.05rem;color:#e0e0e8;letter-spacing:1px}
+.tooltip .tt-emo{font-family:'Barlow Condensed',sans-serif;font-size:0.8rem;margin:2px 0}
+.tooltip .tt-score{font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:#8888aa}
+.tooltip .tt-peak{font-family:'Barlow',sans-serif;font-size:0.65rem;color:#FF6347;
+  margin-top:6px;padding-top:5px;border-top:1px solid rgba(255,255,255,0.06)}
+
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>SESSION WAVEFORMS</h1>
+  <div class="subtitle">46 Sessions &bull; Emotional Amplitude Over Time</div>
+  <div class="concept">Each session rendered as an audio waveform. Amplitude = sentiment intensity. Color = dominant emotion. Click any track to expand.</div>
+</div>
+
+<div class="controls" id="controls">
+  <button id="btn-play" class="active" title="Play">&#9654; Play</button>
+  <button id="btn-pause" title="Pause">&#10074;&#10074; Pause</button>
+  <button id="btn-reset" title="Reset">&#8634; Reset</button>
+  <div class="separator"></div>
+  <span class="time-display" id="time-display">0.0s / 10.0s</span>
+  <div class="separator"></div>
+  <span class="speed-label">Speed</span>
+  <button class="speed-btn" data-speed="5">5s</button>
+  <button class="speed-btn active" data-speed="10">10s</button>
+  <button class="speed-btn" data-speed="20">20s</button>
+  <button class="speed-btn" data-speed="30">30s</button>
+</div>
+
+<div class="overview-wrap">
+  <div class="overview-title">Campaign Aggregate Waveform</div>
+  <div class="overview-canvas-box">
+    <canvas id="overview-canvas"></canvas>
+    <div id="overview-playhead"></div>
+  </div>
+</div>
+
+<div id="main-container"></div>
+
+<div class="legend-bar" id="legend-bar"></div>
+<div class="stats-footer" id="stats-footer"></div>
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// ======== DATA ========
+const DATA = [{"sid":"S001","label":"Castle Corras: The Royal Progress","arc":"Rollercoaster","pace":"Late Bloomer","peak":{"title":"Corras Nat-20 Recruits the Royal Smasher","pct":72,"type":"Dice Peak"},"w":[{"p":0.0,"s":-1.5,"e":"Frustration/Irritation","l":"Technical Troubleshooting"},{"p":3.3,"s":3.0,"e":"Curiosity/Wonder","l":"Morty's Introduction"},{"p":100.0,"s":6.0,"e":"Triumph/Elation","l":"Return to Castle"}]},{"sid":"S002","label":"Castle Corras Management and Mine Exploration","arc":"Rollercoaster","pace":"Steady Climb","peak":{"title":"The Great Troll Loincloth Coin Heist","pct":85,"type":"Chaos Peak"},"w":[{"p":0.0,"s":3.0,"e":"Curiosity/Wonder","l":"DM Explains Castle Turns"},{"p":11.1,"s":2.0,"e":"Determination/Resolve","l":"Discussion on Building Priorities"},{"p":22.2,"s":1.5,"e":"Anticipation","l":"Receiving Lieutenant Reports"},{"p":33.3,"s":0.5,"e":"Confusion/Surprise","l":"Rolling for Followers"},{"p":44.4,"s":-1.0,"e":"Frustration/Irritation","l":"Deciding on Specialists and Missions"},{"p":55.6,"s":1.0,"e":"Curiosity/Wonder","l":"Exploring the Mine Shaft"},{"p":66.7,"s":-2.0,"e":"Fear/Dread","l":"Encounter with the Mysterious Light"},{"p":77.8,"s":0.0,"e":"Determination/Resolve","l":"Troll Distraction Plan"},{"p":88.9,"s":2.5,"e":"Triumph/Elation","l":"Executing the Coin Switch"},{"p":100.0,"s":-1.5,"e":"Suspense/Unease","l":"Troll Fight Ensues"}]},{"sid":"S003","label":"The Beholder's Lair and Castle Upgrades","arc":"Rollercoaster","pace":"Roller Coaster","peak":{"title":"Ave's Performance Check Hits 30 for Beholder","pct":45,"type":"Dice Peak"},"w":[{"p":0.0,"s":3.5,"e":"Curiosity/Wonder","l":"Planning the Approach"},{"p":3.5,"s":1.5,"e":"Tension/Anxiety","l":"Dispel Magic Attempt"},{"p":100.0,"s":-1.5,"e":"Suspense/Unease","l":"Cliffhanger Betrayal"}]},{"sid":"S004","label":"Goblin Battle and Mysteries","arc":"Rollercoaster","pace":"Front-Loaded","peak":{"title":"Ave Polymorphs Into a T-Rex","pct":50,"type":"Combat"},"w":[{"p":0.0,"s":3.0,"e":"Curiosity/Wonder","l":"Planning False Trails"},{"p":3.5,"s":5.0,"e":"Joy/Excitement","l":"Splash Page Excitement"},{"p":6.9,"s":-2.0,"e":"Tension/Anxiety","l":"Combat Setup"},{"p":10.3,"s":-4.0,"e":"Fear/Dread","l":"Goblin Onslaught"},{"p":13.8,"s":-1.0,"e":"Tension/Anxiety","l":"Healing Efforts"},{"p":17.2,"s":4.0,"e":"Triumph/Elation","l":"Billabong's Rampage"},{"p":20.7,"s":-3.0,"e":"Fear/Dread","l":"Fomorian Threat"},{"p":24.1,"s":0.0,"e":"Neutral","l":"Corras's Sneak Attack"},{"p":27.6,"s":2.0,"e":"Amusement/Laughter","l":"Ave's T-Rex Transformation"},{"p":31.0,"s":6.0,"e":"Triumph/Elation","l":"Sarlumon's Arrival"},{"p":34.5,"s":0.0,"e":"Curiosity/Wonder","l":"Post-Battle Discoveries"},{"p":37.9,"s":2.0,"e":"Satisfaction/Relief","l":"Return to Castle Corras"},{"p":41.4,"s":-2.0,"e":"Tension/Anxiety","l":"Xalvador's Message"},{"p":44.8,"s":0.0,"e":"Neutral","l":"Ash's Scrying"},{"p":48.3,"s":-3.0,"e":"Confusion/Surprise","l":"The Tome's Revelation"},{"p":51.7,"s":-1.0,"e":"Suspense/Unease","l":"Raven Investigation"},{"p":55.2,"s":1.0,"e":"Curiosity/Wonder","l":"Raven Revealed"},{"p":58.6,"s":2.0,"e":"Compassion/Empathy","l":"Follower's Confession"},{"p":62.1,"s":0.0,"e":"Determination/Resolve","l":"Decision for Lumin"},{"p":65.5,"s":-2.0,"e":"Suspense/Unease","l":"Entering the Crypt"},{"p":69.0,"s":-4.0,"e":"Fear/Dread","l":"Trapped in Darkness"},{"p":72.4,"s":-3.0,"e":"Suspense/Unease","l":"Cliffhanger End"},{"p":75.9,"s":0.0,"e":"Neutral","l":"Empty for Continuity"},{"p":79.3,"s":0.0,"e":"Neutral","l":"Empty for Continuity"},{"p":82.8,"s":0.0,"e":"Neutral","l":"Empty for Continuity"},{"p":86.2,"s":0.0,"e":"Neutral","l":"Empty for Continuity"},{"p":89.7,"s":0.0,"e":"Neutral","l":"Empty for Continuity"},{"p":93.1,"s":0.0,"e":"Neutral","l":"Empty for Continuity"},{"p":96.5,"s":0.0,"e":"Neutral","l":"Empty for Continuity"},{"p":100.0,"s":-3.0,"e":"Suspense/Unease","l":"Session End"}]},{"sid":"S005","label":"Session with Lilith's followers and burial site encounter","arc":"Rollercoaster","pace":"Explosive Finale","peak":{"title":"Corras Leaps Off Billabong to Sever Wing","pct":82,"type":"Combat"},"w":[{"p":0.0,"s":0.5,"e":"Curiosity/Wonder","l":"Session Start"},{"p":11.1,"s":0.2,"e":"Satisfaction/Relief","l":"DM Adjusts Starting Point"},{"p":22.2,"s":-1.0,"e":"Tension/Anxiety","l":"Lilith's Followers Arrive"},{"p":33.3,"s":0.5,"e":"Amusement/Laughter","l":"Handling Brother Allred"},{"p":44.4,"s":0.3,"e":"Anticipation","l":"Orla's Mentor Evaluation Prep"},{"p":55.6,"s":1.0,"e":"Amusement/Laughter","l":"Forgery and Preparation"},{"p":66.7,"s":0.8,"e":"Amusement/Laughter","l":"Mentor Arrives and Evaluation"},{"p":77.8,"s":0.0,"e":"Confusion/Surprise","l":"Mentor Departs"},{"p":88.9,"s":-0.5,"e":"Tension/Anxiety","l":"Blight Discussion"},{"p":100.0,"s":0.2,"e":"Anticipation","l":"Travel to Lumin Burial Site"}]},{"sid":"S006","label":"The Crypt of the Archmage","arc":"Rollercoaster","pace":"Explosive Finale","peak":{"title":"Ave's Tiny Hut Saves Everyone from Collapse","pct":82,"type":"Dramatic Peak"},"w":[{"p":0.0,"s":-1.5,"e":"Tension/Anxiety","l":"Session Start"},{"p":3.5,"s":-2.5,"e":"Fear/Dread","l":"Fear Effect"},{"p":6.9,"s":-3.0,"e":"Fear/Dread","l":"Zombies Rise"},{"p":10.3,"s":0.5,"e":"Determination/Resolve","l":"Lilith's Spirit Guardians"},{"p":13.8,"s":2.0,"e":"Triumph/Elation","l":"Billabong Attacks"},{"p":17.2,"s":0.0,"e":"Curiosity/Wonder","l":"Ash Sees Invisibility"},{"p":20.7,"s":1.5,"e":"Satisfaction/Relief","l":"Orla's Spirit Totem"},{"p":24.1,"s":-2.0,"e":"Frustration/Irritation","l":"Corras Trapped"},{"p":27.6,"s":-5.0,"e":"Fear/Dread","l":"Archmage Time Stop"},{"p":31.0,"s":-4.0,"e":"Fear/Dread","l":"Fireball Blast"},{"p":34.5,"s":-3.0,"e":"Fear/Dread","l":"Cone of Cold"},{"p":37.9,"s":1.0,"e":"Triumph/Elation","l":"Mirror Image Countered"},{"p":41.4,"s":3.0,"e":"Triumph/Elation","l":"Billabong Returns"},{"p":44.8,"s":4.0,"e":"Satisfaction/Relief","l":"Mass Cure Wounds"},{"p":48.3,"s":2.0,"e":"Triumph/Elation","l":"Ave's Eldritch Blasts"},{"p":51.7,"s":3.0,"e":"Triumph/Elation","l":"Ash Dispels Magic"},{"p":55.2,"s":5.0,"e":"Triumph/Elation","l":"Archmage Defeated"},{"p":58.6,"s":-1.0,"e":"Confusion/Surprise","l":"Ice Puddle"},{"p":62.1,"s":-2.0,"e":"Frustration/Irritation","l":"Voice Mocks"},{"p":65.5,"s":0.0,"e":"Curiosity/Wonder","l":"Investigate Room"},{"p":69.0,"s":1.0,"e":"Satisfaction/Relief","l":"Pull Lever"},{"p":72.4,"s":2.0,"e":"Excitement","l":"Examine Chests"},{"p":75.9,"s":0.0,"e":"Confusion/Surprise","l":"Read Inscription"},{"p":79.3,"s":-4.0,"e":"Fear/Dread","l":"Explosion Warning"},{"p":82.8,"s":1.0,"e":"Determination/Resolve","l":"Grab Items"},{"p":86.2,"s":-3.0,"e":"Frustration/Irritation","l":"Escape Run"},{"p":89.7,"s":2.0,"e":"Relief","l":"Tiny Hut Cast"},{"p":93.1,"s":1.0,"e":"Curiosity/Wonder","l":"Identify Items"},{"p":96.5,"s":0.0,"e":"Tension/Anxiety","l":"Divine Intervention"},{"p":100.0,"s":1.0,"e":"Anticipation","l":"Session End"}]},{"sid":"S007","label":"The Time Travel Heist","arc":"Rollercoaster","pace":"Steady Climb","peak":{"title":"Future-Corras vs Past-Corras Initiative Cliffhanger","pct":90,"type":"Dramatic Peak"},"w":[{"p":0.0,"s":2.5,"e":"Curiosity/Wonder","l":"Time Travel Rules Discussion"},{"p":25.0,"s":1.0,"e":"Frustration/Irritation","l":"Planning the Escape"},{"p":50.0,"s":5.0,"e":"Joy/Excitement","l":"Time Travel Execution"},{"p":75.0,"s":2.0,"e":"Tension/Anxiety","l":"Sneaking into the Castle"},{"p":100.0,"s":3.5,"e":"Amusement/Laughter","l":"Confusion and Chase"}]},{"sid":"S008","label":null,"arc":"Rollercoaster","pace":"Roller Coaster","peak":{"title":"Corras Rolls 25 Deception to Fool His Past Self","pct":40,"type":"Dice Peak"},"w":[{"p":0.0,"s":4.0,"e":"Curiosity/Wonder","l":"DM Introduces Meta Tools"},{"p":11.1,"s":4.5,"e":"Amusement/Laughter","l":"Character Diaries Revealed"},{"p":22.2,"s":-2.0,"e":"Tension/Anxiety","l":"Combat Initiation with Spark"},{"p":33.3,"s":-5.0,"e":"Fear/Dread","l":"Corras Banished to Feywild"},{"p":44.4,"s":2.0,"e":"Amusement/Laughter","l":"Outside Scene with Fortune Teller"},{"p":55.6,"s":1.0,"e":"Determination/Resolve","l":"Planning the Rescue"},{"p":66.7,"s":3.0,"e":"Amusement/Laughter","l":"Distraction Duel Outside Castle"},{"p":77.8,"s":2.0,"e":"Determination/Resolve","l":"Tunneling to Corras"},{"p":88.9,"s":4.0,"e":"Satisfaction/Relief","l":"Escape and Preparation"},{"p":100.0,"s":-1.0,"e":"Suspense/Unease","l":"Cliffhanger with Injured Mercenary"}]},{"sid":"S009","label":"D&D Session: Inventory and Intrigue","arc":"Rollercoaster","pace":"Late Bloomer","peak":{"title":"Lilith Annihilates Hooded Figure with 7th-Level Spirit Guardians","pct":78,"type":"Combat"},"w":[{"p":0.0,"s":0.5,"e":"Neutral","l":"Session Start"},{"p":11.1,"s":-1.0,"e":"Frustration/Irritation","l":"Inventory Begins"},{"p":22.2,"s":0.0,"e":"Neutral","l":"Gold Discussion"},{"p":33.3,"s":2.0,"e":"Amusement/Laughter","l":"Downtime Rolls"},{"p":44.4,"s":3.0,"e":"Joy/Excitement","l":"Meeting Eoman"},{"p":55.6,"s":1.5,"e":"Satisfaction/Relief","l":"Healing Eoman"},{"p":66.7,"s":-2.0,"e":"Tension/Anxiety","l":"Stealth Approach"},{"p":77.8,"s":-3.0,"e":"Fear/Dread","l":"Owl Bear Detection"},{"p":88.9,"s":-5.0,"e":"Anger/Rage","l":"Conflict with Hooded Figure"},{"p":100.0,"s":0.0,"e":"Confusion/Surprise","l":"Mimic Reveal"}]},{"sid":"S010","label":"D&D Session: Cave Confrontation and Demon Summoning","arc":"Rollercoaster","pace":"Front-Loaded","peak":{"title":"Orla's Wrath of Nature Destroys Six Magmen and Two Orcs","pct":55,"type":"Combat"},"w":[{"p":0.0,"s":3.5,"e":"Amusement/Laughter","l":"Casual Banter: Taco Bell Dreams"},{"p":50.0,"s":1.0,"e":"Curiosity/Wonder","l":"Session Setup and Recap"},{"p":100.0,"s":2.0,"e":"Amusement/Laughter","l":"Character Backstories and Squirrel Curses"}]},{"sid":"S011","label":"Session with Toll Gate and Earth Elemental Encounter","arc":"Rollercoaster","pace":"Slow Burn","peak":{"title":"Argentus Seizes Ash's Arm and Forces Sarlumon Into the Pit","pct":72,"type":"Chaos Peak"},"w":[{"p":0.0,"s":4.5,"e":"Amusement/Laughter","l":"Casual Conversation Start"},{"p":3.5,"s":2.0,"e":"Anticipation","l":"Session Introduction"},{"p":6.9,"s":6.0,"e":"Amusement/Laughter","l":"Orla's Backstory"},{"p":10.3,"s":3.5,"e":"Satisfaction/Relief","l":"Lilith and Ash's Backstory"},{"p":13.8,"s":1.0,"e":"Sadness/Grief","l":"Drenek's Backstory"},{"p":17.2,"s":2.5,"e":"Determination/Resolve","l":"Corras's Backstory"},{"p":20.7,"s":2.0,"e":"Neutral","l":"Marching Order Discussion"},{"p":24.1,"s":3.0,"e":"Curiosity/Wonder","l":"Approaching the Toll Gate"},{"p":27.6,"s":6.5,"e":"Amusement/Laughter","l":"Negotiating with the Guards"},{"p":31.0,"s":2.5,"e":"Neutral","l":"After Toll Gate, Setting Pace"},{"p":34.5,"s":4.0,"e":"Excitement","l":"Orla Wild Shapes and Scouts"},{"p":37.9,"s":-1.0,"e":"Tension/Anxiety","l":"Discovery of the Bridge Trap"},{"p":41.4,"s":-2.5,"e":"Fear/Dread","l":"Investigation of the Trap"},{"p":44.8,"s":-5.0,"e":"Fear/Dread","l":"Ash Falls into the Pit"},{"p":48.3,"s":-6.0,"e":"Fear/Dread","l":"Earth Elemental Appears"},{"p":51.7,"s":-3.0,"e":"Tension/Anxiety","l":"Communication with the Elemental"},{"p":55.2,"s":0.5,"e":"Relief","l":"Resolution and Elemental Leaves"},{"p":58.6,"s":2.0,"e":"Satisfaction/Relief","l":"Bridge Destroyed, Horses Safe"},{"p":62.1,"s":4.0,"e":"Amusement/Laughter","l":"Break Time Conversation"},{"p":65.5,"s":2.5,"e":"Neutral","l":"Post-Break Preparation"},{"p":69.0,"s":2.0,"e":"Anticipation","l":"Resuming Session"},{"p":72.4,"s":1.5,"e":"Neutral","l":"Continuing Journey"},{"p":75.9,"s":2.0,"e":"Determination/Resolve","l":"Final Preparations"},{"p":79.3,"s":3.5,"e":"Satisfaction/Relief","l":"Horses Cross Safely"},{"p":82.8,"s":2.5,"e":"Neutral","l":"Post-Encounter Wrap-up"},{"p":86.2,"s":3.0,"e":"Neutral","l":"Break Aftermath"},{"p":89.7,"s":2.5,"e":"Neutral","l":"Session Nearing End"},{"p":93.1,"s":3.5,"e":"Amusement/Laughter","l":"Final Casual Talk"},{"p":96.5,"s":2.0,"e":"Neutral","l":"Session Closing"},{"p":100.0,"s":3.0,"e":"Satisfaction/Relief","l":"End of Session"}]},{"sid":"S012","label":"The Explosive Caravan Encounter","arc":"Rollercoaster","pace":"Front-Loaded","peak":{"title":"Ash Casts Shatter on the Explosive Wagon","pct":25,"type":"Chaos Peak"},"w":[{"p":0.0,"s":3.0,"e":"Amusement/Laughter","l":"Greetings and Casual Chat"},{"p":3.3,"s":2.5,"e":"Curiosity/Wonder","l":"Game Discussion"},{"p":6.7,"s":0.5,"e":"Confusion/Surprise","l":"Billabong Absence"},{"p":10.0,"s":6.0,"e":"Joy/Excitement","l":"Orla's Husband Graduation"},{"p":13.3,"s":2.0,"e":"Curiosity/Wonder","l":"Music Bot Setup"},{"p":16.7,"s":1.0,"e":"Tension/Anxiety","l":"Combat Preparation"},{"p":20.0,"s":-2.0,"e":"Fear/Dread","l":"Owlbear and Mimic Attack"},{"p":23.3,"s":-3.0,"e":"Frustration/Irritation","l":"Grimsnick's Shield and Magic Missiles"},{"p":26.7,"s":1.0,"e":"Curiosity/Wonder","l":"Orla's Investigation as a Cat"},{"p":30.0,"s":-1.0,"e":"Determination/Resolve","l":"Billabong's Rage and Shield Attempt"},{"p":33.3,"s":-4.0,"e":"Frustration/Irritation","l":"Mephit Attack and Heat Metal"},{"p":36.7,"s":0.0,"e":"Determination/Resolve","l":"Ash's Invisibility and Planning"},{"p":40.0,"s":5.0,"e":"Excitement","l":"Shatter Spell on Wagon"},{"p":43.3,"s":-8.0,"e":"Fear/Dread","l":"Explosives Realization"},{"p":46.7,"s":-5.0,"e":"Confusion/Surprise","l":"Time Stop Potion Discussion"},{"p":50.0,"s":2.0,"e":"Hope","l":"Eagle Summoning and Escape Planning"},{"p":53.3,"s":3.0,"e":"Relief","l":"Resilient Sphere on Eoman"},{"p":56.7,"s":-6.0,"e":"Surprise","l":"Teleport to Berdusk"},{"p":60.0,"s":-7.0,"e":"Frustration/Irritation","l":"Arrest in Berdusk"},{"p":63.3,"s":1.0,"e":"Neutral","l":"Ave and Lilith at Ritual Site"},{"p":66.7,"s":4.0,"e":"Amusement/Laughter","l":"Encounter with Merchants"},{"p":70.0,"s":3.0,"e":"Satisfaction/Relief","l":"Herb Negotiation"},{"p":73.3,"s":2.0,"e":"Relief","l":"Merchants Leave"},{"p":76.7,"s":5.0,"e":"Accomplishment","l":"Simulacrum Completion"},{"p":80.0,"s":0.0,"e":"Concern","l":"Sending Messages"},{"p":83.3,"s":2.0,"e":"Curiosity/Wonder","l":"Corras with Fleshy"},{"p":86.7,"s":4.0,"e":"Intrigue","l":"Relic Information"},{"p":90.0,"s":3.0,"e":"Determination/Resolve","l":"Teleport Circle Drawing"},{"p":93.3,"s":1.0,"e":"Surprise","l":"Text Growth and Aging Cessation"},{"p":100.0,"s":2.0,"e":"Mixed","l":"Session Wrap-up"}]},{"sid":"S013","label":"Jailbreak and Demon Pact","arc":"Rollercoaster","pace":"Steady Climb","peak":{"title":"Signing the Blood Pact with Malachar the Twisted","pct":55,"type":"Dramatic Peak"},"w":[{"p":0.0,"s":0.5,"e":"Neutral","l":"Initial Greetings"},{"p":3.5,"s":0.3,"e":"Neutral","l":"Audio Troubles"},{"p":6.9,"s":0.1,"e":"Neutral","l":"Setup and Absences"},{"p":10.3,"s":1.5,"e":"Amusement/Laughter","l":"Recap Begins"},{"p":13.8,"s":1.8,"e":"Amusement/Laughter","l":"Recap Continues"},{"p":17.2,"s":-0.5,"e":"Tension/Anxiety","l":"Jail Scene Setup"},{"p":20.7,"s":-0.3,"e":"Determination/Resolve","l":"Long Rest Discussion"},{"p":24.1,"s":1.0,"e":"Curiosity/Wonder","l":"Discovering Quaggoth"},{"p":27.6,"s":2.0,"e":"Triumph/Elation","l":"Quaggoth Knowledge"},{"p":31.0,"s":-1.0,"e":"Tension/Anxiety","l":"Hellhounds Revealed"},{"p":34.5,"s":0.5,"e":"Determination/Resolve","l":"Cell Investigation"},{"p":37.9,"s":1.2,"e":"Amusement/Laughter","l":"Distraction Plan"},{"p":41.4,"s":1.5,"e":"Amusement/Laughter","l":"Guard Interaction"},{"p":44.8,"s":1.8,"e":"Compassion/Empathy","l":"Hellhound Befriending"},{"p":48.3,"s":2.0,"e":"Triumph/Elation","l":"Stone Removal"},{"p":51.7,"s":2.5,"e":"Curiosity/Wonder","l":"Prince Revelation"},{"p":55.2,"s":-2.0,"e":"Fear/Dread","l":"Demon Arrival"},{"p":58.6,"s":1.0,"e":"Suspense/Unease","l":"Charm Attempt"},{"p":62.1,"s":3.0,"e":"Triumph/Elation","l":"Charm Success"},{"p":65.5,"s":1.5,"e":"Suspense/Unease","l":"Pact Discussion"},{"p":69.0,"s":0.5,"e":"Determination/Resolve","l":"Contract Review"},{"p":72.4,"s":2.5,"e":"Satisfaction/Relief","l":"Pact Signing"},{"p":75.9,"s":3.5,"e":"Triumph/Elation","l":"Teleportation"},{"p":79.3,"s":2.0,"e":"Joy/Excitement","l":"Reunion at Ritual Site"},{"p":82.8,"s":1.8,"e":"Curiosity/Wonder","l":"Prince Introduction"},{"p":86.2,"s":-1.5,"e":"Fear/Dread","l":"Quaggoth Feeding"},{"p":89.7,"s":1.0,"e":"Determination/Resolve","l":"Planning Next Steps"},{"p":93.1,"s":1.5,"e":"Determination/Resolve","l":"Contingency Setup"},{"p":96.5,"s":1.2,"e":"Anticipation","l":"Teleport to Castle"},{"p":100.0,"s":1.5,"e":"Satisfaction/Relief","l":"Session End"}]},{"sid":"S014","label":"Session 1: Castle Corras Heist Planning and Chaos","arc":"Rollercoaster","pace":"Roller Coaster","peak":{"title":"Billabong Catches the Resilient Sphere Hamster Ball","pct":55,"type":"Comedy Peak"},"w":[{"p":0.0,"s":2.5,"e":"Joy/Excitement","l":"Opening Banter and Greetings"},{"p":100.0,"s":1.0,"e":"Anticipation","l":"Recap of Previous Events"}]},{"sid":"S015","label":"Temporal Swap and Rift Crisis","arc":"Rollercoaster","pace":"Explosive Finale","peak":{"title":"The Temporal Sentinel Freezes All of Time","pct":68,"type":"Revelation"},"w":[{"p":0.0,"s":3.0,"e":"Curiosity/Wonder","l":"Greetings"},{"p":3.5,"s":2.5,"e":"Compassion/Empathy","l":"Week Updates"},{"p":6.9,"s":4.0,"e":"Amusement/Laughter","l":"Movie Talk"},{"p":10.3,"s":5.0,"e":"Joy/Excitement","l":"Wedding Plans"},{"p":13.8,"s":3.5,"e":"Anticipation","l":"New Abilities"},{"p":17.2,"s":3.0,"e":"Curiosity/Wonder","l":"Chrono Compass"},{"p":20.7,"s":2.0,"e":"Determination/Resolve","l":"Situation Recap"},{"p":24.1,"s":1.5,"e":"Tension/Anxiety","l":"Planning Start"},{"p":27.6,"s":0.5,"e":"Confusion/Surprise","l":"Distraction Ideas"},{"p":31.0,"s":1.0,"e":"Determination/Resolve","l":"Magic Circle"},{"p":34.5,"s":0.0,"e":"Suspense/Unease","l":"Luring Ash"},{"p":37.9,"s":-1.0,"e":"Tension/Anxiety","l":"Basement Setup"},{"p":41.4,"s":-0.5,"e":"Determination/Resolve","l":"Sending Messages"},{"p":44.8,"s":-2.0,"e":"Frustration/Irritation","l":"Deception Attempt"},{"p":48.3,"s":0.0,"e":"Neutral","l":"Billabong's Role"},{"p":51.7,"s":-3.0,"e":"Fear/Dread","l":"Execution"},{"p":55.2,"s":-4.0,"e":"Confusion/Surprise","l":"Temporal Disturbance"},{"p":58.6,"s":-5.0,"e":"Fear/Dread","l":"Sentinel Appearance"},{"p":62.1,"s":-4.5,"e":"Determination/Resolve","l":"Sentinel's Speech"},{"p":65.5,"s":-3.0,"e":"Hope","l":"Ave's Persuasion"},{"p":69.0,"s":-2.0,"e":"Determination/Resolve","l":"Kelemvor's Help"},{"p":72.4,"s":-1.5,"e":"Determination/Resolve","l":"Team Split"},{"p":75.9,"s":-1.0,"e":"Hope","l":"Eagle Travel"},{"p":79.3,"s":-2.5,"e":"Fear/Dread","l":"Arrival at Rift"},{"p":82.8,"s":-3.5,"e":"Fear/Dread","l":"Remorhaz Emerges"},{"p":86.2,"s":-2.0,"e":"Determination/Resolve","l":"Preparation"},{"p":89.7,"s":-2.5,"e":"Tension/Anxiety","l":"Battle Setup"},{"p":93.1,"s":-3.0,"e":"Fear/Dread","l":"Climax"},{"p":96.5,"s":-1.5,"e":"Determination/Resolve","l":"Resolution Setup"},{"p":100.0,"s":-2.0,"e":"Suspense/Unease","l":"Session End"}]},{"sid":"S016","label":"Temporal Rift Crisis","arc":"Rollercoaster","pace":"Explosive Finale","peak":{"title":"Corras Activates the Fates Card","pct":88,"type":"Dramatic Peak"},"w":[{"p":0.0,"s":1.5,"e":"Neutral","l":"Casual Greetings"},{"p":3.5,"s":-3.0,"e":"Tension/Anxiety","l":"DM Recaps Crisis"},{"p":6.9,"s":0.5,"e":"Determination/Resolve","l":"Planning and Abilities"},{"p":10.3,"s":-1.0,"e":"Tension/Anxiety","l":"Combat Begins on Toilet Map"},{"p":13.8,"s":-4.0,"e":"Frustration/Irritation","l":"Billabong's Axe Breaks"},{"p":17.2,"s":2.0,"e":"Satisfaction/Relief","l":"Lilith's Healing and Hex"},{"p":20.7,"s":1.0,"e":"Curiosity/Wonder","l":"Orla Talks to Dragon"},{"p":24.1,"s":-5.0,"e":"Fear/Dread","l":"Ash Falls into Portal"},{"p":27.6,"s":-4.5,"e":"Fear/Dread","l":"Dragon Grapples Ave"},{"p":31.0,"s":1.0,"e":"Triumph/Elation","l":"Ash Uses Illusion to Escape"},{"p":34.5,"s":0.0,"e":"Confusion/Surprise","l":"Corras Considers Fates Card"},{"p":37.9,"s":3.0,"e":"Satisfaction/Relief","l":"Group Decision to Undo Celestial Slime"},{"p":41.4,"s":6.0,"e":"Triumph/Elation","l":"Fates Card Activated"},{"p":44.8,"s":4.0,"e":"Curiosity/Wonder","l":"Post-Fates Reality"},{"p":48.3,"s":5.0,"e":"Satisfaction/Relief","l":"Session Wrap-Up"},{"p":51.7,"s":0.0,"e":"Neutral","l":"Silent Window 1"},{"p":55.2,"s":0.0,"e":"Neutral","l":"Silent Window 2"},{"p":58.6,"s":0.0,"e":"Neutral","l":"Silent Window 3"},{"p":62.1,"s":0.0,"e":"Neutral","l":"Silent Window 4"},{"p":65.5,"s":0.0,"e":"Neutral","l":"Silent Window 5"},{"p":69.0,"s":0.0,"e":"Neutral","l":"Silent Window 6"},{"p":72.4,"s":0.0,"e":"Neutral","l":"Silent Window 7"},{"p":75.9,"s":0.0,"e":"Neutral","l":"Silent Window 8"},{"p":79.3,"s":0.0,"e":"Neutral","l":"Silent Window 9"},{"p":82.8,"s":0.0,"e":"Neutral","l":"Silent Window 10"},{"p":86.2,"s":0.0,"e":"Neutral","l":"Silent Window 11"},{"p":89.7,"s":0.0,"e":"Neutral","l":"Silent Window 12"},{"p":93.1,"s":0.0,"e":"Neutral","l":"Silent Window 13"},{"p":96.5,"s":0.0,"e":"Neutral","l":"Silent Window 14"},{"p":100.0,"s":3.0,"e":"Satisfaction/Relief","l":"Session End"}]},{"sid":"S017","label":"D&D Session: Character Decisions and World Building","arc":"Rollercoaster","pace":"Steady Climb","peak":{"title":"Lilith Pledges Loyalty to Myrkul","pct":78,"type":"Dramatic Peak"},"w":[{"p":0.0,"s":2.5,"e":"Curiosity/Wonder","l":"DM Introduces Session"},{"p":3.4,"s":3.0,"e":"Curiosity/Wonder","l":"Re-rolling Discussions Begin"},{"p":6.9,"s":3.5,"e":"Determination/Resolve","l":"Dahlia Explains Character Change"},{"p":10.3,"s":2.0,"e":"Curiosity/Wonder","l":"Multi-classing Explanation"},{"p":13.8,"s":1.0,"e":"Reflective","l":"Feedback Session Starts"},{"p":17.2,"s":3.0,"e":"Satisfaction/Relief","l":"DM Responds to Feedback"},{"p":20.7,"s":6.0,"e":"Joy/Excitement","l":"DM Shares 5e Tools"},{"p":24.1,"s":4.0,"e":"Curiosity/Wonder","l":"World Lore Exposition"},{"p":27.6,"s":5.0,"e":"Determination/Resolve","l":"Lilith's Decision Point"},{"p":31.0,"s":5.0,"e":"Surprise","l":"Ash's Heritage Reveal"},{"p":34.5,"s":6.0,"e":"Amusement/Laughter","l":"Billabong's Rat Thonking"},{"p":37.9,"s":5.0,"e":"Determination/Resolve","l":"Orla's Druid Decision"},{"p":41.4,"s":6.0,"e":"Triumph/Elation","l":"Corras's Vassalization Choice"},{"p":44.8,"s":4.0,"e":"Determination/Resolve","l":"Ash's Shard Decision"},{"p":48.3,"s":5.0,"e":"Determination/Resolve","l":"Dahlia's Myrkul Pledge"},{"p":51.7,"s":6.0,"e":"Joy/Excitement","l":"Billabong's Helmet Choice"},{"p":55.2,"s":5.0,"e":"Determination/Resolve","l":"Orla's Celestial Conflict"},{"p":58.6,"s":3.0,"e":"Tension/Anxiety","l":"Corras's Rebellion Handling"},{"p":62.1,"s":7.0,"e":"Triumph/Elation","l":"Corras Rejects Celestial Demands"},{"p":65.5,"s":6.0,"e":"Anticipation","l":"Session Conclusion and Setup"},{"p":69.0,"s":4.0,"e":"Neutral","l":"Window 21"},{"p":72.4,"s":3.0,"e":"Neutral","l":"Window 22"},{"p":75.9,"s":3.0,"e":"Neutral","l":"Window 23"},{"p":79.3,"s":3.0,"e":"Neutral","l":"Window 24"},{"p":82.8,"s":3.0,"e":"Neutral","l":"Window 25"},{"p":86.2,"s":0.0,"e":"Neutral","l":"Window 26"},{"p":89.7,"s":0.0,"e":"Neutral","l":"Window 27"},{"p":93.1,"s":0.0,"e":"Neutral","l":"Window 28"},{"p":96.6,"s":0.0,"e":"Neutral","l":"Window 29"},{"p":100.0,"s":0.0,"e":"Neutral","l":"Window 30"}]},{"sid":"S018","label":"D&D Session: Inventory and Perils in the Storm Mountains","arc":"Rollercoaster","pace":"Late Bloomer","peak":{"title":"Ancient White Dragon Snatches the Axe Beak","pct":82,"type":"Dramatic Peak"},"w":[{"p":0.0,"s":2.5,"e":"Amusement/Laughter","l":"Inventory Setup"},{"p":11.1,"s":1.5,"e":"Curiosity/Wonder","l":"Ability Explanations"},{"p":22.2,"s":0.5,"e":"Confusion/Surprise","l":"Ring Discussions"},{"p":33.3,"s":-1.0,"e":"Tension/Anxiety","l":"Meeting Foehammer"},{"p":44.4,"s":-3.0,"e":"Tension/Anxiety","l":"Bare-Knuckle Challenge"},{"p":55.6,"s":-5.0,"e":"Frustration/Irritation","l":"Fight with Foehammer"},{"p":66.7,"s":7.5,"e":"Joy/Excitement","l":"Snack-O-Matic Surprise"},{"p":77.8,"s":3.0,"e":"Satisfaction/Relief","l":"Shopping Spree"},{"p":88.9,"s":1.0,"e":"Determination/Resolve","l":"Teleportation to Triboar"},{"p":100.0,"s":-1.0,"e":"Frustration/Irritation","l":"Guard Interrogation"}]},{"sid":"S019","label":null,"arc":"Rollercoaster","pace":"Roller Coaster","peak":{"title":"Alchemist Fire Keg Obliterates Everything","pct":78,"type":"Chaos Peak"},"w":[{"p":0.0,"s":0.0,"e":"Neutral","l":"Recap of Previous Session"},{"p":100.0,"s":0.5,"e":"Anticipation","l":"Casting Leomund's Tiny Hut"}]},{"sid":"S020","label":"The Cabin and the Summer Star","arc":"Rollercoaster","pace":"Front-Loaded","peak":{"title":"Summer Star Kills the Entire Party","pct":55,"type":"Chaos Peak"},"w":[{"p":0.0,"s":2.5,"e":"Amusement/Laughter","l":"Cleaning Up After Latrine"},{"p":3.4,"s":0.5,"e":"Curiosity/Wonder","l":"Discussing Schematics"},{"p":6.9,"s":-1.0,"e":"Tension/Anxiety","l":"Approaching the Cabin"},{"p":10.3,"s":-2.0,"e":"Suspense/Unease","l":"Climbing the Stairs"},{"p":13.8,"s":-1.0,"e":"Determination/Resolve","l":"Setting Up the Tightrope"},{"p":17.2,"s":-3.0,"e":"Fear/Dread","l":"Crossing the Tightrope"},{"p":20.7,"s":1.5,"e":"Curiosity/Wonder","l":"Discovering the Glowing Orb"},{"p":24.1,"s":-5.0,"e":"Confusion/Surprise","l":"Golem Activation"},{"p":27.6,"s":-3.5,"e":"Tension/Anxiety","l":"Combat with Golem"},{"p":31.0,"s":-1.0,"e":"Determination/Resolve","l":"Exploring the Room"},{"p":34.5,"s":-6.0,"e":"Fear/Dread","l":"Floor Collapse"},{"p":37.9,"s":-4.5,"e":"Determination/Resolve","l":"Rescue Attempt"},{"p":41.4,"s":-9.0,"e":"Sadness/Grief","l":"Orb Explosion"},{"p":44.8,"s":-2.0,"e":"Confusion/Surprise","l":"Ghost Phase Begins"},{"p":48.3,"s":0.5,"e":"Determination/Resolve","l":"Billabong Alone"},{"p":51.7,"s":1.0,"e":"Amusement/Laughter","l":"Snow Messages"},{"p":55.2,"s":3.0,"e":"Amusement/Laughter","l":"Billabong's Actions"},{"p":58.6,"s":1.5,"e":"Determination/Resolve","l":"Speak with Dead"},{"p":62.1,"s":2.0,"e":"Determination/Resolve","l":"Finding the Ring"},{"p":65.5,"s":8.0,"e":"Triumph/Elation","l":"Resurrection by Lathander"},{"p":69.0,"s":3.0,"e":"Satisfaction/Relief","l":"Post-Resurrection Chill"},{"p":72.4,"s":2.5,"e":"Curiosity/Wonder","l":"Discovering the Trap Door"},{"p":75.9,"s":2.0,"e":"Anticipation","l":"Entering the Cave"},{"p":79.3,"s":0.0,"e":"Tension/Anxiety","l":"Finding Blood Trail"},{"p":82.8,"s":1.5,"e":"Anticipation","l":"Session Conclusion"},{"p":86.2,"s":0.5,"e":"Curiosity/Wonder","l":"Early Exploration"},{"p":89.7,"s":2.0,"e":"Satisfaction/Relief","l":"Reflecting on Events"},{"p":93.1,"s":1.0,"e":"Determination/Resolve","l":"Planning Next Move"},{"p":96.6,"s":1.5,"e":"Satisfaction/Relief","l":"Final Moments"},{"p":100.0,"s":2.0,"e":"Anticipation","l":"Session End"}]},{"sid":"S021","label":"Session 2: Underdark Infiltration","arc":"Rollercoaster","pace":"Steady Climb","peak":{"title":"SavannahBelle Casts Tentacles the Wrong Direction","pct":68,"type":"Comedy Peak"},"w":[{"p":0.0,"s":4.5,"e":"Anticipation","l":"Boon Distribution Begins"},{"p":3.4,"s":5.0,"e":"Joy/Excitement","l":"Boon Rolls and Discussions"},{"p":6.9,"s":4.0,"e":"Curiosity/Wonder","l":"More Boon Details"},{"p":10.3,"s":3.5,"e":"Determination/Resolve","l":"Trading Boons"},{"p":13.8,"s":4.0,"e":"Anticipation","l":"Ritual Preparation"},{"p":17.2,"s":5.5,"e":"Amusement/Laughter","l":"Wild Magic Effects"},{"p":20.7,"s":3.0,"e":"Tension/Anxiety","l":"Portal to Underdark"},{"p":24.1,"s":2.5,"e":"Suspense/Unease","l":"Casting Light and Exploration"},{"p":27.6,"s":2.0,"e":"Fear/Dread","l":"Panther Scouting Webs"},{"p":31.0,"s":1.5,"e":"Suspense/Unease","l":"Discovering Sword and Webs"},{"p":34.5,"s":1.0,"e":"Tension/Anxiety","l":"Detecting Magic and Planning"},{"p":37.9,"s":0.5,"e":"Determination/Resolve","l":"Mold Earth Attempt"},{"p":41.4,"s":-1.0,"e":"Fear/Dread","l":"Perception Checks and Feeling Watched"},{"p":44.8,"s":-2.0,"e":"Fear/Dread","l":"Drow Encounter"},{"p":48.3,"s":-1.5,"e":"Tension/Anxiety","l":"Persuasion Attempt"},{"p":51.7,"s":-1.0,"e":"Determination/Resolve","l":"Test of Shadows"},{"p":55.2,"s":1.0,"e":"Satisfaction/Relief","l":"Corras Passes the Test"},{"p":58.6,"s":-3.0,"e":"Frustration/Irritation","l":"SavannahBelle Fails the Test"},{"p":62.1,"s":-2.5,"e":"Tension/Anxiety","l":"Combat Initiation"},{"p":65.5,"s":-1.0,"e":"Determination/Resolve","l":"Corras Attacks Umber Hulk"},{"p":69.0,"s":0.5,"e":"Satisfaction/Relief","l":"SavannahBelle Breaks Free"},{"p":72.4,"s":1.0,"e":"Determination/Resolve","l":"Dahlia Attacks Umber Hulk"},{"p":75.9,"s":1.5,"e":"Determination/Resolve","l":"Billabong Attacks"},{"p":79.3,"s":2.0,"e":"Determination/Resolve","l":"Ash Casts Spells"},{"p":82.8,"s":-2.0,"e":"Fear/Dread","l":"Drow Casts Cloudkill"},{"p":86.2,"s":-1.5,"e":"Frustration/Irritation","l":"Damage Taken and Drow Retreats"},{"p":89.7,"s":-1.0,"e":"Confusion/Surprise","l":"Umber Hulk's Confusing Gaze"},{"p":93.1,"s":0.5,"e":"Determination/Resolve","l":"End of Session Setup"},{"p":96.6,"s":2.0,"e":"Satisfaction/Relief","l":"Session Conclusion"},{"p":100.0,"s":3.0,"e":"Joy/Excitement","l":"Final Goodbyes"}]},{"sid":"S022","label":"Underdark Infiltration Session","arc":"Rollercoaster","pace":"Front-Loaded","peak":{"title":"SavannahBelle Twin Wall of Fire Incinerates Everything","pct":30,"type":"Combat"},"w":[{"p":0.0,"s":2.0,"e":"Curiosity/Wonder","l":"Session Start"},{"p":100.0,"s":3.0,"e":"Amusement/Laughter","l":"Recap Begins"}]},{"sid":"S023","label":"Web's Edge Combat Session","arc":"Rollercoaster","pace":"Roller Coaster","peak":{"title":"Dahlia Nat 20 Decapitates the Nalfeshnee","pct":97,"type":"Combat"},"w":[{"p":0.0,"s":3.5,"e":"Amusement/Laughter","l":"Character Updates and Banter"},{"p":3.5,"s":2.0,"e":"Curiosity/Wonder","l":"Session Summary Request"},{"p":6.9,"s":1.0,"e":"Tension/Anxiety","l":"Wall of Fire Discussion"},{"p":10.3,"s":2.5,"e":"Determination/Resolve","l":"Ash's Shatter Spell"},{"p":13.8,"s":3.0,"e":"Suspense/Unease","l":"Corras Uses Mislead"},{"p":17.2,"s":5.0,"e":"Triumph/Elation","l":"Billabong Throws Mage into Fire"},{"p":20.7,"s":-2.0,"e":"Fear/Dread","l":"Demon Attacks Corras"},{"p":24.1,"s":2.0,"e":"Determination/Resolve","l":"SavannahBelle's Synaptic Static"},{"p":27.6,"s":1.5,"e":"Suspense/Unease","l":"Orla Commands Centipedes"},{"p":31.0,"s":1.0,"e":"Tension/Anxiety","l":"Dahlia Misty Steps In"},{"p":34.5,"s":3.0,"e":"Suspense/Unease","l":"Ash Deceives Deep Gnome"},{"p":37.9,"s":-1.0,"e":"Fear/Dread","l":"Corras Hides from Demon"},{"p":41.4,"s":2.0,"e":"Satisfaction/Relief","l":"Billabong Picks Up Scroll"},{"p":44.8,"s":6.0,"e":"Triumph/Elation","l":"SavannahBelle's Twin Fireballs"},{"p":48.3,"s":3.0,"e":"Satisfaction/Relief","l":"Orla's Spirit Totem"},{"p":51.7,"s":4.0,"e":"Curiosity/Wonder","l":"Dahlia's Aura of Secrets"},{"p":55.2,"s":2.0,"e":"Curiosity/Wonder","l":"Break and Spell Discussions"},{"p":58.6,"s":4.0,"e":"Determination/Resolve","l":"Dahlia Attacks Demon"},{"p":62.1,"s":3.0,"e":"Determination/Resolve","l":"Ash Locates Object"},{"p":65.5,"s":-2.0,"e":"Fear/Dread","l":"Corras Unlocks Door"},{"p":69.0,"s":-1.0,"e":"Frustration/Irritation","l":"Billabong Persuades Deep Gnome"},{"p":72.4,"s":2.0,"e":"Determination/Resolve","l":"Demon Uses Horror Nimbus"},{"p":75.9,"s":5.0,"e":"Joy/Excitement","l":"Orla Charms Monster Toad"},{"p":79.3,"s":-1.0,"e":"Frustration/Irritation","l":"Deep Gnome Casts Blindness"},{"p":82.8,"s":8.0,"e":"Triumph/Elation","l":"Dahlia Kills Demon"},{"p":86.2,"s":-3.0,"e":"Fear/Dread","l":"Ash and Corras Explore"},{"p":89.7,"s":1.0,"e":"Determination/Resolve","l":"Ash Casts Wall of Force"},{"p":93.1,"s":-2.0,"e":"Suspense/Unease","l":"Corras Uses Mage Hand"},{"p":96.5,"s":2.0,"e":"Satisfaction/Relief","l":"Billabong Breaks Free"},{"p":100.0,"s":-1.0,"e":"Tension/Anxiety","l":"Session Ends with Threat"}]},{"sid":"S024","label":null,"arc":"Rollercoaster","pace":"Explosive Finale","peak":{"title":"Ash Teleports Everyone Out via Scroll","pct":89,"type":"Energy Peak"},"w":[{"p":0.0,"s":2.5,"e":"Curiosity/Wonder","l":"Housekeeping Begins"},{"p":100.0,"s":1.0,"e":"Confusion/Surprise","l":"Automation Discussion"}]},{"sid":"S025","label":null,"arc":"Rollercoaster","pace":"Slow Burn","peak":{"title":"Dahlia Claims Guantanamo as Her Bastion","pct":55,"type":"Comedy Peak"},"w":[{"p":0.0,"s":3.5,"e":"Amusement/Laughter","l":"Casual Talk About Shows"},{"p":3.5,"s":1.0,"e":"Tension/Anxiety","l":"DM Introduces Plot Consolidation"},{"p":100.0,"s":4.0,"e":"Satisfaction/Relief","l":"Wrap-Up and Future Plans"}]},{"sid":"S026","label":null,"arc":"Rollercoaster","pace":"Steady Climb","peak":{"title":"Ash Bluffs the Spider Dragon Solo","pct":42,"type":"Dramatic Peak"},"w":[{"p":0.0,"s":2.5,"e":"Curiosity/Wonder","l":"Character Updates Begin"},{"p":3.3,"s":2.0,"e":"Curiosity/Wonder","l":"Automation Changes Explained"},{"p":6.7,"s":1.5,"e":"Frustration/Irritation","l":"Inventory Management"},{"p":10.0,"s":2.5,"e":"Anticipation","l":"Recap of Last Session"},{"p":13.3,"s":3.0,"e":"Determination/Resolve","l":"Dahlia Persuades Gertrude"},{"p":16.7,"s":1.0,"e":"Confusion/Surprise","l":"Gertrude's Pinky Promise"},{"p":20.0,"s":2.5,"e":"Amusement/Laughter","l":"Billabong and SavannahBelle with Toad"},{"p":23.3,"s":1.5,"e":"Satisfaction/Relief","l":"Toad Spits Out Orla"},{"p":26.7,"s":2.0,"e":"Determination/Resolve","l":"Negotiating with the Toad"},{"p":30.0,"s":-1.0,"e":"Tension/Anxiety","l":"Ash and Corras Sneak"},{"p":33.3,"s":-2.5,"e":"Fear/Dread","l":"Army Approaches"},{"p":36.7,"s":-1.5,"e":"Frustration/Irritation","l":"Gertrude Stuck in Hallway"},{"p":40.0,"s":0.5,"e":"Determination/Resolve","l":"Rescuing Gertrude"},{"p":43.3,"s":-3.0,"e":"Fear/Dread","l":"Army Closes In"},{"p":46.7,"s":-4.0,"e":"Fear/Dread","l":"Billabong and SavannahBelle Trapped"},{"p":50.0,"s":1.0,"e":"Satisfaction/Relief","l":"Orla Dispel Magic"},{"p":53.3,"s":-1.0,"e":"Tension/Anxiety","l":"Ash Meets Spider Dragon"},{"p":56.7,"s":3.0,"e":"Triumph/Elation","l":"Corras Steals the Rod"},{"p":60.0,"s":-2.0,"e":"Fear/Dread","l":"Chase Intensifies"},{"p":63.3,"s":-3.5,"e":"Fear/Dread","l":"Rocks Fall"},{"p":66.7,"s":2.0,"e":"Satisfaction/Relief","l":"Ash Uses Scroll"},{"p":70.0,"s":4.0,"e":"Triumph/Elation","l":"Teleportation to Castle"},{"p":73.3,"s":2.5,"e":"Satisfaction/Relief","l":"Aftermath at Castle"},{"p":76.7,"s":-1.0,"e":"Suspense/Unease","l":"Lolth's Voice"},{"p":80.0,"s":1.0,"e":"Satisfaction/Relief","l":"Session Wind-Down"},{"p":83.3,"s":0.0,"e":"Neutral","l":"Placeholder for Continuity"},{"p":86.7,"s":0.0,"e":"Neutral","l":"Placeholder for Continuity"},{"p":90.0,"s":0.0,"e":"Neutral","l":"Placeholder for Continuity"},{"p":93.3,"s":0.0,"e":"Neutral","l":"Placeholder for Continuity"},{"p":100.0,"s":-0.5,"e":"Suspense/Unease","l":"Session End"}]},{"sid":"S027","label":null,"arc":"Rollercoaster","pace":"Late Bloomer","peak":{"title":"Dahlia Impales Revenant on Dead Man's Plate","pct":82,"type":"Combat"},"w":[{"p":0.0,"s":0.5,"e":"Amusement/Laughter","l":"Session Start and Discord Chat"},{"p":3.5,"s":1.0,"e":"Curiosity/Wonder","l":"DM Sets the Scene"},{"p":6.9,"s":1.5,"e":"Determination/Resolve","l":"Corras Explains Priorities"},{"p":10.3,"s":1.0,"e":"Anticipation","l":"DM Details Plot Hooks"},{"p":13.8,"s":2.0,"e":"Determination/Resolve","l":"Group Decides on Soul Forge"},{"p":17.2,"s":0.5,"e":"Tension/Anxiety","l":"Preparing to Descend"},{"p":20.7,"s":-1.0,"e":"Fear/Dread","l":"Entering the Cavern"},{"p":24.1,"s":-3.0,"e":"Tension/Anxiety","l":"First Encounters with Undead"},{"p":27.6,"s":-2.0,"e":"Tension/Anxiety","l":"Initiative Rolled"},{"p":31.0,"s":-5.0,"e":"Frustration/Irritation","l":"Billabong's Turn (Miss and Fall)"},{"p":34.5,"s":1.0,"e":"Satisfaction/Relief","l":"Ash's Turn (Confusion Cast)"},{"p":37.9,"s":3.0,"e":"Triumph/Elation","l":"Dahlia's Turn (Attacks)"},{"p":41.4,"s":4.0,"e":"Triumph/Elation","l":"SavannahBelle's Turn (Fireball)"},{"p":44.8,"s":-4.0,"e":"Fear/Dread","l":"Wraith Lord's Aura"},{"p":48.3,"s":-3.0,"e":"Tension/Anxiety","l":"Revenant Attacks"},{"p":51.7,"s":-2.0,"e":"Frustration/Irritation","l":"Orla's Turn (Fireball)"},{"p":55.2,"s":-6.0,"e":"Fear/Dread","l":"Billabong Paralyzed"},{"p":58.6,"s":2.0,"e":"Triumph/Elation","l":"Corras's Sneak Attack"},{"p":62.1,"s":5.0,"e":"Triumph/Elation","l":"Ash Banishes Wraith"},{"p":65.5,"s":4.0,"e":"Triumph/Elation","l":"Dahlia's Fierce Attacks"},{"p":69.0,"s":3.0,"e":"Satisfaction/Relief","l":"SavannahBelle's Sorceress Burst"},{"p":72.4,"s":-2.0,"e":"Frustration/Irritation","l":"Revenant's Vengeful Gaze"},{"p":75.9,"s":-3.0,"e":"Frustration/Irritation","l":"Orla's Second Fireball"},{"p":79.3,"s":-7.0,"e":"Fear/Dread","l":"Billabong Downed"},{"p":82.8,"s":2.0,"e":"Satisfaction/Relief","l":"Death Saves and Recovery"},{"p":86.2,"s":1.0,"e":"Curiosity/Wonder","l":"Secret Revealed by Wraith"},{"p":89.7,"s":-1.0,"e":"Tension/Anxiety","l":"Perception Checks"},{"p":93.1,"s":0.5,"e":"Satisfaction/Relief","l":"Session End Discussion"},{"p":96.5,"s":1.0,"e":"Satisfaction/Relief","l":"Closing Remarks"},{"p":100.0,"s":0.0,"e":"Neutral","l":"End of Session"}]},{"sid":"S028","label":"Bastion Planning and Cavern Dangers","arc":"Rollercoaster","pace":"Roller Coaster","peak":{"title":"Orla Gorilla-Slams Billabong for Pack Dominance","pct":40,"type":"Comedy Peak"},"w":[{"p":0.0,"s":3.5,"e":"Amusement/Laughter","l":"Bastion Discussion Start"},{"p":3.5,"s":4.0,"e":"Amusement/Laughter","l":"Bastion Details"},{"p":6.9,"s":0.5,"e":"Tension/Anxiety","l":"Transition to Combat"},{"p":10.3,"s":-1.0,"e":"Tension/Anxiety","l":"Combat Actions"},{"p":13.8,"s":-2.0,"e":"Fear/Dread","l":"Escape and Perceptions"},{"p":17.2,"s":-1.5,"e":"Curiosity/Wonder","l":"Encounter Shadow Mastiffs"},{"p":20.7,"s":1.0,"e":"Amusement/Laughter","l":"Feeding the Mastiffs"},{"p":24.1,"s":-2.5,"e":"Fear/Dread","l":"Alpha Mastiff Appears"},{"p":27.6,"s":2.0,"e":"Amusement/Laughter","l":"Wrestling Match Setup"},{"p":31.0,"s":3.5,"e":"Amusement/Laughter","l":"Wrestling Match Execution"},{"p":34.5,"s":4.0,"e":"Triumph/Elation","l":"Alpha Accepts Dominance"},{"p":37.9,"s":1.5,"e":"Satisfaction/Relief","l":"Short Rest Discussion"},{"p":41.4,"s":0.0,"e":"Curiosity/Wonder","l":"Investigation of Room"},{"p":44.8,"s":-3.0,"e":"Frustration/Irritation","l":"Cursed Parchment"},{"p":48.3,"s":-1.0,"e":"Tension/Anxiety","l":"Arcane Eye Exploration"},{"p":51.7,"s":-2.0,"e":"Tension/Anxiety","l":"Barricading the Door"},{"p":55.2,"s":0.5,"e":"Curiosity/Wonder","l":"Investigating Constructs"},{"p":58.6,"s":2.0,"e":"Anticipation","l":"Sending for Help"},{"p":62.1,"s":-3.5,"e":"Fear/Dread","l":"Ongoing Door Pressure"},{"p":65.5,"s":-1.0,"e":"Suspense/Unease","l":"Session Pause"},{"p":69.0,"s":1.0,"e":"Satisfaction/Relief","l":"Continued Rest"},{"p":72.4,"s":0.5,"e":"Curiosity/Wonder","l":"Detect Magic Results"},{"p":75.9,"s":-2.0,"e":"Fear/Dread","l":"Dagger Revelation"},{"p":79.3,"s":-1.5,"e":"Confusion/Surprise","l":"Constructs Awaken"},{"p":82.8,"s":0.0,"e":"Curiosity/Wonder","l":"Argentus Communication"},{"p":86.2,"s":-0.5,"e":"Tension/Anxiety","l":"Crawler Movement"},{"p":89.7,"s":1.5,"e":"Curiosity/Wonder","l":"Discussion on Timeline"},{"p":93.1,"s":-4.0,"e":"Frustration/Irritation","l":"Final Checks and Damage"},{"p":96.5,"s":0.5,"e":"Neutral","l":"Planning Next Steps"},{"p":100.0,"s":-1.5,"e":"Suspense/Unease","l":"Session End"}]},{"sid":"S029","label":"Infernal Shrine Ritual","arc":"Rollercoaster","pace":"Slow Burn","peak":{"title":"Billabong Nat 20 Breaks the Infernal Contract","pct":65,"type":"Dice Peak"},"w":[{"p":0.0,"s":2.0,"e":"Joy/Excitement","l":"Opening Banter"},{"p":100.0,"s":0.5,"e":"Neutral","l":"Recap Start"}]},{"sid":"S030","label":"Training in the Bastion and Battle with the Maw","arc":"Rollercoaster","pace":"Explosive Finale","peak":{"title":"Corras Crits the Paralyzed Maw's Blinded Eye","pct":93,"type":"Combat"},"w":[{"p":0.0,"s":-2.0,"e":"Tension/Anxiety","l":"Harbinger's Warning"},{"p":3.3,"s":1.5,"e":"Joy/Excitement","l":"Players Thank the DM"},{"p":6.7,"s":0.5,"e":"Curiosity/Wonder","l":"Description of the Bastion"},{"p":10.0,"s":0.0,"e":"Confusion/Surprise","l":"Interacting with Statues"},{"p":13.3,"s":2.0,"e":"Curiosity/Wonder","l":"Ash Casts Detect Magic"},{"p":16.7,"s":2.5,"e":"Anticipation","l":"Discussion on Statue Choices"},{"p":20.0,"s":3.0,"e":"Excitement","l":"Coordinated Activation"},{"p":23.3,"s":4.0,"e":"Triumph/Elation","l":"Dahlia Activates Soulbinder"},{"p":26.7,"s":4.0,"e":"Triumph/Elation","l":"Ash Activates Conductor"},{"p":30.0,"s":4.0,"e":"Triumph/Elation","l":"Corras Activates Shadow Stalker"},{"p":33.3,"s":4.0,"e":"Triumph/Elation","l":"SavannahBelle Activates Warden"},{"p":36.7,"s":4.0,"e":"Triumph/Elation","l":"Orla Activates Bio-Alchemist"},{"p":40.0,"s":4.0,"e":"Triumph/Elation","l":"Billabong Activates Subjugator"},{"p":43.3,"s":3.5,"e":"Joy/Excitement","l":"Sharing New Powers"},{"p":46.7,"s":-3.0,"e":"Fear/Dread","l":"Introduction of the Ceaseless Maw"},{"p":50.0,"s":0.0,"e":"Determination/Resolve","l":"Planning and Teleportation"},{"p":53.3,"s":2.0,"e":"Triumph/Elation","l":"Using Shadow Abilities to Track"},{"p":56.7,"s":1.0,"e":"Tension/Anxiety","l":"Teleporting to the Cave"},{"p":60.0,"s":-2.0,"e":"Fear/Dread","l":"Entering the Cave and Acid Pool"},{"p":63.3,"s":-4.0,"e":"Fear/Dread","l":"Seeing the Ceaseless Maw"},{"p":66.7,"s":-5.0,"e":"Fear/Dread","l":"Battle Begins - Maw Attacks"},{"p":70.0,"s":-2.0,"e":"Frustration/Irritation","l":"Players Retaliate - Billabong's Attempt"},{"p":73.3,"s":1.0,"e":"Determination/Resolve","l":"Dahlia Fights Back"},{"p":76.7,"s":0.5,"e":"Determination/Resolve","l":"Ash Tries to Close Fissures"},{"p":80.0,"s":2.0,"e":"Triumph/Elation","l":"Orla Uses Field Analysis"},{"p":83.3,"s":1.0,"e":"Satisfaction/Relief","l":"SavannahBelle Escapes and Casts"},{"p":86.7,"s":0.0,"e":"Determination/Resolve","l":"Corras Uses Mage Armor"},{"p":90.0,"s":5.0,"e":"Triumph/Elation","l":"Orla Uses Sunbeam"},{"p":93.3,"s":6.0,"e":"Triumph/Elation","l":"SavannahBelle Holds Monster"},{"p":96.7,"s":7.0,"e":"Triumph/Elation","l":"Corras Crits and Session Ends"},{"p":100.0,"s":5.0,"e":"Satisfaction/Relief","l":"Session Conclusion"}]},{"sid":"S031","label":"Battle for Fertility and Aftermath","arc":"Rollercoaster","pace":"Front-Loaded","peak":{"title":"SavannahBelle Explodes the Maw From Inside","pct":28,"type":"Combat"},"w":[{"p":0.0,"s":-4.0,"e":"Tension/Anxiety","l":"Battle Recap"},{"p":14.3,"s":1.0,"e":"Satisfaction/Relief","l":"Healing Efforts"},{"p":28.6,"s":5.0,"e":"Triumph/Elation","l":"Maw Defeated"},{"p":42.9,"s":-2.0,"e":"Tension/Anxiety","l":"Escape Sequence Begins"},{"p":57.1,"s":0.0,"e":"Neutral","l":"Return to Bastion"},{"p":71.4,"s":-3.0,"e":"Tension/Anxiety","l":"Fight with Vrocks"},{"p":85.7,"s":3.0,"e":"Satisfaction/Relief","l":"Vrocks Defeated"},{"p":100.0,"s":1.0,"e":"Anticipation","l":"Planning Next Moves"}]},{"sid":"S032","label":null,"arc":"Rollercoaster","pace":"Explosive Finale","peak":{"title":"SavannahBelle Disintegrates the Lich's Disguise","pct":82,"type":"Combat"},"w":[{"p":0.0,"s":1.5,"e":"Amusement/Laughter","l":"Session Start and Greetings"},{"p":3.5,"s":1.0,"e":"Curiosity/Wonder","l":"Recap of Previous Events"},{"p":6.9,"s":2.0,"e":"Determination/Resolve","l":"Hero's Feast Discussion"},{"p":10.3,"s":1.5,"e":"Anticipation","l":"Inventory Preparation"},{"p":13.8,"s":-0.5,"e":"Tension/Anxiety","l":"Travel to Docks"},{"p":17.2,"s":0.5,"e":"Anticipation","l":"Disguise Planning"},{"p":20.7,"s":0.0,"e":"Curiosity/Wonder","l":"Orla as Rat Investigating"},{"p":24.1,"s":2.5,"e":"Amusement/Laughter","l":"Dahlia's Sweepstakes Distraction"},{"p":27.6,"s":-1.0,"e":"Tension/Anxiety","l":"Corras and Ezrella Attempt Entry"},{"p":31.0,"s":-2.0,"e":"Fear/Dread","l":"Inside the Warehouse"},{"p":34.5,"s":0.0,"e":"Curiosity/Wonder","l":"Finding the Glove"},{"p":37.9,"s":-0.5,"e":"Tension/Anxiety","l":"Investigating Boxes"},{"p":41.4,"s":-1.5,"e":"Fear/Dread","l":"Opening the First Box"},{"p":44.8,"s":-3.0,"e":"Fear/Dread","l":"Necrotic Shock"},{"p":48.3,"s":0.5,"e":"Amusement/Laughter","l":"Foreman Arrival"},{"p":51.7,"s":-4.0,"e":"Fear/Dread","l":"Combat Initiation"},{"p":55.2,"s":-5.0,"e":"Fear/Dread","l":"SavannahBelle Imprisoned"},{"p":58.6,"s":-4.5,"e":"Fear/Dread","l":"Corras Counterspells"},{"p":62.1,"s":-3.0,"e":"Fear/Dread","l":"Orla's Detect Thoughts"},{"p":65.5,"s":-2.0,"e":"Determination/Resolve","l":"Ezrella's Spirit Guardians"},{"p":69.0,"s":-5.5,"e":"Fear/Dread","l":"Orla Banished"},{"p":72.4,"s":-4.0,"e":"Frustration/Irritation","l":"Ezrella Feared"},{"p":75.9,"s":-2.0,"e":"Determination/Resolve","l":"Corras Escapes"},{"p":79.3,"s":-2.5,"e":"Tension/Anxiety","l":"Dahlia Enters Warehouse"},{"p":82.8,"s":-3.5,"e":"Fear/Dread","l":"Intense Spellcasting"},{"p":86.2,"s":-5.0,"e":"Fear/Dread","l":"Revelation of Lich"},{"p":89.7,"s":-4.5,"e":"Suspense/Unease","l":"Session Cliffhanger"},{"p":93.1,"s":-3.0,"e":"Tension/Anxiety","l":"Post-Combat Tension"},{"p":96.5,"s":-1.0,"e":"Neutral","l":"Wrap-up and Goodbyes"},{"p":100.0,"s":-2.0,"e":"Suspense/Unease","l":"Session End"}]},{"sid":"S033","label":null,"arc":"Rollercoaster","pace":"Steady Climb","peak":{"title":"Corras Surrenders Himself to Save Everyone","pct":80,"type":"Emotional Peak"},"w":[{"p":0.0,"s":-1.0,"e":"Frustration/Irritation","l":"Audio Troubles"},{"p":3.4,"s":1.5,"e":"Amusement/Laughter","l":"Sweepstakes Stories"},{"p":6.9,"s":0.0,"e":"Curiosity/Wonder","l":"Orla's Rat Adventure"},{"p":10.3,"s":-1.5,"e":"Tension/Anxiety","l":"Combat Preparation"},{"p":13.8,"s":-2.0,"e":"Frustration/Irritation","l":"Technical Sheet Issues"},{"p":17.2,"s":1.0,"e":"Anticipation","l":"Spirit Guardians Cast"},{"p":20.7,"s":0.5,"e":"Determination/Resolve","l":"Dahlia's Aura Discussion"},{"p":24.1,"s":-1.0,"e":"Frustration/Irritation","l":"Fireball Counterspell Chain"},{"p":27.6,"s":0.0,"e":"Suspense/Unease","l":"Corras Negotiates with Lich"},{"p":31.0,"s":-2.5,"e":"Fear/Dread","l":"Ezrella Charmed Memory"},{"p":34.5,"s":2.5,"e":"Triumph/Elation","l":"Dahlia's Smash Decision"},{"p":37.9,"s":-3.0,"e":"Fear/Dread","l":"Billabong Dominated"},{"p":41.4,"s":1.5,"e":"Satisfaction/Relief","l":"Calm Emotions Cast"},{"p":44.8,"s":-2.0,"e":"Anger/Rage","l":"Corras Betrays Deal"},{"p":48.3,"s":-4.0,"e":"Despair","l":"Force Cage Traps"},{"p":51.7,"s":-1.0,"e":"Determination/Resolve","l":"Branding and Sending Stones"},{"p":55.2,"s":-3.5,"e":"Sadness/Grief","l":"Corras Puts on Manacles"},{"p":58.6,"s":-4.5,"e":"Despair","l":"Transport to Thay"},{"p":62.1,"s":-5.0,"e":"Despair","l":"Prison Cells Awakening"},{"p":65.5,"s":-2.0,"e":"Determination/Resolve","l":"Session Wrap-up"},{"p":69.0,"s":0.0,"e":"Neutral","l":"Placeholder Window 21"},{"p":72.4,"s":0.0,"e":"Neutral","l":"Placeholder Window 22"},{"p":75.9,"s":0.0,"e":"Neutral","l":"Placeholder Window 23"},{"p":79.3,"s":0.0,"e":"Neutral","l":"Placeholder Window 24"},{"p":82.8,"s":0.0,"e":"Neutral","l":"Placeholder Window 25"},{"p":86.2,"s":0.0,"e":"Neutral","l":"Placeholder Window 26"},{"p":89.7,"s":0.0,"e":"Neutral","l":"Placeholder Window 27"},{"p":93.1,"s":0.0,"e":"Neutral","l":"Placeholder Window 28"},{"p":96.6,"s":0.0,"e":"Neutral","l":"Placeholder Window 29"},{"p":100.0,"s":0.0,"e":"Neutral","l":"Placeholder Window 30"}]},{"sid":"S034","label":"Prison Break and Lich Confrontation","arc":"Rollercoaster","pace":"Roller Coaster","peak":{"title":"Knight's Nat-1 Crossbow Kills the Lich","pct":85,"type":"Dice Peak"},"w":[{"p":0.0,"s":1.5,"e":"Amusement/Laughter","l":"Casual Greetings"},{"p":8.3,"s":-0.5,"e":"Tension/Anxiety","l":"Recap and Prison Setup"},{"p":16.7,"s":-1.0,"e":"Tension/Anxiety","l":"Cell Investigations Begin"},{"p":25.0,"s":-2.0,"e":"Fear/Dread","l":"Intellect Devourer Threat"},{"p":33.3,"s":1.0,"e":"Curiosity/Wonder","l":"Nothic Friendship Pact"},{"p":41.7,"s":-2.5,"e":"Frustration/Irritation","l":"Corras Twin Revelation"},{"p":50.0,"s":3.0,"e":"Amusement/Laughter","l":"Otyugh Emotional Dialogue"},{"p":58.3,"s":-3.0,"e":"Fear/Dread","l":"Ritual Chamber Discovery"},{"p":66.7,"s":-4.0,"e":"Tension/Anxiety","l":"Combat with Thayan Knights"},{"p":75.0,"s":6.0,"e":"Triumph/Elation","l":"Asnar's Defeat"},{"p":83.3,"s":4.0,"e":"Determination/Resolve","l":"Sarek's Final Confrontation"},{"p":91.7,"s":7.0,"e":"Triumph/Elation","l":"Loot and Resolution"},{"p":100.0,"s":8.0,"e":"Joy/Excitement","l":"Post-Session Debrief"}]},{"sid":"S035","label":"BWB Session - Barovia Entry","arc":"Rollercoaster","pace":"Late Bloomer","peak":{"title":"Portal Vanishes and Party Trapped in Barovia","pct":60,"type":"Dramatic Peak"},"w":[{"p":0.0,"s":6.5,"e":"Triumph/Elation","l":"Character Upgrades"},{"p":3.4,"s":5.0,"e":"Anticipation","l":"DM Plans Future"},{"p":6.9,"s":4.5,"e":"Amusement/Laughter","l":"One-Shot Discussion"},{"p":10.3,"s":0.5,"e":"Frustration/Irritation","l":"Opportunity Attack Debate Start"},{"p":13.8,"s":-1.5,"e":"Tension/Anxiety","l":"Debate Intensifies"},{"p":17.2,"s":0.0,"e":"Determination/Resolve","l":"Debate Resolution"},{"p":20.7,"s":2.0,"e":"Anticipation","l":"Transition to Barovia"},{"p":24.1,"s":-3.0,"e":"Fear/Dread","l":"Arrival in Barovia"},{"p":27.6,"s":-2.5,"e":"Suspense/Unease","l":"Meeting the Children"},{"p":31.0,"s":-3.5,"e":"Tension/Anxiety","l":"Entering the Manor"},{"p":34.5,"s":-2.0,"e":"Curiosity/Wonder","l":"Finding Items"},{"p":37.9,"s":-4.0,"e":"Fear/Dread","l":"Exploring Rooms"},{"p":41.4,"s":-5.0,"e":"Suspense/Unease","l":"Upstairs Exploration"},{"p":44.8,"s":-7.0,"e":"Fear/Dread","l":"Attic Encounter"},{"p":48.3,"s":-8.0,"e":"Fear/Dread","l":"Session End Cliffhanger"},{"p":51.7,"s":-5.5,"e":"Suspense/Unease","l":"Early Exploration Continuation"},{"p":55.2,"s":-3.0,"e":"Determination/Resolve","l":"Mid-Session Lull"},{"p":58.6,"s":-6.0,"e":"Fear/Dread","l":"Discovering Secrets"},{"p":62.1,"s":-2.5,"e":"Determination/Resolve","l":"Preparing for Battle"},{"p":65.5,"s":-7.5,"e":"Fear/Dread","l":"Final Moments Before Encounter"},{"p":69.0,"s":-1.0,"e":"Frustration/Irritation","l":"Early Debate Continuation"},{"p":72.4,"s":3.0,"e":"Amusement/Laughter","l":"Light-Hearted Banter"},{"p":75.9,"s":2.5,"e":"Determination/Resolve","l":"Strategic Planning"},{"p":79.3,"s":4.0,"e":"Nostalgia/Compassion","l":"Reflection on Past Sessions"},{"p":82.8,"s":6.0,"e":"Joy/Excitement","l":"Excitement for Future"},{"p":86.2,"s":-4.5,"e":"Suspense/Unease","l":"Tension Builds Again"},{"p":89.7,"s":-6.5,"e":"Fear/Dread","l":"Discovery of Dark Rituals"},{"p":93.1,"s":-3.0,"e":"Determination/Resolve","l":"Final Preparations"},{"p":96.6,"s":-8.5,"e":"Fear/Dread","l":"Climax Approach"},{"p":100.0,"s":-9.0,"e":"Fear/Dread","l":"Session Conclusion"}]},{"sid":"S036","label":"Death House Session - Barovia Encounter","arc":"Rollercoaster","pace":"Front-Loaded","peak":{"title":"Marilith Hatches and Grapples SavannahBelle","pct":55,"type":"Combat"},"w":[{"p":0.0,"s":2.5,"e":"Anticipation","l":"Initial Banter and Setup"},{"p":3.4,"s":-1.0,"e":"Tension/Anxiety","l":"Combat Initiation"},{"p":6.9,"s":-3.0,"e":"Fear/Dread","l":"SavannahBelle's Interaction"},{"p":10.3,"s":-4.0,"e":"Tension/Anxiety","l":"Combat Intensifies"},{"p":13.8,"s":-5.0,"e":"Fear/Dread","l":"Marilith Emergence"},{"p":17.2,"s":-2.0,"e":"Neutral","l":"Break and Return"},{"p":20.7,"s":1.0,"e":"Determination/Resolve","l":"Sarusanda's Introduction"},{"p":24.1,"s":3.0,"e":"Determination/Resolve","l":"Alliance Formed"},{"p":27.6,"s":-1.0,"e":"Tension/Anxiety","l":"Basement Exploration"},{"p":31.0,"s":-3.0,"e":"Frustration/Irritation","l":"Cultist Combat Begins"},{"p":34.5,"s":-4.0,"e":"Fear/Dread","l":"Curses and Molting"},{"p":37.9,"s":-2.0,"e":"Determination/Resolve","l":"Strategy and History Check"},{"p":41.4,"s":0.0,"e":"Neutral","l":"Session End"},{"p":44.8,"s":-2.5,"e":"Tension/Anxiety","l":"Placeholder Window 14"},{"p":48.3,"s":-3.5,"e":"Fear/Dread","l":"Placeholder Window 15"},{"p":51.7,"s":-1.5,"e":"Determination/Resolve","l":"Placeholder Window 16"},{"p":55.2,"s":-2.0,"e":"Frustration/Irritation","l":"Placeholder Window 17"},{"p":58.6,"s":-4.5,"e":"Fear/Dread","l":"Placeholder Window 18"},{"p":62.1,"s":-1.0,"e":"Determination/Resolve","l":"Placeholder Window 19"},{"p":65.5,"s":-0.5,"e":"Neutral","l":"Placeholder Window 20"},{"p":69.0,"s":0.5,"e":"Satisfaction/Relief","l":"Placeholder Window 21"},{"p":72.4,"s":1.0,"e":"Satisfaction/Relief","l":"Placeholder Window 22"},{"p":75.9,"s":0.0,"e":"Neutral","l":"Placeholder Window 23"},{"p":79.3,"s":-0.5,"e":"Neutral","l":"Placeholder Window 24"},{"p":82.8,"s":0.5,"e":"Neutral","l":"Placeholder Window 25"},{"p":86.2,"s":-1.0,"e":"Neutral","l":"Placeholder Window 26"},{"p":89.7,"s":1.5,"e":"Satisfaction/Relief","l":"Placeholder Window 27"},{"p":93.1,"s":0.0,"e":"Neutral","l":"Placeholder Window 28"},{"p":96.6,"s":-0.5,"e":"Neutral","l":"Placeholder Window 29"},{"p":100.0,"s":2.0,"e":"Satisfaction/Relief","l":"Final Goodbyes"}]},{"sid":"S037","label":null,"arc":"Rollercoaster","pace":"Explosive Finale","peak":{"title":"SavannahBelle Disintegrates the Crimson Abbot","pct":72,"type":"Combat"},"w":[{"p":0.0,"s":3.0,"e":"Amusement/Laughter","l":"Backstory Revelations"},{"p":3.4,"s":2.0,"e":"Curiosity/Wonder","l":"Planning the Escape"},{"p":6.9,"s":1.0,"e":"Tension/Anxiety","l":"Combat Initiation"},{"p":10.3,"s":2.0,"e":"Determination/Resolve","l":"SavannahBelle's Turn"},{"p":13.8,"s":4.0,"e":"Satisfaction/Relief","l":"Dahlia's Healing"},{"p":17.2,"s":5.0,"e":"Triumph/Elation","l":"Corras's Regal Presence"},{"p":20.7,"s":4.0,"e":"Amusement/Laughter","l":"Orla's Giant Insect"},{"p":24.1,"s":6.0,"e":"Triumph/Elation","l":"Inquisitor's Ritual"},{"p":27.6,"s":2.0,"e":"Curiosity/Wonder","l":"Speak with Dead"},{"p":31.0,"s":-1.0,"e":"Fear/Dread","l":"Orb of Temptation"},{"p":34.5,"s":-3.0,"e":"Fear/Dread","l":"Shambling Mound Introduction"},{"p":37.9,"s":-2.0,"e":"Frustration/Irritation","l":"Orla's Polymorph Attempt"},{"p":41.4,"s":3.0,"e":"Determination/Resolve","l":"SavannahBelle's Wall of Fire"},{"p":44.8,"s":4.0,"e":"Triumph/Elation","l":"Corras's Attacks"},{"p":48.3,"s":-4.0,"e":"Fear/Dread","l":"Orla Engulfed"},{"p":51.7,"s":5.0,"e":"Triumph/Elation","l":"Ezrella's Spirit Guardians"},{"p":55.2,"s":-2.0,"e":"Fear/Dread","l":"Second Shambling Mound"},{"p":58.6,"s":7.0,"e":"Triumph/Elation","l":"Dahlia's Critical Hit"},{"p":62.1,"s":-5.0,"e":"Fear/Dread","l":"Crimson Abbot Arrival"},{"p":65.5,"s":3.0,"e":"Determination/Resolve","l":"Orla's Moonbeam on Abbot"},{"p":69.0,"s":8.0,"e":"Triumph/Elation","l":"SavannahBelle's Disintegrate"},{"p":72.4,"s":4.0,"e":"Satisfaction/Relief","l":"Blood Baby Freeze"},{"p":75.9,"s":6.0,"e":"Awe/Wonder","l":"Strahd's Appearance"},{"p":79.3,"s":4.0,"e":"Curiosity/Wonder","l":"Dialogue with Strahd"},{"p":82.8,"s":5.0,"e":"Satisfaction/Relief","l":"Negotiation and Deal"},{"p":86.2,"s":-3.0,"e":"Tension/Anxiety","l":"Strahd's Departure"},{"p":89.6,"s":-2.0,"e":"Frustration/Irritation","l":"Escape Attempts"},{"p":93.1,"s":3.0,"e":"Satisfaction/Relief","l":"Stone Shape Escape"},{"p":96.5,"s":1.0,"e":"Tension/Anxiety","l":"Attic Arrival"},{"p":100.0,"s":2.0,"e":"Anticipation","l":"Session End"}]},{"sid":"S038","label":"Death House Escape","arc":"Rollercoaster","pace":"Roller Coaster","peak":{"title":"Corras Backflips Through Scythe Blades During Birth","pct":65,"type":"Chaos Peak"},"w":[{"p":0.0,"s":0.0,"e":"Neutral","l":"Skill Challenge Introduction"},{"p":3.5,"s":2.0,"e":"Joy/Excitement","l":"Players React and Decide"},{"p":6.9,"s":1.0,"e":"Curiosity/Wonder","l":"Sneak Past Ghoul Discussion"},{"p":10.3,"s":3.0,"e":"Joy/Excitement","l":"Successful Sneak"},{"p":13.8,"s":1.0,"e":"Curiosity/Wonder","l":"Decision to Investigate Draft"},{"p":17.2,"s":-1.0,"e":"Tension/Anxiety","l":"Mist and Wolf Statue Room"},{"p":20.7,"s":-3.0,"e":"Frustration/Irritation","l":"Dahlia Fails Athletics Check"},{"p":24.1,"s":-1.0,"e":"Fear/Dread","l":"Move On After Failure"},{"p":27.6,"s":2.0,"e":"Amusement/Laughter","l":"Pacifying Taxidermied Wolves"},{"p":31.0,"s":0.0,"e":"Neutral","l":"Decision to Go to Foyer"},{"p":34.5,"s":-2.0,"e":"Fear/Dread","l":"Brick Wall Appears"},{"p":37.9,"s":-1.0,"e":"Confusion/Surprise","l":"Discussing Dimension Door Escape"},{"p":41.4,"s":0.0,"e":"Determination/Resolve","l":"Planning Haste and Other Spells"},{"p":44.8,"s":-2.0,"e":"Fear/Dread","l":"Attempt to Fly Out, Wisdom Saves"},{"p":48.3,"s":-4.0,"e":"Fear/Dread","l":"Wisdom Save Results and Failures"},{"p":51.7,"s":1.0,"e":"Curiosity/Wonder","l":"Orla's Vision from Outside"},{"p":55.2,"s":0.0,"e":"Neutral","l":"Insight Check Suggestion"},{"p":58.6,"s":-1.0,"e":"Tension/Anxiety","l":"Climbing Down Attempt"},{"p":62.1,"s":-3.0,"e":"Fear/Dread","l":"Intelligence Save Against Horror"},{"p":65.5,"s":0.0,"e":"Determination/Resolve","l":"Dimension Door to Entrance"},{"p":69.0,"s":2.0,"e":"Satisfaction/Relief","l":"Constitution Save to Hold Brick Wall"},{"p":72.4,"s":5.0,"e":"Triumph/Elation","l":"Escape Successful"},{"p":75.9,"s":6.0,"e":"Joy/Excitement","l":"Reunion and Fireballing the House"},{"p":79.3,"s":4.0,"e":"Satisfaction/Relief","l":"Aftermath of Fireball"},{"p":82.8,"s":2.0,"e":"Amusement/Laughter","l":"Conversation About Strahd"},{"p":86.2,"s":1.0,"e":"Curiosity/Wonder","l":"Lore Discussion About Barovia"},{"p":89.7,"s":0.0,"e":"Neutral","l":"DM Wrap-Up for Next Session"},{"p":93.1,"s":1.0,"e":"Satisfaction/Relief","l":"Final Comments and Goodbyes"},{"p":96.5,"s":0.0,"e":"Neutral","l":"Session End Transition"},{"p":100.0,"s":0.0,"e":"Neutral","l":"Final Window"}]},{"sid":"S039","label":"Barovia Adventure: Rescue and Rest","arc":"Rollercoaster","pace":"Late Bloomer","peak":{"title":"Aboleth Rises from Tser Pool Lake","pct":72,"type":"Chaos Peak"},"w":[{"p":0.0,"s":2.5,"e":"Joy/Excitement","l":"Greetings and Casual Talk"},{"p":100.0,"s":3.0,"e":"Amusement/Laughter","l":"Twilight Discussion"}]},{"sid":"S040","label":"Curse of Strahd Session - Tser Pool Camp","arc":"Rollercoaster","pace":"Steady Climb","peak":{"title":"Madame Eva Casts Time Stop on the Party","pct":92,"type":"Dramatic Peak"},"w":[{"p":0.0,"s":0.0,"e":"Neutral","l":"Session Start and Recap"},{"p":3.5,"s":3.5,"e":"Amusement/Laughter","l":"Goat Bag Discussion"},{"p":6.9,"s":4.0,"e":"Anticipation","l":"Character Reintroductions Begin"},{"p":10.3,"s":5.0,"e":"Joy/Excitement","l":"Orla Introduction"},{"p":13.8,"s":2.0,"e":"Tension/Anxiety","l":"Dahlia Introduction"},{"p":17.2,"s":3.0,"e":"Curiosity/Wonder","l":"SavannahBelle Introduction"},{"p":20.7,"s":2.5,"e":"Confusion/Surprise","l":"Ash/Ezrella Introduction"},{"p":24.1,"s":6.0,"e":"Amusement/Laughter","l":"Past Campaign Shenanigans"},{"p":27.6,"s":-3.0,"e":"Tension/Anxiety","l":"Zombies Appear"},{"p":31.0,"s":4.0,"e":"Determination/Resolve","l":"Corras Uses Rod of Rulership"},{"p":34.5,"s":1.0,"e":"Confusion/Surprise","l":"Zombie Fight and Orla Wakes"},{"p":37.9,"s":5.0,"e":"Triumph/Elation","l":"Corras Kills Zombie"},{"p":41.4,"s":3.0,"e":"Anticipation","l":"Planning to Sneak into Tent"},{"p":44.8,"s":2.5,"e":"Tension/Anxiety","l":"Sneaking to Tent"},{"p":48.3,"s":1.0,"e":"Suspense/Unease","l":"Listening Outside Tent"},{"p":51.7,"s":2.0,"e":"Curiosity/Wonder","l":"Entering Tent and Seeing Madam Eva"},{"p":55.2,"s":6.0,"e":"Triumph/Elation","l":"Corras Switches Talisman"},{"p":58.6,"s":-4.0,"e":"Confusion/Surprise","l":"Corras Disappears"},{"p":62.1,"s":-1.0,"e":"Tension/Anxiety","l":"Ezrella and SavannahBelle Investigate"},{"p":65.5,"s":-3.0,"e":"Frustration/Irritation","l":"SavannahBelle Causes Commotion"},{"p":69.0,"s":4.0,"e":"Joy/Excitement","l":"Looting Items"},{"p":72.4,"s":-5.0,"e":"Anger/Rage","l":"Madam Eva Awakens and Confronts"},{"p":75.9,"s":0.0,"e":"Neutral","l":"Diplomatic Exchange"},{"p":79.3,"s":-3.0,"e":"Frustration/Irritation","l":"Players Try to Leave, Trapped"},{"p":82.8,"s":-2.0,"e":"Tension/Anxiety","l":"Dimension Door Attempts"},{"p":86.2,"s":1.0,"e":"Determination/Resolve","l":"Corras Returns, Negotiations"},{"p":89.7,"s":2.0,"e":"Suspense/Unease","l":"Deck Game Setup"},{"p":93.1,"s":3.0,"e":"Anticipation","l":"Tarot Reading Announcement"},{"p":96.5,"s":4.0,"e":"Satisfaction/Relief","l":"Session Wrap-up"},{"p":100.0,"s":4.5,"e":"Satisfaction/Relief","l":"End of Session"}]},{"sid":"S041","label":"Session with Madam Eva and Strahd","arc":"Rollercoaster","pace":"Steady Climb","peak":{"title":"Strahd Bites SavannahBelle Into a Vampire","pct":96,"type":"Dramatic Peak"},"w":[{"p":0.0,"s":2.5,"e":"Joy/Excitement","l":"Casual Greetings"},{"p":5.9,"s":2.0,"e":"Neutral","l":"Talk About Breaks"},{"p":11.8,"s":3.0,"e":"Curiosity/Wonder","l":"Game Discussion"},{"p":17.6,"s":-1.0,"e":"Tension/Anxiety","l":"Recap Previous Session"},{"p":23.5,"s":-2.0,"e":"Fear/Dread","l":"Tarot Deck Draw"},{"p":29.4,"s":-3.0,"e":"Tension/Anxiety","l":"Combat Initiation"},{"p":35.3,"s":-4.0,"e":"Confusion/Surprise","l":"Time Stop Actions"},{"p":41.2,"s":-5.0,"e":"Frustration/Irritation","l":"Curses Applied"},{"p":47.1,"s":2.0,"e":"Joy/Excitement","l":"Looting the Tent"},{"p":52.9,"s":0.0,"e":"Determination/Resolve","l":"Planning Next Moves"},{"p":58.8,"s":1.0,"e":"Anticipation","l":"Flight to Castle"},{"p":64.7,"s":-4.0,"e":"Fear/Dread","l":"Trapped in Dungeon"},{"p":70.6,"s":-5.0,"e":"Anger/Rage","l":"Fight with Strahd Begins"},{"p":76.5,"s":-3.0,"e":"Tension/Anxiety","l":"Combat Actions"},{"p":82.4,"s":-6.0,"e":"Fear/Dread","l":"Crown and Chalice"},{"p":88.2,"s":-8.0,"e":"Sadness/Grief","l":"Climax and Betrayal"},{"p":94.1,"s":-7.0,"e":"Despair","l":"Aftermath and Cliffhanger"},{"p":100.0,"s":-2.0,"e":"Reflection","l":"Session Wrap-up"}]},{"sid":"S042","label":"Curse of Strahd: Rahadin and Strahd Confrontation","arc":"Rollercoaster","pace":"Explosive Finale","peak":{"title":"Izzy Crushes Rahadin's Skull With Necrotic Fists","pct":52,"type":"Combat"},"w":[{"p":0.0,"s":3.5,"e":"Amusement/Laughter","l":"Casual Greetings"},{"p":3.5,"s":2.5,"e":"Curiosity/Wonder","l":"Job Discussion"},{"p":6.9,"s":4.0,"e":"Amusement/Laughter","l":"Jury Duty Stories"},{"p":10.3,"s":3.0,"e":"Curiosity/Wonder","l":"TV Show and G-Tube Talk"},{"p":13.8,"s":6.5,"e":"Joy/Excitement","l":"DM Enters with Session Stats"},{"p":17.2,"s":7.0,"e":"Amusement/Laughter","l":"Word Clouds and Insights"},{"p":20.7,"s":5.0,"e":"Anticipation","l":"Transition to Combat"},{"p":24.1,"s":2.5,"e":"Tension/Anxiety","l":"Rahadin Encounter Begins"},{"p":27.6,"s":1.5,"e":"Tension/Anxiety","l":"Combat Initiation"},{"p":31.0,"s":0.5,"e":"Fear/Dread","l":"Rahadin's Taunts and Attacks"},{"p":34.5,"s":4.5,"e":"Determination/Resolve","l":"Players Gain Upper Hand"},{"p":37.9,"s":3.0,"e":"Suspense/Unease","l":"Rahadin's Last Stand"},{"p":41.4,"s":8.0,"e":"Triumph/Elation","l":"Rahadin Defeated"},{"p":44.8,"s":4.0,"e":"Anticipation","l":"Transition to Strahd Combat"},{"p":48.3,"s":5.5,"e":"Determination/Resolve","l":"Strahd Combat Preparation"},{"p":51.7,"s":-1.0,"e":"Fear/Dread","l":"Heart of Sorrow Pulse"},{"p":55.2,"s":2.5,"e":"Determination/Resolve","l":"Strahd Casts Polymorph"},{"p":58.6,"s":4.0,"e":"Determination/Resolve","l":"Players Cast Spells and Attack"},{"p":62.1,"s":6.5,"e":"Triumph/Elation","l":"Dahlia Purifies the Heart"},{"p":65.5,"s":3.0,"e":"Suspense/Unease","l":"Brides and Allies Arrive"},{"p":69.0,"s":5.0,"e":"Confusion/Surprise","l":"Baba Lysaga Appears"},{"p":72.4,"s":1.0,"e":"Fear/Dread","l":"Strahd Casts Power Word Stun"},{"p":75.9,"s":2.5,"e":"Compassion/Empathy","l":"Van Richten Sacrifices Himself"},{"p":79.3,"s":6.0,"e":"Triumph/Elation","l":"Shrum Uses the Mirror"},{"p":82.8,"s":4.5,"e":"Anticipation","l":"Session Conclusion Setup"},{"p":86.2,"s":3.0,"e":"Neutral","l":"Window 26"},{"p":89.7,"s":2.5,"e":"Neutral","l":"Window 27"},{"p":93.1,"s":3.5,"e":"Neutral","l":"Window 28"},{"p":96.5,"s":4.0,"e":"Neutral","l":"Window 29"},{"p":100.0,"s":5.0,"e":"Anticipation","l":"Final Moments"}]},{"sid":"S043","label":"BWB Campaign Return Session","arc":"Rollercoaster","pace":"Late Bloomer","peak":{"title":"SavannahBelle Mass Suggestions the Council Room","pct":58,"type":"Chaos Peak"},"w":[{"p":0.0,"s":2.5,"e":"Amusement/Laughter","l":"Casual Chat Begins"},{"p":14.3,"s":-1.0,"e":"Tension/Anxiety","l":"DM Sets the Scene"},{"p":28.6,"s":4.0,"e":"Joy/Excitement","l":"Player Excitement Discussion"},{"p":42.9,"s":1.5,"e":"Curiosity/Wonder","l":"High-Level Rules Explanation"},{"p":57.1,"s":-0.5,"e":"Tension/Anxiety","l":"Political Meeting Begins"},{"p":71.4,"s":-3.0,"e":"Fear/Dread","l":"Mass Suggestion Cast"},{"p":85.7,"s":-4.0,"e":"Frustration/Irritation","l":"Aftermath and Cover-Up Planning"},{"p":100.0,"s":-1.5,"e":"Tension/Anxiety","l":"Druid Message and Conclusion"}]},{"sid":"S044","label":null,"arc":"Rollercoaster","pace":"Roller Coaster","peak":{"title":"Dahlia Severs the Master of Whispers' Leg","pct":32,"type":"Chaos Peak"},"w":[{"p":0.0,"s":1.5,"e":"Amusement/Laughter","l":"Greetings and Updates"},{"p":3.5,"s":-2.0,"e":"Frustration/Irritation","l":"Technical Issues"},{"p":6.9,"s":-3.0,"e":"Tension/Anxiety","l":"Session Summary Part 1"},{"p":10.3,"s":-1.5,"e":"Determination/Resolve","l":"Discussion on Framing"},{"p":13.8,"s":-2.5,"e":"Curiosity/Wonder","l":"Orla and Radoth"},{"p":17.2,"s":-4.0,"e":"Tension/Anxiety","l":"Finch Knockout"},{"p":20.7,"s":-5.0,"e":"Fear/Dread","l":"Master of Whispers Wakes"},{"p":24.1,"s":-3.5,"e":"Tension/Anxiety","l":"Confrontation with Gideon"},{"p":27.6,"s":-6.0,"e":"Surprise/Confusion","l":"Ash Banished"},{"p":31.0,"s":-4.5,"e":"Curiosity/Wonder","l":"Orla Investigates Warehouse"},{"p":34.5,"s":-3.0,"e":"Fear/Dread","l":"Ash in Feywild"},{"p":37.9,"s":-1.0,"e":"Relief/Satisfaction","l":"Ash Returns"},{"p":41.4,"s":-2.0,"e":"Determination/Resolve","l":"Planning in Castle"},{"p":44.8,"s":-4.0,"e":"Anger/Rage","l":"Crowd Gathers"},{"p":48.3,"s":-5.0,"e":"Tension/Anxiety","l":"Final Confrontation"},{"p":51.7,"s":-4.5,"e":"Suspense/Unease","l":"Session End"},{"p":55.2,"s":-2.0,"e":"Determination/Resolve","l":"Window 17"},{"p":58.6,"s":-1.5,"e":"Neutral","l":"Window 18"},{"p":62.1,"s":-0.5,"e":"Neutral","l":"Window 19"},{"p":65.5,"s":0.0,"e":"Neutral","l":"Window 20"},{"p":69.0,"s":-2.0,"e":"Tension/Anxiety","l":"Window 21"},{"p":72.4,"s":-1.5,"e":"Determination/Resolve","l":"Window 22"},{"p":75.9,"s":-0.5,"e":"Neutral","l":"Window 23"},{"p":79.3,"s":-3.0,"e":"Tension/Anxiety","l":"Window 24"},{"p":82.8,"s":-4.5,"e":"Fear/Dread","l":"Window 25"},{"p":86.2,"s":-5.0,"e":"Anger/Rage","l":"Window 26"},{"p":89.7,"s":-3.5,"e":"Suspense/Unease","l":"Window 27"},{"p":93.1,"s":-2.0,"e":"Determination/Resolve","l":"Window 28"},{"p":96.5,"s":-1.0,"e":"Neutral","l":"Window 29"},{"p":100.0,"s":0.5,"e":"Satisfaction/Relief","l":"Window 30"}]},{"sid":"S045","label":"The Red Council Aftermath","arc":"Rollercoaster","pace":"Front-Loaded","peak":{"title":"Reverse Gravity Launches Hundreds Into the Sky","pct":38,"type":"Chaos Peak"},"w":[{"p":0.0,"s":3.0,"e":"Amusement/Laughter","l":"Casual Banter"},{"p":100.0,"s":2.0,"e":"Curiosity/Wonder","l":"Krispy Kreme Talk"}]},{"sid":"S046","label":null,"arc":"Rollercoaster","pace":"Slow Burn","peak":{"title":"Cernunnos Catches the Party -- Someone Must Join","pct":96,"type":"Dramatic Peak"},"w":[{"p":0.0,"s":-3.5,"e":"Tension/Anxiety","l":"Political Discussion Start"},{"p":3.5,"s":6.0,"e":"Amusement/Laughter","l":"Quiz and Recap"},{"p":100.0,"s":-8.0,"e":"Fear/Dread","l":"Feywild Chase Conclusion"}]}];
+
+// ======== EMOTION COLORS ========
+const EC = {
+  'Joy/Excitement':'#FFD700','Excitement':'#FFD700','Anticipation':'#FFA500',
+  'Triumph/Elation':'#FF6347','Amusement/Laughter':'#FFE066',
+  'Curiosity/Wonder':'#87CEEB','Awe/Wonder':'#87CEEB',
+  'Tension/Anxiety':'#DC143C','Fear/Dread':'#8B0000',
+  'Frustration/Irritation':'#FF4500','Sadness/Grief':'#4682B4',
+  'Determination/Resolve':'#32CD32','Confusion/Surprise':'#DDA0DD',
+  'Surprise/Confusion':'#DDA0DD','Surprise':'#DDA0DD',
+  'Neutral':'#808080','Suspense/Unease':'#9370DB',
+  'Satisfaction/Relief':'#98FB98','Relief/Satisfaction':'#98FB98','Relief':'#98FB98',
+  'Anger/Rage':'#B22222','Compassion/Empathy':'#FF69B4',
+  'Nostalgia/Compassion':'#FF69B4','Hope':'#7FFFD4','Mixed':'#C0C0C0',
+  'Intrigue':'#9370DB','Concern':'#CD853F','Reflection':'#778899',
+  'Reflective':'#778899','Despair':'#2F4F4F','Accomplishment':'#FFD700'
+};
+
+function eColor(e) {
+  if (!e) return '#808080';
+  if (EC[e]) return EC[e];
+  const lo = e.toLowerCase();
+  for (const [k,v] of Object.entries(EC)) {
+    if (lo.includes(k.toLowerCase().split('/')[0])) return v;
+  }
+  return '#808080';
+}
+
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return [r,g,b];
+}
+
+// ======== CONFIG ========
+const TH_COLLAPSED = 24;
+const TH_EXPANDED = 100;
+let SWEEP_MS = 10000;
+let progress = 0; // 0..1
+let playing = false;
+let lastTs = null;
+let expandedIdx = null;
+const dpr = window.devicePixelRatio || 1;
+
+const mainEl = document.getElementById('main-container');
+const ttEl = document.getElementById('tooltip');
+const tracks = [];
+
+// ======== BUILD TRACKS ========
+DATA.forEach((sess, idx) => {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'track-wrapper';
+
+  const row = document.createElement('div');
+  row.className = 'track-row';
+
+  // Left label
+  const lblL = document.createElement('div');
+  lblL.className = 'lbl-left';
+  const safeLabel = sess.label || '';
+  lblL.innerHTML = '<span class="sid">' + sess.sid + '</span><span class="sname" title="' +
+    safeLabel.replace(/"/g, '&quot;') + '">' + safeLabel + '</span>';
+  row.appendChild(lblL);
+
+  // Canvas
+  const cWrap = document.createElement('div');
+  cWrap.className = 'canvas-wrap';
+  const cvs = document.createElement('canvas');
+  cvs.height = TH_COLLAPSED * dpr;
+  cvs.style.height = TH_COLLAPSED + 'px';
+  cWrap.appendChild(cvs);
+
+  // Peak flag
+  if (sess.peak && sess.peak.pct >= 0) {
+    const flag = document.createElement('div');
+    flag.className = 'peak-flag';
+    flag.style.left = sess.peak.pct + '%';
+    flag.innerHTML = '<svg width="8" height="8" viewBox="0 0 8 8"><polygon points="4,0 8,8 0,8" fill="#FF6347"/></svg>';
+    cWrap.appendChild(flag);
+  }
+
+  row.appendChild(cWrap);
+
+  // Right label
+  const lblR = document.createElement('div');
+  lblR.className = 'lbl-right';
+  lblR.innerHTML = '<span class="pace">' + (sess.pace||'') + '</span><span class="arc">' + (sess.arc||'') + '</span>';
+  row.appendChild(lblR);
+
+  wrapper.appendChild(row);
+
+  // Detail panel
+  const detail = document.createElement('div');
+  detail.className = 'detail-panel';
+  const inner = document.createElement('div');
+  inner.className = 'detail-inner';
+  sess.w.forEach(w => {
+    const c = eColor(w.e);
+    const chip = document.createElement('span');
+    chip.className = 'detail-chip';
+    chip.innerHTML = '<span class="cdot" style="background:' + c + ';box-shadow:0 0 4px ' + c + '"></span>' +
+      '<span class="clbl">' + w.l + '</span>' +
+      '<span class="cval">' + (w.s > 0 ? '+' : '') + w.s + '</span>';
+    inner.appendChild(chip);
+  });
+  detail.appendChild(inner);
+  wrapper.appendChild(detail);
+
+  mainEl.appendChild(wrapper);
+  tracks.push({ sess, cvs, cWrap, row, detail, expanded: false });
+});
+
+// ======== DRAWING ========
+function drawTrack(t) {
+  const sess = t.sess;
+  const cvs = t.cvs;
+  const isExp = t.expanded;
+  const th = isExp ? TH_EXPANDED : TH_COLLAPSED;
+  const rect = t.cWrap.getBoundingClientRect();
+  const w = Math.max(rect.width, 100);
+
+  cvs.width = Math.round(w * dpr);
+  cvs.height = Math.round(th * dpr);
+  cvs.style.height = th + 'px';
+  cvs.style.width = '100%';
+
+  const ctx = cvs.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, th);
+
+  const cy = th / 2;
+  const maxAmp = cy - 2;
+  const wins = sess.w;
+  if (!wins.length) return;
+
+  // Build point array, ensure 0 and 100 endpoints
+  let pts = wins.map(d => ({
+    x: (d.p / 100) * w,
+    amp: (Math.abs(d.s) / 10) * maxAmp,
+    s: d.s,
+    col: eColor(d.e),
+    emo: d.e,
+    lbl: d.l,
+    pct: d.p
+  }));
+
+  if (pts[0].pct > 0) pts.unshift({ ...pts[0], x: 0, pct: 0 });
+  if (pts[pts.length-1].pct < 100) pts.push({ ...pts[pts.length-1], x: w, pct: 100 });
+
+  const playX = progress * w;
+
+  // Draw segment by segment
+  for (let i = 0; i < pts.length - 1; i++) {
+    const a = pts[i], b = pts[i+1];
+    const steps = Math.max(4, Math.ceil((b.x - a.x) / 1.5));
+
+    // Build micro-points for this segment
+    const micro = [];
+    for (let j = 0; j <= steps; j++) {
+      const t2 = j / steps;
+      const x = a.x + (b.x - a.x) * t2;
+      const amp = a.amp + (b.amp - a.amp) * t2;
+      const s = a.s + (b.s - a.s) * t2;
+      micro.push({ x, amp, s });
+    }
+
+    // Color gradient
+    const grad = ctx.createLinearGradient(a.x, 0, b.x, 0);
+    const [r1,g1,b1] = hexToRgb(a.col);
+    const [r2,g2,b2] = hexToRgb(b.col);
+    grad.addColorStop(0, `rgba(${r1},${g1},${b1},1)`);
+    grad.addColorStop(1, `rgba(${r2},${g2},${b2},1)`);
+
+    // Alpha based on playhead
+    const midX = (a.x + b.x) / 2;
+    ctx.globalAlpha = midX <= playX ? 0.88 : 0.15;
+
+    // Top waveform
+    ctx.beginPath();
+    ctx.moveTo(micro[0].x, cy);
+    for (const m of micro) {
+      const topY = cy - m.amp * (m.s >= 0 ? 1 : 0.25);
+      ctx.lineTo(m.x, topY);
+    }
+    ctx.lineTo(micro[micro.length-1].x, cy);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Bottom mirror
+    ctx.beginPath();
+    ctx.moveTo(micro[0].x, cy);
+    for (const m of micro) {
+      const botY = cy + m.amp * (m.s < 0 ? 1 : 0.25);
+      ctx.lineTo(m.x, botY);
+    }
+    ctx.lineTo(micro[micro.length-1].x, cy);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    ctx.globalAlpha = 1;
+  }
+
+  // Center line
+  ctx.beginPath();
+  ctx.moveTo(0, cy);
+  ctx.lineTo(w, cy);
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.lineWidth = 0.5;
+  ctx.stroke();
+
+  // If expanded, draw data point dots and glow
+  if (isExp) {
+    pts.forEach(p => {
+      if (p.pct <= 0 || p.pct >= 100) return;
+      // Glow
+      if (Math.abs(p.s) >= 5) {
+        const grd = ctx.createRadialGradient(p.x, cy, 0, p.x, cy, 25);
+        const [r,g,b] = hexToRgb(p.col);
+        grd.addColorStop(0, `rgba(${r},${g},${b},0.25)`);
+        grd.addColorStop(1, 'transparent');
+        ctx.fillStyle = grd;
+        ctx.beginPath();
+        ctx.arc(p.x, cy, 25, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // Dot
+      const dotY = p.s >= 0 ? cy - p.amp : cy + p.amp;
+      ctx.beginPath();
+      ctx.arc(p.x, dotY, 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = p.col;
+      ctx.fill();
+      ctx.strokeStyle = '#06060c';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Score label if expanded
+      ctx.font = '500 9px "JetBrains Mono"';
+      ctx.fillStyle = p.col;
+      ctx.textAlign = 'center';
+      const ly = p.s >= 0 ? dotY - 7 : dotY + 12;
+      ctx.fillText((p.s > 0 ? '+' : '') + p.s, p.x, ly);
+    });
+  }
+
+  // Playhead line on this track
+  if (playX > 0 && playX < w) {
+    ctx.beginPath();
+    ctx.moveTo(playX, 0);
+    ctx.lineTo(playX, th);
+    ctx.strokeStyle = 'rgba(255,215,0,0.5)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+}
+
+function drawOverview() {
+  const cvs = document.getElementById('overview-canvas');
+  const rect = cvs.parentElement.getBoundingClientRect();
+  const w = Math.max(rect.width, 100);
+  const h = 50;
+
+  cvs.width = Math.round(w * dpr);
+  cvs.height = Math.round(h * dpr);
+  cvs.style.height = h + 'px';
+
+  const ctx = cvs.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+
+  const cy = h / 2;
+  const maxAmp = cy - 3;
+
+  // Aggregate by percentage bucket
+  const buckets = Array.from({length: 101}, () => ({ sum: 0, cnt: 0, emos: {} }));
+  DATA.forEach(s => s.w.forEach(win => {
+    const bi = Math.min(100, Math.round(win.p));
+    buckets[bi].sum += win.s;
+    buckets[bi].cnt += 1;
+    buckets[bi].emos[win.e] = (buckets[bi].emos[win.e] || 0) + 1;
+  }));
+
+  const aggPts = [];
+  for (let i = 0; i <= 100; i++) {
+    const b = buckets[i];
+    if (b.cnt === 0) continue;
+    const avg = b.sum / b.cnt;
+    let topEmo = 'Neutral', topC = 0;
+    for (const [e, c] of Object.entries(b.emos)) {
+      if (c > topC) { topC = c; topEmo = e; }
+    }
+    aggPts.push({ x: (i/100)*w, s: avg, col: eColor(topEmo) });
+  }
+
+  // Smooth
+  const sm = aggPts.map((p, i) => {
+    const win = 2;
+    let sum = 0, cnt = 0;
+    for (let j = Math.max(0,i-win); j <= Math.min(aggPts.length-1,i+win); j++) {
+      sum += aggPts[j].s; cnt++;
+    }
+    return { ...p, s: sum / cnt };
+  });
+
+  if (sm.length < 2) return;
+
+  const playX = progress * w;
+
+  for (let i = 0; i < sm.length - 1; i++) {
+    const a = sm[i], b = sm[i+1];
+    const a1 = (Math.abs(a.s)/10) * maxAmp;
+    const a2 = (Math.abs(b.s)/10) * maxAmp;
+    const grad = ctx.createLinearGradient(a.x, 0, b.x, 0);
+    grad.addColorStop(0, a.col);
+    grad.addColorStop(1, b.col);
+
+    const midX = (a.x + b.x) / 2;
+    ctx.globalAlpha = midX <= playX ? 0.85 : 0.18;
+    ctx.fillStyle = grad;
+
+    ctx.beginPath();
+    ctx.moveTo(a.x, cy); ctx.lineTo(a.x, cy - a1); ctx.lineTo(b.x, cy - a2); ctx.lineTo(b.x, cy);
+    ctx.closePath(); ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(a.x, cy); ctx.lineTo(a.x, cy + a1); ctx.lineTo(b.x, cy + a2); ctx.lineTo(b.x, cy);
+    ctx.closePath(); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  // Center line
+  ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(w, cy);
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 0.5; ctx.stroke();
+
+  // Playhead
+  document.getElementById('overview-playhead').style.left = (playX) + 'px';
+}
+
+function drawAll() {
+  tracks.forEach(t => drawTrack(t));
+  drawOverview();
+}
+
+// ======== ANIMATION ========
+function animate(ts) {
+  if (!lastTs) lastTs = ts;
+  const dt = ts - lastTs;
+  lastTs = ts;
+
+  if (playing) {
+    progress += dt / SWEEP_MS;
+    if (progress >= 1) {
+      progress = 1;
+      playing = false;
+      document.getElementById('btn-play').classList.remove('active');
+    }
+    updateTime();
+    drawAll();
+  }
+  requestAnimationFrame(animate);
+}
+
+function updateTime() {
+  const cur = (progress * SWEEP_MS / 1000).toFixed(1);
+  const tot = (SWEEP_MS / 1000).toFixed(1);
+  document.getElementById('time-display').textContent = cur + 's / ' + tot + 's';
+}
+
+// ======== CONTROLS ========
+document.getElementById('btn-play').onclick = () => {
+  if (progress >= 1) progress = 0;
+  playing = true; lastTs = null;
+  document.getElementById('btn-play').classList.add('active');
+  document.getElementById('btn-pause').classList.remove('active');
+};
+document.getElementById('btn-pause').onclick = () => {
+  playing = false;
+  document.getElementById('btn-pause').classList.add('active');
+  document.getElementById('btn-play').classList.remove('active');
+};
+document.getElementById('btn-reset').onclick = () => {
+  playing = false; progress = 0; lastTs = null;
+  document.getElementById('btn-play').classList.remove('active');
+  document.getElementById('btn-pause').classList.remove('active');
+  updateTime(); drawAll();
+};
+document.querySelectorAll('.speed-btn').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    SWEEP_MS = parseInt(btn.dataset.speed) * 1000;
+    updateTime();
+  };
+});
+
+// ======== INTERACTION ========
+tracks.forEach((t, idx) => {
+  const cvs = t.cvs;
+
+  cvs.addEventListener('mousemove', (e) => {
+    const rect = cvs.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const pct = (mx / rect.width) * 100;
+    let closest = t.sess.w[0];
+    let minD = Infinity;
+    t.sess.w.forEach(win => {
+      const d = Math.abs(win.p - pct);
+      if (d < minD) { minD = d; closest = win; }
+    });
+
+    const col = eColor(closest.e);
+    let html = '<div class="tt-sid">' + t.sess.sid + ' &mdash; ' + (t.sess.label || '') + '</div>';
+    html += '<div class="tt-win">' + closest.l + '</div>';
+    html += '<div class="tt-emo" style="color:' + col + '">' + closest.e + '</div>';
+    html += '<div class="tt-score">Sentiment: ' + (closest.s > 0 ? '+' : '') + closest.s + ' / 10</div>';
+    html += '<div class="tt-score">Position: ' + closest.p.toFixed(0) + '%</div>';
+    if (t.sess.peak && Math.abs(t.sess.peak.pct - pct) < 6) {
+      html += '<div class="tt-peak">&#9650; ' + t.sess.peak.title + '</div>';
+    }
+    ttEl.innerHTML = html;
+    ttEl.style.display = 'block';
+
+    let tx = e.clientX + 14, ty = e.clientY - 14;
+    const tb = ttEl.getBoundingClientRect();
+    if (tx + tb.width > window.innerWidth - 10) tx = e.clientX - tb.width - 14;
+    if (ty + tb.height > window.innerHeight - 10) ty = e.clientY - tb.height - 10;
+    if (ty < 4) ty = 4;
+    ttEl.style.left = tx + 'px';
+    ttEl.style.top = ty + 'px';
+  });
+
+  cvs.addEventListener('mouseleave', () => { ttEl.style.display = 'none'; });
+
+  t.row.addEventListener('click', () => {
+    if (expandedIdx === idx) {
+      t.expanded = false;
+      t.row.classList.remove('expanded');
+      t.detail.classList.remove('open');
+      expandedIdx = null;
+    } else {
+      if (expandedIdx !== null) {
+        tracks[expandedIdx].expanded = false;
+        tracks[expandedIdx].row.classList.remove('expanded');
+        tracks[expandedIdx].detail.classList.remove('open');
+      }
+      t.expanded = true;
+      t.row.classList.add('expanded');
+      t.detail.classList.add('open');
+      expandedIdx = idx;
+    }
+    // Redraw after DOM update
+    requestAnimationFrame(() => drawAll());
+  });
+});
+
+// ======== LEGEND ========
+const usedEmos = new Set();
+DATA.forEach(s => s.w.forEach(w => usedEmos.add(w.e)));
+const legendEl = document.getElementById('legend-bar');
+[...usedEmos].sort().forEach(emo => {
+  const c = eColor(emo);
+  const item = document.createElement('div');
+  item.className = 'legend-item';
+  item.innerHTML = '<span class="legend-sw" style="background:' + c + ';box-shadow:0 0 4px ' + c + '60"></span>' + emo;
+  legendEl.appendChild(item);
+});
+
+// ======== STATS ========
+const allS = DATA.flatMap(s => s.w.map(w => w.s));
+const avgS = (allS.reduce((a,b) => a+b, 0) / allS.length).toFixed(1);
+const maxS = Math.max(...allS);
+const minS = Math.min(...allS);
+const paceMap = {};
+DATA.forEach(s => { if (s.pace) paceMap[s.pace] = (paceMap[s.pace]||0) + 1; });
+const topPace = Object.entries(paceMap).sort((a,b) => b[1]-a[1])[0];
+const statsEl = document.getElementById('stats-footer');
+[
+  ['46', 'Sessions'],
+  [allS.length, 'Data Points'],
+  [(avgS > 0 ? '+' : '') + avgS, 'Avg Sentiment'],
+  ['+' + maxS, 'Peak High'],
+  ['' + minS, 'Deepest Low'],
+  [topPace ? topPace[0] : '', 'Top Pace Type']
+].forEach(([v, l]) => {
+  const box = document.createElement('div');
+  box.className = 'stat-box';
+  box.innerHTML = '<div class="sv">' + v + '</div><div class="sl">' + l + '</div>';
+  statsEl.appendChild(box);
+});
+
+// ======== INIT ========
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(drawAll, 150);
+});
+
+requestAnimationFrame(() => {
+  drawAll();
+  requestAnimationFrame(animate);
+  // Auto-play after short delay
+  setTimeout(() => {
+    playing = true; lastTs = null;
+    document.getElementById('btn-play').classList.add('active');
+  }, 600);
+});
+</script>
+</body>
+</html>

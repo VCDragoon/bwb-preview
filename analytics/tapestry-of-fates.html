@@ -1,0 +1,1564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Tapestry of Fates</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+
+body {
+  background: #0a0806;
+  color: #d4c9a8;
+  font-family: 'Barlow', sans-serif;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* ═══════════════════════════════════════
+   TITLE
+   ═══════════════════════════════════════ */
+.title-area {
+  text-align: center;
+  padding: 28px 20px 6px;
+  position: relative;
+  z-index: 10;
+}
+.title-area h1 {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: clamp(24px, 4vw, 54px);
+  background: linear-gradient(
+    135deg, #8b6914 0%, #c9a84c 18%, #f5e6a3 35%,
+    #c9a84c 50%, #8b6914 65%, #c9a84c 82%, #f5e6a3 100%
+  );
+  background-size: 200% 200%;
+  animation: goldShimmer 8s ease infinite;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 8px;
+  filter: drop-shadow(0 0 30px rgba(201,168,76,0.35))
+          drop-shadow(0 0 60px rgba(201,168,76,0.12));
+}
+@keyframes goldShimmer {
+  0%,100% { background-position: 0% 50% }
+  50% { background-position: 100% 50% }
+}
+.subtitle {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 400;
+  font-size: 12px;
+  color: #5a4e3e;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+/* ═══════════════════════════════════════
+   STATS BAR
+   ═══════════════════════════════════════ */
+.stats-bar {
+  display: flex;
+  justify-content: center;
+  gap: 22px;
+  padding: 10px 20px 6px;
+  flex-wrap: wrap;
+}
+.stat-item { text-align: center }
+.stat-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 19px;
+  font-weight: 500;
+  color: #c9a84c;
+  text-shadow: 0 0 10px rgba(201,168,76,0.2);
+}
+.stat-label {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 9px;
+  color: #4a3e30;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+/* ═══════════════════════════════════════
+   CONTROLS
+   ═══════════════════════════════════════ */
+.controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 20px 6px;
+  flex-wrap: wrap;
+}
+.filter-btn {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 3px 11px;
+  border: 1px solid #221e16;
+  border-radius: 2px;
+  background: transparent;
+  color: #5a4e3e;
+  cursor: pointer;
+  transition: all .25s;
+  position: relative;
+  overflow: hidden;
+}
+.filter-btn::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0;
+  width: 3px; height: 100%;
+  opacity: .7;
+}
+.filter-btn.active {
+  border-color: #3a3228;
+  color: #b8a880;
+  background: rgba(45,38,25,.35);
+}
+.filter-btn:hover {
+  border-color: #4a3e30;
+  color: #d4c9a8;
+}
+.filter-btn[data-type="Mystery"]::before{background:#ad6bff}
+.filter-btn[data-type="Character Arc"]::before{background:#ffd700}
+.filter-btn[data-type="NPC"]::before{background:#4DB6AC}
+.filter-btn[data-type="Obligation"]::before{background:#FF8A65}
+.filter-btn[data-type="Threat"]::before{background:#ef4444}
+.filter-btn[data-type="Faction"]::before{background:#4A90D9}
+.filter-btn[data-type="Location"]::before{background:#81C784}
+.filter-btn[data-type="Other"]::before{background:#9e9e9e}
+
+.weave-btn {
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  padding: 5px 22px;
+  border: 2px solid #c9a84c;
+  border-radius: 2px;
+  background: linear-gradient(135deg, rgba(201,168,76,.1), rgba(139,105,20,.06));
+  color: #c9a84c;
+  cursor: pointer;
+  transition: all .4s;
+  margin-left: 10px;
+  text-shadow: 0 0 8px rgba(201,168,76,.25);
+}
+.weave-btn:hover {
+  background: linear-gradient(135deg, rgba(201,168,76,.22), rgba(139,105,20,.12));
+  box-shadow: 0 0 28px rgba(201,168,76,.18);
+}
+
+/* ═══════════════════════════════════════
+   LEGEND
+   ═══════════════════════════════════════ */
+.legend-row {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding: 2px 20px 6px;
+  flex-wrap: wrap;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 9.5px;
+  color: #4a3e30;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.legend-swatch { width: 14px; height: 3px; border-radius: 1px }
+.legend-sep { width: 1px; height: 10px; background: #1e1a14; margin: 0 4px }
+.legend-marker {
+  font-size: 11px;
+  margin-right: 1px;
+}
+
+/* ═══════════════════════════════════════
+   LOOM FRAME
+   ═══════════════════════════════════════ */
+.loom-container {
+  position: relative;
+  margin: 4px auto 0;
+  max-width: 100%;
+  padding: 0 12px;
+}
+.loom-frame {
+  position: relative;
+  border: 14px solid;
+  border-image: linear-gradient(180deg,
+    #5a4a3a 0%, #4a3a2a 8%, #3a2a1a 25%,
+    #2a1c10 50%, #3a2a1a 75%, #4a3a2a 92%, #5a4a3a 100%) 1;
+  box-shadow:
+    inset 0 0 50px rgba(0,0,0,.95),
+    0 4px 60px rgba(0,0,0,.7),
+    inset 0 3px 0 rgba(100,80,55,.2),
+    inset 0 -3px 0 rgba(10,6,2,.95),
+    inset 3px 0 0 rgba(80,60,40,.15),
+    inset -3px 0 0 rgba(80,60,40,.15);
+  background: #0c0a08;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 1s ease, border-width .8s cubic-bezier(.22,1,.36,1);
+}
+.loom-frame.visible { opacity: 1 }
+
+.loom-bar {
+  height: 12px;
+  background: linear-gradient(90deg,
+    #2a1c10 0%, #3a2a1a 4%, #4a3a2a 10%, #3a2a1a 20%,
+    #4a3a2a 35%, #3a2a1a 50%, #4a3a2a 65%, #3a2a1a 80%,
+    #4a3a2a 90%, #3a2a1a 96%, #2a1c10 100%);
+  position: relative;
+}
+.loom-bar::before {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; height: 100%;
+  background: repeating-linear-gradient(90deg,
+    transparent, transparent 22px,
+    rgba(0,0,0,.12) 22px, rgba(0,0,0,.12) 23px);
+}
+.loom-bar.top { box-shadow: 0 3px 12px rgba(0,0,0,.7) }
+.loom-bar.bottom { box-shadow: 0 -3px 12px rgba(0,0,0,.7) }
+
+.tapestry-svg { display: block; width: 100% }
+
+/* ═══════════════════════════════════════
+   DENSITY BAR
+   ═══════════════════════════════════════ */
+.density-area {
+  margin: 0 auto;
+  max-width: 100%;
+  padding: 0 12px;
+}
+
+/* ═══════════════════════════════════════
+   TOOLTIP
+   ═══════════════════════════════════════ */
+.thread-tooltip {
+  position: fixed;
+  pointer-events: none;
+  background: linear-gradient(135deg, #1a1610, #0c0a06);
+  border: 1px solid #2a2218;
+  border-radius: 3px;
+  padding: 12px 16px;
+  max-width: 320px;
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity .15s;
+  box-shadow: 0 8px 36px rgba(0,0,0,.85);
+}
+.thread-tooltip.visible { opacity: 1 }
+.tt-title {
+  font-family: 'Cinzel', serif;
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+.tt-meta {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 10px;
+  color: #6b6050;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
+.tt-span {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: #4a3e30;
+}
+.tt-events {
+  margin-top: 5px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 10px;
+}
+
+/* ═══════════════════════════════════════
+   SIDE PANEL
+   ═══════════════════════════════════════ */
+.side-panel {
+  position: fixed;
+  top: 0; right: -440px;
+  width: 420px; height: 100vh;
+  background: linear-gradient(180deg, #14120e, #0c0a06);
+  border-left: 2px solid #2a1c10;
+  z-index: 500;
+  overflow-y: auto;
+  transition: right .45s cubic-bezier(.22,1,.36,1);
+  box-shadow: -14px 0 60px rgba(0,0,0,.65);
+}
+.side-panel.open { right: 0 }
+
+.panel-header {
+  position: sticky; top: 0; z-index: 2;
+  background: linear-gradient(180deg, #1a1610, #14120e);
+  padding: 22px 22px 12px;
+  border-bottom: 1px solid #1e1a14;
+}
+.panel-close {
+  position: absolute; top: 14px; right: 14px;
+  width: 26px; height: 26px;
+  background: none;
+  border: 1px solid #2a2218;
+  border-radius: 50%;
+  color: #5a4e3e;
+  font-size: 15px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .3s;
+}
+.panel-close:hover { border-color: #c9a84c; color: #c9a84c }
+
+.panel-title {
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: 16px;
+  padding-right: 38px;
+  line-height: 1.3;
+}
+.panel-type-badge {
+  display: inline-block;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 10px; font-weight: 500;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 2px 9px;
+  border-radius: 2px;
+  margin-top: 6px;
+  border: 1px solid;
+}
+.panel-status-badge {
+  display: inline-block;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 10px; font-weight: 500;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 2px;
+  margin-left: 6px;
+  background: rgba(80,70,55,.12);
+  border: 1px solid rgba(80,70,55,.25);
+  color: #6b6050;
+}
+.panel-content { padding: 14px 22px 40px }
+.panel-section { margin-bottom: 16px }
+.panel-section-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 10px; font-weight: 600;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: #4a3e30;
+  margin-bottom: 8px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid #16140e;
+}
+.event-item {
+  margin-bottom: 11px;
+  padding-left: 14px;
+  border-left: 2px solid #2a2218;
+  position: relative;
+}
+.event-dot {
+  position: absolute;
+  left: -5px; top: 5px;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  border: 2px solid;
+}
+.event-session {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: #4a3e30;
+}
+.event-type-badge {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 2px;
+  margin-left: 5px;
+}
+.event-summary {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #908878;
+  margin-top: 3px;
+}
+.entity-tag {
+  display: inline-block;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 11px;
+  padding: 2px 8px;
+  margin: 2px 3px 2px 0;
+  border-radius: 2px;
+  background: rgba(201,168,76,.06);
+  border: 1px solid rgba(201,168,76,.15);
+  color: #b8a060;
+}
+.hook-item {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #908878;
+  padding: 3px 0 3px 14px;
+  position: relative;
+}
+.hook-item::before {
+  content: '\27A4';
+  position: absolute;
+  left: 0;
+  color: #3a3228;
+  font-size: 8px;
+  top: 6px;
+}
+
+/* ═══════════════════════════════════════
+   SCROLLBAR
+   ═══════════════════════════════════════ */
+::-webkit-scrollbar { width: 5px }
+::-webkit-scrollbar-track { background: #0a0806 }
+::-webkit-scrollbar-thumb { background: #2a1c10; border-radius: 3px }
+::-webkit-scrollbar-thumb:hover { background: #3a2a1a }
+
+/* ═══════════════════════════════════════
+   FEATURE 1: GOLDEN THREAD SHIMMER
+   ═══════════════════════════════════════ */
+@keyframes shimmer {
+  0%   { stroke: #ffd700; }
+  50%  { stroke: #fff8dc; }
+  100% { stroke: #ffd700; }
+}
+.golden-thread-seg {
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+/* ═══════════════════════════════════════
+   FEATURE 6: LOOM VIBRATION
+   ═══════════════════════════════════════ */
+@keyframes loomHum {
+  0%, 100% { transform: translateX(0); }
+  25%      { transform: translateX(0.3px); }
+  75%      { transform: translateX(-0.3px); }
+}
+.loom-frame.humming {
+  animation: loomHum 0.15s infinite;
+}
+</style>
+</head>
+<body>
+
+<div class="title-area">
+  <h1>The Tapestry of Fates</h1>
+  <div class="subtitle">78 Narrative Threads Woven Across 46 Sessions</div>
+</div>
+<div class="stats-bar" id="statsBar"></div>
+<div class="controls" id="controls"></div>
+<div class="legend-row" id="legendRow"></div>
+
+<div class="loom-container">
+  <div class="loom-frame" id="loomFrame">
+    <div class="loom-bar top"></div>
+    <svg class="tapestry-svg" id="tapestrySvg"></svg>
+    <div class="loom-bar bottom"></div>
+  </div>
+</div>
+
+<div class="density-area">
+  <svg id="densitySvg" style="display:block;width:100%"></svg>
+</div>
+
+<div class="thread-tooltip" id="tooltip"></div>
+
+<div class="side-panel" id="sidePanel">
+  <div class="panel-header">
+    <button class="panel-close" id="panelClose">&times;</button>
+    <div class="panel-title" id="panelTitle"></div>
+    <div id="panelBadges"></div>
+  </div>
+  <div class="panel-content" id="panelContent"></div>
+</div>
+
+<script id="threadData" type="application/json">[{"id": "thread_001", "title": "Lilith's Ecclesiastical Trial and Myrkul Pact", "type": "Character Arc", "status": "Active", "first": 5, "last": 22, "events": [{"s": 5, "type": "advance", "summary": "Orla's mentor, Elder Inscrutable, arrives for an in-person review of Orla's druidic training. The party hastily prepares a presentation involving forged notes, a tour of the Feywild portal, nature logs from Lilith's followers, and a musical performance. Orla passes the review, but the mentor leaves abruptly with unresolved concerns.", "signal": "Pending"}, {"s": 17, "type": "advance", "summary": "Lilith establishes a wellness commune in the High Forest, grows her followers to 4,000, and pledges fealty to Myrkul to resurrect her brother, shifting from Grave Domain to Death Domain cleric and gaining infernal allies.", "signal": "Active"}, {"s": 17, "type": "advance", "summary": "Orla becomes Archdruid of the Moonlit Thicket, leads a successful defense against celestial mining, and gains allegiance from elves and gnomes, elevating her status and expanding her influence in the High Forest.", "signal": "Active"}, {"s": 22, "type": "reveal", "summary": "Orla received a dark blessing (Zephyr's Veil) after the party was punished by the Lady of Pain, reducing them to level 10 upon entering Sanctum via a wish spell.", "signal": "Active"}, {"s": 22, "type": "reveal", "summary": "Orla received a dark blessing (Zephyr's Veil) after the party was punished by the Lady of Pain, reducing them to level 10 upon entering Sanctum via a wish spell.", "signal": "Active"}], "entities": ["Orla", "Elder Inscrutable", "Lilith", "Myrkul", "Kelemvor", "Lady of Pain"], "locations": ["Castle Corras", "High Forest", "Haunted Grove", "Sanctum"], "hooks": ["Follow up on the mentor's abrupt departure", "Continue Orla's training with the dragon egg or other projects", "Manage the commune's growth and spy network", "Explore Myrkul's boons", "Navigate celestial opposition", "Consolidate druidic power", "Maintain truce with celestials", "Support Corras in the war", "Utilize dark blessings strategically in upcoming challenges", "Explore ways to regain lost power levels"]}, {"id": "thread_002", "title": "Billabong's Celestial Powers", "type": "Character Arc", "status": "Active", "first": 3, "last": 16, "events": [{"s": 3, "type": "advance", "summary": "One of the two Solarum orbs (sun and moon entities) was fading after its partner was absorbed by the eldritch slime. Billabong willingly fused with it, gaining celestial powers: +2 Strength (up to 24), understanding of Celestial, and once per long rest ability to cast Planar Binding.", "signal": "Active"}, {"s": 16, "type": "advance", "summary": "Billabong's celestial powers activated outside of time, granting telepathic communication between party members at different rift sites and enhancing her abilities.", "signal": "Active"}], "entities": ["Billabong"], "locations": [], "hooks": ["Explore the new celestial abilities and their implications", "Investigate the history of the Solarum entities", "Consider how this fusion affects group dynamics", "Leverage telepathic coordination to manage both rift sites more effectively.", "Explore further celestial abilities as the situation evolves."]}, {"id": "thread_003", "title": "Corras's Eyelash Heist and Simulacrum", "type": "Character Arc", "status": "Pending", "first": 8, "last": 35, "events": [{"s": 8, "type": "advance", "summary": "The party devised a plan to create a simulacrum of Spark using the stolen eyelash, requiring a 12-hour ritual, while managing distractions and past party suspicions.", "signal": "Active"}, {"s": 22, "type": "advance", "summary": "The party successfully infiltrated Web's Edge, the secret hideout of Lolth followers, by picking an arcane-locked iron door after navigating through webs and using spider disguises.", "signal": "Active"}, {"s": 25, "type": "create", "summary": "Bastion roles are assigned: Corras administers the BWB Federation from Castle Corras, Orla oversees the High Forest and druids (EPA), Ash handles intelligence and magical defenses (NSA), Dahlia manages interrogation and torture (TNI), Billabong works with dwarves and goblins, and SavannahBelle connects to an Aberrant entity for retribution.", "signal": "Active"}, {"s": 33, "type": "advance", "summary": "Billabong is dominated by the lich using Dominate Person but freed when Calm Emotions suppresses the charm effect. She later uses Nightmare's Leash to brand Corras, allowing her to track his location after his capture.", "signal": "Resolved"}, {"s": 35, "type": "advance", "summary": "Corras stole Dahlia's broken dragon turtle hood and gave it to Foehammer along with his ring of mind shielding to craft a legendary replacement, escalating their rivalry.", "signal": "Pending"}], "entities": ["Corras", "Ash", "Ave", "Orla", "Billabong", "Dahlia", "SavannahBelle", "Drow Mage", "Umber Hulk", "Asnar the Crimson", "Foehammer"], "locations": ["Lumin ritual site", "Web's Edge", "Underdark", "Castle Corras", "High Forest", "BWB outpost", "Torture chamber", "Sanctuary of Retribution", "Warehouse", "Bastion"], "hooks": ["Cast the simulacrum ritual", "Guard the ritual site", "Retrieve Spark after creation", "Explore Web's Edge to locate the Rod of Seven Parts piece", "Maintain disguises as Lolth followers to avoid detection", "Develop bastion mechanics and resources.", "Coordinate roles for federation efficiency.", "Use the brand to locate Corras in Thay", "Address any lingering effects from the domination", "Prepare for a rescue mission using the tracking ability", "Await Foehammer's completion of the item", "Manage Dahlia's reaction when she discovers the theft"]}, {"id": "thread_004", "title": "Drenek's Squirrel Curse", "type": "Character Arc", "status": "Active", "first": 10, "last": 10, "events": [{"s": 10, "type": "reveal", "summary": "Drenek revealed he is cursed by squirrels after chopping up stuffed squirrels in a haunted mansion, causing them to haunt and sing to him.", "signal": "Active"}], "entities": ["Drenek"], "locations": ["haunted mansion"], "hooks": ["Investigate the haunted mansion for curse removal", "Seek a cleric or wizard to break the curse", "Use the curse for comic relief or tactical advantage"]}, {"id": "thread_005", "title": "Corras's Deck of Many Things Aftermath", "type": "Character Arc", "status": "Active", "first": 10, "last": 10, "events": [{"s": 10, "type": "advance", "summary": "Corras recounted drawing 11 cards from the Deck of Many Things, resulting in being trapped in an extra-dimensional portal, losing his main character, and becoming a duke of a castle in the far north, with the option to undo it using the Fates card.", "signal": "Active"}], "entities": ["Corras", "Ilmater"], "locations": ["far north castle", "Triboar"], "hooks": ["Decide whether to use the Fates card to undo the draws", "Explore the far north castle for resources", "Integrate the duke title into party dynamics"]}, {"id": "thread_006", "title": "Argentus's Influence on Ash", "type": "Character Arc", "status": "Resolved", "first": 11, "last": 16, "events": [{"s": 11, "type": "escalate", "summary": "Argentus (the sentient arm) exerted control over Ash, forcing her to cast Suggestion on Sarlumon to throw Ash into a pit trap, revealing its manipulative and potentially dangerous nature.", "signal": "Active"}, {"s": 16, "type": "reveal", "summary": "Ash lost an arm while escaping an alternate timeline battlefield using Misty Step, sacrificing it to break free from magical restraints, though this event was undone by the Fates card.", "signal": "Resolved"}], "entities": ["Ash", "Argentus", "Sarlumon"], "locations": ["Summer Hills", "pit trap near bridge", "Ancient Battlefield"], "hooks": ["Monitor Argentus for further hostile actions", "Seek a way to communicate with or control Argentus", "Discuss the incident with the party to assess trust issues", "In the reset timeline, ensure Ash retains both arms and Spark.", "Explore any lingering effects from the undone timeline."]}, {"id": "thread_007", "title": "Fleshy's Transformation", "type": "Character Arc", "status": "Active", "first": 14, "last": 14, "events": [{"s": 14, "type": "reveal", "summary": "Fleshy partially transformed back to human and cast mass healing word during combat, revealing regained wizard abilities.", "signal": "Active"}], "entities": ["Fleshy"], "locations": [], "hooks": ["Investigate Fleshy's full transformation process", "Utilize his healing abilities in future conflicts"]}, {"id": "thread_008", "title": "Dahlia's Soul Conduit and Vengeance Oath", "type": "Character Arc", "status": "Active", "first": 16, "last": 18, "events": [{"s": 16, "type": "reveal", "summary": "Dahlia tapped into Kelemvor's soul conduit power, gaining abilities like necrotic resistance and ancestral wisdom without needing followers present.", "signal": "Active"}, {"s": 18, "type": "create", "summary": "Dahlia joins the party as an aasimar paladin with an oath of vengeance against celestials after her hometown was destroyed by them; she seeks the Soul Forge as a weapon.", "signal": "Active"}], "entities": ["Dahlia", "Kelemvor", "Celestials"], "locations": ["Triboar", "Northeast Faer\u00fbn"], "hooks": ["Experiment with soul conduit abilities in combat or social situations.", "Consider how this power aligns with Dahlia's paladin oath.", "Explore Dahlia's personal quest for vengeance against specific celestial figures.", "Integrate her backstory with the party's search for the Soul Forge."]}, {"id": "thread_009", "title": "Ash's Shadow Glass Heritage and Feywild Connections", "type": "Character Arc", "status": "Active", "first": 17, "last": 44, "events": [{"s": 17, "type": "reveal", "summary": "Ash learns she is the Princess of Shadow Glass, a banished fey entity with lost power tied to three obsidian shards; she chooses not to absorb them but gives them to trusted companions, becoming the Obsidian Sorceress.", "signal": "Active"}, {"s": 25, "type": "advance", "summary": "Ash seeks to resolve threats from the Feywild (Queen of Air and Darkness and former patron Morgantha) and understand her Princess of Shadowgloss link to the Shadowfell, aiming to gather information and avoid future conflicts.", "signal": "Active"}, {"s": 44, "type": "advance", "summary": "Ash was banished to the Feywild by SavannahBelle, spent months there evading the Wild Hunt, reclaimed her familiar Spark from a green dragon named Thorn, and returned with enhanced abilities.", "signal": "Active"}], "entities": ["Ash", "Princess of Shadow Glass", "Keeper of the Veiled Path", "Queen of Air and Darkness", "Morgantha", "Thorn", "Spark"], "locations": ["Feywild", "Material Plane", "Shadowfell", "Whispering Weald"], "hooks": ["Explore the transformed companions' abilities", "Monitor Feywild reactions", "Leverage Harper connections", "Plan a scouting mission to the Feywild for intelligence.", "Research Shadowfell lore to understand Ash's connection.", "Leverage Feywild knowledge against the Gloaming Court", "Investigate Thorn's connection to Orla's lineage", "Use Spark for enhanced scouting"]}, {"id": "thread_010", "title": "SavannahBelle's Aberrant Connection and Retribution", "type": "Character Arc", "status": "Active", "first": 25, "last": 25, "events": [{"s": 25, "type": "create", "summary": "SavannahBelle is a conduit for an Aberrant entity, seeking retribution against Celestials who destroyed her village. Her bastion, the Sanctuary of Retribution, imprisons powerful beings and has layers for rehabilitation, holding, and punishment.", "signal": "Active"}], "entities": ["SavannahBelle"], "locations": ["Sanctuary of Retribution", "Nether Mountains"], "hooks": ["Locate and establish the Sanctuary of Retribution.", "Target Celestial entities for imprisonment."]}, {"id": "thread_011", "title": "Corras's Changeling Backstory and Family", "type": "Character Arc", "status": "Active", "first": 31, "last": 34, "events": [{"s": 31, "type": "advance", "summary": "The DM hinted that the shipping crate mystery ties to Corras's background and cult reports in his realm, suggesting personal stakes.", "signal": "Active"}, {"s": 32, "type": "escalate", "summary": "Asnar the Crimson, a lich and leader of the Red Wizards encountered, identified Corras as a changeling and target for capture to complete 'experimentation' on changelings. This directly ties to Corras's backstory of his tribe being hunted and tortured by the Crimson Order.", "signal": "Active"}, {"s": 33, "type": "advance", "summary": "Corras confronts the lich Asnar the Crimson, who reveals he has been torturing Corras's family and friends instead of killing them. Corras makes a deal to surrender in exchange for the party's safety, but betrays the lich by attacking when the lich attempts to shackle him. The lich then captures Corras using anti-magic manacles and transports him to a prison filled with dead changelings.", "signal": "Active"}, {"s": 34, "type": "reveal", "summary": "A twin brother named Sarek, who is Corras's opposite and had been imprisoned, is revealed. Sarek claims Corras took his life and identity, leading to a confrontation where Sarek attempts to kill Corras but is absorbed by him in an arcane ritual.", "signal": "Active"}], "entities": ["Corras", "Asnar the Crimson", "Sarek"], "locations": ["Warehouse 17", "Warehouse", "Prison in Thay", "Thayan prison"], "hooks": ["Corras should investigate his past ties to cults", "Follow up on the Everlund lead personally", "Protect Corras from capture by the Red Wizards.", "Investigate the fate of other captured changelings.", "Consider leveraging this for negotiation or a rescue mission.", "Explore the prison environment with Corras co-DMing", "Determine fate of Corras's family and other changelings", "Plan a rescue mission for the captured party members", "Explore the consequences of Corras absorbing Sarek's essence", "Investigate Sarek's backstory and connection to Corras's past"]}, {"id": "thread_012", "title": "Ezrella's Modified Memory and Vampiric Corruption", "type": "Character Arc", "status": "Active", "first": 33, "last": 36, "events": [{"s": 33, "type": "reveal", "summary": "Ezrella has her memory modified by the lich using Modify Memory, making her believe the lich saved her life and that she owes him a life debt. This affects her actions during the confrontation, as she tries to persuade the party to negotiate rather than fight.", "signal": "Active"}, {"s": 36, "type": "create", "summary": "Ezrella is cursed with vampiric corruption after being bitten by a Priest of Osibus, causing disadvantage on constitution and wisdom saves, halved healing, and ongoing necrotic damage.", "signal": "Active"}], "entities": ["Ezrella", "Asnar the Crimson", "Priests of Osibus"], "locations": ["Warehouse", "Death House basement"], "hooks": ["Use Greater Restoration or Remove Curse to undo the memory modification", "Have Ezrella confront the lich about the deception", "Explore how this false memory affects her relationships with the party", "Seek a cure from Sarusanda or other sources", "Prioritize protecting Ezrella in combat", "Use abilities to mitigate the curse effects"]}, {"id": "thread_013", "title": "SavannahBelle's Paranoia and Vampiric Transformation", "type": "Character Arc", "status": "Active", "first": 36, "last": 42, "events": [{"s": 36, "type": "create", "summary": "SavannahBelle is cursed with extreme paranoia after an encounter with Strahd von Zarovich's illusion, giving her disadvantage on wisdom and charisma checks and a fear of wizards.", "signal": "Active"}, {"s": 41, "type": "escalate", "summary": "SavannahBelle drank from a cursed chalice in Strahd's heart chamber, was paralyzed, attacked by Ezrella under a crown's influence, and then turned into a vampire spawn by Strahd.", "signal": "Active"}, {"s": 42, "type": "advance", "summary": "SavannahBelle, turned into a vampire spawn by Strahd, is now an enemy combatant under Strahd's control. She uses etherealness and greater invisibility to maneuver, posing a direct threat to the party.", "signal": "Active"}], "entities": ["SavannahBelle", "Strahd von Zarovich", "Ezrella"], "locations": ["Death House", "Castle Ravenloft", "heart chamber", "Ravenloft Dungeon"], "hooks": ["Find a way to remove the curse (e.g., greater restoration)", "Use SavannahBelle's paranoia to advantage in wizard-related situations", "Monitor for escalation of the condition", "Use holy magic to purify the chalice and disable the coffin", "Decide whether to fight or try to save SavannahBelle", "Consider using Sunsword on SavannahBelle to revert her vampirism", "Develop a plan to subdue or eliminate her as a threat"]}, {"id": "thread_014", "title": "Shrum's Memory Restoration", "type": "Character Arc", "status": "Active", "first": 42, "last": 42, "events": [{"s": 42, "type": "reveal", "summary": "Shrum stabilizes the reassembled mirror, restoring his memories. He learns he was a bard enslaved by Strahd, his soul trapped in the mirror, and that he knows how to destroy the Brides by forcing them to see their true forms.", "signal": "Active"}], "entities": ["Shrum", "Popovsky", "Ludmilla", "Anastrazia", "Escher", "Strahd von Zarovich"], "locations": ["Ravenloft"], "hooks": ["Use the mirror to target remaining Brides (Anastrazia, Escher)", "Leverage Shrum's restored knowledge for tactical advantage"]}, {"id": "thread_015", "title": "Graymark Mercenaries", "type": "Faction", "status": "Active", "first": 8, "last": 44, "events": [{"s": 8, "type": "advance", "summary": "The party devised a plan to create a simulacrum of Spark using the stolen eyelash, requiring a 12-hour ritual, while managing distractions and past party suspicions.", "signal": "Active"}, {"s": 17, "type": "advance", "summary": "Corras vassalizes nearby towns, creating a small empire, but faces a rebellion in Jalanthar; he lets rebels go, leading to their destruction by celestials, and later rejects celestial demands, plunging into open war as King Corras.", "signal": "Active"}, {"s": 25, "type": "advance", "summary": "BWB Federation has expanded, settling a metropolitan area around Castle Corras with refugees from Waterdeep, Neverwinter, etc. It includes dwarves, elves, goblins, orcs, and druids, governed under a constitution with local autonomy but collective defense. An outpost is established near Drakkar's territory for monitoring.", "signal": "Active"}, {"s": 28, "type": "advance", "summary": "The party finalized their combined bastions: Billabong/Ash's bastion in the north near Mithral Hall, SavannahBelle's Sanctuary of Retribution in the Nether Mountains, and Dahlia/Corras's combined finance/IT bastion. Details were discussed offline.", "signal": "Active"}, {"s": 43, "type": "escalate", "summary": "After being forced into the Matron's ritual and freed, Isteval accuses the party of violating his mind and leaves with his paladins, potentially turning refugees against the party.", "signal": "Active"}, {"s": 44, "type": "escalate", "summary": "Lord Isteval is rallying refugees and Lord's Alliance soldiers against BWB, accusing them of mind control and murder. This has turned a significant portion of the camp against the party, risking open conflict.", "signal": "Active"}], "entities": ["Corras", "Ash", "Ave", "Orla", "Morty", "Darz", "Billabong", "SavannahBelle", "Dahlia", "Isteval", "Lord Isteval", "Sir Gideon"], "locations": ["Lumin ritual site", "Castle Corras", "Jalanthar", "Hilltop", "Everlund", "High Forest", "Mithral Hall", "Silverymoon", "BWB outpost", "Nether Mountains", "Castle Corras courtyard"], "hooks": ["Cast the simulacrum ritual", "Guard the ritual site", "Retrieve Spark after creation", "Lead war efforts with allies", "Explore the soul forge for advantage", "Manage empire stability", "Solidify the constitution and core tenets.", "Strengthen alliances with member factions.", "Resolve bastion events offline via DM messages", "Explore implications of bastion placements on regional politics", "Control the narrative with propaganda", "Attempt reconciliation", "Prepare for backlash", "De-escalate through diplomacy or force", "Expose the Butcher's corruption to undermine Isteval", "Prepare for potential combat"]}, {"id": "thread_016", "title": "Celestial War and Treaty Breach", "type": "Faction", "status": "Active", "first": 17, "last": 17, "events": [{"s": 17, "type": "reveal", "summary": "DM reveals the backdrop of the celestial war: Mercuria celestials broke the Pact of Cosmic Equilibrium to establish a foothold in the material plane, leading to a three-way conflict with fiends and elemental cults, reshaping the geopolitical landscape.", "signal": "Active"}], "entities": ["Celestials", "Devils", "Demons", "Matron", "Coven"], "locations": ["Castle Corras", "Nether Mountains", "Etyrael", "Berdusk", "High Forest", "Sword Mountains"], "hooks": ["Investigate celestial motives further", "Explore the soul forge as a potential power source", "Forge alliances with neutral factions"]}, {"id": "thread_017", "title": "Coven Schism and Lord's Alliance", "type": "Faction", "status": "Active", "first": 25, "last": 27, "events": [{"s": 25, "type": "advance", "summary": "The Coven has splintered: Drakkar (Lord of Terror) and Nyla (Lady of Shadows) led a coup, taking most armies and openly taking over the Lord's Alliance. They are militaristic and expansionist, renaming it and ruling by fear. The remaining Coven members (Matron, Alton Whisperwind, Vexara Spellweaver, Valtor) are in hiding, allied with BWB Federation at Castle Corras.", "signal": "Active"}, {"s": 27, "type": "advance", "summary": "DM highlighted opportunities to support resistance movements in Triboar and Yartar, cities taken over by the Lord's Alliance under Drakkar. The party can gather intel, create propaganda, or aid rebellions.", "signal": "Active"}], "entities": ["Drakkar", "Nyla", "Matron", "Alton Whisperwind", "Vexara Spellweaver", "Valtor", "Oh Hammer", "Harper master of Triboar"], "locations": ["Castle Corras", "Lord's Alliance territories", "Triboar", "Yartar"], "hooks": ["Gather intelligence on Drakkar's movements and army strength.", "Support rebellion in annexed cities like Triboar and Yartar.", "Establish contact with resistance leaders in Triboar or Yartar.", "Plan a mission to deliver aid or incite rebellion."]}, {"id": "thread_018", "title": "Red Wizards of Thay", "type": "Faction", "status": "Active", "first": 32, "last": 32, "events": [{"s": 32, "type": "advance", "summary": "The party investigated Warehouse 17 in Everlund, following Ezrella's tip about enchanted crates linked to the Red Wizards of Thay. They found crates labeled 'Zabriel and Sons' with hidden magical traps, a metal box with a hand-dial requiring a specific glove sequence, and encountered invisible Red Wizards, including Asnar the Crimson (a lich). Combat ensued, revealing the warehouse is a front for Thayan operations involving changeling experimentation.", "signal": "Active"}], "entities": ["Corras", "Ezrella", "Asnar the Crimson", "Red Wizards of Thay"], "locations": ["Warehouse 17", "Everlund", "BWB Federation"], "hooks": ["Dispel the imprisonment on SavannahBelle or fulfill its condition (burn the warehouse).", "Deal with the antipathy/sympathy field affecting Ezrella.", "Decide whether to fight, flee, or negotiate with the Red Wizards, given their high-level capabilities."]}, {"id": "thread_019", "title": "Ulmist Inquisition", "type": "Faction", "status": "Active", "first": 36, "last": 36, "events": [{"s": 36, "type": "create", "summary": "The party meets Sarusanda of the Ulmist Inquisition, a secret order hunting existential evils, who proposes an alliance to stop the Cult of Osibus ritual in the Death House.", "signal": "Active"}], "entities": ["Sarusanda Al-Ester"], "locations": ["Death House", "Barovia"], "hooks": ["Learn more about the Ulmist Inquisition's goals", "Use Sarusanda's knowledge to navigate the Death House", "Maintain the alliance while pursuing the rod piece"]}, {"id": "thread_020", "title": "Castle Corras Upgrades and Obsidian Dome", "type": "Location", "status": "Resolved", "first": 3, "last": 46, "events": [{"s": 3, "type": "advance", "summary": "Morty, the castle's steward, completed major renovations: individual pocket dimension rooms for each party member, an alchemy lab with potion vendor, a blacksmith, library, kitchen, and audience chamber. The castle now has improved functionality and resources.", "signal": "Active"}, {"s": 21, "type": "advance", "summary": "Mordenkainen reveals the first Rod of Seven Parts is hidden in Web's Edge, a secret Lolth sanctuary in the Underdark. The party portals to the Underdark and begins searching for the entrance.", "signal": "Active"}, {"s": 24, "type": "resolve", "summary": "The party used a scroll of planar alignment to escape Web's Edge, arriving at Castle Corras, ending the immediate threat.", "signal": "Resolved"}, {"s": 24, "type": "resolve", "summary": "The party used a scroll of planar alignment to escape Web's Edge, arriving at Castle Corras, ending the immediate threat.", "signal": "Resolved"}, {"s": 46, "type": "advance", "summary": "Zibblebottom claims to have improved the obsidian dome's stability with his Ziblomatic Integrity Monitoring Array, reducing power consumption and increasing integrity, though with risks of catastrophic failure.", "signal": "Active"}], "entities": ["Morty", "Mordenkainen", "Lolth", "Ash", "Corras", "Zibblebottom", "Gerald the Hamster"], "locations": ["Castle Corras", "Web's Edge", "Underdark", "Obsidian Dome"], "hooks": ["Utilize the new alchemy lab for potions", "Explore individual room features and teleportation circles", "Manage castle affairs with Morty's reports", "Find Web's Edge entrance using spider web clues", "Infiltrate disguised as Lolth devotees", "Secure Castle Corras", "Rest and recover from the ordeal", "Monitor the dome for further anomalies", "Use anti-scrying grenades in the Feywild", "Keep Zibblebottom away from critical systems"]}, {"id": "thread_021", "title": "Poisoned Fey Tree Portal and Seed of the Elder Grove", "type": "Location", "status": "Pending", "first": 4, "last": 44, "events": [{"s": 4, "type": "create", "summary": "Orla planted a heartwood seed with the shadow glass shard, creating a fey-touched tree that acts as an unstable portal to the Feywild, seeping the same poison affecting the Moonlit Thicket.", "signal": "Active"}, {"s": 44, "type": "create", "summary": "Radoth gave Orla the Seed of the Elder Grove, a magical seed that can create hallowed ground when activated by a green dragon's fire, with the ultimate goal of planting it in Chult to restore the land.", "signal": "Pending"}], "entities": ["Orla", "Radoth"], "locations": ["Castle Corras outskirts", "Feywild", "Chult"], "hooks": ["Study the portal's instability and poison effects.", "Consult with fey experts like Ash or druidic circles.", "Find a green dragon to activate the seed", "Plan an expedition to Chult", "Use the seed as a strategic asset in the refugee camp"]}, {"id": "thread_022", "title": "Abandoned Cabin and Dwarven Tunnels", "type": "Location", "status": "Active", "first": 19, "last": 20, "events": [{"s": 19, "type": "advance", "summary": "The party arrives at an abandoned cabin perched on stilts over a chasm, detecting magical traps and hearing gnoll cackles from below, likely related to the Forge of Spells search.", "signal": "Active"}, {"s": 20, "type": "create", "summary": "After the cabin collapsed, a trap door revealed dwarvish-designed tunnels with fresh blood trails, connecting to earlier explorations like the Wayback Cave.", "signal": "Active"}], "entities": ["Cyril Maldron", "Corras"], "locations": ["Abandoned cabin", "Chasm", "Dwarven Tunnels", "Wayback Cave"], "hooks": ["Climb the rickety walkway to explore the cabin", "Use Detect Magic to identify traps", "Prepare for potential gnoll encounters", "Follow the blood trail", "Explore the tunnels for clues"]}, {"id": "thread_023", "title": "Death House and Barovia Village", "type": "Location", "status": "Active", "first": 35, "last": 38, "events": [{"s": 35, "type": "create", "summary": "The party entered the sentient Durst Manor in Barovia, encountering ghostly children, haunted objects, a hanged corpse, and a spectral nursemaid. The house is actively trying to lure and consume them.", "signal": "Active"}, {"s": 38, "type": "reveal", "summary": "Upon escaping Death House, the party observed that the village of Barovia is half-burned, overgrown, and infested with zombies, indicating a collapse since their last visit due to unresolved plot threads like the poisoned well and lack of leadership.", "signal": "Active"}], "entities": ["Rose", "Thorn", "Valtor", "nursemaid", "Ismark", "Ireena", "Morgantha"], "locations": ["Durst Manor", "Barovia", "Village of Barovia"], "hooks": ["Investigate the basement for the rod piece", "Deal with the spectral nursemaid", "Find a way to escape Death House", "Investigate the cause of the village's downfall", "Deal with the zombie hordes", "Search for survivors or clues about Ismark/Ireena"]}, {"id": "thread_024", "title": "Locked Basement Door Mystery", "type": "Mystery", "status": "Active", "first": 22, "last": 37, "events": [{"s": 22, "type": "advance", "summary": "The party advanced their mission to retrieve a piece of the Rod of Seven Parts from Web's Edge, as tasked by Mordenkainen, Tasha, and Illustriel Silverhand to stop Vecna.", "signal": "Active"}, {"s": 22, "type": "advance", "summary": "The party advanced their mission to retrieve a piece of the Rod of Seven Parts from Web's Edge, as tasked by Mordenkainen, Tasha, and Illustriel Silverhand to stop Vecna.", "signal": "Active"}, {"s": 35, "type": "advance", "summary": "The party traveled to Sigil, retrieved the first Rod of Seven Parts piece from Mordenkainen, and learned the next piece is in Barovia's Durst Manor. Mordenkainen was deceptive about the location and escape methods.", "signal": "Active"}, {"s": 36, "type": "advance", "summary": "The Death House in Barovia is undergoing a ritual shift due to the presence of a powerful artifact (rod piece), drawing more cultists and the devil's attention, changing from its usual sacrificial pattern.", "signal": "Active"}, {"s": 37, "type": "advance", "summary": "Strahd von Zarovich appears, reveals he knows about the Rod of Seven Parts, and offers a deal: he gives the Staff of Kazon and his blessing to travel Barovia if the party finds another rod piece for him. He hints that Mordenkainen is mad in Barovia and that Tasha's mother, Baba Yaga, is here.", "signal": "Active"}], "entities": ["Mordenkainen", "Tasha", "Illustriel Silverhand", "Vecna", "Sarusanda Al-Ester", "Priests of Osibus", "Strahd von Zarovich", "Baba Yaga", "Illustriel Silverhandle"], "locations": ["Sanctum", "Underdark", "Sigil", "Barovia", "Durst Manor", "Death House"], "hooks": ["Proceed carefully within Web's Edge to find the Rod piece", "Monitor time constraints as the mission is time-sensitive", "Explore Durst Manor for the rod piece", "Find a way to escape Barovia", "Confront Mordenkainen about his deception", "Investigate the ritual further in the basement", "Retrieve the rod piece to stop the escalation", "Work with Sarusanda to sever the ritual", "Accept or negotiate Strahd's deal", "Investigate Mordenkainen's whereabouts", "Seek the next rod piece in Barovia"]}, {"id": "thread_025", "title": "Darz's Payment Discrepancy", "type": "Mystery", "status": "Active", "first": 1, "last": 1, "events": [{"s": 1, "type": "advance", "summary": "Ash discovers that Darz did not fully pay for her ivory idol statue; only half the payment was sent. The artisan expects the remaining 750 gold, suggesting Darz may be incompetent or something nefarious is afoot. Ash intimidates the artisan into giving her the idol with an IOU.", "signal": "Active"}], "entities": ["Ash", "Darz", "Artisan in Lumin"], "locations": ["Lumin"], "hooks": ["Confront Darz about the missing payment", "Investigate if Darz is compromised or acting strangely", "Settle the debt to maintain goodwill with Lumin artisans"]}, {"id": "thread_026", "title": "Mine Shaft and Eldritch Slime", "type": "Mystery", "status": "Resolved", "first": 2, "last": 46, "events": [{"s": 2, "type": "create", "summary": "While digging for the greenhouse, players uncovered an old mine shaft with arcane containment runes, a sentient light orb, and a bottomless pit that consumed Ash's familiar. A cave troll was also found nearby.", "signal": "Active"}, {"s": 3, "type": "reveal", "summary": "An invisible gelatinous cube-like creature (eldritch slime) was discovered filling the pit in the caverns. It disintegrates matter on contact, absorbed Spark, and is magically linked to the Solarum orb. Ash was partially consumed and rescued.", "signal": "Active"}, {"s": 4, "type": "create", "summary": "Reading the 'Chronicles of the Quill' tome caused Sylvan text to tattoo onto all party members, granting Sylvan language and charm immunity but removing shadows and reflections, with progressive unknown effects.", "signal": "Active"}, {"s": 4, "type": "create", "summary": "The party entered an archaeological dig site beneath Lumin, only for it to collapse behind them, trapping them in a bone-filled chamber with skittering sounds and no sign of the Gilded Quill archaeologists.", "signal": "Active"}, {"s": 5, "type": "advance", "summary": "The party goes to Lumin to investigate the Gilded Quill excavation, finding the site empty and trapped. They encounter a Hall of Whispers requiring truth confessions and a Chamber of Reflections, leading to combat with a bone devil and an archmage.", "signal": "Active"}, {"s": 6, "type": "reveal", "summary": "The party fought an archmage who turned out to be a simulacrum; upon defeat, it dissolved into water, revealing it was not the real archmage. The real archmage's voice taunted them from elsewhere in the crypt.", "signal": "Active"}, {"s": 6, "type": "create", "summary": "Corras retrieved an Orb of Time from a chest in the crypt, identified as a rare artifact worth 500,000 gold with unknown magical properties related to time.", "signal": "Active"}, {"s": 6, "type": "advance", "summary": "The party discovered the crypt is warded with Mordenkainen's Private Sanctum, blocking teleportation and other planar travel, complicating their escape from the buried hut.", "signal": "Active"}, {"s": 7, "type": "advance", "summary": "The party, trapped in a cave collapse, debates and executes a plan to use Ash's chronoport spell to travel back in time approximately four months to before the beholder cave incident, aiming to save Spark and avoid the cave-in.", "signal": "Active"}, {"s": 7, "type": "reveal", "summary": "Upon time traveling, each party member experiences a random temporal dissonance effect (e.g., Lilith de-aged to a child, Orla gained timeless mind, Ave temporal fading), introducing complications and roleplay opportunities.", "signal": "Active"}, {"s": 9, "type": "resolve", "summary": "A hooded figure (Ash's former apprentice) sneaks up on Ave's ritual site, is intimidated by Lilith, and killed by her spirit guardians after casting thunderwave; Lilith loots the body and casts gentle repose.", "signal": "Resolved"}, {"s": 12, "type": "reveal", "summary": "The Chronicle book's curse advanced: all party members ceased aging naturally but lost the ability to benefit from magical potions and elixirs. The text expanded on their bodies, and the voice hinted at the Princess of the Shadow Glass.", "signal": "Active"}, {"s": 12, "type": "advance", "summary": "Ave completed the simulacrum of Spark at the ritual site near Lumin, with Lilith assisting. They encountered Cheech and Chong-like merchants and received herbs. Ash messaged them about being jailed in Berdusk and the need to swap the simulacrum for the real Spark to prevent resummoning.", "signal": "Active"}, {"s": 13, "type": "advance", "summary": "The party plans to swap the real Spark with a Simulacrum to prevent past Ash from resummoning him, using Magic Circle and Anti-Life Shell spells. Contingency set to alert when Simulacrum enters the hole.", "signal": "Active"}, {"s": 15, "type": "reveal", "summary": "Ave's chrono compass activated, pointing to a temporal rift near the secret toilet, revealing its function in detecting anomalies.", "signal": "Active"}, {"s": 15, "type": "advance", "summary": "The party successfully swapped the past Spark with a simulacrum using a coordinated distraction and magic circle, though it caused temporal disturbances.", "signal": "Active"}, {"s": 16, "type": "resolve", "summary": "Corras undid the event of the celestial slime merging with Spark, preventing the temporal disturbance and resetting the timeline to before the time travel incident, with only Corras retaining memory of the original events.", "signal": "Resolved"}, {"s": 20, "type": "reveal", "summary": "The glowing orb (Summer Star) exploded when handled, killing the party with radiant damage and revealing its dangerous nature as a device meant to open the Forge of Spells.", "signal": "Active"}, {"s": 22, "type": "reveal", "summary": "Orla received a dark blessing (Zephyr's Veil) after the party was punished by the Lady of Pain, reducing them to level 10 upon entering Sanctum via a wish spell.", "signal": "Active"}, {"s": 22, "type": "advance", "summary": "The party successfully infiltrated Web's Edge, the secret hideout of Lolth followers, by picking an arcane-locked iron door after navigating through webs and using spider disguises.", "signal": "Active"}, {"s": 23, "type": "reveal", "summary": "Dahlia's Aura of Secrets forced Gertrude the cyclops to reveal a secret about her friend Roxana and a planned attack on a mining operation by Lolth followers. This revealed secret is now a party resource tied to Vecna's power.", "signal": "Active"}, {"s": 23, "type": "advance", "summary": "Ash used Locate Object to sense the Rod of Seven Parts, confirming it is within 1,000 feet to the northeast. This gives a direction but not exact distance, guiding the party's search.", "signal": "Active"}, {"s": 24, "type": "advance", "summary": "Corras successfully stole a piece of the Rod of Seven Parts from the spider dragon's lair in Web's Edge, triggering Lolth's awareness.", "signal": "Active"}, {"s": 26, "type": "advance", "summary": "Corras successfully retrieved a piece of the Rod of Seven Parts from the spider dragon's lair in Web's Edge, cutting it free from a magical web cocoon.", "signal": "Active"}, {"s": 28, "type": "create", "summary": "Billabong touched a cursed parchment in the dwarven temple, becoming obsessed with writing the name 'Malchor, bringer of sorrow' and weaving it into speech, with the curse spreading to Dahlia.", "signal": "Active"}, {"s": 28, "type": "reveal", "summary": "The party discovered a desecrated temple of Dumathoin with infernal markings, a cursed dagger, and malfunctioning gnomish constructs (crawler and collector), hinting at a corrupted resonance node.", "signal": "Active"}, {"s": 29, "type": "escalate", "summary": "Ash touched the cursed coin, became possessed by the demon Malchor (the Bound Sorrowbringer), and the party had to subdue her. Malchor was forced back into the coin after SavannahBelle's suggestion spell, but the coin is now embedded in Ash's hand.", "signal": "Active"}, {"s": 29, "type": "advance", "summary": "The party deciphered the ritual to activate the Infernal Node: they placed essences in a pentagram, laid the dagger with blood on the altar, and touched the gem. This transported them to the pocket dimension Malgaris, where Billabong took the fiendish pact of avarice to activate the node.", "signal": "Active"}, {"s": 29, "type": "reveal", "summary": "Billabong and Orla read the infernal contract and discovered a loophole: Malchor is bound to the material plane as long as the coin exists. Destroying the coin would banish him back to the Abyss.", "signal": "Active"}, {"s": 31, "type": "reveal", "summary": "Ash's soul was abducted by a mysterious black orb after her death, preventing natural resurrection. Only SavannahBelle witnessed this event.", "signal": "Active"}, {"s": 34, "type": "reveal", "summary": "Corras finds black obsidian crystal dust left by Asnar that resembles Ash's face, hinting at a connection to Ash's soul or whereabouts.", "signal": "Active"}, {"s": 45, "type": "reveal", "summary": "After capturing the Butcher, Dahlia stripped him and discovered he is a mechanical construct with human skin stitched over a hydraulic body, containing transmutation and necromancy magic. Zibby Zibblebottom is attempting to extract information or rewire him.", "signal": "Active"}, {"s": 45, "type": "advance", "summary": "The party investigated the warehouse where Orla previously saw the Butcher handling a heartbeat stone in a lead box. The box is missing, with drag marks indicating it was moved by cart. Locate object spell detected no other lead boxes nearby, suggesting it was taken to Castle Corras.", "signal": "Active"}, {"s": 46, "type": "reveal", "summary": "Zibblebottom discovers that the Butcher (B7) is a triple agent: originally a Thayan construct serving the Lord's Alliance, with encrypted commands to corrupt ley lines, and a deepest layer overridden by the Ashen Prince of the Feywild, indicating fey interference.", "signal": "Active"}], "entities": ["Ash", "Orla", "Lilith", "Corras", "Ave", "Spark", "Cave Troll", "Billabong", "Archmage", "Bone Devil", "Dahlia", "hooded figure", "Princess of the Shadow Glass", "Alizar", "Celestial Slime", "Cyril Maldron", "Lady of Pain", "SavannahBelle", "Drow Mage", "Umber Hulk", "Gertrude", "Roxana", "Spider Dragon", "Malchor", "Dumathoin", "Zibblebottoms", "Valtor", "Argentus", "Korath", "The Butcher", "Zibby Zibblebottom", "Butcher (B7)", "Zibblebottom", "Ashen Prince"], "locations": ["Castle Corras mine shaft", "Pit in caverns", "Castle Corras", "Lumin crypt", "Lumin", "burial site", "Crypt", "Tomb", "Underdark", "Beholder Cave", "Lumin ritual site", "Ritual site near Lumin", "secret toilet area", "Greenhouse site", "Snowy Cabin", "Chasm", "Sanctum", "Web's Edge", "Soul Cavern", "dwarven temple", "Echo Cave", "Soulforge chamber", "Malgaris (Infernal Node pocket dimension)", "Echo Cave altar", "Ash's Sanctum", "Warehouse"], "hooks": ["Investigate the bottomless pit further with caution or magical means.", "Research the arcane runes to understand what was contained.", "Deal with the cave trolls to secure the area.", "Research ways to defeat or contain the slime", "Explore its connection to the Solarum orbs", "Consider sealing the pit if it cannot be destroyed", "Research the Chronicler's Mark for removal methods.", "Contact the Gilded Quill for information on the tome.", "Explore the crypt to find an exit and uncover what happened to the archaeologists.", "Defend against the unknown creature.", "Defeat the archmage and explore further", "Use the scroll of legend lore on key items or locations", "Investigate the real archmage's whereabouts", "Use the simulacrum's items to gain clues", "Explore the crypt for more secrets about the archmage", "Research the Orb of Time's abilities", "Test the orb in a safe environment", "Consider its value or use in bargaining", "Wait for the sanctum to expire (24 hours)", "Use Gate or Wish spells to bypass it", "Find another escape method like digging", "Resolve Corras's stealth mission to pluck Spark's eyelash", "Deal with temporal dissonance effects on party members", "Navigate potential encounters with past selves", "Explore character-specific effects (e.g., Lilith haunting Mother Volna)", "Monitor for long-term impacts of dissonance", "Use effects strategically in heist", "Hide or dispose of the body", "Consider repercussions if Ash's group learns of the death", "Use looted items", "Investigate the Princess of the Shadow Glass and the curse's origins.", "Find alternative healing methods since potions are ineffective.", "Swap the simulacrum with the real Spark before the other Ash summons him.", "Coordinate with Ash, Orla, and Billabong to regroup.", "Execute the swap in the cave", "Monitor for complications", "Adjust plan based on past events", "Use the compass to monitor rift stability during the sealing ritual", "Investigate its connection to Alizar's earlier rituals", "Protect Spark in the magic circle until temporal stability is restored", "Investigate the long-term effects of the swap on the timeline", "Investigate the new celestial-influenced changes at Castle Corras.", "Prepare for the ongoing war mentioned in the reset timeline.", "Investigate the Forge of Spells connection", "Find more information about the Summer Star's purpose", "Utilize dark blessings strategically in upcoming challenges", "Explore ways to regain lost power levels", "Explore Web's Edge to locate the Rod of Seven Parts piece", "Maintain disguises as Lolth followers to avoid detection", "Use the secret to grant party-wide advantage for one minute", "Investigate the mining operation mentioned by Gertrude", "Explore Vecna's connection to secrets further", "Follow the northeast direction while avoiding enemies", "Use further divination to pinpoint the rod's location", "Retrieve the rod before Lolth followers intercept", "Determine the rod piece's properties", "Hide the rod piece from Lolth's scrying", "Plan next move to collect other rod pieces", "Determine the rod's properties and how to use it", "Deal with Lolth's possible awareness via the rod", "Find a way to remove the curse (e.g., Remove Curse spell)", "Research Malchor's history in the cavern", "Await Zibblebottoms' arrival to fix the constructs", "Investigate the green glowing eyes on the altar with Detect Magic", "Find a way to safely remove the coin from Ash's hand", "Research methods to banish Malchor permanently", "Consult Argentus or other experts on infernal bindings", "Explore the new abilities from the node attunement", "Deal with the Harbinger statue in Malgaris", "Plan how to exit the pocket dimension", "Experiment with destroying the coin safely", "Research if destruction would harm Ash", "Consider using this against Malchor in future encounters", "Investigate the black orb's origin", "Consult experts on soul magic or planar entities", "Investigate the crystal dust with arcane or divination magic", "Follow up on Ash's storyline", "Await Zibby's analysis for intel on the famine plot", "Determine if the Butcher can be repurposed or stripped for parts", "Link construct nature to larger faction threats", "Track the cart's path to find the stone", "Confront the Matron and Fleshy who were found with the open box in a secret castle room", "Use druidic sight to follow ley lines to the stone", "Investigate other B-series constructs", "Consult Thayan experts on the memory crystal", "Determine the Ashen Prince's motives"]}, {"id": "thread_027", "title": "Robed Figures Near Lumin", "type": "Mystery", "status": "Active", "first": 2, "last": 2, "events": [{"s": 2, "type": "advance", "summary": "Ash's lieutenant reported robed figures conducting a ritual near Lumin. Ash sent an apprentice mage and spellweaver to investigate; they succeeded in gathering information without detection.", "signal": "Active"}], "entities": ["Ash", "Urgle Gurglela", "Robed figures"], "locations": ["Lumin"], "hooks": ["Await the full report from the specialists on the robed figures.", "Consider sending a party to confront or observe the figures directly.", "Link this to other mysterious events (e.g., Lilith's cipher)."]}, {"id": "thread_028", "title": "Swordsman Sigil at Gilded Quill", "type": "Mystery", "status": "Active", "first": 2, "last": 2, "events": [{"s": 2, "type": "advance", "summary": "Ave's lieutenant reported a mysterious swordsman challenging guards and leaving a sigil at the Order of the Gilded Quill. Ave sent a linguist and negotiator to investigate and build relations.", "signal": "Active"}], "entities": ["Ave", "Sarlumon", "Mysterious swordsman"], "locations": ["Gilded Quill"], "hooks": ["Await the envoy's report on the sigil and relations with the Gilded Quill.", "Consider following up with a player-led visit to the Gilded Quill.", "Prepare for potential conflict or alliance based on findings."]}, {"id": "thread_029", "title": "Raven's Cipher Message", "type": "Mystery", "status": "Pending", "first": 2, "last": 2, "events": [{"s": 2, "type": "advance", "summary": "Lilith received a raven carrying a coded message with religious symbols. She attempted to hire a priest to decipher it but failed the recruitment check.", "signal": "Pending"}], "entities": ["Lilith", "Darz"], "locations": [], "hooks": ["Lilith could personally investigate the message during downtime.", "Try hiring a different specialist (e.g., cryptographer) next month.", "Research the symbols in a library or arcane study."]}, {"id": "thread_030", "title": "Graymark Mercenary Death", "type": "Mystery", "status": "Active", "first": 3, "last": 3, "events": [{"s": 3, "type": "create", "summary": "A dying Graymark mercenary was brought to Castle Corras, claiming 'betrayal within castle' before expiring. This suggests internal treachery or external threat infiltrating the castle.", "signal": "Active"}], "entities": [], "locations": ["Castle Corras gate"], "hooks": ["Investigate the mercenary's identity and mission", "Search for traitors or spies within the castle", "Interrogate castle staff and hirelings"]}, {"id": "thread_031", "title": "Shadow Glass Shard", "type": "Mystery", "status": "Active", "first": 4, "last": 4, "events": [{"s": 4, "type": "create", "summary": "Corras killed a Goblin Curse Spitter and retrieved a dark crystalline shard that bound to him, emitting a conscious resonance and linked to shadow magic.", "signal": "Active"}], "entities": ["Corras", "Goblin Curse Spitter"], "locations": ["Havenbrook"], "hooks": ["Investigate the shard's origins and magical properties.", "Consult with Ash or Orla on its fey connections."]}, {"id": "thread_032", "title": "Injured Mercenary Eoman", "type": "Mystery", "status": "Active", "first": 14, "last": 14, "events": [{"s": 14, "type": "reveal", "summary": "Fleshy partially transformed back to human and cast mass healing word during combat, revealing regained wizard abilities.", "signal": "Active"}], "entities": ["Fleshy"], "locations": [], "hooks": ["Investigate Fleshy's full transformation process", "Utilize his healing abilities in future conflicts"]}, {"id": "thread_033", "title": "Master of Whispers' Task", "type": "Mystery", "status": "Active", "first": 9, "last": 9, "events": [{"s": 9, "type": "advance", "summary": "Master of Whispers appears to Corras in his jail cell, demanding he retrieve the Netherese Relic from the castle vault within a day to aid their matron, showing him runes to escape via the veil stone.", "signal": "Active"}], "entities": ["Corras", "Master of Whispers"], "locations": ["Castle Corras"], "hooks": ["Corras uses veil stone runes to escape jail", "Retrieve Netherese Relic from vault", "Determine what Master of Whispers plans with the relic"]}, {"id": "thread_034", "title": "Orla's Animal Intel", "type": "Mystery", "status": "Active", "first": 11, "last": 11, "events": [{"s": 11, "type": "reveal", "summary": "Orla communicated with birds that revealed an 'evil fire' tainting the land far ahead, possibly related to the cult's balor summoning or other threats.", "signal": "Active"}], "entities": ["Orla"], "locations": ["Summer Hills"], "hooks": ["Have Orla gather more animal intel as they travel", "Correlate this with cult activities or other threats", "Prepare for fire-based dangers"]}, {"id": "thread_035", "title": "Prince Darindale's Curse", "type": "Mystery", "status": "Active", "first": 13, "last": 13, "events": [{"s": 13, "type": "reveal", "summary": "Discovered Prince Darindale of Nelrindenvane, an elf cursed into a Quaggoth form, imprisoned in Berdusk. He claims royal lineage and seeks to reclaim his true form, joining the party after their escape.", "signal": "Active"}], "entities": ["Prince Darindale"], "locations": ["Berdusk Dungeons", "High Forest", "Nelrindenvane"], "hooks": ["Investigate the curse origin", "Find a way to reverse the polymorph", "Integrate Darindale into party plans"]}, {"id": "thread_036", "title": "Soul Forge Mystery", "type": "Mystery", "status": "Active", "first": 17, "last": 27, "events": [{"s": 17, "type": "reopen", "summary": "The soul forge in the Sword Mountains is identified as a key location to swing the war's balance; it remains undiscovered and dangerous, with the party planning to explore it next session.", "signal": "Active"}, {"s": 25, "type": "escalate", "summary": "Drakkar only knows of the Forge of Spells (arcane resonance point) within the Soulforge, not its full nature. He has allied with Red Wizards of Thay to interpret and use it for crafting magical weapons and growing his hybrid army. BWB knows it's more than the Forge of Spells, with seven resonance points, and aims to explore and understand its full power.", "signal": "Active"}, {"s": 27, "type": "advance", "summary": "The party entered the Soul Forge via teleportation circle, encountered undead guardians (Revenants and a Wraith Lord), and engaged in combat. They learned from a revenant's secret that activating a 'Fiends node' requires a pact sacrificing supportive abilities.", "signal": "Active"}], "entities": ["Fleshy", "Valtor", "Coven", "Drakkar", "Red Wizards of Thay"], "locations": ["Sword Mountains", "Soul Forge", "Soulforge", "Forge of Spells", "Wave Echo Cave", "Fort Caliban"], "hooks": ["Plan expedition to the soul forge", "Research its dangers and history", "Coordinate with allies for support", "Expedite exploration of the Soulforge to uncover more resonance points.", "Disrupt Drakkar's alliance with the Red Wizards.", "Explore deeper into the Soul Forge to uncover more about the nodes.", "Investigate the approaching noise from the hallway."]}, {"id": "thread_037", "title": "Mysterious Cabin Over Gorge", "type": "Mystery", "status": "Active", "first": 18, "last": 18, "events": [{"s": 18, "type": "create", "summary": "The party discovers a cabin on stilts over a gorge, emitting arcane energies; Corras feels familiarity but can't place it, suggesting a hidden location or connection to past events.", "signal": "Active"}], "entities": ["Corras"], "locations": ["Cabin over gorge in Storm Mountains"], "hooks": ["Explore the cabin for clues or resources.", "Recall why it feels familiar to Corras (possibly related to Forge of Spells)."]}, {"id": "thread_038", "title": "Yeti Tykes and Zibblebottom's Note", "type": "Mystery", "status": "Active", "first": 19, "last": 19, "events": [{"s": 19, "type": "reveal", "summary": "After the explosion, the party finds two yeti tykes in a nest near a cave, along with a note from Zibblebottom to Cyril Maldron about abandoning the search for the Forge of Spells.", "signal": "Active"}], "entities": ["Yeti Tykes", "Cyril Maldron", "Zibblebottom"], "locations": ["Cave nest", "Snowy forest"], "hooks": ["Investigate the cabin for Cyril Maldron", "Follow up on Zibblebottom's whereabouts", "Decide what to do with the yeti tykes"]}, {"id": "thread_039", "title": "Harbinger's Training", "type": "Mystery", "status": "Active", "first": 30, "last": 30, "events": [{"s": 30, "type": "advance", "summary": "The Harbinger whisked the party to a strange bastion where they bonded with statues (Warden, Conductor, Shadow Stalker, Soulbinder, Bio-Alchemist, Subjugator), gaining new shadow essence abilities tied to interdimensional creatures and the Shadowfell. They learned to harvest shadow essence from creatures like the Rift Stalker.", "signal": "Active"}, {"s": 30, "type": "reveal", "summary": "The party learned how to harvest shadow essence from creatures: Bio-Alchemist can extract via physical damage, Subjugator via psychic damage once per creature, and Soulbinder via final blow. Essence is pooled for the party and used to fuel new abilities.", "signal": "Active"}], "entities": ["Harbinger", "Argentus", "Rift Stalker"], "locations": ["Bastion", "Shadowfell"], "hooks": ["Experiment with shadow essence abilities on other creatures", "Investigate the bastion's other rooms and portals", "Use shadow essence to track more interdimensional threats", "Practice harvesting essence on different creature types", "Manage shadow essence pool strategically in combat", "Explore abilities that consume shadow essence"]}, {"id": "thread_040", "title": "Zabriel and Stunts Shipping", "type": "Mystery", "status": "Active", "first": 31, "last": 32, "events": [{"s": 31, "type": "create", "summary": "Ezrella arrives with information about suspicious shipping crates labeled 'Zabriel and Stunts' with powerful enchantment magic and a twisted skull emblem, possibly linked to Red Wizards of Thay or other cult activity.", "signal": "Active"}, {"s": 32, "type": "reveal", "summary": "A metal box with a hand-dial was found in a crate, requiring a specific sequence (linked to runes on a silk glove) to open without triggering necrotic backlash. A poem clue was found: 'From dark to dawn the mask is torn, the coin must pay, that skull be shorn, the flame shall light the hidden way, the watchful eye reveals the day.'", "signal": "Active"}], "entities": ["Ezrella"], "locations": ["Everlund", "Warehouse 17"], "hooks": ["Travel to Everlund to investigate the crates", "Research the skull emblem and Zabriel & Stunts", "Solve the poem to open the box safely.", "Determine the box's contents and its significance to the Thayan operation."]}, {"id": "thread_041", "title": "Barovia Sacrificial Goat", "type": "Mystery", "status": "Active", "first": 43, "last": 46, "events": [{"s": 43, "type": "create", "summary": "A mysterious spoilage is affecting rations in the refugee camps, spreading and threatening food supplies. The Matron proposes putting refugees into a coma to conserve rations, while Lord Neverember suggests expelling criminals.", "signal": "Active"}, {"s": 43, "type": "reveal", "summary": "The Matron's coma ritual is revealed to be a curse that puts victims into a dreamless stasis, making them obedient to her upon waking. Ash identifies the ritual's effects.", "signal": "Active"}, {"s": 46, "type": "advance", "summary": "The Matron reveals her plan for the party to enter the Feywild using a modified obsidian stone to mask their presence, aiming to stop the Gloaming Court invasion by targeting the Queen. She demands full authority over Castle Corras and a hair from the Queen as payment.", "signal": "Active"}], "entities": ["Matron", "Lord Neverember", "Isteval", "Ash", "Queen of the Gloaming Court"], "locations": ["Castle Corras refugee camps", "Castle Corras meeting room", "Castle Corras", "Feywild"], "hooks": ["Investigate the source of spoilage", "Test the Matron's coma ritual safely", "Address refugee concerns", "Find a way to reverse the curse", "Confront the Matron", "Secure affected individuals", "Attune to the obsidian stone and enter the Feywild", "Investigate the Gloaming Court's leadership", "Avoid speaking true names or accepting fey gifts"]}, {"id": "thread_042", "title": "Holy Symbol of Ravenkind", "type": "Mystery", "status": "Active", "first": 46, "last": 46, "events": [{"s": 46, "type": "reveal", "summary": "Zibblebottom discovers that the Butcher (B7) is a triple agent: originally a Thayan construct serving the Lord's Alliance, with encrypted commands to corrupt ley lines, and a deepest layer overridden by the Ashen Prince of the Feywild, indicating fey interference.", "signal": "Active"}], "entities": ["Butcher (B7)", "Zibblebottom", "Ashen Prince"], "locations": ["Castle Corras"], "hooks": ["Investigate other B-series constructs", "Consult Thayan experts on the memory crystal", "Determine the Ashen Prince's motives"]}, {"id": "thread_043", "title": "Madam Eva's Deck of Many Things", "type": "Mystery", "status": "Active", "first": 40, "last": 40, "events": [{"s": 40, "type": "advance", "summary": "Corras stole the Deck of Many Things from Madam Eva's tent, triggering a magical trap that sent him to a latrine pit. After returning, Madam Eva confronted the party, leading to a standoff where she forced Corras into a gamble: draw from one of two decks (tarot vs. Deck of Many Things) to determine fate.", "signal": "Active"}], "entities": ["Corras", "Madam Eva", "Ezrella", "SavannahBelle", "Dahlia"], "locations": ["Tser Pool Camp", "Madam Eva's tent"], "hooks": ["Resolve the tarot reading outcome and its consequences.", "Decide whether to continue confronting Madam Eva or flee the camp.", "Use the Holy Symbol of Ravenkind against Strahd if retained."]}, {"id": "thread_044", "title": "Underground Poison Crisis", "type": "Mystery", "status": "Active", "first": 43, "last": 43, "events": [{"s": 43, "type": "create", "summary": "Radoth warns Orla of a poison underground affecting the land and crops, linked to waste backing up in the castle's septic system (the Otuga beast).", "signal": "Active"}], "entities": ["Radoth", "Orla"], "locations": ["Castle Corras underground"], "hooks": ["Investigate the Otuga beast", "Find the source of poison", "Clear the waste blockage"]}, {"id": "thread_045", "title": "Mortimer von Schatten", "type": "NPC", "status": "Resolved", "first": 9, "last": 44, "events": [{"s": 9, "type": "advance", "summary": "Ash, Orla, and Billabong encounter the injured mercenary Eoman, heal him, and learn he was separated from goblin merchant Grimslick after a bandit attack; they join him to find Grimslick's caravan.", "signal": "Active"}, {"s": 21, "type": "escalate", "summary": "A Drow mage discovers the party in the Underdark, subjects them to tests of devotion to Lolth, and combat erupts when SavannahBelle fails the web test.", "signal": "Active"}, {"s": 22, "type": "advance", "summary": "The party successfully infiltrated Web's Edge, the secret hideout of Lolth followers, by picking an arcane-locked iron door after navigating through webs and using spider disguises.", "signal": "Active"}, {"s": 22, "type": "advance", "summary": "The party successfully infiltrated Web's Edge, the secret hideout of Lolth followers, by picking an arcane-locked iron door after navigating through webs and using spider disguises.", "signal": "Active"}, {"s": 22, "type": "advance", "summary": "The party advanced their mission to retrieve a piece of the Rod of Seven Parts from Web's Edge, as tasked by Mordenkainen, Tasha, and Illustriel Silverhand to stop Vecna.", "signal": "Active"}, {"s": 23, "type": "escalate", "summary": "A deep gnome ritual master arrived to investigate, initially deceived by Ash using Friends. After the spell ended, he became hostile, declared the party enemies of Lolth for using mind-control magic, and called for quarantine. He summoned a demon toad and cast Hold Person on Billabong.", "signal": "Active"}, {"s": 24, "type": "reveal", "summary": "Ash deceived the spider dragon, a lieutenant of Lolth, into following her, revealing the dragon's role and Lolth's communication artifact.", "signal": "Active"}, {"s": 24, "type": "resolve", "summary": "The party betrayed and abandoned Gertrude the cyclops, leading to her capture and death by Web's Edge forces.", "signal": "Resolved"}, {"s": 26, "type": "resolve", "summary": "Dahlia recruited the cyclops Gertrude as a sister, but the party abandoned her during the escape; she was killed by Web's Edge forces, sacrificing herself to delay pursuers.", "signal": "Resolved"}, {"s": 37, "type": "reveal", "summary": "Strahd uses vampiric charm on SavannahBelle, making her see him as a trusted friend. She is compelled to hand over the rod piece, but the party intervenes.", "signal": "Active"}, {"s": 38, "type": "advance", "summary": "The party discussed Strahd von Zarovich's deal: he will let them leave Barovia if they retrieve the second piece of the rod and the Staff of Kazon for him, in exchange for Ash's soul and safe passage.", "signal": "Pending"}, {"s": 41, "type": "advance", "summary": "The party fought Madam Eva, who cursed several members before disappearing. They looted her tent, acquiring magical items including a Deck of Many Things, Staff of Power, Robe of Stars, and cursed items like the Amulet of Scrying and Executioner's Hand.", "signal": "Active"}, {"s": 42, "type": "advance", "summary": "Baba Lysaga appears to Lydia, calling her 'little leech' and revealing she is Strahd's mother. She gives Lydia the Sunsword, explaining it can incapacitate Strahd for two rounds or turn his thralls back to human, but will be consumed upon use.", "signal": "Active"}, {"s": 44, "type": "advance", "summary": "Dahlia and Corras freed Valerius (Master of Whispers) from the Matron's control by amputating his leg to remove a rune she inscribed. He regained his autonomy and pledged allegiance to Corras.", "signal": "Active"}], "entities": ["Eoman", "Grimslick", "Ash", "Orla", "Billabong", "Drow Mage", "Corras", "Dahlia", "SavannahBelle", "Umber Hulk", "Mordenkainen", "Tasha", "Illustriel Silverhand", "Vecna", "Deep Gnome Ritual Master", "Spider Dragon", "Lolth", "Gertrude", "Strahd von Zarovich", "Madam Eva", "Ezrella", "Baba Lysaga", "Lydia", "Valerius", "Matron"], "locations": ["Lumin to Havenbrook road", "Underdark tunnels", "Web's Edge", "Underdark", "Sanctum", "Web's Edge prison cells", "Death House", "Barovia", "Madam Eva's tent", "Ravenloft Dungeon", "Baba Lysaga's Hut", "Castle Corras council chamber"], "hooks": ["Approach Grimslick's caravan cautiously", "Investigate the magical cane Eoman carries", "Handle potential bandit or mimic threats", "Defeat Drow mage to continue infiltration", "Interrogate mage for Web's Edge location", "Explore Web's Edge to locate the Rod of Seven Parts piece", "Maintain disguises as Lolth followers to avoid detection", "Proceed carefully within Web's Edge to find the Rod piece", "Monitor time constraints as the mission is time-sensitive", "Negotiate or fight the ritual master", "Use the charmed demon toad as leverage", "Escape before reinforcements arrive", "Investigate the communication artifact", "Exploit the spider dragon's rivalry with Grotonel Stonecutter", "Monitor SavannahBelle for charm effects", "Consider ways to break the charm", "Be cautious around Strahd", "Locate the second rod piece in Barovia", "Plan how to retrieve the Staff of Kazon", "Re-engage with Strahd for negotiations", "Determine how to break the curses placed by Madam Eva", "Decide what to do with the cursed items like the Amulet of Scrying", "Decide whether to use Sunsword on Strahd or on SavannahBelle to revert her vampirism", "Coordinate with party for maximum effect", "Integrate Valerius into intelligence operations", "Monitor for residual Matron influence", "Use his knowledge against the Gloaming Court"]}, {"id": "thread_046", "title": "Urgle Gurgle", "type": "NPC", "status": "Active", "first": 14, "last": 14, "events": [{"s": 14, "type": "reveal", "summary": "Fleshy partially transformed back to human and cast mass healing word during combat, revealing regained wizard abilities.", "signal": "Active"}], "entities": ["Fleshy"], "locations": [], "hooks": ["Investigate Fleshy's full transformation process", "Utilize his healing abilities in future conflicts"]}, {"id": "thread_047", "title": "Lilith's Disciples", "type": "NPC", "status": "Active", "first": 4, "last": 4, "events": [{"s": 4, "type": "reveal", "summary": "A raven messenger was revealed to be a shapeshifted disciple of Lilith, part of a group of 40 who have abandoned the Abbey to worship Lilith as Kelemvor's prophet, seeking her guidance.", "signal": "Active"}], "entities": ["Lilith", "Mother Volna"], "locations": ["Everlund", "Yartar", "Mirabar", "Silverymoon", "Lumin"], "hooks": ["Lilith to address her disciples and manage their influx.", "Investigate Mother Volna's response to the schism."]}, {"id": "thread_048", "title": "Billabong's Dougs", "type": "NPC", "status": "Active", "first": 17, "last": 17, "events": [{"s": 17, "type": "create", "summary": "Billabong saves a village of mini-gnomes from rats, gaining 250 followers named the Dougs; she opts for them to be wandering merchants with a rotating group of five always with her, and acquires the Helm of the Ancients.", "signal": "Active"}], "entities": ["Billabong", "Dougs"], "locations": ["Castle Corras region"], "hooks": ["Utilize Dougs for trade and espionage", "Explore the helm's curse and abilities", "Integrate with party resources"]}, {"id": "thread_049", "title": "Cyril Maldron", "type": "NPC", "status": "Active", "first": 20, "last": 20, "events": [{"s": 20, "type": "create", "summary": "After death, the party met the ghost of Cyril Maldron, the inventor of the Summer Star, who explained his failed attempt to unlock the Forge of Spells and offered to guide them back as spirits.", "signal": "Active"}], "entities": ["Cyril Maldron"], "locations": ["Chasm"], "hooks": ["Learn more about Cyril's past", "Explore his connection to Zibblebottoms"]}, {"id": "thread_050", "title": "Orla and Toad Demons", "type": "NPC", "status": "Active", "first": 23, "last": 26, "events": [{"s": 23, "type": "advance", "summary": "Orla charmed the summoned demon toad with Charm Monster, then persuaded it to join the party as a friend. It swallowed Orla and rolled away with her, planning to escape together.", "signal": "Active"}, {"s": 24, "type": "advance", "summary": "Orla befriended a Hezrou (giant toad) in Web's Edge, using sending stones to communicate, and it escaped with the party.", "signal": "Active"}, {"s": 26, "type": "advance", "summary": "The Hezrou demon (toad) aided the party by attacking pursuers and providing sending stones for communication, though it was left behind during the escape.", "signal": "Active"}], "entities": ["Orla", "Demon Toad", "Hezrou Toad", "Hezrou"], "locations": ["Web's Edge"], "hooks": ["Communicate with Orla inside the toad via telepathy", "Coordinate the toad's movement for escape", "Ensure Orla's safety inside the toad", "Integrate the Hezrou into Castle Corras", "Use sending stones for future communication", "Check in via sending stones to see if the Hezrou survived", "Consider future alliances with fiends"]}, {"id": "thread_051", "title": "Zibblebottoms", "type": "NPC", "status": "Active", "first": 29, "last": 29, "events": [{"s": 29, "type": "advance", "summary": "The party summoned the gnomish engineer Zibblebottoms to help with the constructs, but they completed the ritual and left the chamber. Zibblebottoms is due to arrive in about 30 minutes, potentially into danger with revenants and doughboys.", "signal": "Active"}], "entities": ["Zibblebottoms", "Ash"], "locations": ["Echo Cave entrance"], "hooks": ["Find a way back to the cave to rescue Zibblebottoms", "Send a message to warn him or redirect him", "Prepare for combat upon return"]}, {"id": "thread_052", "title": "SavannahBelle and Bovanacell", "type": "NPC", "status": "Active", "first": 34, "last": 34, "events": [{"s": 34, "type": "create", "summary": "SavannahBelle forms a blood pact with a Nothic named Bovanacell (nicknamed SavannahBelle Jr.), creating a psychic tether with shared abilities and a suicide pact if either dies.", "signal": "Active"}], "entities": ["SavannahBelle", "Bovanacell (Nothic)"], "locations": ["Thayan prison"], "hooks": ["Explore the Nothic's abilities and integration into the party", "Manage the risks of the suicide pact"]}, {"id": "thread_053", "title": "Tser Pool Camp", "type": "NPC", "status": "Active", "first": 46, "last": 46, "events": [{"s": 46, "type": "create", "summary": "The party encounters Cernunnos, leader of the Wild Hunt, who offers a compact: if they win a chase within 10 miles, he releases Thorn the dragon; if they lose, one joins the Hunt forever. The party fails, and one must volunteer.", "signal": "Active"}], "entities": ["Cernunnos", "Thorn the Dragon"], "locations": ["Feywild", "Mirkwood", "River of Stars"], "hooks": ["Decide which character joins the Wild Hunt", "Plan a rescue mission for the captured character", "Learn more about Cernunnos's weaknesses"]}, {"id": "thread_054", "title": "Rahadin", "type": "NPC", "status": "Resolved", "first": 42, "last": 42, "events": [{"s": 42, "type": "resolve", "summary": "The party defeats Rahadin in combat, destroying his soul-scimitar and freeing the trapped dusk elf souls. This removes a major lieutenant of Strahd and opens the way to the final confrontation.", "signal": "Resolved"}], "entities": ["Rahadin", "Izzy", "Meg", "Lydia", "Zal", "Shrum", "Corras"], "locations": ["Ravenloft Dungeon"], "hooks": ["Loot Rahadin's body for any remaining items or clues", "Proceed immediately to the final battle with Strahd"]}, {"id": "thread_055", "title": "Baba Lysaga", "type": "NPC", "status": "Active", "first": 42, "last": 42, "events": [{"s": 42, "type": "advance", "summary": "Baba Lysaga appears to Lydia, calling her 'little leech' and revealing she is Strahd's mother. She gives Lydia the Sunsword, explaining it can incapacitate Strahd for two rounds or turn his thralls back to human, but will be consumed upon use.", "signal": "Active"}], "entities": ["Baba Lysaga", "Lydia", "Strahd von Zarovich", "SavannahBelle"], "locations": ["Ravenloft Dungeon", "Baba Lysaga's Hut"], "hooks": ["Decide whether to use Sunsword on Strahd or on SavannahBelle to revert her vampirism", "Coordinate with party for maximum effect"]}, {"id": "thread_056", "title": "Van Richten", "type": "NPC", "status": "Active", "first": 42, "last": 42, "events": [{"s": 42, "type": "advance", "summary": "Van Richten takes a Power Word Kill spell meant for Zal, leaving him dying. Zal stabilizes him with a medicine check, and Van Richten urges her to 'do what I could not' before falling unconscious.", "signal": "Active"}], "entities": ["Van Richten", "Zal", "Strahd von Zarovich"], "locations": ["Ravenloft Dungeon"], "hooks": ["Ensure Van Richten's safety if he stabilizes", "Consider his role in the final battle against Strahd"]}, {"id": "thread_057", "title": "Lumin Town Council and Castle Corras Funding", "type": "Obligation", "status": "Active", "first": 1, "last": 1, "events": [{"s": 1, "type": "create", "summary": "After the etin's rampage, the Lumin town council holds Castle Corras financially liable for the damage, since Urgle Gurgle is now allied with the castle. They request an audience to discuss funding for rebuilding the town.", "signal": "Active"}], "entities": ["Corras", "Lumin Town Council"], "locations": ["Lumin"], "hooks": ["Negotiate with the town council on repayment terms", "Use castle resources or quests to offset costs", "Improve public relations in Lumin to mitigate future liabilities"]}, {"id": "thread_058", "title": "Xalvador's Capture by Still Sorrow", "type": "Obligation", "status": "Active", "first": 4, "last": 4, "events": [{"s": 4, "type": "escalate", "summary": "Xalvador was captured by the Still Sorrow while planting misinformation about Lilith's whereabouts; they sent a raven with his finger demanding Lilith's location, threatening execution.", "signal": "Active"}], "entities": ["Xalvador", "Lilith", "Still Sorrow"], "locations": ["Everlund"], "hooks": ["Rescue Xalvador from Everlund.", "Decide on a response to the Still Sorrow's demands."]}, {"id": "thread_059", "title": "Lilith's Divine Intervention Attempts", "type": "Obligation", "status": "Pending", "first": 6, "last": 6, "events": [{"s": 6, "type": "advance", "summary": "Lilith attempted Divine Intervention to escape the crypt, but it failed; she can try again after a long rest, with the party considering using it for Gate or other planar travel.", "signal": "Pending"}], "entities": ["Dahlia"], "locations": ["Crypt"], "hooks": ["Attempt Divine Intervention again after a long rest", "Prepare specific request (e.g., Gate spell)", "Coordinate with party for backup plans"]}, {"id": "thread_060", "title": "Spark Rescue Heist at Castle Corras", "type": "Obligation", "status": "Active", "first": 7, "last": 45, "events": [{"s": 7, "type": "create", "summary": "The party splits to execute a heist: Corras (invisible) sneaks into Castle Corras to steal rubies for a simulacrum and pluck an eyelash from Spark, while others create distractions or pursue side objectives.", "signal": "Active"}, {"s": 13, "type": "create", "summary": "The party, trapped in Berdusk dungeons, made a pact with the demon Glabrezu Malachar the Twisted to escape. Each member owes a future favor to be called within one year, with terms including no morally abhorrent tasks and return of belongings.", "signal": "Active"}, {"s": 45, "type": "advance", "summary": "The party accidentally interrupted Lord Neverember's funeral procession led by SavannahBelle bees. They gave improvised eulogies, with SavannahBelle successfully placating the crowd by offering her ring (later retrieved). This highlighted ongoing tensions with the populace.", "signal": "Active"}], "entities": ["Corras", "Spark", "Ash", "Orla", "Ave", "Lilith", "Billabong", "Mortimer", "Malachar the Twisted", "Prince Darindale", "Dahlia", "SavannahBelle", "Lord Neverember"], "locations": ["Castle Corras", "Alchemy Lab", "Vault", "Berdusk Dungeons", "Lumin Ritual Site", "Castle Corras vicinity"], "hooks": ["Corras must escape after plucking eyelash, potentially confronting past self", "Ash to start simulacrum creation with eyelash", "Regroup and proceed to Underdark or other plans", "Monitor for Malachar's call", "Research demon pact loopholes", "Prepare for favor fulfillment", "Monitor morale among survivors and SavannahBelle bees", "Use the ring to solidify legal authority post-massacre", "Address lingering grief and loyalty issues"]}, {"id": "thread_061", "title": "Corras's Imprisonment and Netherese Relic", "type": "Obligation", "status": "Active", "first": 12, "last": 12, "events": [{"s": 12, "type": "advance", "summary": "Corras, imprisoned in the castle dungeon, learned from Fleshy about the Netherese relic's properties (a shadow-imbued battery) and was reminded by the Master of Whispers to deliver it within 12 hours. Corras decided to use a Veil Stone to teleport to a drop-off location, bringing Fleshy along.", "signal": "Active"}], "entities": ["Corras", "Fleshy", "Master of Whispers"], "locations": ["Castle Lumin dungeon"], "hooks": ["Deliver the relic to the Master of Whispers as instructed.", "Learn more about the relic's purification and uses."]}, {"id": "thread_062", "title": "Billabong's Resurrection via Lathander", "type": "Obligation", "status": "Resolved", "first": 20, "last": 20, "events": [{"s": 20, "type": "resolve", "summary": "Billabong, guided by ghostly messages, retrieved a ring and attuned to the Summer Star, prompting Lathander to resurrect the party in exchange for the device and granting Billabong a blessing.", "signal": "Resolved"}], "entities": ["Billabong", "Lathander", "Cyril Maldron"], "locations": ["Snowy Cabin"], "hooks": []}, {"id": "thread_063", "title": "Vecna Artifact Retrieval Mission", "type": "Obligation", "status": "Active", "first": 22, "last": 22, "events": [{"s": 22, "type": "advance", "summary": "The party advanced their mission to retrieve a piece of the Rod of Seven Parts from Web's Edge, as tasked by Mordenkainen, Tasha, and Illustriel Silverhand to stop Vecna.", "signal": "Active"}], "entities": ["Mordenkainen", "Tasha", "Illustriel Silverhand", "Vecna"], "locations": ["Sanctum", "Underdark"], "hooks": ["Proceed carefully within Web's Edge to find the Rod piece", "Monitor time constraints as the mission is time-sensitive"]}, {"id": "thread_064", "title": "Billabong's Demon Summoning Consequences", "type": "Obligation", "status": "Active", "first": 31, "last": 31, "events": [{"s": 31, "type": "escalate", "summary": "Billabong summoned two Vrocks during the battle; after fulfilling their contract, they remained free and attacked the party, revealing ongoing risks of her demon-summoning powers.", "signal": "Active"}], "entities": ["Billabong", "Vrocks"], "locations": ["Ash's Bastion"], "hooks": ["Research safer demon-binding techniques", "Deal with lingering demonic threats"]}, {"id": "thread_065", "title": "SavannahBelle's Imprisonment and Recovery", "type": "Obligation", "status": "Resolved", "first": 33, "last": 34, "events": [{"s": 33, "type": "advance", "summary": "SavannahBelle remains chained to the floor by a level 9 Imprisonment spell, with the condition that she is freed only if the warehouse burns down. The lich casts Leomund's Tiny Hut to protect her from the spreading fire, but her ultimate fate is left uncertain as the party is captured and transported away.", "signal": "Pending"}, {"s": 34, "type": "advance", "summary": "SavannahBelle recovers most of the party's stolen equipment from a sewer area with help from an Otyug named Wally, though some items were taken earlier by Sarek.", "signal": "Resolved"}], "entities": ["SavannahBelle", "Asnar the Crimson", "Wally (Otyug)"], "locations": ["Warehouse", "Thayan prison sewer"], "hooks": ["Find a way to dispel the Imprisonment spell (e.g., 9th-level Dispel Magic)", "Return to the warehouse to ensure it burns down completely", "Investigate if the lich or Red Wizards have plans for SavannahBelle", "Repair broken items like the crystal rapier and dragon turtle hood", "Distribute recovered gear"]}, {"id": "thread_066", "title": "Cernunnos's Wild Hunt Compact", "type": "Obligation", "status": "Active", "first": 46, "last": 46, "events": [{"s": 46, "type": "create", "summary": "The party encounters Cernunnos, leader of the Wild Hunt, who offers a compact: if they win a chase within 10 miles, he releases Thorn the dragon; if they lose, one joins the Hunt forever. The party fails, and one must volunteer.", "signal": "Active"}], "entities": ["Cernunnos", "Thorn the Dragon"], "locations": ["Feywild", "Mirkwood", "River of Stars"], "hooks": ["Decide which character joins the Wild Hunt", "Plan a rescue mission for the captured character", "Learn more about Cernunnos's weaknesses"]}, {"id": "thread_067", "title": "Castle Corras Management System", "type": "Other", "status": "Resolved", "first": 2, "last": 26, "events": [{"s": 2, "type": "create", "summary": "DM introduced a castle management system with rooms, followers, and monthly turns for building, hiring, and events. Players allocated gold and followers for the first month.", "signal": "Active"}, {"s": 5, "type": "create", "summary": "A group of 30+ fervent followers (Lilith's Loyalists) arrive at Castle Corras, led by Brother Alred and Sister Elowen, declaring Lilith their prophetess and setting up a shrine. They are highly devoted and interpret Lilith's actions as divine.", "signal": "Active"}, {"s": 13, "type": "reveal", "summary": "Morty gave the party an amulet allowing spell replacement without a long rest, aiding their upcoming heist. He hinted at greater tasks ahead and cryptic interference.", "signal": "Active"}, {"s": 26, "type": "resolve", "summary": "Ash used a scroll of planar alignment to teleport the entire party from collapsing Web's Edge to Castle Corras, narrowly avoiding death.", "signal": "Resolved"}], "entities": ["Corras", "Ash", "Dahlia", "Orla", "Ave", "Billabong", "Urgle Gurgle", "Foehammer", "Xalvador", "Sarlumon", "Othovir", "Morty", "Lilith", "Brother Alred", "Sister Elowen", "SavannahBelle"], "locations": ["Castle Corras", "Lumin", "Gilded Quill", "Jalanthar", "High Forest", "Castle Corras grounds", "Web's Edge"], "hooks": ["Decide on first building priorities (e.g., merchant plaza, caravansary) to generate income.", "Hire specialists for key tasks like tax collection or research.", "Explore nearby towns to establish trade or taxation relationships.", "Direct followers to spread Lilith's teachings or perform tasks", "Use followers for manipulation or resource gathering", "Use amulet to optimize spells", "Investigate Morty's motives", "Prepare for hinted tasks", "Secure Castle Corras against possible pursuit", "Rest and recover from the ordeal"]}, {"id": "thread_068", "title": "Boons from Vecna's Binding", "type": "Other", "status": "Active", "first": 21, "last": 21, "events": [{"s": 21, "type": "create", "summary": "The party receives mysterious boons/blessings from Vecna's binding ritual, each gaining unique magical abilities with potential sinister implications.", "signal": "Active"}], "entities": ["Vecna", "Mordenkainen", "Illustrile", "Tasha"], "locations": ["Sanctum"], "hooks": ["Monitor boon effects for unexpected consequences", "Research Vecna's binding magic in Sanctum library"]}, {"id": "thread_069", "title": "Xel'therath the Eye of Midnight", "type": "Threat", "status": "Active", "first": 3, "last": 3, "events": [{"s": 3, "type": "create", "summary": "A beholder named Xel'therath revealed itself in the caverns beneath Castle Corras, telepathically communicating with the party and demonstrating its illusory powers. It claims dominion over its lair and seeks to dominate all within a mile radius, including the castle.", "signal": "Active"}], "entities": ["Xel'therath"], "locations": ["Caverns beneath Castle Corras"], "hooks": ["Determine the beholder's immediate plans for the castle", "Investigate if it has other minions besides the trolls", "Consider diplomatic or combat strategies to neutralize the threat"]}, {"id": "thread_070", "title": "Goblin Incursion and Fomorian Threat", "type": "Threat", "status": "Resolved", "first": 4, "last": 46, "events": [{"s": 4, "type": "resolve", "summary": "The party, with aid from Sarlumon's paladins, defeated the goblin horde led by Niles Bargnot at Havenbrook, pushing back the incursion from the Nether Mountains.", "signal": "Resolved"}, {"s": 4, "type": "reveal", "summary": "A Goblin Curse Spitter summoned three Fomorians\u2014twisted fey giants\u2014during the battle, indicating a nearby path to the Underdark and a connection to ancient fey conflicts.", "signal": "Active"}, {"s": 6, "type": "escalate", "summary": "After defeating the simulacrum, a magic mouth spell revealed the crypt is laced with explosive glyphs set to detonate in six minutes, forcing the party to flee and take shelter in Leomund's Tiny Hut as rubble buried them.", "signal": "Active"}, {"s": 7, "type": "escalate", "summary": "Multiple incidents cause chaos in the castle: Orla (as a condor) is chased by past Billabong after being spotted in alchemy lab, Lilith (de-aged) causes a scene with caravan children, and Ave uses dominate person on past Billabong, increasing temporal disturbance.", "signal": "Active"}, {"s": 9, "type": "escalate", "summary": "The party locates Grimslick's stuck caravan with owlbears and slaves; Orla and Ash stealthily approach, but owlbears detect Orla, and a horse is revealed to be a mimic named Sid, prompting imminent combat.", "signal": "Active"}, {"s": 12, "type": "advance", "summary": "Ash, Billabong, and Orla engaged Grimslick's caravan, leading to a combat where Ash cast Shatter on a wagon filled with explosives, triggering a catastrophic explosion. The party used time-stop potions and teleportation to escape, but Grimslick's fate and the explosion's consequences are unknown.", "signal": "Active"}, {"s": 18, "type": "advance", "summary": "Foehammer warns the party of unnatural blizzards in the Storm Mountains, hinting at a stalker (possibly yeti-like) and the ancient white dragon Arvia Turris.", "signal": "Active"}, {"s": 18, "type": "escalate", "summary": "The party triggers an avalanche while traveling; during the aftermath, they observe spectral phantoms wandering the blizzard, adding a supernatural danger to the environment.", "signal": "Active"}, {"s": 18, "type": "advance", "summary": "The party accidentally walks onto a frozen lake, cracking the ice; a white dragon emerges, snatching Dahlia's axe beak, and is seen with a rider, hinting at a controlled or allied threat.", "signal": "Active"}, {"s": 19, "type": "create", "summary": "The party is surrounded by a frost giant and yetis while resting in Leomund's Tiny Hut. They attempt diplomacy and later use a keg of alchemist fire to escape, killing the frost giant and several yetis.", "signal": "Active"}, {"s": 23, "type": "advance", "summary": "The party battled a Nalfeshnee demon jailer in the prison area. After significant damage from spells like Fireball and Scorching Ray, Dahlia decapitated it, ending the immediate threat. The demon's death revealed its disinterest and weariness.", "signal": "Resolved"}, {"s": 23, "type": "escalate", "summary": "The Nalfeshnee blew a magical horn, alerting reinforcements. Ash and Corras scouted ahead and saw acolytes of Lolth and a slime pillar with an eye moving toward the party. Ash created a Wall of Force to block the hallway, but enemies are approaching.", "signal": "Active"}, {"s": 24, "type": "escalate", "summary": "Web's Edge army, including spiders, mages, and demons, mobilized to hunt the party, leading to a chase and cavern collapse.", "signal": "Active"}, {"s": 26, "type": "escalate", "summary": "Ash deceived the spider dragon lieutenant of Lolth into following her, but the dragon discovered the theft of the rod piece, causing Web's Edge to collapse and triggering a chase.", "signal": "Active"}, {"s": 26, "type": "advance", "summary": "Billabong and SavannahBelle were trapped in a magical torture chamber with living chains; Orla dispelled the magic, allowing their rescue, but they were nearly eviscerated.", "signal": "Active"}, {"s": 26, "type": "reveal", "summary": "After retrieving the rod piece, Corras heard Lolth's voice speaking to him, though his Ring of Mind Shielding prevented full mental intrusion.", "signal": "Active"}, {"s": 28, "type": "create", "summary": "The party encountered shadow mastiffs in the Soul Cavern, with Orla establishing dominance over the alpha through a staged fight with Billabong, gaining safe passage.", "signal": "Active"}, {"s": 28, "type": "escalate", "summary": "Hulking flesh abominations (doughboys) were detected south of the temple, banging on the barricaded door, increasing immediate danger.", "signal": "Active"}, {"s": 32, "type": "escalate", "summary": "SavannahBelle was hit with a 9th-level imprisonment spell (chaining) by a Red Wizard, restraining her to the ground until the warehouse burns down or the spell is dispelled at 9th level.", "signal": "Active"}, {"s": 32, "type": "escalate", "summary": "Orla (in rat form) was banished to a harmless demiplane by Asnar the Crimson using banishment, removing her from combat and the scene.", "signal": "Active"}, {"s": 32, "type": "escalate", "summary": "Ezrella is affected by an antipathy/sympathy spell from Asnar the Crimson, causing fear and compelling her to move away from him, limiting her combat effectiveness.", "signal": "Active"}, {"s": 33, "type": "escalate", "summary": "After Corras surrenders, the lich and Red Wizards capture the entire party (except SavannahBelle), strip them of their belongings, and transport them to a prison in Thay. They are placed in isolated cells with an anti-magic field, setting up a new threat and escape scenario.", "signal": "Active"}, {"s": 34, "type": "advance", "summary": "The party escapes their cells in a Thayan prison, confronts Asnar the Crimson (a lich) and Drek'nar (Lord of Terror), and stops a ritual to create a changeling flesh golem. Asnar is defeated but will regenerate via phylactery.", "signal": "Active"}, {"s": 36, "type": "reveal", "summary": "The Priests of Osibus have undeath boons that allow them to resurrect stronger each time they are killed, requiring specific tactics to permanently defeat them.", "signal": "Active"}, {"s": 37, "type": "resolve", "summary": "The Crimson Abbot, a cult leader with a rod piece, is disintegrated by SavannahBelle. His remains form a blood baby that is frozen and shattered, ending the immediate threat in Death House.", "signal": "Resolved"}, {"s": 37, "type": "escalate", "summary": "The Death House mimic demands a sacrifice ('one must die') as the party tries to escape. The walls close in, and a skill challenge is imminent to avoid death.", "signal": "Active"}, {"s": 37, "type": "advance", "summary": "The party fights two shambling mounds in the reliquary. One is killed, and the other retreats, with the encounter revealing vulnerabilities (e.g., fire resistance, thunder healing).", "signal": "Resolved"}, {"s": 38, "type": "advance", "summary": "The party navigated the Death House skill challenge, encountering ghouls, animated armor, spinning blades, and psychic horrors while trying to escape. They succeeded in getting out, but with two failures (one from the ghoul encounter and one from the flying carpet horror).", "signal": "Active"}, {"s": 39, "type": "escalate", "summary": "During watch, zombies approached the Tser Pool Camp, attracted by a failed minor illusion. Protective shimmering barriers on the wagons were noted, but the zombies may discover the party under the wagon, threatening to interrupt their rest.", "signal": "Active"}, {"s": 40, "type": "advance", "summary": "Corras successfully stole the Holy Symbol of Ravenkind from Madam Eva by swapping it with a cursed necklace while she slept. This artifact is key to defeating Strahd, but its theft has angered Madam Eva.", "signal": "Active"}, {"s": 40, "type": "advance", "summary": "Zombies emerged from the water during the long rest; Corras used Rod of Rulership to charm three zombies, killed one, and ordered the others to stand down. This resolved the immediate threat but left zombies in camp.", "signal": "Resolved"}, {"s": 40, "type": "escalate", "summary": "After the thefts, Madam Eva trapped SavannahBelle and Dahlia in her tent with an anti-magic field, demanded the Deck's return, and forced Corras into a gamble. She used high-level spells like Geas and Time Stop, escalating the conflict.", "signal": "Active"}, {"s": 41, "type": "escalate", "summary": "Strahd transported the party to his heart chamber, where they must destroy a crystalline heart powered by coffins representing his crown, love, and blood. The fight is ongoing, with SavannahBelle turned into a vampire spawn.", "signal": "Active"}, {"s": 42, "type": "resolve", "summary": "Dahlia purifies the profane blood in the coffin using Remove Curse, sacrificing half her max HP. This destroys the Heart of Sorrow, making Strahd vulnerable and stopping its damaging pulses.", "signal": "Resolved"}, {"s": 42, "type": "escalate", "summary": "After the Heart of Sorrow is destroyed, the Brides (Popovsky, Ludmilla, Anastrazia, Escher) appear and join the combat, adding significant enemies to the encounter.", "signal": "Active"}, {"s": 43, "type": "advance", "summary": "The party returns to Castle Corras after months away to find the Fey (Gloaming Court) have invaded and besieged the Sword Coast, with the castle protected by an obsidian shield. The Fey are led by the Queen of Air and Darkness, targeting Ash.", "signal": "Active"}, {"s": 44, "type": "reveal", "summary": "Orla discovered through Radoth's vision that Lieutenant Calen Vane (the Butcher) is experimenting with a geode-like stone that is poisoning the land and transforming it into the Gloaming Court. The stone is stored in a lead-lined case in a heavily guarded warehouse.", "signal": "Active"}, {"s": 45, "type": "advance", "summary": "The party faced a riot of 9,000 people (peasants, Lord's Alliance soldiers, paladins) after failing persuasion checks. Combat ensued, resulting in massive slaughter via reverse gravity, wall of fire, lightning bolt, and trampling. Lord Isteval was killed after a divine intervention rapture, and the Butcher was captured.", "signal": "Active"}, {"s": 46, "type": "advance", "summary": "Zibblebottom claims to have improved the obsidian dome's stability with his Ziblomatic Integrity Monitoring Array, reducing power consumption and increasing integrity, though with risks of catastrophic failure.", "signal": "Active"}, {"s": 46, "type": "advance", "summary": "The Matron reveals her plan for the party to enter the Feywild using a modified obsidian stone to mask their presence, aiming to stop the Gloaming Court invasion by targeting the Queen. She demands full authority over Castle Corras and a hair from the Queen as payment.", "signal": "Active"}], "entities": ["Niles Bargnot", "Sarlumon", "Corras", "Lilith", "Billabong", "Ave", "Ash", "Orla", "Fomorians", "Archmage", "Dahlia", "Caravan children", "Castle guards", "Grimslick", "Sid (mimic)", "Eoman", "Foehammer", "Arvia Turris", "Frost Giant", "Yeti", "Nalfeshnee", "Gertrude", "Spider Dragon", "Grotonel Stonecutter", "SavannahBelle", "Lolth", "Shadow Mastiffs", "flesh abominations", "Red Wizards of Thay", "Asnar the Crimson", "Ezrella", "Drek'nar", "Sarek", "Priests of Osibus", "Crimson Abbot", "Madam Eva", "Strahd", "Strahd von Zarovich", "Popovsky", "Ludmilla", "Anastrazia", "Escher", "Queen of Air and Darkness", "Morty", "Calen Vane", "Radoth", "Lord Neverember", "Lord Isteval", "The Butcher", "Zibblebottom", "Gerald the Hamster", "Matron", "Queen of the Gloaming Court"], "locations": ["Havenbrook", "Castle Corras", "Nether Mountains", "Underdark", "Crypt", "Tomb", "Castle Corras grounds", "Alchemy Lab", "forest clearing near caravan", "Wilderness near Lumin", "Berdusk", "Storm Mountains", "Triboar", "Frozen lake in Storm Mountains", "Snowy forest", "Leomund's Tiny Hut", "Web's Edge prison", "Web's Edge corridors", "Web's Edge", "Soul Cavern", "Wave Echo Cave", "south corridor", "Warehouse 17", "Prison in Thay", "Thayan prison", "Death House basement", "Death House", "Death House reliquary", "Barovia", "Tser Pool Camp", "Madam Eva's tent", "Castle Ravenloft", "heart chamber", "Ravenloft Dungeon", "Coffin Chamber", "Sword Coast", "Warehouse", "Castle Corras refugee camp", "Castle Corras courtyard", "Obsidian Dome", "Feywild"], "hooks": ["Investigate the source of the goblin threat in the Nether Mountains.", "Secure the region with patrols from Castle Corras.", "Explore the area for Underdark entrances.", "Research Fomorians and their ties to the fey.", "Find a way to escape the buried hut (e.g., divine intervention, digging spells)", "Use the Orb of Time or Elixir of Cronus to aid escape", "Investigate if the explosion dispels Mordenkainen's Private Sanctum", "Manage fallout from disturbances (e.g., angry parents, guard alertness)", "Coordinate to avoid further detection", "Escape castle area to reduce temporal impact", "Roll initiative for combat", "Assess full caravan threats", "Protect Eoman and Miss Nibbles", "Investigate the explosion site for survivors and loot.", "Deal with legal consequences in Berdusk for unauthorized magic use.", "Follow up on Grimslick's connection to the goblin plague.", "Prepare for encounters with the blizzard stalker or Arvia Turris.", "Investigate the source of the unnatural blizzards.", "Determine the origin and intent of the spectral phantoms.", "Avoid or confront them if they become hostile.", "Investigate the dragon's lair or the rider's identity.", "Prepare for potential dragon attacks while traveling.", "Investigate the cabin for clues about the Forge of Spells", "Care for the yeti tykes", "Watch for remaining yeti or frost giant retaliation", "Loot the demon's body (earrings, tusk rings)", "Check Gertrude's condition after the head landed near her", "Prepare for incoming reinforcements alerted by the horn", "Hold the line against incoming forces", "Use the Wall of Force as a barrier for escape", "Regroup the party to coordinate defense or retreat", "Assess Web's Edge retaliation", "Fortify Castle Corras against attacks", "Prepare for potential retaliation from Lolth's forces", "Use the rod piece to gain advantage against fiends", "Investigate the origins of such traps in Web's Edge", "Recover from the traumatic experience", "Investigate the rod's connection to Lolth", "Strengthen mental defenses against fiends", "Monitor shadow mastiff behavior if the party returns", "Investigate the mastiffs' connection to the cavern's corruption", "Prepare for combat with the abominations", "Consider alternative escape routes", "Find a way to dispel the imprisonment (e.g., 9th-level dispel magic, wish, or burning the warehouse).", "Protect SavannahBelle while she is restrained.", "Wait for the banishment to end (1 minute concentration) or dispel it.", "Account for Orla's absence in planning.", "Use calm emotions or similar to suppress the fear effect.", "Have Ezrella use ranged attacks or support from a distance.", "Devise an escape plan from the Thay prison", "Recover stolen equipment and items", "Investigate the Red Wizards' motives and plans in Thay", "Deal with Asnar's phylactery to prevent his return", "Investigate Drek'nar's involvement with the Lord's Alliance", "Target the tattoos to prevent soul absorption", "Use Sarusanda's sword to stop regeneration", "Coordinate attacks to force duplicate boon rolls", "Use skills to navigate escape", "Find alternative to sacrifice", "Prepare for skill challenge next session", "Investigate the aftermath of Barovia village", "Follow up on Strahd's deal regarding the Staff of Kazon and rod piece", "Deal with the approaching zombies before they alert the camp or attack.", "Investigate the shimmering barriers for protection or weaknesses.", "Consider moving to a safer location to complete the rest.", "Test the Holy Symbol's powers against undead or Strahd.", "Hide the symbol from Madam Eva or Strahd's agents.", "Learn more about its lore and limitations.", "Dispose of the zombie bodies to avoid alarming camp residents.", "Investigate the source of zombies in the water.", "Escape the anti-magic field if possible.", "Negotiate or fight Madam Eva to resolve the standoff.", "Use non-magical means to assist trapped allies.", "Purify the chalice to disable the third coffin", "Defeat Strahd to potentially free SavannahBelle from vampirism", "Focus attacks on Strahd now that he is vulnerable", "Protect Dahlia as she recovers from the sacrifice", "Use Shrum's mirror ability to target remaining Brides", "Focus fire to reduce enemy action economy", "Investigate Fey movements", "Strengthen the shield", "Gather intelligence on the Queen's plans", "Confront the Butcher publicly", "Steal or destroy the geode", "Use evidence to turn the Lord's Alliance against him", "Manage fallout from the massacre among survivors", "Interrogate the Butcher for information on the famine plot", "Investigate the missing heartbeat stone from the warehouse", "Monitor the dome for further anomalies", "Use anti-scrying grenades in the Feywild", "Keep Zibblebottom away from critical systems", "Attune to the obsidian stone and enter the Feywild", "Investigate the Gloaming Court's leadership", "Avoid speaking true names or accepting fey gifts"]}, {"id": "thread_071", "title": "Essence Drain Plague and Blight", "type": "Threat", "status": "Active", "first": 5, "last": 5, "events": [{"s": 5, "type": "escalate", "summary": "The magical blight affecting plants (reported by Orla) and essence drain plague affecting animals (reported by Billabong) are spreading in the region, with symptoms including blackened plants, shimmering residues, and drained carcasses. The party discusses research, quarantine, or a risky ritual to cleanse the area.", "signal": "Active"}], "entities": [], "locations": ["Castle Corras", "Lumin", "Havenbrook", "High Forest"], "hooks": ["Research the plague to find a cure or source", "Consider Orla's ritual with arcane reserves", "Delegate rangers to collect samples"]}, {"id": "thread_072", "title": "Temporal Disturbance and Sentinel", "type": "Threat", "status": "Active", "first": 15, "last": 22, "events": [{"s": 15, "type": "escalate", "summary": "A Temporal Sentinel appeared due to critical temporal disturbances, threatening to reset the universe unless the party seals a rift caused by their actions.", "signal": "Active"}, {"s": 15, "type": "create", "summary": "The party must seal a temporal rift spewing creatures, with Kelemvor providing revenant helpers, while others distract the Temporal Sentinel.", "signal": "Active"}, {"s": 16, "type": "escalate", "summary": "The Time Warden is actively resetting the universe, requiring the party to disrupt her concentration within five turns while navigating a chaotic rift field.", "signal": "Active"}, {"s": 16, "type": "advance", "summary": "Ethereal servants are attempting to seal a rift at the toilet house, requiring protection from creatures emerging each round, including a blue dragon and a balor.", "signal": "Active"}, {"s": 22, "type": "reveal", "summary": "Orla received a dark blessing (Zephyr's Veil) after the party was punished by the Lady of Pain, reducing them to level 10 upon entering Sanctum via a wish spell.", "signal": "Active"}], "entities": ["Temporal Sentinel", "Kelemvor", "revenants", "Remorhaz", "Time Warden", "Elenvor", "Ethereal Servants", "Blue Dragon", "Balor", "Vampire Warrior", "Orla", "Lady of Pain"], "locations": ["Greenhouse site", "secret toilet area", "Temporal Rift Site", "Toilet House", "Sanctum"], "hooks": ["Navigate temporal bubbles to distract the Sentinel", "Seal the rift with revenant assistance while fighting emerging creatures", "Coordinate with revenants to perform sealing rituals", "Defend against high-CR creatures rolling from the rift each turn", "Use Chrono Compass to teleport between rift sites strategically.", "Coordinate attacks to land hits on the Time Warden to reset her timer.", "Clear obstacles like boulders and trees to give ethereal servants line of sight.", "Focus fire on high-threat creatures like the blue dragon to prevent interruptions.", "Utilize dark blessings strategically in upcoming challenges", "Explore ways to regain lost power levels"]}, {"id": "thread_073", "title": "Cult of Eternal Flame and Balor Summoning", "type": "Threat", "status": "Active", "first": 10, "last": 11, "events": [{"s": 10, "type": "advance", "summary": "The party discovered the cult's ritual to summon a Balor demon in a lava cave, with 28 hours remaining until completion. They learned the mechanics: at least two cultists must maintain concentration each round to control the summoning; if interrupted, a random entity (possibly a devil) may emerge uncontrolled.", "signal": "Active"}, {"s": 10, "type": "advance", "summary": "The party engaged and defeated a cult camp guarding the ritual site, using spells like Wrath of Nature and Moonbeam. Several orcs, orogs, and magmen were killed or surrendered, clearing the path to the cave.", "signal": "Resolved"}, {"s": 11, "type": "create", "summary": "An earth elemental spirit was encountered, angered by defilement of the land, possibly linked to the Cult of Eternal Flame's activities. It threatened the party but was temporarily placated.", "signal": "Active"}, {"s": 11, "type": "advance", "summary": "The party advanced toward the cult's ritual site, encountering a deceptive bridge and pit trap, indicating the cult's defensive measures and proximity to their activities.", "signal": "Active"}], "entities": ["Eternal Flame Priest", "fire genasi", "tieflings", "orcs", "orogs", "magmen", "Earth Elemental"], "locations": ["lava cave", "hills", "camp", "cave entrance", "Summer Hills", "pit trap area", "bridge and pit trap"], "hooks": ["Interrupt the ritual by attacking cultists to break concentration", "Attempt to reverse the gate by channeling energy into it", "Prepare for combat with a powerful demon or devil", "Loot the camp for resources", "Heal up before entering the cave", "Question surrendered orogs for more intel", "Investigate the source of land defilement the elemental mentioned", "Prepare for potential return of the elemental if not satisfied", "Use Orla's animal communication to gather more intel", "Continue toward the ritual site with caution", "Scout for more traps or cult patrols", "Use divination magic to assess cult strength"]}, {"id": "thread_074", "title": "Berdusk Dungeons Demonic Presence", "type": "Threat", "status": "Active", "first": 13, "last": 13, "events": [{"s": 13, "type": "escalate", "summary": "Revealed Glabrezu demon Malachar and hellhounds in Berdusk dungeons, indicating a larger demonic plot. The demon served as translator and offered the pact, suggesting sinister activities by the Lords Alliance.", "signal": "Active"}], "entities": ["Malachar the Twisted"], "locations": ["Berdusk Dungeons"], "hooks": ["Investigate Lords Alliance demonic ties", "Warn allies about Berdusk", "Prepare for demonic threats"]}, {"id": "thread_075", "title": "Celestial and Fiendish War", "type": "Threat", "status": "Resolved", "first": 25, "last": 25, "events": [{"s": 25, "type": "resolve", "summary": "The Celestial Foothold and Fiend Incursion have been resolved. Higher-ups in the Celestial hierarchy regained control, withdrew support, and took the war back to the Hells, causing demons and devils to resume the Blood War and retreat. The Scar region is devastated, creating a neutral buffer zone.", "signal": "Resolved"}], "entities": [], "locations": ["The Scar", "Neutral Zone"], "hooks": ["Monitor the Scar for residual threats or opportunistic factions.", "Consider humanitarian aid to affected areas."]}, {"id": "thread_076", "title": "Dark Embrace Cult Infiltration", "type": "Threat", "status": "Active", "first": 25, "last": 27, "events": [{"s": 25, "type": "escalate", "summary": "The Dark Embrace cult, led by Alar Shadowspeaker, is insidiously growing within BWB territories, brainwashing and recruiting members. It worships dark entities and poses a significant internal threat due to BWB's stance on religious freedom, making it hard to counter without witch hunts.", "signal": "Active"}, {"s": 27, "type": "advance", "summary": "DM reminded the party of a cult led by Alar Shadowspeaker, working for Drakkar, trying to infiltrate the BWB federation. This cult threat was noted as a plot line the party can be proactive or reactive about.", "signal": "Active"}], "entities": ["Alar Shadowspeaker", "Drakkar"], "locations": ["BWB Federation territories"], "hooks": ["Investigate cult activities discreetly to gather evidence.", "Develop a strategy to counter cult influence without violating freedoms.", "Gather intelligence on the cult's activities within BWB.", "Confront or sabotage the cult's operations."]}, {"id": "thread_077", "title": "Ceaseless Maww Threat", "type": "Threat", "status": "Active", "first": 30, "last": 30, "events": [{"s": 30, "type": "create", "summary": "The Harbinger warned of the Ceaseless Maww, a monstrous abomination devouring fertility as it moves through the world, currently south and heading north. The party tracked it to a cave near Daggerford and engaged it in combat.", "signal": "Active"}], "entities": ["Ceaseless Maww"], "locations": ["Daggerford", "cave"], "hooks": ["Defeat the Ceaseless Maww to stop its destruction", "Collect shadow essence from the Maww during the battle", "Investigate the necromantic fissures in the cave"]}, {"id": "thread_078", "title": "Lord of Terror and Bastion Defense", "type": "Threat", "status": "Active", "first": 35, "last": 35, "events": [{"s": 35, "type": "escalate", "summary": "The Lord of Terror's army (goblins, orcs, Lord's Alliance) is preparing to attack Ash's bastion. The party must return quickly or risk losing it.", "signal": "Active"}], "entities": ["Lord of Terror", "Billabong"], "locations": ["Ash's Bastion", "Lurkwood"], "hooks": ["Return to Faerun after retrieving the rod piece", "Prepare defenses for the bastion", "Rescue Billabong if possible"]}]</script>
+
+<script>
+/* ================================================================
+   DATA & CONSTANTS
+   ================================================================ */
+const THREADS = JSON.parse(document.getElementById('threadData').textContent);
+
+const TYPE_COLORS = {
+  'Mystery':'#ad6bff','Character Arc':'#ffd700','NPC':'#4DB6AC',
+  'Obligation':'#FF8A65','Threat':'#ef4444','Faction':'#4A90D9',
+  'Location':'#81C784','Other':'#9e9e9e'
+};
+const EVENT_COLORS = {
+  create:'#81C784',advance:'#64B5F6',escalate:'#ef4444',
+  reveal:'#ad6bff',resolve:'#ffd700',reopen:'#FF8A65'
+};
+const SESSIONS = d3.range(1, 47);
+const NSESS = 46;
+
+/* ================================================================
+   STATE
+   ================================================================ */
+let activeTypes = new Set(['all']);
+let isWoven = true;
+let lockedThread = null;
+let animating = false;
+
+// ── Feature 1: Golden Thread (longest session span) ──
+const GOLDEN_THREAD_ID = THREADS.slice().sort((a,b) => (b.last - b.first) - (a.last - a.first))[0].id;
+
+// ── Feature 2: Knot Cluster sessions (5+ threads with events) ──
+const KNOT_SESSIONS = (function() {
+  const sessEventThreads = {};
+  SESSIONS.forEach(s => { sessEventThreads[s] = new Set(); });
+  THREADS.forEach(t => {
+    t.events.forEach(e => { sessEventThreads[e.s].add(t.id); });
+  });
+  return SESSIONS.filter(s => sessEventThreads[s].size >= 5);
+})();
+
+// ── Feature 5: Hidden Rune sessions (major arc convergence points) ──
+const RUNE_SESSIONS = [4, 13, 16, 17, 30, 34, 43, 46];
+
+/* ================================================================
+   STATS
+   ================================================================ */
+(function buildStats() {
+  const active = THREADS.filter(t => t.status === 'Active').length;
+  const resolved = THREADS.filter(t => t.status === 'Resolved').length;
+  const pending = THREADS.filter(t => t.status === 'Pending').length;
+
+  const sessCounts = {};
+  SESSIONS.forEach(s => { sessCounts[s] = 0 });
+  THREADS.forEach(t => { for (let s = t.first; s <= t.last; s++) sessCounts[s]++ });
+  const maxSess = Object.entries(sessCounts).sort((a, b) => b[1] - a[1])[0];
+
+  const longest = THREADS.slice().sort((a, b) => (b.last - b.first) - (a.last - a.first))[0];
+
+  const stats = [
+    { v: THREADS.length, l: 'Total Threads' },
+    { v: active, l: 'Active' },
+    { v: resolved, l: 'Resolved' },
+    { v: pending, l: 'Pending' },
+    { v: 'S' + String(maxSess[0]).padStart(3, '0'), l: 'Densest (' + maxSess[1] + ')' },
+    { v: (longest.last - longest.first + 1) + 's', l: 'Longest Span' }
+  ];
+
+  const bar = d3.select('#statsBar');
+  stats.forEach(s => {
+    const it = bar.append('div').attr('class', 'stat-item');
+    it.append('div').attr('class', 'stat-value').text(s.v);
+    it.append('div').attr('class', 'stat-label').text(s.l);
+  });
+})();
+
+/* ================================================================
+   CONTROLS
+   ================================================================ */
+(function buildControls() {
+  const c = d3.select('#controls');
+
+  c.append('button').attr('class', 'filter-btn active').attr('data-type', 'all').text('All')
+    .on('click', function() {
+      activeTypes = new Set(['all']);
+      c.selectAll('.filter-btn').classed('active', true);
+      render();
+    });
+
+  const types = [...new Set(THREADS.map(t => t.type))].sort();
+  types.forEach(type => {
+    c.append('button').attr('class', 'filter-btn active').attr('data-type', type).text(type)
+      .on('click', function() {
+        if (activeTypes.has('all')) {
+          activeTypes.clear();
+          activeTypes.add(type);
+          c.selectAll('.filter-btn').classed('active', false);
+          d3.select(this).classed('active', true);
+        } else if (activeTypes.has(type)) {
+          activeTypes.delete(type);
+          d3.select(this).classed('active', false);
+          if (activeTypes.size === 0) {
+            activeTypes.add('all');
+            c.selectAll('.filter-btn').classed('active', true);
+          }
+        } else {
+          activeTypes.add(type);
+          d3.select(this).classed('active', true);
+        }
+        if (activeTypes.size === types.length && !activeTypes.has('all')) {
+          activeTypes.clear();
+          activeTypes.add('all');
+          c.selectAll('.filter-btn').classed('active', true);
+        }
+        render();
+      });
+  });
+
+  c.append('button').attr('class', 'weave-btn').attr('id', 'weaveBtn')
+    .text('UNRAVEL').on('click', toggleWeave);
+})();
+
+/* ================================================================
+   LEGEND
+   ================================================================ */
+(function buildLegend() {
+  const r = d3.select('#legendRow');
+  Object.entries(TYPE_COLORS).forEach(([t, c]) => {
+    if (t === 'Other') return;
+    const it = r.append('div').attr('class', 'legend-item');
+    it.append('div').attr('class', 'legend-swatch').style('background', c);
+    it.append('span').text(t);
+  });
+  r.append('div').attr('class', 'legend-sep');
+  const markers = [
+    ['\u25CF', '#81C784', 'Create'],
+    ['\u2022', '#64B5F6', 'Advance'],
+    ['\u25C6', '#ef4444', 'Escalate'],
+    ['\u25CE', '#ad6bff', 'Reveal'],
+    ['\u2605', '#ffd700', 'Resolve'],
+    ['\u25CB', '#FF8A65', 'Reopen']
+  ];
+  markers.forEach(([sym, col, label]) => {
+    const it = r.append('div').attr('class', 'legend-item');
+    it.append('span').attr('class', 'legend-marker').style('color', col).text(sym);
+    it.append('span').text(label);
+  });
+})();
+
+/* ================================================================
+   HELPERS
+   ================================================================ */
+function visibleThreads() {
+  if (activeTypes.has('all')) return THREADS;
+  return THREADS.filter(t => activeTypes.has(t.type));
+}
+
+function threadPriority(t) {
+  const span = t.last - t.first + 1;
+  const ev = t.events.length;
+  if (span >= 15 || ev >= 5) return 'high';
+  if (span >= 5 || ev >= 3) return 'medium';
+  return 'low';
+}
+
+function threadThickness(t) {
+  return { high: 4.5, medium: 2.8, low: 1.6 }[threadPriority(t)];
+}
+
+function threadOpacity(t) {
+  if (t.status === 'Resolved') return 0.28;
+  if (t.status === 'Pending') return 0.5;
+  return 0.82;
+}
+
+/* ================================================================
+   CORE RENDER
+   ================================================================ */
+function render(animate) {
+  const svg = d3.select('#tapestrySvg');
+  svg.selectAll('*').remove();
+
+  const threads = visibleThreads();
+  if (!threads.length) { renderDensity(); return; }
+
+  // Sort by type group, then first session, then span length
+  const typeOrder = ['Character Arc', 'Threat', 'Mystery', 'Obligation', 'Faction', 'NPC', 'Location', 'Other'];
+  const sorted = threads.slice().sort((a, b) => {
+    const ta = typeOrder.indexOf(a.type), tb = typeOrder.indexOf(b.type);
+    if (ta !== tb) return ta - tb;
+    if (a.first !== b.first) return a.first - b.first;
+    return (b.last - b.first) - (a.last - a.first);
+  });
+
+  const margin = { top: 30, right: 55, bottom: 18, left: 55 };
+  const W = document.getElementById('loomFrame').clientWidth - 28;
+  const wovenSpacing = 8.5;
+  const unravelSpacing = 17;
+  const spacing = isWoven ? wovenSpacing : unravelSpacing;
+  const H = margin.top + margin.bottom + sorted.length * spacing + 30;
+
+  svg.attr('viewBox', `0 0 ${W} ${H}`).attr('width', W).attr('height', H);
+
+  // ── SVG Defs ──
+  const defs = svg.append('defs');
+
+  // Thread glow (subtle)
+  const glow = defs.append('filter').attr('id', 'glow')
+    .attr('x', '-40%').attr('y', '-80%').attr('width', '180%').attr('height', '260%');
+  glow.append('feGaussianBlur').attr('stdDeviation', '2.5').attr('result', 'g');
+  const gm = glow.append('feMerge');
+  gm.append('feMergeNode').attr('in', 'g');
+  gm.append('feMergeNode').attr('in', 'SourceGraphic');
+
+  // Highlight glow (bright)
+  const hglow = defs.append('filter').attr('id', 'hglow')
+    .attr('x', '-60%').attr('y', '-100%').attr('width', '220%').attr('height', '300%');
+  hglow.append('feGaussianBlur').attr('stdDeviation', '5').attr('result', 'g');
+  const hm = hglow.append('feMerge');
+  hm.append('feMergeNode').attr('in', 'g');
+  hm.append('feMergeNode').attr('in', 'SourceGraphic');
+
+  // Under-thread shadow
+  const ushadow = defs.append('filter').attr('id', 'ushadow')
+    .attr('x', '-20%').attr('y', '-50%').attr('width', '140%').attr('height', '200%');
+  ushadow.append('feGaussianBlur').attr('stdDeviation', '1').attr('result', 'blur');
+  ushadow.append('feOffset').attr('dx', '0').attr('dy', '1').attr('result', 'offset');
+  const um = ushadow.append('feMerge');
+  um.append('feMergeNode').attr('in', 'offset');
+  um.append('feMergeNode').attr('in', 'SourceGraphic');
+
+  const xScale = d3.scaleLinear()
+    .domain([0.5, NSESS + 0.5])
+    .range([margin.left, W - margin.right]);
+
+  // ── Session column labels ──
+  const lblG = svg.append('g');
+  SESSIONS.forEach(s => {
+    if (s % 5 === 0 || s === 1 || s === NSESS) {
+      lblG.append('text')
+        .attr('x', xScale(s)).attr('y', margin.top - 10)
+        .attr('text-anchor', 'middle')
+        .attr('fill', '#2a2218')
+        .attr('font-family', 'JetBrains Mono, monospace')
+        .attr('font-size', 8)
+        .text(s);
+    }
+  });
+
+  // ── Vertical grid ──
+  SESSIONS.forEach(s => {
+    if (s % 5 === 0) {
+      svg.append('line')
+        .attr('x1', xScale(s)).attr('x2', xScale(s))
+        .attr('y1', margin.top).attr('y2', H - margin.bottom)
+        .attr('stroke', '#12100c').attr('stroke-width', 0.5);
+    }
+  });
+
+  // ── Base Y positions (each thread's home row) ──
+  const baseY = {};
+  sorted.forEach((t, i) => {
+    baseY[t.id] = margin.top + 16 + i * spacing;
+  });
+
+  // ════════════════════════════════════
+  // WEAVING ALGORITHM
+  // ════════════════════════════════════
+  // For each session column, find all active threads, assign y positions.
+  // In woven mode: threads swap positions in a tabby-weave pattern,
+  // creating the characteristic over/under interlace.
+  const colData = {};
+
+  SESSIONS.forEach(s => {
+    const active = sorted.filter(t => s >= t.first && s <= t.last);
+
+    if (!isWoven || active.length <= 1) {
+      const m = {};
+      active.forEach(t => { m[t.id] = { y: baseY[t.id], over: true }; });
+      colData[s] = m;
+      return;
+    }
+
+    // Collect the y-slots these threads occupy
+    const ySlots = active.map(t => baseY[t.id]).sort((a, b) => a - b);
+
+    // Build permutation: tabby weave with phase shift
+    // Phase alternates which pairs swap each column
+    const n = active.length;
+    const indices = d3.range(n);
+    const phase = s % 2;
+
+    // Swap adjacent pairs with phase offset
+    for (let i = phase; i < n - 1; i += 2) {
+      const tmp = indices[i];
+      indices[i] = indices[i + 1];
+      indices[i + 1] = tmp;
+    }
+
+    const m = {};
+    active.forEach((t, i) => {
+      const targetSlot = indices[i];
+      // A thread is "over" when it moved to a higher (lower y) position
+      // or stayed in place. "under" when it moved down.
+      const movedUp = targetSlot < i;
+      const stayed = targetSlot === i;
+      m[t.id] = {
+        y: ySlots[targetSlot],
+        over: movedUp || stayed
+      };
+    });
+    colData[s] = m;
+  });
+
+  // ── Feature 5: Hidden Runes layer (behind everything) ──
+  const runeG = svg.append('g').attr('class', 'layer-runes');
+  RUNE_SESSIONS.forEach(s => {
+    const cx = xScale(s);
+    // Place rune at vertical center of the tapestry
+    const cy = margin.top + (H - margin.top - margin.bottom) / 2;
+    const rSize = 20; // half-size of 40x40
+    const rg = runeG.append('g')
+      .attr('transform', `translate(${cx},${cy})`)
+      .attr('class', 'hidden-rune')
+      .style('opacity', 0.10);
+
+    // Outer circle
+    rg.append('circle').attr('r', rSize)
+      .attr('fill', 'none').attr('stroke', '#c4956a').attr('stroke-width', 0.8);
+    // Inscribed triangle
+    const triPts = [0,1,2].map(i => {
+      const a = (i * 2 * Math.PI / 3) - Math.PI / 2;
+      return `${Math.cos(a)*rSize*0.75},${Math.sin(a)*rSize*0.75}`;
+    }).join(' ');
+    rg.append('polygon').attr('points', triPts)
+      .attr('fill', 'none').attr('stroke', '#c4956a').attr('stroke-width', 0.6);
+    // Inner circle
+    rg.append('circle').attr('r', rSize * 0.35)
+      .attr('fill', 'none').attr('stroke', '#c4956a').attr('stroke-width', 0.5);
+
+    // Invisible hover target for rune
+    rg.append('circle').attr('r', rSize + 4)
+      .attr('fill', 'transparent').style('cursor', 'default')
+      .on('mouseenter', function(ev) {
+        d3.select(this.parentNode).transition().duration(400).style('opacity', 0.40);
+        const tt = d3.select('#tooltip');
+        tt.html('<div class="tt-title" style="color:#c4956a">Fate Convergence Point</div>' +
+                '<div class="tt-meta">Session ' + s + '</div>' +
+                '<div class="tt-span">A nexus where multiple narrative threads converge</div>')
+          .classed('visible', true);
+        let px = ev.clientX + 16, py = ev.clientY - 10;
+        const r = tt.node().getBoundingClientRect();
+        if (px + r.width > window.innerWidth) px = ev.clientX - r.width - 16;
+        if (py + r.height > window.innerHeight) py = window.innerHeight - r.height - 10;
+        if (py < 0) py = 4;
+        tt.style('left', px + 'px').style('top', py + 'px');
+      })
+      .on('mouseleave', function() {
+        d3.select(this.parentNode).transition().duration(400).style('opacity', 0.10);
+        hideTooltip();
+      });
+  });
+
+  // ── Drawing layers: under first, then over ──
+  const underG = svg.append('g').attr('class', 'layer-under');
+  const overG = svg.append('g').attr('class', 'layer-over');
+  const markerG = svg.append('g').attr('class', 'layer-markers');
+
+  // ── Feature 2: Knot Clusters layer (above markers) ──
+  const knotG = svg.append('g').attr('class', 'layer-knots');
+
+  const labelG = svg.append('g').attr('class', 'layer-labels');
+  const hoverG = svg.append('g').attr('class', 'layer-hover');
+
+  sorted.forEach((thread, tidx) => {
+    const color = TYPE_COLORS[thread.type] || '#9e9e9e';
+    const thick = threadThickness(thread);
+    const baseOp = threadOpacity(thread);
+    const isDashed = thread.status === 'Pending';
+
+    // Event lookup by session
+    const evMap = {};
+    thread.events.forEach(e => {
+      if (!evMap[e.s]) evMap[e.s] = [];
+      evMap[e.s].push(e);
+    });
+
+    // Build ordered points along this thread's path
+    const points = [];
+    for (let s = thread.first; s <= thread.last; s++) {
+      const col = colData[s];
+      if (!col || !col[thread.id]) continue;
+      points.push({
+        s,
+        x: xScale(s),
+        y: col[thread.id].y,
+        over: col[thread.id].over
+      });
+    }
+
+    if (points.length === 0) return;
+
+    // ── Feature 1: Is this the Golden Thread? ──
+    const isGolden = thread.id === GOLDEN_THREAD_ID;
+    // ── Feature 4: Thread priority for tension ──
+    const pri = threadPriority(thread);
+
+    // ── Draw bezier segments ──
+    for (let i = 0; i < points.length - 1; i++) {
+      const p = points[i], q = points[i + 1];
+      const mx = (p.x + q.x) / 2;
+
+      // Segment layer depends on start point's over/under state
+      const segOver = p.over;
+      const layer = (segOver || !isWoven) ? overG : underG;
+
+      let segThick = thick;
+      let segOp = baseOp;
+
+      // Feature 1: Golden thread is always 6px thick
+      if (isGolden) segThick = 6;
+
+      // Escalated segments are thicker and glowing
+      const hasEscalate = evMap[p.s] && evMap[p.s].some(e => e.type === 'escalate');
+      if (hasEscalate && !isGolden) segThick = thick + 1.8;
+
+      // Under segments: dimmed and thinner to create depth
+      if (!segOver && isWoven) {
+        segOp *= 0.45;
+        if (!isGolden) segThick *= 0.7;
+      }
+
+      const hasReopen = evMap[p.s] && evMap[p.s].some(e => e.type === 'reopen');
+
+      // ── Feature 4: Thread Tension — modify path based on priority ──
+      let pathD;
+      if (pri === 'high') {
+        // Taut: minimal vertical deviation — nearly straight with very slight easing
+        const qtr = (q.x - p.x) * 0.35;
+        pathD = `M${p.x},${p.y} C${p.x + qtr},${p.y} ${q.x - qtr},${q.y} ${q.x},${q.y}`;
+      } else if (pri === 'low') {
+        // Sagging: catenary curve, midpoint drops 3-5px
+        const sag = 4;
+        const midY = (p.y + q.y) / 2 + sag;
+        pathD = `M${p.x},${p.y} C${mx},${midY} ${mx},${midY} ${q.x},${q.y}`;
+      } else {
+        // Medium: standard bezier (existing behavior)
+        pathD = `M${p.x},${p.y} C${mx},${p.y} ${mx},${q.y} ${q.x},${q.y}`;
+      }
+
+      const path = layer.append('path')
+        .attr('d', pathD)
+        .attr('fill', 'none')
+        .attr('stroke', isGolden ? '#ffd700' : color)
+        .attr('stroke-width', segThick)
+        .attr('stroke-linecap', 'round')
+        .attr('opacity', isGolden ? Math.max(segOp, 0.9) : segOp)
+        .attr('data-tid', thread.id);
+
+      // Feature 1: Golden thread gets shimmer animation class
+      if (isGolden) {
+        path.classed('golden-thread-seg', true);
+      }
+
+      // ── Feature 3: Fraying Edges ──
+      // Resolved threads fray in their last 3 sessions
+      if (thread.status === 'Resolved') {
+        const sessionsFromEnd = thread.last - p.s;
+        if (sessionsFromEnd <= 2 && sessionsFromEnd >= 0) {
+          if (sessionsFromEnd === 2)      path.attr('stroke-dasharray', '8,2');
+          else if (sessionsFromEnd === 1) path.attr('stroke-dasharray', '5,3');
+          else                            path.attr('stroke-dasharray', '3,4');
+        } else if (isDashed || hasReopen) {
+          path.attr('stroke-dasharray', '5,4');
+        }
+      } else if (isDashed || hasReopen) {
+        path.attr('stroke-dasharray', '5,4');
+      }
+
+      if (hasEscalate) {
+        path.attr('filter', 'url(#glow)');
+      }
+
+      // Under threads get shadow filter for depth
+      if (!segOver && isWoven && !isGolden) {
+        path.attr('filter', 'url(#ushadow)');
+      }
+      // Golden thread always gets glow
+      if (isGolden) {
+        path.attr('filter', 'url(#glow)');
+      }
+    }
+
+    // ── Single-session thread dot ──
+    if (points.length === 1) {
+      const p = points[0];
+      overG.append('circle')
+        .attr('cx', p.x).attr('cy', p.y)
+        .attr('r', thick + 1.5)
+        .attr('fill', color)
+        .attr('opacity', baseOp)
+        .attr('data-tid', thread.id);
+    }
+
+    // ── Start/end caps ──
+    if (points.length > 1) {
+      // Start cap: small knot
+      const pFirst = points[0];
+      if (!evMap[pFirst.s] || !evMap[pFirst.s].some(e => e.type === 'create')) {
+        markerG.append('circle')
+          .attr('cx', pFirst.x).attr('cy', pFirst.y)
+          .attr('r', thick * 0.8)
+          .attr('fill', color).attr('opacity', baseOp * 0.8)
+          .attr('data-tid', thread.id);
+      }
+      // End cap
+      const pLast = points[points.length - 1];
+      if (thread.status === 'Resolved') {
+        // Resolved: fade dot
+        markerG.append('circle')
+          .attr('cx', pLast.x).attr('cy', pLast.y)
+          .attr('r', thick * 0.6)
+          .attr('fill', color).attr('opacity', baseOp * 0.5)
+          .attr('data-tid', thread.id);
+      } else {
+        // Active/Pending: open-ended strand
+        markerG.append('circle')
+          .attr('cx', pLast.x).attr('cy', pLast.y)
+          .attr('r', thick * 0.7)
+          .attr('fill', color).attr('opacity', baseOp * 0.7)
+          .attr('data-tid', thread.id);
+      }
+    }
+
+    // ── Event markers ──
+    points.forEach(p => {
+      if (!evMap[p.s]) return;
+      evMap[p.s].forEach(ev => {
+        const g = markerG.append('g')
+          .attr('transform', `translate(${p.x},${p.y})`)
+          .attr('data-tid', thread.id);
+
+        if (ev.type === 'create') {
+          // Knot: concentric circles
+          g.append('circle').attr('r', thick + 2.5)
+            .attr('fill', color).attr('opacity', baseOp)
+            .attr('stroke', '#0c0a08').attr('stroke-width', 1.5);
+          g.append('circle').attr('r', thick * 0.45)
+            .attr('fill', '#0c0a08');
+        } else if (ev.type === 'resolve') {
+          // Golden star
+          const R = thick + 3.5;
+          let d = '';
+          for (let k = 0; k < 10; k++) {
+            const a = (k * Math.PI / 5) - Math.PI / 2;
+            const r = k % 2 === 0 ? R : R * 0.38;
+            d += (k === 0 ? 'M' : 'L') + `${Math.cos(a)*r},${Math.sin(a)*r}`;
+          }
+          d += 'Z';
+          g.append('path').attr('d', d)
+            .attr('fill', '#ffd700').attr('opacity', .9)
+            .attr('stroke', '#0c0a08').attr('stroke-width', .8)
+            .attr('filter', 'url(#glow)');
+        } else if (ev.type === 'escalate') {
+          // Glowing diamond
+          const R = thick + 2.5;
+          g.append('path')
+            .attr('d', `M0,${-R} L${R},0 L0,${R} L${-R},0 Z`)
+            .attr('fill', color).attr('opacity', baseOp)
+            .attr('stroke', 'rgba(255,255,255,.35)').attr('stroke-width', .8)
+            .attr('filter', 'url(#glow)');
+        } else if (ev.type === 'reveal') {
+          // Eye shape
+          const R = thick + 2;
+          g.append('ellipse')
+            .attr('rx', R * 1.6).attr('ry', R)
+            .attr('fill', 'none').attr('stroke', color)
+            .attr('stroke-width', 1.2).attr('opacity', baseOp);
+          g.append('circle')
+            .attr('r', R * 0.45)
+            .attr('fill', color).attr('opacity', baseOp);
+        } else if (ev.type === 'reopen') {
+          // Dashed circle
+          g.append('circle').attr('r', thick + 2)
+            .attr('fill', 'none').attr('stroke', color)
+            .attr('stroke-width', 1.5).attr('stroke-dasharray', '2,2')
+            .attr('opacity', baseOp);
+        } else {
+          // Advance: small filled dot
+          g.append('circle').attr('r', thick + 1)
+            .attr('fill', color).attr('opacity', baseOp * 0.55);
+        }
+      });
+    });
+
+    // ── Unravel labels (only visible when unwoven) ──
+    if (!isWoven && points.length > 0) {
+      const lastP = points[points.length - 1];
+      labelG.append('text')
+        .attr('x', lastP.x + 8)
+        .attr('y', baseY[thread.id] + 3.5)
+        .attr('fill', color)
+        .attr('opacity', .55)
+        .attr('font-family', 'Barlow Condensed, sans-serif')
+        .attr('font-size', 8)
+        .attr('data-tid', thread.id)
+        .text(thread.title.length > 38 ? thread.title.substring(0, 36) + '\u2026' : thread.title);
+    }
+
+    // ── Invisible hover targets (match tension-adjusted paths) ──
+    for (let i = 0; i < points.length - 1; i++) {
+      const p = points[i], q = points[i + 1];
+      const mx = (p.x + q.x) / 2;
+      let hoverD;
+      if (pri === 'high') {
+        const qtr = (q.x - p.x) * 0.35;
+        hoverD = `M${p.x},${p.y} C${p.x + qtr},${p.y} ${q.x - qtr},${q.y} ${q.x},${q.y}`;
+      } else if (pri === 'low') {
+        const sag = 4;
+        const midY = (p.y + q.y) / 2 + sag;
+        hoverD = `M${p.x},${p.y} C${mx},${midY} ${mx},${midY} ${q.x},${q.y}`;
+      } else {
+        hoverD = `M${p.x},${p.y} C${mx},${p.y} ${mx},${q.y} ${q.x},${q.y}`;
+      }
+      hoverG.append('path')
+        .attr('d', hoverD)
+        .attr('fill', 'none')
+        .attr('stroke', 'transparent')
+        .attr('stroke-width', Math.max(14, thick + 10))
+        .attr('data-tid', thread.id)
+        .style('cursor', 'pointer')
+        .on('mouseenter', () => hoverThread(thread))
+        .on('mousemove', ev => showTooltip(ev, thread))
+        .on('mouseleave', () => unhoverThread())
+        .on('click', () => clickThread(thread));
+    }
+    // Single-session hover target
+    if (points.length <= 1 && points.length > 0) {
+      const p = points[0];
+      hoverG.append('circle')
+        .attr('cx', p.x).attr('cy', p.y).attr('r', 12)
+        .attr('fill', 'transparent')
+        .attr('data-tid', thread.id)
+        .style('cursor', 'pointer')
+        .on('mouseenter', () => hoverThread(thread))
+        .on('mousemove', ev => showTooltip(ev, thread))
+        .on('mouseleave', () => unhoverThread())
+        .on('click', () => clickThread(thread));
+    }
+  });
+
+  // ── Feature 2: Knot Clusters ──
+  KNOT_SESSIONS.forEach(s => {
+    // Count how many threads from the visible set are active at this session
+    const activeHere = sorted.filter(t => s >= t.first && s <= t.last);
+    if (activeHere.length < 5) return;
+
+    const cx = xScale(s);
+    // Place at the vertical center of active threads at this column
+    const ys = activeHere.map(t => colData[s] && colData[s][t.id] ? colData[s][t.id].y : baseY[t.id]);
+    const cy = (d3.min(ys) + d3.max(ys)) / 2;
+
+    const kg = knotG.append('g')
+      .attr('transform', `translate(${cx},${cy})`)
+      .attr('class', 'knot-cluster');
+
+    // Celtic-knot-inspired: 3 overlapping circles
+    const r = 10;
+    const offsets = [
+      { dx: -5, dy: -3 },
+      { dx:  5, dy: -3 },
+      { dx:  0, dy:  5 }
+    ];
+    offsets.forEach(o => {
+      kg.append('circle')
+        .attr('cx', o.dx).attr('cy', o.dy).attr('r', r)
+        .attr('fill', 'none')
+        .attr('stroke', '#c4956a')
+        .attr('stroke-width', 1)
+        .attr('opacity', 0.4);
+    });
+
+    // Invisible hover target for knot
+    kg.append('circle')
+      .attr('r', 18)
+      .attr('fill', 'transparent')
+      .style('cursor', 'default')
+      .on('mouseenter', function(ev) {
+        d3.select(this.parentNode).selectAll('circle:not(:last-child)')
+          .transition().duration(200).attr('opacity', 0.7);
+        const tt = d3.select('#tooltip');
+        tt.html('<div class="tt-title" style="color:#c4956a">Plot Convergence</div>' +
+                '<div class="tt-meta">Session ' + s + '</div>' +
+                '<div class="tt-span">' + activeHere.length + ' threads active</div>')
+          .classed('visible', true);
+        let px = ev.clientX + 16, py = ev.clientY - 10;
+        const rect = tt.node().getBoundingClientRect();
+        if (px + rect.width > window.innerWidth) px = ev.clientX - rect.width - 16;
+        if (py + rect.height > window.innerHeight) py = window.innerHeight - rect.height - 10;
+        if (py < 0) py = 4;
+        tt.style('left', px + 'px').style('top', py + 'px');
+      })
+      .on('mouseleave', function() {
+        d3.select(this.parentNode).selectAll('circle:not(:last-child)')
+          .transition().duration(200).attr('opacity', 0.4);
+        hideTooltip();
+      });
+  });
+
+  // ── Entrance animation: left-to-right weave-in ──
+  if (animate) {
+    svg.selectAll('[data-tid]').each(function() {
+      const el = d3.select(this);
+      const tid = el.attr('data-tid');
+      const idx = sorted.findIndex(t => t.id === tid);
+      if (idx < 0) return;
+      const origOp = el.attr('opacity');
+      el.attr('opacity', 0)
+        .transition()
+        .delay(idx * 22)
+        .duration(700)
+        .ease(d3.easeCubicOut)
+        .attr('opacity', origOp);
+    });
+  }
+
+  if (lockedThread) applyHighlight(lockedThread.id);
+  renderDensity();
+}
+
+/* ================================================================
+   DENSITY BAR
+   ================================================================ */
+function renderDensity() {
+  const svg = d3.select('#densitySvg');
+  svg.selectAll('*').remove();
+
+  const threads = visibleThreads();
+  const W = document.getElementById('loomFrame').clientWidth - 28;
+  const H = 42;
+  const margin = { top: 2, right: 55, bottom: 16, left: 55 };
+  svg.attr('viewBox', `0 0 ${W} ${H}`).attr('width', W).attr('height', H);
+
+  const x = d3.scaleLinear().domain([0.5, NSESS + 0.5]).range([margin.left, W - margin.right]);
+  const counts = SESSIONS.map(s => threads.filter(t => s >= t.first && s <= t.last).length);
+  const maxC = d3.max(counts) || 1;
+  const bw = (W - margin.left - margin.right) / NSESS * 0.6;
+  const y = d3.scaleLinear().domain([0, maxC]).range([0, H - margin.top - margin.bottom]);
+
+  SESSIONS.forEach((s, i) => {
+    svg.append('rect')
+      .attr('x', x(s) - bw / 2)
+      .attr('y', H - margin.bottom - y(counts[i]))
+      .attr('width', bw)
+      .attr('height', y(counts[i]))
+      .attr('fill', '#c9a84c')
+      .attr('opacity', .18)
+      .attr('rx', 1);
+  });
+
+  svg.append('text')
+    .attr('x', margin.left - 2).attr('y', H - margin.bottom + 11)
+    .attr('fill', '#2a2218')
+    .attr('font-family', 'Barlow Condensed, sans-serif')
+    .attr('font-size', 8)
+    .attr('letter-spacing', '1.5px')
+    .text('THREAD DENSITY');
+}
+
+/* ================================================================
+   HOVER / CLICK INTERACTIONS
+   ================================================================ */
+function hoverThread(thread) {
+  if (lockedThread) return;
+  applyHighlight(thread.id);
+}
+
+function unhoverThread() {
+  if (lockedThread) return;
+  removeHighlight();
+  hideTooltip();
+}
+
+function clickThread(thread) {
+  if (lockedThread && lockedThread.id === thread.id) {
+    lockedThread = null;
+    removeHighlight();
+    closePanel();
+    return;
+  }
+  lockedThread = thread;
+  applyHighlight(thread.id);
+  openPanel(thread);
+}
+
+function applyHighlight(tid) {
+  d3.select('#tapestrySvg').selectAll('[data-tid]').each(function() {
+    const el = d3.select(this);
+    const id = el.attr('data-tid');
+    if (id === tid) {
+      // Save original values
+      if (!el.attr('data-orig-op')) {
+        el.attr('data-orig-op', el.attr('opacity') || 1);
+        el.attr('data-orig-sw', el.attr('stroke-width') || '');
+        el.attr('data-orig-filter', el.attr('filter') || '');
+      }
+      el.transition().duration(200)
+        .attr('opacity', 1);
+      el.attr('filter', 'url(#hglow)');
+      const sw = parseFloat(el.attr('stroke-width'));
+      if (sw && el.attr('stroke') !== 'transparent') {
+        el.attr('stroke-width', Math.max(sw, 6));
+      }
+    } else {
+      if (!el.attr('data-orig-op')) {
+        el.attr('data-orig-op', el.attr('opacity') || 1);
+        el.attr('data-orig-sw', el.attr('stroke-width') || '');
+        el.attr('data-orig-filter', el.attr('filter') || '');
+      }
+      el.transition().duration(200)
+        .attr('opacity', 0.06);
+      el.attr('filter', null);
+    }
+  });
+}
+
+function removeHighlight() {
+  d3.select('#tapestrySvg').selectAll('[data-tid]').each(function() {
+    const el = d3.select(this);
+    const origOp = el.attr('data-orig-op');
+    const origSw = el.attr('data-orig-sw');
+    const origFilter = el.attr('data-orig-filter');
+    if (origOp !== null) {
+      el.transition().duration(300)
+        .attr('opacity', origOp);
+      if (origSw) el.attr('stroke-width', origSw);
+      el.attr('filter', origFilter || null);
+      el.attr('data-orig-op', null);
+      el.attr('data-orig-sw', null);
+      el.attr('data-orig-filter', null);
+    }
+  });
+}
+
+function showTooltip(event, thread) {
+  const tt = d3.select('#tooltip');
+  const c = TYPE_COLORS[thread.type] || '#9e9e9e';
+  const eventTypes = [...new Set(thread.events.map(e => e.type))];
+  const evBadges = eventTypes.map(et =>
+    `<span style="color:${EVENT_COLORS[et] || '#5a4e3e'}">${et}</span>`
+  ).join(' \u00B7 ');
+
+  // Feature 1: Golden thread gets special label in tooltip
+  const goldenLabel = thread.id === GOLDEN_THREAD_ID
+    ? '<div style="font-family:Cinzel,serif;font-size:10px;letter-spacing:3px;color:#ffd700;text-transform:uppercase;margin-bottom:4px;text-shadow:0 0 8px rgba(255,215,0,0.4)">THE GOLDEN THREAD</div>'
+    : '';
+
+  tt.html(
+    goldenLabel +
+    `<div class="tt-title" style="color:${thread.id === GOLDEN_THREAD_ID ? '#ffd700' : c}">${thread.title}</div>` +
+    `<div class="tt-meta">${thread.type} \u2014 ${thread.status}</div>` +
+    `<div class="tt-span">S${String(thread.first).padStart(3,'0')} \u2192 S${String(thread.last).padStart(3,'0')}` +
+    ` \u00B7 ${thread.last - thread.first + 1} sessions \u00B7 ${thread.events.length} events</div>` +
+    `<div class="tt-events">${evBadges}</div>`
+  ).classed('visible', true);
+
+  let px = event.clientX + 16, py = event.clientY - 10;
+  const r = tt.node().getBoundingClientRect();
+  if (px + r.width > window.innerWidth) px = event.clientX - r.width - 16;
+  if (py + r.height > window.innerHeight) py = window.innerHeight - r.height - 10;
+  if (py < 0) py = 4;
+  tt.style('left', px + 'px').style('top', py + 'px');
+}
+
+function hideTooltip() {
+  d3.select('#tooltip').classed('visible', false);
+}
+
+/* ================================================================
+   SIDE PANEL
+   ================================================================ */
+function openPanel(thread) {
+  const c = TYPE_COLORS[thread.type] || '#9e9e9e';
+
+  document.getElementById('panelTitle').textContent = thread.title;
+  document.getElementById('panelTitle').style.color = c;
+
+  document.getElementById('panelBadges').innerHTML =
+    `<span class="panel-type-badge" style="border-color:${c};color:${c};background:${c}12">${thread.type}</span>` +
+    `<span class="panel-status-badge">${thread.status}</span>`;
+
+  let h = '';
+
+  // Session span
+  h += `<div class="panel-section">
+    <div class="panel-section-title">Session Span</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:${c}">
+      S${String(thread.first).padStart(3,'0')} \u2192 S${String(thread.last).padStart(3,'0')}
+      <span style="color:#4a3e30;margin-left:8px">${thread.last - thread.first + 1} sessions \u00B7 ${thread.events.length} events</span>
+    </div>
+  </div>`;
+
+  // Event chronology
+  h += '<div class="panel-section"><div class="panel-section-title">Event Chronology</div>';
+  thread.events.forEach(e => {
+    const ec = EVENT_COLORS[e.type] || '#4a3e30';
+    h += `<div class="event-item" style="border-left-color:${ec}">
+      <div class="event-dot" style="border-color:${ec};background:${ec}25"></div>
+      <span class="event-session">S${String(e.s).padStart(3,'0')}</span>
+      <span class="event-type-badge" style="background:${ec}15;color:${ec}">${e.type.toUpperCase()}</span>
+      <div class="event-summary">${e.summary}</div>
+    </div>`;
+  });
+  h += '</div>';
+
+  // Entities
+  if (thread.entities.length) {
+    h += '<div class="panel-section"><div class="panel-section-title">Anchor Entities</div><div>';
+    thread.entities.forEach(en => { h += `<span class="entity-tag">${en}</span>` });
+    h += '</div></div>';
+  }
+
+  // Locations
+  if (thread.locations.length) {
+    h += '<div class="panel-section"><div class="panel-section-title">Key Locations</div><div>';
+    thread.locations.forEach(l => {
+      h += `<span class="entity-tag" style="background:rgba(129,199,132,.06);border-color:rgba(129,199,132,.15);color:#6faa72">${l}</span>`;
+    });
+    h += '</div></div>';
+  }
+
+  // Open hooks
+  if (thread.hooks.length) {
+    h += '<div class="panel-section"><div class="panel-section-title">Open Hooks</div>';
+    thread.hooks.forEach(hk => { h += `<div class="hook-item">${hk}</div>` });
+    h += '</div>';
+  }
+
+  document.getElementById('panelContent').innerHTML = h;
+  document.getElementById('sidePanel').classList.add('open');
+}
+
+function closePanel() {
+  document.getElementById('sidePanel').classList.remove('open');
+}
+
+document.getElementById('panelClose').addEventListener('click', () => {
+  lockedThread = null;
+  removeHighlight();
+  closePanel();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    lockedThread = null;
+    removeHighlight();
+    closePanel();
+    hideTooltip();
+  }
+});
+
+/* ================================================================
+   UNRAVEL / WEAVE ANIMATION
+   ================================================================ */
+function toggleWeave() {
+  if (animating) return;
+  animating = true;
+
+  const btn = document.getElementById('weaveBtn');
+  const frame = d3.select('#loomFrame');
+  const svg = d3.select('#tapestrySvg');
+
+  // Close panel if open
+  lockedThread = null;
+  closePanel();
+
+  if (isWoven) {
+    // ─── UNRAVEL ───
+    btn.textContent = 'WEAVE';
+
+    // Loom frame widens/opens
+    frame.transition().duration(900).ease(d3.easeCubicOut)
+      .style('border-width', '4px');
+
+    // Fade out all elements, then re-render unwoven
+    const els = svg.selectAll('[data-tid]');
+    const count = els.size();
+
+    if (count === 0) {
+      isWoven = false;
+      render(true);
+      setTimeout(() => { animating = false }, 1800);
+      return;
+    }
+
+    els.transition()
+      .duration(600)
+      .ease(d3.easeCubicIn)
+      .attr('opacity', 0)
+      .end()
+      .then(() => {
+        isWoven = false;
+        render(true);
+        setTimeout(() => { animating = false }, 1800);
+      })
+      .catch(() => {
+        isWoven = false;
+        render(true);
+        setTimeout(() => { animating = false }, 1800);
+      });
+
+  } else {
+    // ─── WEAVE ───
+    btn.textContent = 'UNRAVEL';
+
+    // Loom frame tightens
+    frame.transition().duration(900).ease(d3.easeCubicOut)
+      .style('border-width', '14px');
+
+    const els = svg.selectAll('[data-tid]');
+    const count = els.size();
+
+    if (count === 0) {
+      isWoven = true;
+      render(true);
+      setTimeout(() => { animating = false }, 1800);
+      return;
+    }
+
+    els.transition()
+      .duration(600)
+      .ease(d3.easeCubicIn)
+      .attr('opacity', 0)
+      .end()
+      .then(() => {
+        isWoven = true;
+        render(true);
+        setTimeout(() => { animating = false }, 1800);
+      })
+      .catch(() => {
+        isWoven = true;
+        render(true);
+        setTimeout(() => { animating = false }, 1800);
+      });
+  }
+}
+
+/* ================================================================
+   INITIALIZATION
+   ================================================================ */
+setTimeout(() => {
+  document.getElementById('loomFrame').classList.add('visible');
+  setTimeout(() => render(true), 700);
+}, 300);
+
+window.addEventListener('resize', () => {
+  if (!animating) render();
+});
+
+// ── Feature 6: Loom Vibration on hover ──
+(function initLoomVibration() {
+  const loomFrame = document.getElementById('loomFrame');
+  loomFrame.addEventListener('mouseenter', () => {
+    loomFrame.classList.add('humming');
+  });
+  loomFrame.addEventListener('mouseleave', () => {
+    loomFrame.classList.remove('humming');
+  });
+})();
+</script>
+</body>
+</html>

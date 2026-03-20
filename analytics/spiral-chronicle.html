@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spiral Chronicle — BWB Campaign</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@300;400;600;700&family=Barlow:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #06060c;
+    color: #c8c8e0;
+    font-family: 'Barlow', sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    position: relative;
+  }
+
+  /* Scanline overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.03) 2px,
+      rgba(0,0,0,0.03) 4px
+    );
+  }
+
+  /* Star field canvas */
+  #starfield {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* Header */
+  .page-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 28px;
+    background: linear-gradient(180deg, rgba(6,6,12,0.95) 0%, rgba(6,6,12,0.7) 80%, transparent 100%);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .page-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px;
+    letter-spacing: 6px;
+    background: linear-gradient(135deg, #ffd700, #ad6bff, #4DB6AC, #ff4444);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 12px rgba(173,107,255,0.4));
+  }
+
+  .page-subtitle {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 300;
+    font-size: 13px;
+    color: #8888aa;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-left: 16px;
+  }
+
+  /* Controls panel */
+  .controls {
+    position: fixed;
+    top: 64px;
+    left: 20px;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .control-group {
+    background: linear-gradient(135deg, rgba(18,18,36,0.92), rgba(30,30,50,0.88));
+    border: 1px solid #2a2a40;
+    border-radius: 8px;
+    padding: 12px 16px;
+    backdrop-filter: blur(8px);
+  }
+
+  .control-group-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #6666aa;
+    margin-bottom: 8px;
+  }
+
+  .arc-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 10px;
+    margin-bottom: 4px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: #c8c8e0;
+    font-family: 'Barlow', sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 100%;
+    text-align: left;
+  }
+
+  .arc-btn:hover {
+    background: rgba(255,255,255,0.04);
+  }
+
+  .arc-btn.inactive {
+    opacity: 0.3;
+  }
+
+  .arc-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .sig-btn {
+    padding: 5px 12px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid #2a2a40;
+    border-radius: 4px;
+    color: #c8c8e0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-right: 6px;
+  }
+
+  .sig-btn:hover {
+    border-color: #ad6bff;
+  }
+
+  .sig-btn.active {
+    background: rgba(173,107,255,0.15);
+    border-color: #ad6bff;
+    color: #ad6bff;
+  }
+
+  /* Stats panel */
+  .stats-panel {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    z-index: 100;
+    background: linear-gradient(135deg, rgba(18,18,36,0.92), rgba(30,30,50,0.88));
+    border: 1px solid #2a2a40;
+    border-radius: 8px;
+    padding: 16px 20px;
+    backdrop-filter: blur(8px);
+    min-width: 240px;
+  }
+
+  .stats-panel .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(42,42,64,0.5);
+  }
+
+  .stats-panel .stat-row:last-child { border-bottom: none; }
+
+  .stat-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 400;
+    font-size: 12px;
+    color: #8888aa;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .stat-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+    color: #e0e0ff;
+    text-shadow: 0 0 8px rgba(173,107,255,0.3);
+  }
+
+  /* Detail panel */
+  .detail-panel {
+    position: fixed;
+    top: 64px;
+    right: 20px;
+    z-index: 100;
+    width: 340px;
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+    background: linear-gradient(135deg, rgba(14,14,30,0.96), rgba(24,24,44,0.94));
+    border: 1px solid #2a2a40;
+    border-radius: 8px;
+    padding: 0;
+    backdrop-filter: blur(12px);
+    opacity: 0;
+    transform: translateX(20px);
+    pointer-events: none;
+    transition: opacity 0.3s, transform 0.3s;
+  }
+
+  .detail-panel.visible {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: all;
+  }
+
+  .detail-panel .accent-bar {
+    height: 3px;
+    border-radius: 8px 8px 0 0;
+  }
+
+  .detail-content {
+    padding: 18px 20px;
+  }
+
+  .detail-title {
+    font-family: 'Cinzel', serif;
+    font-weight: 600;
+    font-size: 16px;
+    margin-bottom: 4px;
+    line-height: 1.3;
+  }
+
+  .detail-session {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #6666aa;
+    margin-bottom: 10px;
+  }
+
+  .detail-desc {
+    font-family: 'Barlow', sans-serif;
+    font-size: 13px;
+    font-weight: 300;
+    line-height: 1.6;
+    color: #b0b0cc;
+    margin-bottom: 14px;
+  }
+
+  .detail-section-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 600;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #6666aa;
+    margin-bottom: 6px;
+    margin-top: 12px;
+  }
+
+  .detail-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    margin: 2px 4px 2px 0;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid #2a2a40;
+    border-radius: 3px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #aaaacc;
+  }
+
+  .detail-close {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+    background: none;
+    border: none;
+    color: #6666aa;
+    font-size: 18px;
+    cursor: pointer;
+    transition: color 0.2s;
+    z-index: 10;
+  }
+
+  .detail-close:hover { color: #ff4444; }
+
+  .chain-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 300;
+    font-size: 11px;
+    color: #8888aa;
+    padding: 3px 0;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+
+  .chain-label:hover {
+    color: #e0e0ff;
+  }
+
+  .chain-arrow {
+    color: #555577;
+    margin: 0 4px;
+  }
+
+  /* Significance badge */
+  .sig-badge {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-left: 6px;
+  }
+
+  .sig-major { background: rgba(173,107,255,0.2); color: #ad6bff; border: 1px solid rgba(173,107,255,0.3); }
+  .sig-moderate { background: rgba(77,182,172,0.15); color: #4DB6AC; border: 1px solid rgba(77,182,172,0.2); }
+  .sig-minor { background: rgba(100,100,140,0.15); color: #8888aa; border: 1px solid rgba(100,100,140,0.2); }
+
+  /* SVG */
+  #spiral-svg {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+  }
+
+  /* Tooltip */
+  .tooltip {
+    position: fixed;
+    z-index: 200;
+    background: linear-gradient(135deg, rgba(14,14,30,0.97), rgba(24,24,44,0.95));
+    border: 1px solid #3a3a55;
+    border-radius: 6px;
+    padding: 10px 14px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    max-width: 280px;
+    backdrop-filter: blur(10px);
+  }
+
+  .tooltip-title {
+    font-family: 'Cinzel', serif;
+    font-weight: 600;
+    font-size: 13px;
+    margin-bottom: 4px;
+  }
+
+  .tooltip-desc {
+    font-family: 'Barlow', sans-serif;
+    font-weight: 300;
+    font-size: 11px;
+    color: #9999bb;
+    line-height: 1.4;
+  }
+
+  .tooltip-session {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #6666aa;
+    margin-bottom: 3px;
+  }
+
+  /* Scrollbar */
+  .detail-panel::-webkit-scrollbar { width: 4px; }
+  .detail-panel::-webkit-scrollbar-track { background: transparent; }
+  .detail-panel::-webkit-scrollbar-thumb { background: #2a2a40; border-radius: 2px; }
+
+  /* Pulse animation for major events */
+  @keyframes majorPulse {
+    0%, 100% { filter: drop-shadow(0 0 4px var(--glow-color)); }
+    50% { filter: drop-shadow(0 0 14px var(--glow-color)) drop-shadow(0 0 24px var(--glow-color)); }
+  }
+
+  /* Dash animation for causal lines */
+  @keyframes dashFlow {
+    to { stroke-dashoffset: -20; }
+  }
+
+  /* Zoom hint */
+  .zoom-hint {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 100;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #555577;
+    letter-spacing: 1px;
+    transition: opacity 0.5s;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="starfield"></canvas>
+<svg id="spiral-svg"></svg>
+
+<div class="page-header">
+  <div style="display:flex;align-items:baseline;">
+    <span class="page-title">SPIRAL CHRONICLE</span>
+    <span class="page-subtitle">42 Events Across 46 Sessions</span>
+  </div>
+</div>
+
+<div class="controls">
+  <div class="control-group">
+    <div class="control-group-title">Story Arcs</div>
+    <div id="arc-filters"></div>
+  </div>
+  <div class="control-group">
+    <div class="control-group-title">Significance</div>
+    <div id="sig-filters"></div>
+  </div>
+</div>
+
+<div class="stats-panel" id="stats-panel"></div>
+
+<div class="detail-panel" id="detail-panel">
+  <button class="detail-close" id="detail-close">&times;</button>
+  <div class="accent-bar" id="detail-accent"></div>
+  <div class="detail-content" id="detail-content"></div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<div class="zoom-hint" id="zoom-hint">SCROLL TO ZOOM &middot; DRAG TO PAN</div>
+
+<script>
+// ─── DATA ───
+const EVENTS = [{"event_id":"evt_s004_chroniclers_mark","session_id":"S004","title":"Chronicler's Mark Bestowed","description":"The party survives an ambush and gains magical tattoos from the Chronicles of the Quill, granting immunity to sleep and charm but losing their shadows.","arc_id":"arc_01_intro_and_early_quests","arc_name":"Chronicler's Mark and Early Adventures","significance":"moderate","cause":null,"consequences":["Gained Chronicler's Mark","Lost shadows"],"entities_involved":["Ash","Lilith","Orla","Corras"]},{"event_id":"evt_s005_hall_of_whispers","session_id":"S005","title":"Trapped in Hall of Whispers","description":"After passing Orla's apprenticeship review, the party teleports to a burial site and gets locked in the Hall of Whispers, requiring confessions to progress.","arc_id":"arc_01_intro_and_early_quests","arc_name":"Chronicler's Mark and Early Adventures","significance":"moderate","cause":"evt_s004_chroniclers_mark","consequences":["Trapped in magical chamber","Forced to confess truths"],"entities_involved":["Orla","Ash","Corras","Billabong"]},{"event_id":"evt_s006_archmage_defeated","session_id":"S006","title":"Archmage Defeated in Battle","description":"The party defeats a powerful tiefling archmage using coordinated attacks and clever tactics, but a disembodied voice emerges afterward.","arc_id":"arc_01_intro_and_early_quests","arc_name":"Chronicler's Mark and Early Adventures","significance":"moderate","cause":"evt_s005_hall_of_whispers","consequences":["Archmage killed","Mysterious voice appears"],"entities_involved":["Corras","Orla","Ash","Billabong"]},{"event_id":"evt_s007_operation_save_spark","session_id":"S007","title":"Operation Save Spark Begins","description":"Facing death, the party chronoports back in time to save Ash's familiar Spark, causing temporal dissonance side effects.","arc_id":"arc_01_intro_and_early_quests","arc_name":"Chronicler's Mark and Early Adventures","significance":"major","cause":"evt_s006_archmage_defeated","consequences":["Time travel initiated","Temporal side effects"],"entities_involved":["Ash","Lilith","Corras","Ave"]},{"event_id":"evt_s008_time_heist_completed","session_id":"S008","title":"Time Heist for Spark's Eyelash","description":"The party successfully secures Spark's eyelash from the past using stealth and magic, then retreats to Lumin for safety.","arc_id":"arc_01_intro_and_early_quests","arc_name":"Chronicler's Mark and Early Adventures","significance":"moderate","cause":"evt_s007_operation_save_spark","consequences":["Eyelash obtained","Safe haven found"],"entities_involved":["Corras","Ash","Orla","Ave"]},{"event_id":"evt_s009_mimic_horse_encounter","session_id":"S009","title":"Mimic Horse Road Encounter","description":"During downtime, the party encounters a mimic disguised as a horse on the road, leading to a chaotic fight.","arc_id":"arc_01_intro_and_early_quests","arc_name":"Chronicler's Mark and Early Adventures","significance":"moderate","cause":"evt_s008_time_heist_completed","consequences":["Mimic defeated","Travel disrupted"],"entities_involved":["Ash","Orla","Billabong"]},{"event_id":"evt_s010_sarlumon_introduced","session_id":"S010","title":"Sarlumon Joins the Party","description":"Corras's new paladin character Sarlumon is introduced after his rogue is lost, and the party fails a stealth check at a cultist camp.","arc_id":"arc_01_intro_and_early_quests","arc_name":"Chronicler's Mark and Early Adventures","significance":"moderate","cause":"evt_s009_mimic_horse_encounter","consequences":["New party member","Camp alerted"],"entities_involved":["Sarlumon","Lilith","Orla"]},{"event_id":"evt_s011_earth_elemental_battle","session_id":"S011","title":"Earth Elemental Ambush","description":"The party encounters a decoy bridge and is ambushed by an earth elemental while traveling toward the Cult of Eternal Flame.","arc_id":"arc_01_intro_and_early_quests","arc_name":"Chronicler's Mark and Early Adventures","significance":"moderate","cause":"evt_s010_sarlumon_introduced","consequences":["Elemental defeated","Path cleared"],"entities_involved":["Orla","Dahlia","Ash","Billabong"]},{"event_id":"evt_s013_demonic_escape_pact","session_id":"S013","title":"Pact with Glabrezu Demon","description":"Captured in Berdusk, the party makes a blood pact with the demon Malachar to escape, agreeing to future favors.","arc_id":"arc_02_demonic_pacts_and_escapes","arc_name":"Demonic Pacts and Prison Escapes","significance":"major","cause":null,"consequences":["Escape secured","Debt to demon"],"entities_involved":["Ash","Orla","Billabong","Prince Darindale"]},{"event_id":"evt_s014_prince_darindale_rage","session_id":"S014","title":"Prince Darindale's Blood Rage","description":"Prince Darindale flies into a rage after being insulted, leading to chaotic attempts to calm him, including a hamster ball.","arc_id":"arc_02_demonic_pacts_and_escapes","arc_name":"Demonic Pacts and Prison Escapes","significance":"moderate","cause":"evt_s013_demonic_escape_pact","consequences":["Rage triggered","Calming attempts fail"],"entities_involved":["Prince Darindale","Billabong","Eleazar"]},{"event_id":"evt_s015_temporal_heist_executed","session_id":"S015","title":"Spark Swapped with Simulacrum","description":"The party successfully swaps Spark with a simulacrum in the past using disguises and distractions, preserving the timeline.","arc_id":"arc_02_demonic_pacts_and_escapes","arc_name":"Demonic Pacts and Prison Escapes","significance":"major","cause":"evt_s014_prince_darindale_rage","consequences":["Spark saved","Timeline preserved"],"entities_involved":["Corras","Ave","Ash","Lilith"]},{"event_id":"evt_s016_time_warden_confrontation","session_id":"S016","title":"Time Warden Universe Reset","description":"A Time Warden arrives to reset the universe due to temporal tampering, leading to a split-party battle against monsters.","arc_id":"arc_02_demonic_pacts_and_escapes","arc_name":"Demonic Pacts and Prison Escapes","significance":"major","cause":"evt_s015_temporal_heist_executed","consequences":["Universe reset","Timeline altered"],"entities_involved":["Billabong","Ave","Corras","Ash"]},{"event_id":"evt_s017_new_world_order","session_id":"S017","title":"New World Order Established","description":"After the reset, the party advances to level 15 and establishes new roles, with Orla uniting druids and Corras becoming king.","arc_id":"arc_02_demonic_pacts_and_escapes","arc_name":"Demonic Pacts and Prison Escapes","significance":"major","cause":"evt_s016_time_warden_confrontation","consequences":["Level up","Political shifts"],"entities_involved":["Orla","Corras","Ash","Dahlia"]},{"event_id":"evt_s018_blizzard_travel","session_id":"S018","title":"Blizzard in Storm Mountains","description":"The party battles brutal winter conditions and a blizzard while traveling toward the Soulforge, with Orla slipping while scouting.","arc_id":"arc_02_demonic_pacts_and_escapes","arc_name":"Demonic Pacts and Prison Escapes","significance":"minor","cause":"evt_s017_new_world_order","consequences":["Travel hindered","Scouting accident"],"entities_involved":["Orla","Dahlia","Billabong","Corras"]},{"event_id":"evt_s019_big_bang_explosion","session_id":"S019","title":"Alchemist's Fire Big Bang","description":"The party uses a keg of Alchemist's Fire to explode yetis and a frost giant, then discovers orphaned yeti tykes.","arc_id":"arc_02_demonic_pacts_and_escapes","arc_name":"Demonic Pacts and Prison Escapes","significance":"moderate","cause":"evt_s018_blizzard_travel","consequences":["Monsters killed","Yeti orphans found"],"entities_involved":["Orla","Ash","Dahlia","Billabong"]},{"event_id":"evt_s020_summer_star_explosion","session_id":"S020","title":"Summer Star Explosion Deaths","description":"Corras activates the Summer Star artifact, causing a massive explosion that kills him and three others, leaving Billabong to resurrect them.","arc_id":"arc_02_demonic_pacts_and_escapes","arc_name":"Demonic Pacts and Prison Escapes","significance":"major","cause":"evt_s019_big_bang_explosion","consequences":["Multiple deaths","Resurrection needed"],"entities_involved":["Corras","Ash","Orla","Dahlia"]},{"event_id":"evt_s021_webbs_edge_discovery","session_id":"S021","title":"Webb's Edge Safe House Found","description":"Corras and Ash discover a book detailing Webb's Edge, a safe house for Lolth devotees, before Ash's risky ritual causes wild magic.","arc_id":"arc_03_underdark_and_webbs_edge","arc_name":"Underdark and Webb's Edge","significance":"moderate","cause":null,"consequences":["Lolth safe house found","Wild magic surges"],"entities_involved":["Corras","Ash","SavannahBelle","Dahlia"]},{"event_id":"evt_s022_webbs_edge_entered","session_id":"S022","title":"Entering Webb's Edge","description":"After defeating a Drow Mage and Umber Hulk, the party follows a silk trail and picks an arcane-locked door to enter Webb's Edge.","arc_id":"arc_03_underdark_and_webbs_edge","arc_name":"Underdark and Webb's Edge","significance":"moderate","cause":"evt_s021_webbs_edge_discovery","consequences":["Webb's Edge entered","Door unlocked"],"entities_involved":["Ash","Corras","Dahlia","SavannahBelle"]},{"event_id":"evt_s023_fireball_in_webbs_edge","session_id":"S023","title":"Fireball Chaos in Webb's Edge","description":"SavannahBelle unleashes a twin-cast Fireball, burning a Nalfeshnee demon and setting the room ablaze during a battle.","arc_id":"arc_03_underdark_and_webbs_edge","arc_name":"Underdark and Webb's Edge","significance":"moderate","cause":"evt_s022_webbs_edge_entered","consequences":["Demon injured","Room set on fire"],"entities_involved":["SavannahBelle","Billabong","Dahlia","Orla"]},{"event_id":"evt_s024_spider_dragon_trick","session_id":"S024","title":"Spider Dragon Tricked","description":"Ash tricks a Spider Dragon by impersonating a Lolth follower, allowing the party to escape Webb's Edge with a Rod piece.","arc_id":"arc_03_underdark_and_webbs_edge","arc_name":"Underdark and Webb's Edge","significance":"moderate","cause":"evt_s023_fireball_in_webbs_edge","consequences":["Dragon deceived","Escape successful"],"entities_involved":["Ash","Corras","Orla","Dahlia"]},{"event_id":"evt_s025_bwb_federation_formed","session_id":"S025","title":"BWB Federation Takes Shape","description":"The party establishes the BWB Federation with administrative bastions, while Drakkar Knight Reaver conquers the Sword Coast.","arc_id":"arc_03_underdark_and_webbs_edge","arc_name":"Underdark and Webb's Edge","significance":"major","cause":"evt_s024_spider_dragon_trick","consequences":["Federation formed","Bastions assigned"],"entities_involved":["Corras","Orla","Ash","Dahlia"]},{"event_id":"evt_s026_webbs_edge_escape","session_id":"S026","title":"Escape from Webb's Edge","description":"The party navigates dungeons, frees a cyclops with demon drool, and triggers a cave-in while escaping with a Rod piece.","arc_id":"arc_03_underdark_and_webbs_edge","arc_name":"Underdark and Webb's Edge","significance":"minor","cause":"evt_s025_bwb_federation_formed","consequences":["Escape achieved","Cave-in triggered"],"entities_involved":["Billabong","SavannahBelle","Dahlia","Orla"]},{"event_id":"evt_s027_descent_into_soulforge","session_id":"S027","title":"Descent into Soulforge","description":"The party teleports to the Soulforge entrance and battles a Wraith Lord and Revenants, with Billabong nearly killed.","arc_id":"arc_03_underdark_and_webbs_edge","arc_name":"Underdark and Webb's Edge","significance":"moderate","cause":"evt_s026_webbs_edge_escape","consequences":["Enemies defeated","Billabong injured"],"entities_involved":["Billabong","Orla","Corras","Ash"]},{"event_id":"evt_s028_pie_eating_shadow_mastiffs","session_id":"S028","title":"Pie-Eating Shadow Mastiffs","description":"The party feeds mince pies to Shadow Mastiffs instead of fighting, attracting a massive alpha beast.","arc_id":"arc_03_underdark_and_webbs_edge","arc_name":"Underdark and Webb's Edge","significance":"moderate","cause":"evt_s027_descent_into_soulforge","consequences":["Mastiffs distracted","Alpha drawn out"],"entities_involved":["Orla","Dahlia","Billabong","Ash"]},{"event_id":"evt_s029_infernal_node_pact","session_id":"S029","title":"Pact of Avarice at Infernal Node","description":"The party activates a fiendish node ritual, and Billabong breaks her curse to deal with the demon Malchor, leading to a pact offer.","arc_id":"arc_04_shadow_powers_and_infernal_node","arc_name":"Shadow Powers and Infernal Node","significance":"major","cause":null,"consequences":["Node activated","Pact offered"],"entities_involved":["Billabong","Ash","Corras","Orla"]},{"event_id":"evt_s030_shadow_powers_gained","session_id":"S030","title":"Shadow Powers Bestowed","description":"The Harbinger trains the party at the soul forge, where each member attunes to a statue and gains shadow essence powers.","arc_id":"arc_04_shadow_powers_and_infernal_node","arc_name":"Shadow Powers and Infernal Node","significance":"moderate","cause":"evt_s029_infernal_node_pact","consequences":["Shadow powers gained","Training completed"],"entities_involved":["Corras","Ash","Orla","Dahlia"]},{"event_id":"evt_s031_maw_battle_harm_debate","session_id":"S031","title":"Maw Battle and Harm Debate","description":"The party battles the Maw, with Billabong controlled to kill Ash, leading to a debate over whether stunning counts as harm.","arc_id":"arc_04_shadow_powers_and_infernal_node","arc_name":"Shadow Powers and Infernal Node","significance":"moderate","cause":"evt_s030_shadow_powers_gained","consequences":["Maw defeated","Ash killed"],"entities_involved":["Billabong","SavannahBelle","Corras","Ash"]},{"event_id":"evt_s032_warehouse_crate_discovery","session_id":"S032","title":"Warehouse Enchanted Crates Found","description":"Ezrella reveals enchanted crates at Warehouse 17, leading to a distraction and sneaky investigation by the party.","arc_id":"arc_04_shadow_powers_and_infernal_node","arc_name":"Shadow Powers and Infernal Node","significance":"moderate","cause":"evt_s031_maw_battle_harm_debate","consequences":["Crates discovered","Distraction created"],"entities_involved":["Dahlia","Orla","Ezrella","Corras"]},{"event_id":"evt_s033_price_of_surrender","session_id":"S033","title":"Surrender to Lich Asnar","description":"Outmatched by lich Asnar the Crimson, the party surrenders the Rod of Seven Parts piece to avoid death.","arc_id":"arc_04_shadow_powers_and_infernal_node","arc_name":"Shadow Powers and Infernal Node","significance":"major","cause":"evt_s032_warehouse_crate_discovery","consequences":["Rod piece surrendered","Capture avoided"],"entities_involved":["Dahlia","Billabong","Orla","SavannahBelle"]},{"event_id":"evt_s034_prison_of_thay_escape","session_id":"S034","title":"Escape from Thay Prison","description":"Captured in Thay, the party battles Asnar and his twin, with SavannahBelle disintegrating the lich to escape.","arc_id":"arc_04_shadow_powers_and_infernal_node","arc_name":"Shadow Powers and Infernal Node","significance":"moderate","cause":"evt_s033_price_of_surrender","consequences":["Asnar killed","Escape achieved"],"entities_involved":["SavannahBelle","Corras","Dahlia","Billabong"]},{"event_id":"evt_s035_crossover_to_barovia","session_id":"S035","title":"Portal to Barovia Opened","description":"Mordenkainen uses the Rod piece to open a portal, sending the party to the demiplane of Barovia and Durst Manor.","arc_id":"arc_04_shadow_powers_and_infernal_node","arc_name":"Shadow Powers and Infernal Node","significance":"minor","cause":"evt_s034_prison_of_thay_escape","consequences":["Barovia entered","Portal used"],"entities_involved":["Mordenkainen","Corras","Ash","Orla"]},{"event_id":"evt_s036_death_house_ritual","session_id":"S036","title":"Death House Ritual and Curse","description":"In the Death House, SavannahBelle is cursed with paranoia after a vision, and the party meets inquisitor Sarusanda.","arc_id":"arc_04_shadow_powers_and_infernal_node","arc_name":"Shadow Powers and Infernal Node","significance":"moderate","cause":"evt_s035_crossover_to_barovia","consequences":["Curse gained","Inquisitor met"],"entities_involved":["SavannahBelle","Corras","Dahlia","Orla"]},{"event_id":"evt_s037_root_of_the_problem","session_id":"S037","title":"Entity in Murder House Basement","description":"Corras resists a dominating orb in the basement, engaging with an entity claiming to be the master of the house.","arc_id":"arc_04_shadow_powers_and_infernal_node","arc_name":"Shadow Powers and Infernal Node","significance":"moderate","cause":"evt_s036_death_house_ritual","consequences":["Entity encountered","Dominance resisted"],"entities_involved":["Corras","Sarusanda","Dahlia","Orla"]},{"event_id":"evt_s038_escape_from_death_house","session_id":"S038","title":"Escape from Death House","description":"The party navigates a skill challenge to escape the alive Death House, with some members falling into mists.","arc_id":"arc_04_shadow_powers_and_infernal_node","arc_name":"Shadow Powers and Infernal Node","significance":"minor","cause":"evt_s037_root_of_the_problem","consequences":["Escape attempted","Some lost to mists"],"entities_involved":["Orla","SavannahBelle","Corras","Dahlia"]},{"event_id":"evt_s039_cursed_goat_rescue","session_id":"S039","title":"Cursed Goat Billy Rescued","description":"In Barovia, the party rescues a cursed goat from dire wolves and flees hostile villagers to Tser Pool.","arc_id":"arc_04_shadow_powers_and_infernal_node","arc_name":"Shadow Powers and Infernal Node","significance":"moderate","cause":"evt_s038_escape_from_death_house","consequences":["Goat saved","Villagers angered"],"entities_involved":["Corras","Dahlia","Orla","SavannahBelle"]},{"event_id":"evt_s040_heist_at_tser_pool","session_id":"S040","title":"Heist for Holy Symbol","description":"Corras and Ezrella steal the Holy Symbol of Ravenkind from Madam Eva, but taking a Deck of Many Things triggers a curse.","arc_id":"arc_04_shadow_powers_and_infernal_node","arc_name":"Shadow Powers and Infernal Node","significance":"major","cause":"evt_s039_cursed_goat_rescue","consequences":["Holy Symbol stolen","Curse triggered"],"entities_involved":["Corras","Ezrella","Madam Eva"]},{"event_id":"evt_s041_heart_of_sorrow_scouted","session_id":"S041","title":"Heart of Sorrow Scouted","description":"After looting Madam Eva's tent, the party flies over Castle Ravenloft to scout the Heart of Sorrow, angering Strahd.","arc_id":"arc_04_shadow_powers_and_infernal_node","arc_name":"Shadow Powers and Infernal Node","significance":"moderate","cause":"evt_s040_heist_at_tser_pool","consequences":["Heart scouted","Strahd angered"],"entities_involved":["Corras","Orla","Dahlia","SavannahBelle"]},{"event_id":"evt_s042_battle_of_ravenloft_begins","session_id":"S042","title":"Battle of Ravenloft Begins","description":"Rahadin is slain, and the BWB party merges with another group for a final showdown against Strahd at his wedding.","arc_id":"arc_04_shadow_powers_and_infernal_node","arc_name":"Shadow Powers and Infernal Node","significance":"moderate","cause":"evt_s041_heart_of_sorrow_scouted","consequences":["Rahadin killed","Showdown initiated"],"entities_involved":["Dahlia","Izzy","Corras","Strahd"]},{"event_id":"evt_s043_refugee_crisis_at_castle","session_id":"S043","title":"Refugee Crisis at Castle Corras","description":"Returning to Faerun, the party finds Castle Corras packed with refugees and facing multiple crises under Fey invasion.","arc_id":"arc_04_shadow_powers_and_infernal_node","arc_name":"Shadow Powers and Infernal Node","significance":"moderate","cause":"evt_s042_battle_of_ravenloft_begins","consequences":["Refugees housed","Crises emerge"],"entities_involved":["Corras","Dahlia","SavannahBelle","Orla"]},{"event_id":"evt_s044_trial_and_amputation","session_id":"S044","title":"Master of Whispers Amputation","description":"After a failed council, Dahlia amputates the Master of Whispers's leg to prevent a spell, leading to his capture.","arc_id":"arc_04_shadow_powers_and_infernal_node","arc_name":"Shadow Powers and Infernal Node","significance":"major","cause":"evt_s043_refugee_crisis_at_castle","consequences":["Leg amputated","Capture secured"],"entities_involved":["Dahlia","Corras","Master of Whispers"]},{"event_id":"evt_s045_butcher_revealed_as_construct","session_id":"S045","title":"Butcher Revealed as Construct","description":"After a riot, Dahlia interrogates the Butcher and discovers he is a mechanical construct wearing human skin.","arc_id":"arc_04_shadow_powers_and_infernal_node","arc_name":"Shadow Powers and Infernal Node","significance":"moderate","cause":"evt_s044_trial_and_amputation","consequences":["Construct revealed","Interruption occurs"],"entities_involved":["Dahlia","Butcher","Zibby Zibblebottoms"]},{"event_id":"evt_s046_matrons_bargain","session_id":"S046","title":"Matron's Bargain for Obsidian Stone","description":"The Matron offers an Obsidian Stone to mask magical ripples in exchange for authority over the city in Corras's absence.","arc_id":"arc_04_shadow_powers_and_infernal_node","arc_name":"Shadow Powers and Infernal Node","significance":"major","cause":"evt_s045_butcher_revealed_as_construct","consequences":["Stone granted","Leadership transferred"],"entities_involved":["Corras","Matron","Dahlia","Orla"]}];
+
+// ─── CONSTANTS ───
+const ARC_COLORS = {
+  "Chronicler's Mark and Early Adventures": '#ffd700',
+  "Demonic Pacts and Prison Escapes": '#ff4444',
+  "Underdark and Webb's Edge": '#4DB6AC',
+  "Shadow Powers and Infernal Node": '#ad6bff'
+};
+
+const ARC_SHORT = {
+  "Chronicler's Mark and Early Adventures": 'Chronicler\'s Mark',
+  "Demonic Pacts and Prison Escapes": 'Demonic Pacts',
+  "Underdark and Webb's Edge": 'Underdark',
+  "Shadow Powers and Infernal Node": 'Shadow Powers'
+};
+
+const SIG_RADIUS = { major: 16, moderate: 10, minor: 6 };
+const TOTAL_SESSIONS = 46;
+const REVOLUTIONS = 3.5;
+
+// Build lookup
+const eventMap = {};
+EVENTS.forEach(e => eventMap[e.event_id] = e);
+
+// ─── STAR FIELD ───
+(function drawStars() {
+  const canvas = document.getElementById('starfield');
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  for (let i = 0; i < 400; i++) {
+    const x = Math.random() * canvas.width;
+    const y = Math.random() * canvas.height;
+    const r = Math.random() * 1.2;
+    const alpha = Math.random() * 0.15 + 0.03;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(200,200,240,${alpha})`;
+    ctx.fill();
+  }
+
+  // A few brighter stars
+  for (let i = 0; i < 30; i++) {
+    const x = Math.random() * canvas.width;
+    const y = Math.random() * canvas.height;
+    const r = Math.random() * 0.8 + 0.4;
+    const alpha = Math.random() * 0.2 + 0.1;
+    const hue = Math.random() > 0.5 ? '200,180,255' : '255,215,100';
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${hue},${alpha})`;
+    ctx.fill();
+  }
+
+  window.addEventListener('resize', drawStars);
+})();
+
+// ─── SPIRAL MATH ───
+const width = window.innerWidth;
+const height = window.innerHeight;
+const cx = width / 2;
+const cy = height / 2;
+const maxR = Math.min(width, height) * 0.4;
+const a = 20; // inner radius
+const b = (maxR - a) / (REVOLUTIONS * 2 * Math.PI);
+
+function sessionToTheta(sessionNum) {
+  return (sessionNum / TOTAL_SESSIONS) * REVOLUTIONS * 2 * Math.PI;
+}
+
+function thetaToXY(theta) {
+  const r = a + b * theta;
+  return { x: cx + r * Math.cos(theta - Math.PI / 2), y: cy + r * Math.sin(theta - Math.PI / 2), r };
+}
+
+function sessionNumFromId(sid) {
+  return parseInt(sid.replace('S', ''), 10);
+}
+
+// Compute positions for each event
+EVENTS.forEach(e => {
+  const sn = sessionNumFromId(e.session_id);
+  const theta = sessionToTheta(sn);
+  const pos = thetaToXY(theta);
+  e._x = pos.x;
+  e._y = pos.y;
+  e._theta = theta;
+  e._r = pos.r;
+  e._sn = sn;
+});
+
+// ─── STATS ───
+function computeStats() {
+  const arcCounts = {};
+  Object.keys(ARC_COLORS).forEach(k => arcCounts[k] = 0);
+  EVENTS.forEach(e => arcCounts[e.arc_name]++);
+
+  // Longest causal chain
+  function chainLength(evt) {
+    let len = 0;
+    let current = evt;
+    while (current && current.cause && eventMap[current.cause]) {
+      len++;
+      current = eventMap[current.cause];
+    }
+    return len;
+  }
+
+  let longestChain = 0;
+  let longestChainEvt = null;
+  EVENTS.forEach(e => {
+    const cl = chainLength(e);
+    if (cl > longestChain) { longestChain = cl; longestChainEvt = e; }
+  });
+
+  // Most consequential
+  let maxConseq = 0;
+  let mostConseqEvt = null;
+  EVENTS.forEach(e => {
+    // Count how many events cite this as cause
+    const downstream = EVENTS.filter(x => x.cause === e.event_id).length;
+    const total = downstream + e.consequences.length;
+    if (total > maxConseq) { maxConseq = total; mostConseqEvt = e; }
+  });
+
+  const panel = document.getElementById('stats-panel');
+  panel.innerHTML = `
+    <div class="control-group-title" style="margin-bottom:10px;">Campaign Stats</div>
+    <div class="stat-row"><span class="stat-label">Total Events</span><span class="stat-value">42</span></div>
+    ${Object.entries(arcCounts).map(([k,v]) => `
+      <div class="stat-row">
+        <span class="stat-label" style="display:flex;align-items:center;gap:6px;">
+          <span style="width:8px;height:8px;border-radius:50%;background:${ARC_COLORS[k]};box-shadow:0 0 6px ${ARC_COLORS[k]};flex-shrink:0;"></span>
+          ${ARC_SHORT[k]}
+        </span>
+        <span class="stat-value">${v}</span>
+      </div>
+    `).join('')}
+    <div class="stat-row"><span class="stat-label">Longest Chain</span><span class="stat-value">${longestChain + 1} events</span></div>
+    <div class="stat-row"><span class="stat-label">Most Consequential</span><span class="stat-value" style="font-size:11px;max-width:140px;text-align:right;">${mostConseqEvt ? mostConseqEvt.title.substring(0,22) : 'N/A'}</span></div>
+  `;
+}
+computeStats();
+
+// ─── FILTERS ───
+const arcActive = {};
+Object.keys(ARC_COLORS).forEach(k => arcActive[k] = true);
+let sigFilter = 'all'; // 'all' or 'major'
+
+function buildFilters() {
+  const arcDiv = document.getElementById('arc-filters');
+  arcDiv.innerHTML = '';
+  Object.entries(ARC_COLORS).forEach(([name, color]) => {
+    const btn = document.createElement('button');
+    btn.className = 'arc-btn' + (arcActive[name] ? '' : ' inactive');
+    btn.innerHTML = `<span class="arc-dot" style="background:${color};box-shadow:0 0 6px ${color};"></span>${ARC_SHORT[name]}`;
+    btn.onclick = () => {
+      arcActive[name] = !arcActive[name];
+      btn.classList.toggle('inactive');
+      applyFilters();
+    };
+    arcDiv.appendChild(btn);
+  });
+
+  const sigDiv = document.getElementById('sig-filters');
+  sigDiv.innerHTML = '';
+  ['all', 'major'].forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = 'sig-btn' + (sigFilter === s ? ' active' : '');
+    btn.textContent = s === 'all' ? 'ALL' : 'MAJOR';
+    btn.onclick = () => {
+      sigFilter = s;
+      sigDiv.querySelectorAll('.sig-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      applyFilters();
+    };
+    sigDiv.appendChild(btn);
+  });
+}
+buildFilters();
+
+function isEventVisible(e) {
+  if (!arcActive[e.arc_name]) return false;
+  if (sigFilter === 'major' && e.significance !== 'major') return false;
+  return true;
+}
+
+function applyFilters() {
+  nodeGroups.transition().duration(300)
+    .attr('opacity', d => isEventVisible(d) ? 1 : 0.06);
+
+  causalLines.transition().duration(300)
+    .attr('opacity', d => {
+      const source = eventMap[d.cause];
+      if (!source || !isEventVisible(d) || !isEventVisible(source)) return 0;
+      return 0.4;
+    });
+}
+
+// ─── D3 SETUP ───
+const svg = d3.select('#spiral-svg')
+  .attr('width', width)
+  .attr('height', height);
+
+const defs = svg.append('defs');
+
+// Arrowhead marker per arc color
+Object.entries(ARC_COLORS).forEach(([name, color]) => {
+  defs.append('marker')
+    .attr('id', 'arrow-' + name.replace(/[^a-zA-Z]/g, ''))
+    .attr('viewBox', '0 0 10 6')
+    .attr('refX', 10)
+    .attr('refY', 3)
+    .attr('markerWidth', 8)
+    .attr('markerHeight', 6)
+    .attr('orient', 'auto')
+    .append('path')
+    .attr('d', 'M0,0 L10,3 L0,6 Z')
+    .attr('fill', color)
+    .attr('opacity', 0.6);
+});
+
+// Glow filters
+Object.entries(ARC_COLORS).forEach(([name, color]) => {
+  const filter = defs.append('filter')
+    .attr('id', 'glow-' + name.replace(/[^a-zA-Z]/g, ''))
+    .attr('x', '-50%').attr('y', '-50%')
+    .attr('width', '200%').attr('height', '200%');
+  filter.append('feGaussianBlur')
+    .attr('stdDeviation', '4')
+    .attr('result', 'blur');
+  filter.append('feFlood')
+    .attr('flood-color', color)
+    .attr('flood-opacity', '0.6')
+    .attr('result', 'color');
+  filter.append('feComposite')
+    .attr('in', 'color')
+    .attr('in2', 'blur')
+    .attr('operator', 'in')
+    .attr('result', 'shadow');
+  const merge = filter.append('feMerge');
+  merge.append('feMergeNode').attr('in', 'shadow');
+  merge.append('feMergeNode').attr('in', 'SourceGraphic');
+});
+
+const masterG = svg.append('g').attr('class', 'master');
+
+// Zoom
+const zoom = d3.zoom()
+  .scaleExtent([0.3, 6])
+  .on('zoom', (event) => {
+    masterG.attr('transform', event.transform);
+    // Show labels when zoomed in
+    const k = event.transform.k;
+    masterG.selectAll('.node-label')
+      .attr('opacity', k > 1.5 ? Math.min(1, (k - 1.5) * 2) : 0);
+    masterG.selectAll('.session-marker')
+      .attr('opacity', k > 1.2 ? Math.min(0.5, (k - 1.2)) : 0.2);
+  });
+
+svg.call(zoom);
+
+// ─── DRAW SPIRAL PATH ───
+const spiralPoints = [];
+for (let t = 0; t <= REVOLUTIONS * 2 * Math.PI; t += 0.05) {
+  spiralPoints.push(thetaToXY(t));
+}
+
+const spiralLine = d3.line()
+  .x(d => d.x)
+  .y(d => d.y)
+  .curve(d3.curveBasis);
+
+const spiralPath = masterG.append('path')
+  .datum(spiralPoints)
+  .attr('d', spiralLine)
+  .attr('fill', 'none')
+  .attr('stroke', '#1a1a30')
+  .attr('stroke-width', 1.5)
+  .attr('stroke-dasharray', '4,6')
+  .attr('opacity', 0);
+
+// Session markers along the spiral
+const sessionMarkers = masterG.selectAll('.session-marker')
+  .data(d3.range(1, TOTAL_SESSIONS + 1))
+  .enter()
+  .append('g')
+  .attr('class', 'session-marker')
+  .attr('transform', d => {
+    const pos = thetaToXY(sessionToTheta(d));
+    return `translate(${pos.x},${pos.y})`;
+  })
+  .attr('opacity', 0);
+
+sessionMarkers.append('circle')
+  .attr('r', 1.5)
+  .attr('fill', '#2a2a40');
+
+sessionMarkers.append('text')
+  .text(d => d)
+  .attr('x', 0)
+  .attr('y', -6)
+  .attr('text-anchor', 'middle')
+  .attr('fill', '#44446a')
+  .attr('font-family', "'JetBrains Mono', monospace")
+  .attr('font-size', '7px')
+  .attr('font-weight', 300);
+
+// ─── CAUSAL LINES ───
+const causalData = EVENTS.filter(e => e.cause && eventMap[e.cause]);
+
+const causalLines = masterG.selectAll('.causal-line')
+  .data(causalData)
+  .enter()
+  .append('path')
+  .attr('class', 'causal-line')
+  .attr('d', d => {
+    const source = eventMap[d.cause];
+    const dx = d._x - source._x;
+    const dy = d._y - source._y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    // Offset for target node radius
+    const targetR = SIG_RADIUS[d.significance];
+    const ratio = targetR / dist;
+    const tx = d._x - dx * ratio;
+    const ty = d._y - dy * ratio;
+    // Curved line using midpoint offset toward center
+    const mx = (source._x + tx) / 2 + (cy - (source._y + ty) / 2) * 0.15;
+    const my = (source._y + ty) / 2 + ((source._x + tx) / 2 - cx) * 0.15;
+    return `M${source._x},${source._y} Q${mx},${my} ${tx},${ty}`;
+  })
+  .attr('fill', 'none')
+  .attr('stroke', d => ARC_COLORS[d.arc_name])
+  .attr('stroke-opacity', 0)
+  .attr('stroke-width', 1.5)
+  .attr('stroke-dasharray', '6,4')
+  .attr('marker-end', d => `url(#arrow-${d.arc_name.replace(/[^a-zA-Z]/g, '')})`)
+  .style('animation', 'dashFlow 1s linear infinite');
+
+// ─── EVENT NODES ───
+const nodeGroups = masterG.selectAll('.event-node')
+  .data(EVENTS)
+  .enter()
+  .append('g')
+  .attr('class', 'event-node')
+  .attr('transform', d => `translate(${d._x},${d._y})`)
+  .attr('opacity', 0)
+  .style('cursor', 'pointer');
+
+// Outer glow ring for major events
+nodeGroups.filter(d => d.significance === 'major')
+  .append('circle')
+  .attr('class', 'glow-ring')
+  .attr('r', d => SIG_RADIUS[d.significance] + 6)
+  .attr('fill', 'none')
+  .attr('stroke', d => ARC_COLORS[d.arc_name])
+  .attr('stroke-width', 1.5)
+  .attr('stroke-opacity', 0.3)
+  .style('--glow-color', d => ARC_COLORS[d.arc_name])
+  .style('animation', 'majorPulse 3s ease-in-out infinite');
+
+// Main circle
+nodeGroups.append('circle')
+  .attr('class', 'node-circle')
+  .attr('r', d => SIG_RADIUS[d.significance])
+  .attr('fill', d => ARC_COLORS[d.arc_name])
+  .attr('stroke', d => d3.color(ARC_COLORS[d.arc_name]).brighter(0.5))
+  .attr('stroke-width', d => d.significance === 'major' ? 2 : 1)
+  .attr('opacity', 0.9)
+  .style('filter', d => `drop-shadow(0 0 ${d.significance === 'major' ? 8 : 4}px ${ARC_COLORS[d.arc_name]})`);
+
+// Label (visible on zoom)
+nodeGroups.append('text')
+  .attr('class', 'node-label')
+  .text(d => d.title.length > 20 ? d.title.substring(0, 20) + '...' : d.title)
+  .attr('x', 0)
+  .attr('y', d => -(SIG_RADIUS[d.significance] + 8))
+  .attr('text-anchor', 'middle')
+  .attr('fill', d => ARC_COLORS[d.arc_name])
+  .attr('font-family', "'Barlow Condensed', sans-serif")
+  .attr('font-size', '10px')
+  .attr('font-weight', 400)
+  .attr('opacity', 0)
+  .style('text-shadow', d => `0 0 6px ${ARC_COLORS[d.arc_name]}44`);
+
+// ─── TOOLTIP ───
+const tooltip = d3.select('#tooltip');
+
+nodeGroups
+  .on('mouseenter', (event, d) => {
+    if (!isEventVisible(d)) return;
+
+    const sigClass = d.significance === 'major' ? 'sig-major' : d.significance === 'moderate' ? 'sig-moderate' : 'sig-minor';
+    tooltip.html(`
+      <div class="tooltip-session">${d.session_id} &middot; ${d.arc_name}</div>
+      <div class="tooltip-title" style="color:${ARC_COLORS[d.arc_name]}">${d.title} <span class="sig-badge ${sigClass}">${d.significance}</span></div>
+      <div class="tooltip-desc">${d.description}</div>
+    `);
+    tooltip.style('opacity', 1);
+
+    // Highlight node
+    d3.select(event.currentTarget).select('.node-circle')
+      .transition().duration(150)
+      .attr('r', SIG_RADIUS[d.significance] * 1.4)
+      .attr('opacity', 1);
+
+    // Show label
+    d3.select(event.currentTarget).select('.node-label')
+      .transition().duration(150)
+      .attr('opacity', 1);
+  })
+  .on('mousemove', (event) => {
+    let tx = event.clientX + 16;
+    let ty = event.clientY - 10;
+    if (tx + 290 > window.innerWidth) tx = event.clientX - 296;
+    if (ty + 120 > window.innerHeight) ty = event.clientY - 120;
+    tooltip.style('left', tx + 'px').style('top', ty + 'px');
+  })
+  .on('mouseleave', (event, d) => {
+    tooltip.style('opacity', 0);
+    d3.select(event.currentTarget).select('.node-circle')
+      .transition().duration(200)
+      .attr('r', SIG_RADIUS[d.significance])
+      .attr('opacity', 0.9);
+
+    // Only hide label if not zoomed in
+    const currentZoom = d3.zoomTransform(svg.node()).k;
+    if (currentZoom <= 1.5) {
+      d3.select(event.currentTarget).select('.node-label')
+        .transition().duration(200)
+        .attr('opacity', 0);
+    }
+  })
+  .on('click', (event, d) => {
+    event.stopPropagation();
+    showDetail(d);
+  });
+
+// Click background to dismiss detail
+svg.on('click', () => {
+  hideDetail();
+});
+
+// ─── DETAIL PANEL ───
+let selectedEvent = null;
+
+function getUpstreamChain(evt) {
+  const chain = [];
+  let current = evt;
+  while (current && current.cause && eventMap[current.cause]) {
+    current = eventMap[current.cause];
+    chain.unshift(current);
+  }
+  return chain;
+}
+
+function getDownstreamChain(evt) {
+  const children = EVENTS.filter(e => e.cause === evt.event_id);
+  const result = [];
+  function walk(e) {
+    result.push(e);
+    EVENTS.filter(x => x.cause === e.event_id).forEach(walk);
+  }
+  children.forEach(walk);
+  return result;
+}
+
+function showDetail(d) {
+  selectedEvent = d;
+  const panel = document.getElementById('detail-panel');
+  const accent = document.getElementById('detail-accent');
+  const content = document.getElementById('detail-content');
+  const color = ARC_COLORS[d.arc_name];
+  const sigClass = d.significance === 'major' ? 'sig-major' : d.significance === 'moderate' ? 'sig-moderate' : 'sig-minor';
+
+  accent.style.background = `linear-gradient(90deg, ${color}, transparent)`;
+
+  const upstream = getUpstreamChain(d);
+  const downstream = getDownstreamChain(d);
+
+  const chainHTML = (upstream.length + downstream.length > 0) ? `
+    <div class="detail-section-label">Causal Chain</div>
+    <div style="padding:4px 0;">
+      ${upstream.map(e => `<span class="chain-label" data-eid="${e.event_id}" style="color:${ARC_COLORS[e.arc_name]}">${e.title}</span>`).join('<span class="chain-arrow">&darr;</span><br>')}
+      ${upstream.length > 0 ? '<span class="chain-arrow">&darr;</span><br>' : ''}
+      <span class="chain-label" style="color:${color};font-weight:600;font-size:12px;">&raquo; ${d.title}</span>
+      ${downstream.length > 0 ? '<br><span class="chain-arrow">&darr;</span><br>' : ''}
+      ${downstream.map(e => `<span class="chain-label" data-eid="${e.event_id}" style="color:${ARC_COLORS[e.arc_name]}">${e.title}</span>`).join('<br><span class="chain-arrow">&darr;</span><br>')}
+    </div>
+  ` : '';
+
+  content.innerHTML = `
+    <div class="detail-title" style="color:${color}">${d.title} <span class="sig-badge ${sigClass}">${d.significance}</span></div>
+    <div class="detail-session">${d.session_id} &middot; ${d.arc_name}</div>
+    <div class="detail-desc">${d.description}</div>
+
+    <div class="detail-section-label">Consequences</div>
+    <div>${d.consequences.map(c => `<span class="detail-tag">${c}</span>`).join('')}</div>
+
+    <div class="detail-section-label">Entities</div>
+    <div>${d.entities_involved.map(e => `<span class="detail-tag" style="border-color:${color}44;color:${color}">${e}</span>`).join('')}</div>
+
+    ${chainHTML}
+  `;
+
+  panel.classList.add('visible');
+
+  // Highlight causal chain on spiral
+  highlightChain(d, upstream, downstream);
+
+  // Click chain labels to navigate
+  content.querySelectorAll('.chain-label[data-eid]').forEach(el => {
+    el.addEventListener('click', () => {
+      const evt = eventMap[el.dataset.eid];
+      if (evt) showDetail(evt);
+    });
+  });
+}
+
+function hideDetail() {
+  selectedEvent = null;
+  document.getElementById('detail-panel').classList.remove('visible');
+  clearHighlight();
+}
+
+document.getElementById('detail-close').onclick = (e) => {
+  e.stopPropagation();
+  hideDetail();
+};
+
+function highlightChain(d, upstream, downstream) {
+  const chainIds = new Set([d.event_id, ...upstream.map(e => e.event_id), ...downstream.map(e => e.event_id)]);
+
+  nodeGroups.transition().duration(300)
+    .attr('opacity', x => {
+      if (!isEventVisible(x)) return 0.06;
+      return chainIds.has(x.event_id) ? 1 : 0.12;
+    });
+
+  causalLines.transition().duration(300)
+    .attr('stroke-opacity', x => {
+      const source = eventMap[x.cause];
+      if (!source) return 0;
+      if (chainIds.has(x.event_id) && chainIds.has(source.event_id)) return 0.8;
+      return 0.05;
+    })
+    .attr('stroke-width', x => {
+      const source = eventMap[x.cause];
+      if (!source) return 1.5;
+      if (chainIds.has(x.event_id) && chainIds.has(source.event_id)) return 2.5;
+      return 1;
+    });
+}
+
+function clearHighlight() {
+  nodeGroups.transition().duration(300)
+    .attr('opacity', d => isEventVisible(d) ? 1 : 0.06);
+
+  causalLines.transition().duration(300)
+    .attr('stroke-opacity', d => {
+      const source = eventMap[d.cause];
+      if (!source || !isEventVisible(d) || !isEventVisible(source)) return 0;
+      return 0.4;
+    })
+    .attr('stroke-width', 1.5);
+}
+
+// ─── ENTRANCE ANIMATION ───
+(function animate() {
+  // 1. Draw the spiral path
+  const pathNode = spiralPath.node();
+  const totalLength = pathNode.getTotalLength();
+
+  spiralPath
+    .attr('stroke-dasharray', totalLength + ' ' + totalLength)
+    .attr('stroke-dashoffset', totalLength)
+    .attr('opacity', 0.6)
+    .transition()
+    .duration(2500)
+    .ease(d3.easeQuadOut)
+    .attr('stroke-dashoffset', 0)
+    .on('end', () => {
+      // Reset to dotted
+      spiralPath
+        .attr('stroke-dasharray', '4,6')
+        .attr('stroke-dashoffset', 0);
+    });
+
+  // 2. Session markers fade in
+  sessionMarkers
+    .transition()
+    .delay((d, i) => 400 + i * 40)
+    .duration(400)
+    .attr('opacity', 0.2);
+
+  // 3. Events pop in with stagger
+  const sortedEvents = [...EVENTS].sort((a, b) => a._sn - b._sn);
+  const sortedIndices = sortedEvents.map(e => EVENTS.indexOf(e));
+
+  nodeGroups
+    .transition()
+    .delay((d, i) => {
+      const order = sortedIndices.indexOf(i);
+      return 800 + order * 40;
+    })
+    .duration(500)
+    .ease(d3.easeBackOut.overshoot(1.5))
+    .attr('opacity', 1);
+
+  // 4. Causal lines draw in after events
+  causalLines
+    .each(function() {
+      const path = d3.select(this);
+      const len = this.getTotalLength();
+      path
+        .attr('stroke-dasharray', len + ' ' + len)
+        .attr('stroke-dashoffset', len);
+    })
+    .transition()
+    .delay((d) => {
+      const order = sortedEvents.indexOf(d);
+      return 1200 + order * 40;
+    })
+    .duration(600)
+    .ease(d3.easeQuadOut)
+    .attr('stroke-opacity', 0.4)
+    .attr('stroke-dashoffset', 0)
+    .on('end', function() {
+      d3.select(this)
+        .attr('stroke-dasharray', '6,4')
+        .attr('stroke-dashoffset', 0);
+    });
+
+  // Hide zoom hint after 5s
+  setTimeout(() => {
+    document.getElementById('zoom-hint').style.opacity = '0';
+  }, 6000);
+})();
+
+// ─── RESIZE ───
+window.addEventListener('resize', () => {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  svg.attr('width', w).attr('height', h);
+});
+</script>
+</body>
+</html>

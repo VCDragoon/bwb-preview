@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CAMPAIGN DNA</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@300;400;600&family=Barlow:wght@300;400;500&family=JetBrains+Mono:wght@400;700&family=Cinzel:wght@400;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#06060c;color:#e0e0e8;font-family:'Barlow',sans-serif;overflow-x:hidden;min-height:100vh}
+body::after{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px);pointer-events:none;z-index:9999}
+#header{text-align:center;padding:40px 20px 10px;position:relative;z-index:10}
+#header h1{font-family:'Bebas Neue',sans-serif;font-size:72px;letter-spacing:12px;background:linear-gradient(135deg,#ad6bff 0%,#4A90D9 30%,#44ff88 60%,#ffd700 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 0 30px rgba(173,107,255,0.4));margin-bottom:4px}
+#header .subtitle{font-family:'Barlow Condensed',sans-serif;font-size:18px;letter-spacing:4px;color:#8888aa;text-transform:uppercase}
+#header .tagline{font-family:'Barlow',sans-serif;font-size:13px;color:#555570;margin-top:6px;font-style:italic}
+#legend{display:flex;justify-content:center;gap:32px;padding:20px;flex-wrap:wrap;position:relative;z-index:10}
+.legend-group{display:flex;flex-direction:column;gap:6px}
+.legend-group h3{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:3px;color:#8888aa;margin-bottom:4px}
+.legend-item{display:flex;align-items:center;gap:8px;font-family:'Barlow Condensed',sans-serif;font-size:13px;color:#aaaacc}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+#controls{display:flex;justify-content:center;gap:20px;padding:10px 20px 20px;position:relative;z-index:10;flex-wrap:wrap;align-items:center}
+#controls button{font-family:'Barlow Condensed',sans-serif;font-size:14px;letter-spacing:2px;text-transform:uppercase;background:rgba(173,107,255,0.1);border:1px solid rgba(173,107,255,0.3);color:#ad6bff;padding:6px 18px;cursor:pointer;transition:all 0.3s;border-radius:2px}
+#controls button:hover,#controls button.active{background:rgba(173,107,255,0.25);border-color:#ad6bff;box-shadow:0 0 15px rgba(173,107,255,0.3)}
+#controls label{font-family:'Barlow Condensed',sans-serif;font-size:13px;color:#8888aa;display:flex;align-items:center;gap:6px}
+#controls input[type=range]{width:100px;accent-color:#ad6bff}
+#helix-container{position:relative;width:100%;display:flex;justify-content:center}
+#helixCanvas{display:block}
+#tooltip{position:fixed;pointer-events:none;background:rgba(10,10,20,0.95);border:1px solid rgba(173,107,255,0.4);border-radius:4px;padding:12px 16px;max-width:380px;z-index:1000;opacity:0;transition:opacity 0.15s;backdrop-filter:blur(10px)}
+#tooltip.visible{opacity:1}
+.tt-title{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px;margin-bottom:6px}
+.tt-type{font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px}
+.tt-body{font-family:'Barlow',sans-serif;font-size:13px;line-height:1.5;color:#ccccdd}
+.tt-body .char-line{display:flex;align-items:center;gap:6px;margin:3px 0}
+.tt-body .char-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;display:inline-block}
+.growth-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px}
+.growth-pos{color:#44ff88}.growth-neg{color:#ff4444}.growth-zero{color:#8888aa}
+#detail-panel{position:fixed;top:0;right:-460px;width:440px;height:100vh;background:linear-gradient(180deg,#0a0a14 0%,#12122a 100%);border-left:1px solid rgba(173,107,255,0.3);z-index:500;overflow-y:auto;transition:right 0.4s cubic-bezier(0.25,0.8,0.25,1);padding:30px 24px}
+#detail-panel.open{right:0}
+#detail-panel .close-btn{position:absolute;top:14px;right:14px;font-size:24px;color:#8888aa;cursor:pointer;background:none;border:none;font-family:'Barlow',sans-serif}
+#detail-panel .close-btn:hover{color:#fff}
+#detail-panel h2{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:4px;background:linear-gradient(135deg,#ad6bff,#4A90D9);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px}
+.panel-label{font-family:'Barlow Condensed',sans-serif;font-size:14px;color:#8888aa;letter-spacing:2px;margin-bottom:16px}
+.panel-emotion{display:inline-block;padding:3px 12px;border-radius:2px;font-family:'JetBrains Mono',monospace;font-size:12px;margin-bottom:20px}
+.section-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:3px;color:#ad6bff;margin:16px 0 8px;border-bottom:1px solid rgba(173,107,255,0.2);padding-bottom:4px}
+.thread-item{padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05)}
+.thread-item .thread-name{font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:600}
+.thread-item .thread-event{font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin:2px 0}
+.thread-item .thread-summary{font-family:'Barlow',sans-serif;font-size:12px;color:#999;line-height:1.4}
+.growth-item{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05)}
+.gi-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.gi-name{font-family:'Cinzel',serif;font-size:14px;flex:1}
+.gi-score{font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;min-width:40px;text-align:right}
+.gi-dir{font-family:'Barlow Condensed',sans-serif;font-size:12px;color:#8888aa;letter-spacing:1px;min-width:80px}
+#stats-bar{display:flex;justify-content:center;gap:40px;padding:20px;position:relative;z-index:10}
+.stat-item{text-align:center}
+.stat-val{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:#ad6bff;text-shadow:0 0 20px rgba(173,107,255,0.5)}
+.stat-label{font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:2px;color:#666680;text-transform:uppercase}
+</style>
+</head>
+<body>
+<div id="header">
+<h1>CAMPAIGN DNA</h1>
+<div class="subtitle">THE INTERTWINED STRANDS OF NARRATIVE AND CHARACTER EVOLUTION</div>
+<div class="tagline">46 sessions &middot; 78 plot threads &middot; 8 players &middot; one living story</div>
+</div>
+<div id="legend">
+<div class="legend-group">
+<h3>THREAD TYPES (LEFT STRAND)</h3>
+<div class="legend-item"><div class="legend-dot" style="background:#ad6bff;box-shadow:0 0 6px #ad6bff"></div> Mystery</div>
+<div class="legend-item"><div class="legend-dot" style="background:#4A90D9;box-shadow:0 0 6px #4A90D9"></div> Character Arc</div>
+<div class="legend-item"><div class="legend-dot" style="background:#ff4444;box-shadow:0 0 6px #ff4444"></div> Threat</div>
+<div class="legend-item"><div class="legend-dot" style="background:#ffd700;box-shadow:0 0 6px #ffd700"></div> Faction</div>
+<div class="legend-item"><div class="legend-dot" style="background:#44ff88;box-shadow:0 0 6px #44ff88"></div> NPC</div>
+<div class="legend-item"><div class="legend-dot" style="background:#FF8A65;box-shadow:0 0 6px #FF8A65"></div> Obligation</div>
+<div class="legend-item"><div class="legend-dot" style="background:#4DB6AC;box-shadow:0 0 6px #4DB6AC"></div> Location</div>
+</div>
+<div class="legend-group">
+<h3>PLAYER COLORS (RIGHT STRAND)</h3>
+<div class="legend-item"><div class="legend-dot" style="background:#4A90D9;box-shadow:0 0 6px #4A90D9"></div> Gradles (Corras)</div>
+<div class="legend-item"><div class="legend-dot" style="background:#E57373;box-shadow:0 0 6px #E57373"></div> HT (Ash)</div>
+<div class="legend-item"><div class="legend-dot" style="background:#81C784;box-shadow:0 0 6px #81C784"></div> Mary (Billabong)</div>
+<div class="legend-item"><div class="legend-dot" style="background:#BA68C8;box-shadow:0 0 6px #BA68C8"></div> Christie (Dahlia/Lilith)</div>
+<div class="legend-item"><div class="legend-dot" style="background:#FFB74D;box-shadow:0 0 6px #FFB74D"></div> Lucy (Orla)</div>
+<div class="legend-item"><div class="legend-dot" style="background:#4DB6AC;box-shadow:0 0 6px #4DB6AC"></div> Tenderbittle (SavannahBelle)</div>
+<div class="legend-item"><div class="legend-dot" style="background:#FF8A65;box-shadow:0 0 6px #FF8A65"></div> Meijinx (Ave)</div>
+<div class="legend-item"><div class="legend-dot" style="background:#7986CB;box-shadow:0 0 6px #7986CB"></div> Drenek</div>
+</div>
+<div class="legend-group">
+<h3>RUNG COLOR = SESSION EMOTION</h3>
+<div class="legend-item"><div class="legend-dot" style="background:#ff6b6b;box-shadow:0 0 6px #ff6b6b"></div> Tension / Anxiety</div>
+<div class="legend-item"><div class="legend-dot" style="background:#ffd93d;box-shadow:0 0 6px #ffd93d"></div> Amusement / Laughter</div>
+<div class="legend-item"><div class="legend-dot" style="background:#6bcbff;box-shadow:0 0 6px #6bcbff"></div> Curiosity / Wonder</div>
+<div class="legend-item"><div class="legend-dot" style="background:#44ff88;box-shadow:0 0 6px #44ff88"></div> Joy / Excitement</div>
+<div class="legend-item"><div class="legend-dot" style="background:#ff4444;box-shadow:0 0 6px #ff4444"></div> Fear / Dread</div>
+<div class="legend-item"><div class="legend-dot" style="background:#c77dff;box-shadow:0 0 6px #c77dff"></div> Suspense / Unease</div>
+<div class="legend-item"><div class="legend-dot" style="background:#50fa7b;box-shadow:0 0 6px #50fa7b"></div> Determination / Resolve</div>
+<div class="legend-item"><div class="legend-dot" style="background:#ffb347;box-shadow:0 0 6px #ffb347"></div> Anticipation</div>
+</div>
+</div>
+<div id="controls">
+<button id="btn-pause">PAUSE</button>
+<label>SPEED <input type="range" id="speed-slider" min="0.1" max="3" step="0.1" value="1"></label>
+<label>HELIX RADIUS <input type="range" id="radius-slider" min="80" max="300" step="10" value="180"></label>
+<button id="btn-reset">RESET VIEW</button>
+</div>
+<div id="helix-container"><canvas id="helixCanvas"></canvas></div>
+<div id="stats-bar">
+<div class="stat-item"><div class="stat-val" id="stat-sessions">46</div><div class="stat-label">Sessions</div></div>
+<div class="stat-item"><div class="stat-val" id="stat-threads">78</div><div class="stat-label">Plot Threads</div></div>
+<div class="stat-item"><div class="stat-val" id="stat-events">0</div><div class="stat-label">Thread Events</div></div>
+<div class="stat-item"><div class="stat-val" id="stat-growth">0</div><div class="stat-label">Growth Records</div></div>
+</div>
+<div id="tooltip"></div>
+<div id="detail-panel">
+<button class="close-btn" onclick="closePanel()">&times;</button>
+<div id="panel-content"></div>
+</div>
+
+<script>
+// ===== DATA =====
+const RAW = [{"sid":"S001","n":1,"l":"Castle Corras: The Royal Progress","em":"Amusement/Laughter","th":[{"i":"thread_025","t":"Darz's Payment Discrepancy","y":"Mystery","e":"advance","s":"Ash discovers that Darz did not fully pay for her ivory idol statue; only half the payment was sent. The artisan expects"},{"i":"thread_057","t":"Lumin Town Council and Castle Corras Funding","y":"Obligation","e":"create","s":"After the etin's rampage, the Lumin town council holds Castle Corras financially liable for the damage, since Urgle Gurg"}],"gr":[{"p":"Gradles","c":"Corras","n":9,"d":"Ascending"},{"p":"HT","c":"Ash","n":-4,"d":"Questioning"},{"p":"Mary","c":"Billabong","n":7,"d":"Ascending"},{"p":"Christie","c":"Dahlia","n":4,"d":"Hardening"},{"p":"Lucy","c":"Orla","n":7,"d":"Awakening"}]},{"sid":"S002","n":2,"l":"Castle Corras Management and Mine Exploration","em":"Curiosity/Wonder","th":[{"i":"thread_026","t":"Mine Shaft and Eldritch Slime","y":"Mystery","e":"create","s":"While digging for the greenhouse, players uncovered an old mine shaft with arcane containment runes, a sentient light or"},{"i":"thread_027","t":"Robed Figures Near Lumin","y":"Mystery","e":"advance","s":"Ash's lieutenant reported robed figures conducting a ritual near Lumin. Ash sent an apprentice mage and spellweaver to i"},{"i":"thread_028","t":"Swordsman Sigil at Gilded Quill","y":"Mystery","e":"advance","s":"Ave's lieutenant reported a mysterious swordsman challenging guards and leaving a sigil at the Order of the Gilded Quill"},{"i":"thread_029","t":"Raven's Cipher Message","y":"Mystery","e":"advance","s":"Lilith received a raven carrying a coded message with religious symbols. She attempted to hire a priest to decipher it b"},{"i":"thread_067","t":"Castle Corras Management System","y":"Other","e":"create","s":"DM introduced a castle management system with rooms, followers, and monthly turns for building, hiring, and events. Play"}],"gr":[{"p":"Gradles","c":"Corras","n":4,"d":"Ascending"},{"p":"HT","c":"Ash","n":-1,"d":"Questioning"},{"p":"Christie","c":"Lilith","n":1,"d":"Stabilizing"},{"p":"Lucy","c":"Orla","n":9,"d":"Awakening"},{"p":"Meijinx","c":"Ave","n":7,"d":"Deepening"}]},{"sid":"S003","n":3,"l":"The Beholder's Lair and Castle Upgrades","em":"Tension/Anxiety","th":[{"i":"thread_002","t":"Billabong's Celestial Powers","y":"Character Arc","e":"advance","s":"One of the two Solarum orbs (sun and moon entities) was fading after its partner was absorbed by the eldritch slime. Bil"},{"i":"thread_020","t":"Castle Corras Upgrades and Obsidian Dome","y":"Location","e":"advance","s":"Morty, the castle's steward, completed major renovations: individual pocket dimension rooms for each party member, an al"},{"i":"thread_026","t":"Mine Shaft and Eldritch Slime","y":"Mystery","e":"reveal","s":"An invisible gelatinous cube-like creature (eldritch slime) was discovered filling the pit in the caverns. It disintegra"},{"i":"thread_030","t":"Graymark Mercenary Death","y":"Mystery","e":"create","s":"A dying Graymark mercenary was brought to Castle Corras, claiming 'betrayal within castle' before expiring. This suggest"},{"i":"thread_069","t":"Xel'therath the Eye of Midnight","y":"Threat","e":"create","s":"A beholder named Xel'therath revealed itself in the caverns beneath Castle Corras, telepathically communicating with the"}],"gr":[{"p":"Gradles","c":"Corras","n":-1,"d":"Questioning"},{"p":"HT","c":"Ash","n":3,"d":"Awakening"},{"p":"Mary","c":"Billabong","n":11,"d":"Ascending"},{"p":"Christie","c":"Lilith","n":8,"d":"Deepening"},{"p":"Lucy","c":"Orla","n":8,"d":"Deepening"},{"p":"Meijinx","c":"Ave","n":14,"d":"Ascending"}]},{"sid":"S004","n":4,"l":"Goblin Battle and Mysteries","em":"Tension/Anxiety","th":[{"i":"thread_021","t":"Poisoned Fey Tree Portal and Seed of the Elder Grove","y":"Location","e":"create","s":"Orla planted a heartwood seed with the shadow glass shard, creating a fey-touched tree that acts as an unstable portal t"},{"i":"thread_026","t":"Mine Shaft and Eldritch Slime","y":"Mystery","e":"create","s":"Reading the 'Chronicles of the Quill' tome caused Sylvan text to tattoo onto all party members, granting Sylvan language"},{"i":"thread_031","t":"Shadow Glass Shard","y":"Mystery","e":"create","s":"Corras killed a Goblin Curse Spitter and retrieved a dark crystalline shard that bound to him, emitting a conscious reso"},{"i":"thread_047","t":"Lilith's Disciples","y":"NPC","e":"reveal","s":"A raven messenger was revealed to be a shapeshifted disciple of Lilith, part of a group of 40 who have abandoned the Abb"},{"i":"thread_058","t":"Xalvador's Capture by Still Sorrow","y":"Obligation","e":"escalate","s":"Xalvador was captured by the Still Sorrow while planting misinformation about Lilith's whereabouts; they sent a raven wi"},{"i":"thread_070","t":"Goblin Incursion and Fomorian Threat","y":"Threat","e":"resolve","s":"The party, with aid from Sarlumon's paladins, defeated the goblin horde led by Niles Bargnot at Havenbrook, pushing back"},{"i":"thread_070","t":"Goblin Incursion and Fomorian Threat","y":"Threat","e":"reveal","s":"A Goblin Curse Spitter summoned three Fomorians—twisted fey giants—during the battle, indicating a nearby path to the Un"}],"gr":[{"p":"Gradles","c":"Corras","n":5,"d":"Ascending"},{"p":"HT","c":"Ash","n":6,"d":"Ascending"},{"p":"Mary","c":"Billabong","n":4,"d":"Hardening"},{"p":"Christie","c":"Lilith","n":5,"d":"Awakening"},{"p":"Lucy","c":"Orla","n":6,"d":"Awakening"},{"p":"Meijinx","c":"Ave","n":6,"d":"Ascending"}]},{"sid":"S005","n":5,"l":"Session with Lilith's followers and burial site encounter","em":"Amusement/Laughter","th":[{"i":"thread_001","t":"Lilith's Ecclesiastical Trial and Myrkul Pact","y":"Character Arc","e":"advance","s":"Orla's mentor, Elder Inscrutable, arrives for an in-person review of Orla's druidic training. The party hastily prepares"},{"i":"thread_026","t":"Mine Shaft and Eldritch Slime","y":"Mystery","e":"advance","s":"The party goes to Lumin to investigate the Gilded Quill excavation, finding the site empty and trapped. They encounter a"},{"i":"thread_067","t":"Castle Corras Management System","y":"Other","e":"create","s":"A group of 30+ fervent followers (Lilith's Loyalists) arrive at Castle Corras, led by Brother Alred and Sister Elowen, d"},{"i":"thread_071","t":"Essence Drain Plague and Blight","y":"Threat","e":"escalate","s":"The magical blight affecting plants (reported by Orla) and essence drain plague affecting animals (reported by Billabong"}],"gr":[{"p":"Gradles","c":"Corras","n":0,"d":"Stabilizing"},{"p":"HT","c":"Ash","n":1,"d":"Ascending"},{"p":"Mary","c":"Billabong","n":0,"d":"Stabilizing"},{"p":"Christie","c":"Lilith","n":2,"d":"Ascending"},{"p":"Lucy","c":"Orla","n":2,"d":"Ascending"},{"p":"Meijinx","c":"Ave","n":0,"d":"Stabilizing"}]},{"sid":"S006","n":6,"l":"The Crypt of the Archmage","em":"Tension/Anxiety","th":[{"i":"thread_026","t":"Mine Shaft and Eldritch Slime","y":"Mystery","e":"reveal","s":"The party fought an archmage who turned out to be a simulacrum; upon defeat, it dissolved into water, revealing it was n"},{"i":"thread_026","t":"Mine Shaft and Eldritch Slime","y":"Mystery","e":"create","s":"Corras retrieved an Orb of Time from a chest in the crypt, identified as a rare artifact worth 500,000 gold with unknown"},{"i":"thread_026","t":"Mine Shaft and Eldritch Slime","y":"Mystery","e":"advance","s":"The party discovered the crypt is warded with Mordenkainen's Private Sanctum, blocking teleportation and other planar tr"},{"i":"thread_059","t":"Lilith's Divine Intervention Attempts","y":"Obligation","e":"advance","s":"Lilith attempted Divine Intervention to escape the crypt, but it failed; she can try again after a long rest, with the p"},{"i":"thread_070","t":"Goblin Incursion and Fomorian Threat","y":"Threat","e":"escalate","s":"After defeating the simulacrum, a magic mouth spell revealed the crypt is laced with explosive glyphs set to detonate in"}],"gr":[{"p":"Gradles","c":"Corras","n":7,"d":"Ascending"},{"p":"HT","c":"Ash","n":7,"d":"Ascending"},{"p":"Mary","c":"Billabong","n":7,"d":"Ascending"},{"p":"Christie","c":"Dahlia","n":7,"d":"Ascending"},{"p":"Lucy","c":"Orla","n":7,"d":"Ascending"},{"p":"Meijinx","c":"Ave","n":7,"d":"Ascending"}]},{"sid":"S007","n":7,"l":"The Time Travel Heist","em":"Joy/Excitement","th":[{"i":"thread_026","t":"Mine Shaft and Eldritch Slime","y":"Mystery","e":"advance","s":"The party, trapped in a cave collapse, debates and executes a plan to use Ash's chronoport spell to travel back in time "},{"i":"thread_026","t":"Mine Shaft and Eldritch Slime","y":"Mystery","e":"reveal","s":"Upon time traveling, each party member experiences a random temporal dissonance effect (e.g., Lilith de-aged to a child,"},{"i":"thread_060","t":"Spark Rescue Heist at Castle Corras","y":"Obligation","e":"create","s":"The party splits to execute a heist: Corras (invisible) sneaks into Castle Corras to steal rubies for a simulacrum and p"},{"i":"thread_070","t":"Goblin Incursion and Fomorian Threat","y":"Threat","e":"escalate","s":"Multiple incidents cause chaos in the castle: Orla (as a condor) is chased by past Billabong after being spotted in alch"}],"gr":[{"p":"Gradles","c":"Corras","n":0,"d":"Stabilizing"},{"p":"HT","c":"Ash","n":3,"d":"Ascending"},{"p":"Mary","c":"Billabong","n":-8,"d":"Fracturing"},{"p":"Christie","c":"Lilith","n":1,"d":"Questioning"},{"p":"Lucy","c":"Orla","n":-6,"d":"Fracturing"},{"p":"Meijinx","c":"Ave","n":4,"d":"Ascending"}]},{"sid":"S008","n":8,"l":"Session 8","em":"Tension/Anxiety","th":[{"i":"thread_003","t":"Corras's Eyelash Heist and Simulacrum","y":"Character Arc","e":"advance","s":"The party devised a plan to create a simulacrum of Spark using the stolen eyelash, requiring a 12-hour ritual, while man"},{"i":"thread_015","t":"Graymark Mercenaries","y":"Faction","e":"advance","s":"The party devised a plan to create a simulacrum of Spark using the stolen eyelash, requiring a 12-hour ritual, while man"}],"gr":[{"p":"Gradles","c":"Corras","n":0,"d":"Stabilizing"},{"p":"HT","c":"Ash","n":5,"d":"Ascending"},{"p":"Mary","c":"Billabong","n":2,"d":"Stabilizing"},{"p":"Christie","c":"Lilith","n":3,"d":"Hardening"},{"p":"Lucy","c":"Orla","n":5,"d":"Ascending"},{"p":"Meijinx","c":"Ave","n":6,"d":"Ascending"}]},{"sid":"S009","n":9,"l":"D&D Session: Inventory and Intrigue","em":"Tension/Anxiety","th":[{"i":"thread_026","t":"Mine Shaft and Eldritch Slime","y":"Mystery","e":"resolve","s":"A hooded figure (Ash's former apprentice) sneaks up on Ave's ritual site, is intimidated by Lilith, and killed by her sp"},{"i":"thread_033","t":"Master of Whispers' Task","y":"Mystery","e":"advance","s":"Master of Whispers appears to Corras in his jail cell, demanding he retrieve the Netherese Relic from the castle vault w"},{"i":"thread_045","t":"Mortimer von Schatten","y":"NPC","e":"advance","s":"Ash, Orla, and Billabong encounter the injured mercenary Eoman, heal him, and learn he was separated from goblin merchan"},{"i":"thread_070","t":"Goblin Incursion and Fomorian Threat","y":"Threat","e":"escalate","s":"The party locates Grimslick's stuck caravan with owlbears and slaves; Orla and Ash stealthily approach, but owlbears det"}],"gr":[{"p":"Gradles","c":"Corras","n":-2,"d":"Questioning"},{"p":"HT","c":"Ash","n":-1,"d":"Stabilizing"},{"p":"Mary","c":"Billabong","n":-1,"d":"Stabilizing"},{"p":"Christie","c":"Lilith","n":3,"d":"Hardening"},{"p":"Lucy","c":"Orla","n":0,"d":"Stabilizing"},{"p":"Meijinx","c":"Ave","n":6,"d":"Ascending"}]},{"sid":"S010","n":10,"l":"D&D Session: Cave Confrontation and Demon Summoning","em":"Tension/Anxiety","th":[{"i":"thread_004","t":"Drenek's Squirrel Curse","y":"Character Arc","e":"reveal","s":"Drenek revealed he is cursed by squirrels after chopping up stuffed squirrels in a haunted mansion, causing them to haun"},{"i":"thread_005","t":"Corras's Deck of Many Things Aftermath","y":"Character Arc","e":"advance","s":"Corras recounted drawing 11 cards from the Deck of Many Things, resulting in being trapped in an extra-dimensional porta"},{"i":"thread_073","t":"Cult of Eternal Flame and Balor Summoning","y":"Threat","e":"advance","s":"The party discovered the cult's ritual to summon a Balor demon in a lava cave, with 28 hours remaining until completion."}],"gr":[{"p":"Gradles","c":"Corras","n":-1,"d":"Stabilizing"},{"p":"HT","c":"Ash","n":3,"d":"Ascending"},{"p":"Christie","c":"Dahlia","n":2,"d":"Deepening"},{"p":"Lucy","c":"Orla","n":7,"d":"Awakening"},{"p":"Drenek","c":"Drenek","n":6,"d":"Ascending"}]},{"sid":"S011","n":11,"l":"Session with Toll Gate and Earth Elemental Encounter","em":"Tension/Anxiety","th":[{"i":"thread_006","t":"Argentus's Influence on Ash","y":"Character Arc","e":"escalate","s":"Argentus (the sentient arm) exerted control over Ash, forcing her to cast Suggestion on Sarlumon to throw Ash into a pit"},{"i":"thread_034","t":"Orla's Animal Intel","y":"Mystery","e":"reveal","s":"Orla communicated with birds that revealed an 'evil fire' tainting the land far ahead, possibly related to the cult's ba"},{"i":"thread_073","t":"Cult of Eternal Flame and Balor Summoning","y":"Threat","e":"create","s":"An earth elemental spirit was encountered, angered by defilement of the land, possibly linked to the Cult of Eternal Fla"},{"i":"thread_073","t":"Cult of Eternal Flame and Balor Summoning","y":"Threat","e":"advance","s":"The party advanced toward the cult's ritual site, encountering a deceptive bridge and pit trap, indicating the cult's de"}],"gr":[{"p":"Gradles","c":"Corras","n":0,"d":"Stabilizing"},{"p":"HT","c":"Ash","n":-3,"d":"Fracturing"},{"p":"Christie","c":"Dahlia","n":0,"d":"Stabilizing"},{"p":"Lucy","c":"Orla","n":3,"d":"Ascending"},{"p":"Drenek","c":"Drenek","n":0,"d":"Stabilizing"}]},{"sid":"S012","n":12,"l":"The Explosive Caravan Encounter","em":"Tension/Anxiety","th":[{"i":"thread_026","t":"Mine Shaft and Eldritch Slime","y":"Mystery","e":"reveal","s":"The Chronicle book's curse advanced: all party members ceased aging naturally but lost the ability to benefit from magic"},{"i":"thread_026","t":"Mine Shaft and Eldritch Slime","y":"Mystery","e":"advance","s":"Ave completed the simulacrum of Spark at the ritual site near Lumin, with Lilith assisting. They encountered Cheech and "},{"i":"thread_061","t":"Corras's Imprisonment and Netherese Relic","y":"Obligation","e":"advance","s":"Corras, imprisoned in the castle dungeon, learned from Fleshy about the Netherese relic's properties (a shadow-imbued ba"},{"i":"thread_070","t":"Goblin Incursion and Fomorian Threat","y":"Threat","e":"advance","s":"Ash, Billabong, and Orla engaged Grimslick's caravan, leading to a combat where Ash cast Shatter on a wagon filled with "}],"gr":[{"p":"HT","c":"Ash","n":-3,"d":"Questioning"},{"p":"Mary","c":"Billabong","n":0,"d":"Stabilizing"},{"p":"Christie","c":"Dahlia","n":-1,"d":"Questioning"},{"p":"Lucy","c":"Orla","n":2,"d":"Ascending"},{"p":"Meijinx","c":"Ave","n":0,"d":"Stabilizing"},{"p":"Gradles","c":"Corras","n":2,"d":"Deepening"}]},{"sid":"S013","n":13,"l":"Jailbreak and Demon Pact","em":"Suspense/Unease","th":[{"i":"thread_026","t":"Mine Shaft and Eldritch Slime","y":"Mystery","e":"advance","s":"The party plans to swap the real Spark with a Simulacrum to prevent past Ash from resummoning him, using Magic Circle an"},{"i":"thread_035","t":"Prince Darindale's Curse","y":"Mystery","e":"reveal","s":"Discovered Prince Darindale of Nelrindenvane, an elf cursed into a Quaggoth form, imprisoned in Berdusk. He claims royal"},{"i":"thread_060","t":"Spark Rescue Heist at Castle Corras","y":"Obligation","e":"create","s":"The party, trapped in Berdusk dungeons, made a pact with the demon Glabrezu Malachar the Twisted to escape. Each member "},{"i":"thread_067","t":"Castle Corras Management System","y":"Other","e":"reveal","s":"Morty gave the party an amulet allowing spell replacement without a long rest, aiding their upcoming heist. He hinted at"},{"i":"thread_074","t":"Berdusk Dungeons Demonic Presence","y":"Threat","e":"escalate","s":"Revealed Glabrezu demon Malachar and hellhounds in Berdusk dungeons, indicating a larger demonic plot. The demon served "}],"gr":[{"p":"HT","c":"Ash","n":5,"d":"Questioning"},{"p":"Lucy","c":"Orla","n":4,"d":"Softening"},{"p":"Gradles","c":"Corras","n":2,"d":"Stabilizing"},{"p":"Gradles","c":"Billabong","n":5,"d":"Awakening"},{"p":"Meijinx","c":"Ave","n":2,"d":"Stabilizing"},{"p":"Christie","c":"Lilith","n":1,"d":"Stabilizing"}]},{"sid":"S014","n":14,"l":"Session 1: Castle Corras Heist Planning and Chaos","em":"Tension/Anxiety","th":[{"i":"thread_007","t":"Fleshy's Transformation","y":"Character Arc","e":"reveal","s":"Fleshy partially transformed back to human and cast mass healing word during combat, revealing regained wizard abilities"},{"i":"thread_032","t":"Injured Mercenary Eoman","y":"Mystery","e":"reveal","s":"Fleshy partially transformed back to human and cast mass healing word during combat, revealing regained wizard abilities"},{"i":"thread_046","t":"Urgle Gurgle","y":"NPC","e":"reveal","s":"Fleshy partially transformed back to human and cast mass healing word during combat, revealing regained wizard abilities"}],"gr":[{"p":"Gradles","c":"Corras","n":-2,"d":"Fracturing"},{"p":"HT","c":"Ash","n":5,"d":"Ascending"},{"p":"Mary","c":"Billabong","n":3,"d":"Deepening"},{"p":"Christie","c":"Dahlia","n":0,"d":"Stabilizing"},{"p":"Lucy","c":"Orla","n":3,"d":"Softening"},{"p":"Meijinx","c":"Ave","n":2,"d":"Deepening"}]},{"sid":"S015","n":15,"l":"Temporal Swap and Rift Crisis","em":"Tension/Anxiety","th":[{"i":"thread_026","t":"Mine Shaft and Eldritch Slime","y":"Mystery","e":"reveal","s":"Ave's chrono compass activated, pointing to a temporal rift near the secret toilet, revealing its function in detecting "},{"i":"thread_026","t":"Mine Shaft and Eldritch Slime","y":"Mystery","e":"advance","s":"The party successfully swapped the past Spark with a simulacrum using a coordinated distraction and magic circle, though"},{"i":"thread_072","t":"Temporal Disturbance and Sentinel","y":"Threat","e":"escalate","s":"A Temporal Sentinel appeared due to critical temporal disturbances, threatening to reset the universe unless the party s"},{"i":"thread_072","t":"Temporal Disturbance and Sentinel","y":"Threat","e":"create","s":"The party must seal a temporal rift spewing creatures, with Kelemvor providing revenant helpers, while others distract t"}],"gr":[{"p":"Gradles","c":"Corras","n":1,"d":"Stabilizing"},{"p":"HT","c":"Ash","n":0,"d":"Stabilizing"},{"p":"Mary","c":"Billabong","n":0,"d":"Stabilizing"},{"p":"Christie","c":"Dahlia","n":2,"d":"Deepening"},{"p":"Lucy","c":"Orla","n":4,"d":"Ascending"},{"p":"Meijinx","c":"Ave","n":5,"d":"Ascending"}]},{"sid":"S016","n":16,"l":"Temporal Rift Crisis","em":"Tension/Anxiety","th":[{"i":"thread_002","t":"Billabong's Celestial Powers","y":"Character Arc","e":"advance","s":"Billabong's celestial powers activated outside of time, granting telepathic communication between party members at diffe"},{"i":"thread_006","t":"Argentus's Influence on Ash","y":"Character Arc","e":"reveal","s":"Ash lost an arm while escaping an alternate timeline battlefield using Misty Step, sacrificing it to break free from mag"},{"i":"thread_008","t":"Dahlia's Soul Conduit and Vengeance Oath","y":"Character Arc","e":"reveal","s":"Dahlia tapped into Kelemvor's soul conduit power, gaining abilities like necrotic resistance and ancestral wisdom withou"},{"i":"thread_026","t":"Mine Shaft and Eldritch Slime","y":"Mystery","e":"resolve","s":"Corras undid the event of the celestial slime merging with Spark, preventing the temporal disturbance and resetting the "},{"i":"thread_072","t":"Temporal Disturbance and Sentinel","y":"Threat","e":"escalate","s":"The Time Warden is actively resetting the universe, requiring the party to disrupt her concentration within five turns w"},{"i":"thread_072","t":"Temporal Disturbance and Sentinel","y":"Threat","e":"advance","s":"Ethereal servants are attempting to seal a rift at the toilet house, requiring protection from creatures emerging each r"}],"gr":[{"p":"Gradles","c":"Corras","n":2,"d":"Deepening"},{"p":"HT","c":"Ash","n":7,"d":"Ascending"},{"p":"Mary","c":"Billabong","n":8,"d":"Hardening"},{"p":"Christie","c":"Dahlia","n":8,"d":"Ascending"},{"p":"Lucy","c":"Orla","n":8,"d":"Softening"},{"p":"Meijinx","c":"Ave","n":8,"d":"Hardening"}]},{"sid":"S017","n":17,"l":"D&D Session: Character Decisions and World Building","em":"Curiosity/Wonder","th":[{"i":"thread_001","t":"Lilith's Ecclesiastical Trial and Myrkul Pact","y":"Character Arc","e":"advance","s":"Lilith establishes a wellness commune in the High Forest, grows her followers to 4,000, and pledges fealty to Myrkul to "},{"i":"thread_009","t":"Ash's Shadow Glass Heritage and Feywild Connections","y":"Character Arc","e":"reveal","s":"Ash learns she is the Princess of Shadow Glass, a banished fey entity with lost power tied to three obsidian shards; she"},{"i":"thread_015","t":"Graymark Mercenaries","y":"Faction","e":"advance","s":"Corras vassalizes nearby towns, creating a small empire, but faces a rebellion in Jalanthar; he lets rebels go, leading "},{"i":"thread_016","t":"Celestial War and Treaty Breach","y":"Faction","e":"reveal","s":"DM reveals the backdrop of the celestial war: Mercuria celestials broke the Pact of Cosmic Equilibrium to establish a fo"},{"i":"thread_036","t":"Soul Forge Mystery","y":"Mystery","e":"reopen","s":"The soul forge in the Sword Mountains is identified as a key location to swing the war's balance; it remains undiscovere"},{"i":"thread_048","t":"Billabong's Dougs","y":"NPC","e":"create","s":"Billabong saves a village of mini-gnomes from rats, gaining 250 followers named the Dougs; she opts for them to be wande"}],"gr":[{"p":"Gradles","c":"Corras","n":6,"d":"Ascending"},{"p":"HT","c":"Ash","n":6,"d":"Awakening"},{"p":"Mary","c":"Billabong","n":7,"d":"Ascending"},{"p":"Christie","c":"Lilith","n":6,"d":"Hardening"},{"p":"Lucy","c":"Orla","n":11,"d":"Ascending"}]},{"sid":"S018","n":18,"l":"D&D Session: Inventory and Perils in the Storm Mountains","em":"Tension/Anxiety","th":[{"i":"thread_008","t":"Dahlia's Soul Conduit and Vengeance Oath","y":"Character Arc","e":"create","s":"Dahlia joins the party as an aasimar paladin with an oath of vengeance against celestials after her hometown was destroy"},{"i":"thread_037","t":"Mysterious Cabin Over Gorge","y":"Mystery","e":"create","s":"The party discovers a cabin on stilts over a gorge, emitting arcane energies; Corras feels familiarity but can't place i"},{"i":"thread_070","t":"Goblin Incursion and Fomorian Threat","y":"Threat","e":"advance","s":"Foehammer warns the party of unnatural blizzards in the Storm Mountains, hinting at a stalker (possibly yeti-like) and t"},{"i":"thread_070","t":"Goblin Incursion and Fomorian Threat","y":"Threat","e":"escalate","s":"The party triggers an avalanche while traveling; during the aftermath, they observe spectral phantoms wandering the bliz"}],"gr":[{"p":"Gradles","c":"Corras","n":-2,"d":"Fracturing"},{"p":"HT","c":"Ash","n":1,"d":"Questioning"},{"p":"Mary","c":"Billabong","n":0,"d":"Stabilizing"},{"p":"Christie","c":"Dahlia","n":7,"d":"Ascending"},{"p":"Lucy","c":"Orla","n":4,"d":"Deepening"}]},{"sid":"S019","n":19,"l":"Session 19","em":"Tension/Anxiety","th":[{"i":"thread_022","t":"Abandoned Cabin and Dwarven Tunnels","y":"Location","e":"advance","s":"The party arrives at an abandoned cabin perched on stilts over a chasm, detecting magical traps and hearing gnoll cackle"},{"i":"thread_038","t":"Yeti Tykes and Zibblebottom's Note","y":"Mystery","e":"reveal","s":"After the explosion, the party finds two yeti tykes in a nest near a cave, along with a note from Zibblebottom to Cyril "},{"i":"thread_070","t":"Goblin Incursion and Fomorian Threat","y":"Threat","e":"create","s":"The party is surrounded by a frost giant and yetis while resting in Leomund's Tiny Hut. They attempt diplomacy and later"}],"gr":[{"p":"Gradles","c":"Corras","n":0,"d":"Stabilizing"},{"p":"HT","c":"Ash","n":0,"d":"Stabilizing"},{"p":"Lucy","c":"Orla","n":0,"d":"Stabilizing"},{"p":"Mary","c":"Billabong","n":0,"d":"Stabilizing"},{"p":"Christie","c":"Dahlia","n":0,"d":"Stabilizing"}]},{"sid":"S020","n":20,"l":"The Cabin and the Summer Star","em":"Curiosity/Wonder","th":[{"i":"thread_022","t":"Abandoned Cabin and Dwarven Tunnels","y":"Location","e":"create","s":"After the cabin collapsed, a trap door revealed dwarvish-designed tunnels with fresh blood trails, connecting to earlier"},{"i":"thread_026","t":"Mine Shaft and Eldritch Slime","y":"Mystery","e":"reveal","s":"The glowing orb (Summer Star) exploded when handled, killing the party with radiant damage and revealing its dangerous n"},{"i":"thread_049","t":"Cyril Maldron","y":"NPC","e":"create","s":"After death, the party met the ghost of Cyril Maldron, the inventor of the Summer Star, who explained his failed attempt"},{"i":"thread_062","t":"Billabong's Resurrection via Lathander","y":"Obligation","e":"resolve","s":"Billabong, guided by ghostly messages, retrieved a ring and attuned to the Summer Star, prompting Lathander to resurrect"}],"gr":[{"p":"Gradles","c":"Corras","n":-1,"d":"Stabilizing"},{"p":"HT","c":"Ash","n":-2,"d":"Questioning"},{"p":"Mary","c":"Billabong","n":9,"d":"Ascending"},{"p":"Christie","c":"Dahlia","n":0,"d":"Stabilizing"},{"p":"Lucy","c":"Orla","n":0,"d":"Stabilizing"}]},{"sid":"S021","n":21,"l":"Session 2: Underdark Infiltration","em":"Tension/Anxiety","th":[{"i":"thread_020","t":"Castle Corras Upgrades and Obsidian Dome","y":"Location","e":"advance","s":"Mordenkainen reveals the first Rod of Seven Parts is hidden in Web's Edge, a secret Lolth sanctuary in the Underdark. Th"},{"i":"thread_045","t":"Mortimer von Schatten","y":"NPC","e":"escalate","s":"A Drow mage discovers the party in the Underdark, subjects them to tests of devotion to Lolth, and combat erupts when Sa"},{"i":"thread_068","t":"Boons from Vecna's Binding","y":"Other","e":"create","s":"The party receives mysterious boons/blessings from Vecna's binding ritual, each gaining unique magical abilities with po"}],"gr":[{"p":"Gradles","c":"Corras","n":3,"d":"Ascending"},{"p":"HT","c":"Ash","n":3,"d":"Awakening"},{"p":"Mary","c":"Billabong","n":1,"d":"Hardening"},{"p":"Christie","c":"Dahlia","n":1,"d":"Deepening"},{"p":"Tenderbillet","c":"SavannahBelle","n":-2,"d":"Questioning"}]},{"sid":"S022","n":22,"l":"Underdark Infiltration Session","em":"Tension/Anxiety","th":[{"i":"thread_001","t":"Lilith's Ecclesiastical Trial and Myrkul Pact","y":"Character Arc","e":"reveal","s":"Orla received a dark blessing (Zephyr's Veil) after the party was punished by the Lady of Pain, reducing them to level 1"},{"i":"thread_003","t":"Corras's Eyelash Heist and Simulacrum","y":"Character Arc","e":"advance","s":"The party successfully infiltrated Web's Edge, the secret hideout of Lolth followers, by picking an arcane-locked iron d"},{"i":"thread_024","t":"Locked Basement Door Mystery","y":"Mystery","e":"advance","s":"The party advanced their mission to retrieve a piece of the Rod of Seven Parts from Web's Edge, as tasked by Mordenkaine"},{"i":"thread_026","t":"Mine Shaft and Eldritch Slime","y":"Mystery","e":"reveal","s":"Orla received a dark blessing (Zephyr's Veil) after the party was punished by the Lady of Pain, reducing them to level 1"},{"i":"thread_026","t":"Mine Shaft and Eldritch Slime","y":"Mystery","e":"advance","s":"The party successfully infiltrated Web's Edge, the secret hideout of Lolth followers, by picking an arcane-locked iron d"},{"i":"thread_045","t":"Mortimer von Schatten","y":"NPC","e":"advance","s":"The party successfully infiltrated Web's Edge, the secret hideout of Lolth followers, by picking an arcane-locked iron d"},{"i":"thread_063","t":"Vecna Artifact Retrieval Mission","y":"Obligation","e":"advance","s":"The party advanced their mission to retrieve a piece of the Rod of Seven Parts from Web's Edge, as tasked by Mordenkaine"},{"i":"thread_072","t":"Temporal Disturbance and Sentinel","y":"Threat","e":"reveal","s":"Orla received a dark blessing (Zephyr's Veil) after the party was punished by the Lady of Pain, reducing them to level 1"}],"gr":[{"p":"Gradles","c":"Corras","n":8,"d":"Ascending"},{"p":"HT","c":"Ash","n":5,"d":"Ascending"},{"p":"Mary","c":"Billabong","n":4,"d":"Deepening"},{"p":"Christie","c":"Dahlia","n":5,"d":"Ascending"},{"p":"Lucy","c":"Orla","n":7,"d":"Awakening"},{"p":"Tenderbittle","c":"SavannahBelle","n":6,"d":"Ascending"}]},{"sid":"S023","n":23,"l":"Web's Edge Combat Session","em":"Tension/Anxiety","th":[{"i":"thread_026","t":"Mine Shaft and Eldritch Slime","y":"Mystery","e":"reveal","s":"Dahlia's Aura of Secrets forced Gertrude the cyclops to reveal a secret about her friend Roxana and a planned attack on "},{"i":"thread_026","t":"Mine Shaft and Eldritch Slime","y":"Mystery","e":"advance","s":"Ash used Locate Object to sense the Rod of Seven Parts, confirming it is within 1,000 feet to the northeast. This gives "},{"i":"thread_045","t":"Mortimer von Schatten","y":"NPC","e":"escalate","s":"A deep gnome ritual master arrived to investigate, initially deceived by Ash using Friends. After the spell ended, he be"},{"i":"thread_050","t":"Orla and Toad Demons","y":"NPC","e":"advance","s":"Orla charmed the summoned demon toad with Charm Monster, then persuaded it to join the party as a friend. It swallowed O"},{"i":"thread_070","t":"Goblin Incursion and Fomorian Threat","y":"Threat","e":"advance","s":"The party battled a Nalfeshnee demon jailer in the prison area. After significant damage from spells like Fireball and S"},{"i":"thread_070","t":"Goblin Incursion and Fomorian Threat","y":"Threat","e":"escalate","s":"The Nalfeshnee blew a magical horn, alerting reinforcements. Ash and Corras scouted ahead and saw acolytes of Lolth and "}],"gr":[{"p":"Gradles","c":"Corras","n":-1,"d":"Questioning"},{"p":"HT","c":"Ash","n":0,"d":"Stabilizing"},{"p":"Mary","c":"Billabong","n":-2,"d":"Hardening"},{"p":"Christie","c":"Dahlia","n":5,"d":"Ascending"},{"p":"Lucy","c":"Orla","n":5,"d":"Awakening"},{"p":"Tenderbittle","c":"SavannahBelle","n":1,"d":"Deepening"}]},{"sid":"S024","n":24,"l":"Session 24","em":"Tension/Anxiety","th":[{"i":"thread_020","t":"Castle Corras Upgrades and Obsidian Dome","y":"Location","e":"resolve","s":"The party used a scroll of planar alignment to escape Web's Edge, arriving at Castle Corras, ending the immediate threat"},{"i":"thread_026","t":"Mine Shaft and Eldritch Slime","y":"Mystery","e":"advance","s":"Corras successfully stole a piece of the Rod of Seven Parts from the spider dragon's lair in Web's Edge, triggering Lolt"},{"i":"thread_045","t":"Mortimer von Schatten","y":"NPC","e":"reveal","s":"Ash deceived the spider dragon, a lieutenant of Lolth, into following her, revealing the dragon's role and Lolth's commu"},{"i":"thread_045","t":"Mortimer von Schatten","y":"NPC","e":"resolve","s":"The party betrayed and abandoned Gertrude the cyclops, leading to her capture and death by Web's Edge forces."},{"i":"thread_050","t":"Orla and Toad Demons","y":"NPC","e":"advance","s":"Orla befriended a Hezrou (giant toad) in Web's Edge, using sending stones to communicate, and it escaped with the party."},{"i":"thread_070","t":"Goblin Incursion and Fomorian Threat","y":"Threat","e":"escalate","s":"Web's Edge army, including spiders, mages, and demons, mobilized to hunt the party, leading to a chase and cavern collap"}],"gr":[{"p":"Gradles","c":"Corras","n":8,"d":"Ascending"},{"p":"HT","c":"Ash","n":6,"d":"Ascending"},{"p":"Mary","c":"Billabong","n":4,"d":"Hardening"},{"p":"Christie","c":"Dahlia","n":-2,"d":"Fracturing"},{"p":"Lucy","c":"Orla","n":2,"d":"Questioning"},{"p":"Tenderbittle","c":"SavannahBelle","n":6,"d":"Softening"}]},{"sid":"S025","n":25,"l":"Session 25","em":"Curiosity/Wonder","th":[{"i":"thread_003","t":"Corras's Eyelash Heist and Simulacrum","y":"Character Arc","e":"create","s":"Bastion roles are assigned: Corras administers the BWB Federation from Castle Corras, Orla oversees the High Forest and "},{"i":"thread_009","t":"Ash's Shadow Glass Heritage and Feywild Connections","y":"Character Arc","e":"advance","s":"Ash seeks to resolve threats from the Feywild (Queen of Air and Darkness and former patron Morgantha) and understand her"},{"i":"thread_010","t":"SavannahBelle's Aberrant Connection and Retribution","y":"Character Arc","e":"create","s":"SavannahBelle is a conduit for an Aberrant entity, seeking retribution against Celestials who destroyed her village. Her"},{"i":"thread_015","t":"Graymark Mercenaries","y":"Faction","e":"advance","s":"BWB Federation has expanded, settling a metropolitan area around Castle Corras with refugees from Waterdeep, Neverwinter"},{"i":"thread_017","t":"Coven Schism and Lord's Alliance","y":"Faction","e":"advance","s":"The Coven has splintered: Drakkar (Lord of Terror) and Nyla (Lady of Shadows) led a coup, taking most armies and openly "},{"i":"thread_036","t":"Soul Forge Mystery","y":"Mystery","e":"escalate","s":"Drakkar only knows of the Forge of Spells (arcane resonance point) within the Soulforge, not its full nature. He has all"},{"i":"thread_075","t":"Celestial and Fiendish War","y":"Threat","e":"resolve","s":"The Celestial Foothold and Fiend Incursion have been resolved. Higher-ups in the Celestial hierarchy regained control, w"},{"i":"thread_076","t":"Dark Embrace Cult Infiltration","y":"Threat","e":"escalate","s":"The Dark Embrace cult, led by Alar Shadowspeaker, is insidiously growing within BWB territories, brainwashing and recrui"}],"gr":[{"p":"Gradles","c":"Corras","n":0,"d":"Stabilizing"},{"p":"HT","c":"Ash","n":0,"d":"Stabilizing"},{"p":"Lucy","c":"Orla","n":0,"d":"Stabilizing"},{"p":"Christie","c":"Dahlia","n":0,"d":"Stabilizing"}]},{"sid":"S026","n":26,"l":"Session 26","em":"Tension/Anxiety","th":[{"i":"thread_026","t":"Mine Shaft and Eldritch Slime","y":"Mystery","e":"advance","s":"Corras successfully retrieved a piece of the Rod of Seven Parts from the spider dragon's lair in Web's Edge, cutting it "},{"i":"thread_045","t":"Mortimer von Schatten","y":"NPC","e":"resolve","s":"Dahlia recruited the cyclops Gertrude as a sister, but the party abandoned her during the escape; she was killed by Web'"},{"i":"thread_050","t":"Orla and Toad Demons","y":"NPC","e":"advance","s":"The Hezrou demon (toad) aided the party by attacking pursuers and providing sending stones for communication, though it "},{"i":"thread_067","t":"Castle Corras Management System","y":"Other","e":"resolve","s":"Ash used a scroll of planar alignment to teleport the entire party from collapsing Web's Edge to Castle Corras, narrowly"},{"i":"thread_070","t":"Goblin Incursion and Fomorian Threat","y":"Threat","e":"escalate","s":"Ash deceived the spider dragon lieutenant of Lolth into following her, but the dragon discovered the theft of the rod pi"},{"i":"thread_070","t":"Goblin Incursion and Fomorian Threat","y":"Threat","e":"advance","s":"Billabong and SavannahBelle were trapped in a magical torture chamber with living chains; Orla dispelled the magic, allo"},{"i":"thread_070","t":"Goblin Incursion and Fomorian Threat","y":"Threat","e":"reveal","s":"After retrieving the rod piece, Corras heard Lolth's voice speaking to him, though his Ring of Mind Shielding prevented "}],"gr":[{"p":"Gradles","c":"Corras","n":3,"d":"Ascending"},{"p":"HT","c":"Ash","n":7,"d":"Ascending"},{"p":"Mary","c":"Billabong","n":-6,"d":"Fracturing"},{"p":"Christie","c":"Dahlia","n":-6,"d":"Questioning"},{"p":"Lucy","c":"Orla","n":7,"d":"Awakening"},{"p":"Tenderbittle","c":"SavannahBelle","n":-3,"d":"Softening"}]},{"sid":"S027","n":27,"l":"Session 27","em":"Tension/Anxiety","th":[{"i":"thread_017","t":"Coven Schism and Lord's Alliance","y":"Faction","e":"advance","s":"DM highlighted opportunities to support resistance movements in Triboar and Yartar, cities taken over by the Lord's Alli"},{"i":"thread_036","t":"Soul Forge Mystery","y":"Mystery","e":"advance","s":"The party entered the Soul Forge via teleportation circle, encountered undead guardians (Revenants and a Wraith Lord), a"},{"i":"thread_076","t":"Dark Embrace Cult Infiltration","y":"Threat","e":"advance","s":"DM reminded the party of a cult led by Alar Shadowspeaker, working for Drakkar, trying to infiltrate the BWB federation."}],"gr":[{"p":"Gradles","c":"Corras","n":1,"d":"Ascending"},{"p":"HT","c":"Ash","n":-1,"d":"Questioning"},{"p":"Mary","c":"Billabong","n":-3,"d":"Fracturing"},{"p":"Christie","c":"Dahlia","n":5,"d":"Ascending"},{"p":"Lucy","c":"Orla","n":-1,"d":"Questioning"},{"p":"Tenderbittle","c":"SavannahBelle","n":0,"d":"Stabilizing"}]},{"sid":"S028","n":28,"l":"Bastion Planning and Cavern Dangers","em":"Tension/Anxiety","th":[{"i":"thread_015","t":"Graymark Mercenaries","y":"Faction","e":"advance","s":"The party finalized their combined bastions: Billabong/Ash's bastion in the north near Mithral Hall, SavannahBelle's San"},{"i":"thread_026","t":"Mine Shaft and Eldritch Slime","y":"Mystery","e":"create","s":"Billabong touched a cursed parchment in the dwarven temple, becoming obsessed with writing the name 'Malchor, bringer of"},{"i":"thread_026","t":"Mine Shaft and Eldritch Slime","y":"Mystery","e":"reveal","s":"The party discovered a desecrated temple of Dumathoin with infernal markings, a cursed dagger, and malfunctioning gnomis"},{"i":"thread_070","t":"Goblin Incursion and Fomorian Threat","y":"Threat","e":"create","s":"The party encountered shadow mastiffs in the Soul Cavern, with Orla establishing dominance over the alpha through a stag"},{"i":"thread_070","t":"Goblin Incursion and Fomorian Threat","y":"Threat","e":"escalate","s":"Hulking flesh abominations (doughboys) were detected south of the temple, banging on the barricaded door, increasing imm"}],"gr":[{"p":"Gradles","c":"Corras","n":5,"d":"Ascending"},{"p":"HT","c":"Ash","n":6,"d":"Ascending"},{"p":"Mary","c":"Billabong","n":-9,"d":"Fracturing"},{"p":"Christie","c":"Dahlia","n":-7,"d":"Fracturing"},{"p":"Lucy","c":"Orla","n":11,"d":"Ascending"},{"p":"Tenderbittle","c":"SavannahBelle","n":7,"d":"Ascending"}]},{"sid":"S029","n":29,"l":"Infernal Shrine Ritual","em":"Tension/Anxiety","th":[{"i":"thread_026","t":"Mine Shaft and Eldritch Slime","y":"Mystery","e":"escalate","s":"Ash touched the cursed coin, became possessed by the demon Malchor (the Bound Sorrowbringer), and the party had to subdu"},{"i":"thread_026","t":"Mine Shaft and Eldritch Slime","y":"Mystery","e":"advance","s":"The party deciphered the ritual to activate the Infernal Node: they placed essences in a pentagram, laid the dagger with"},{"i":"thread_026","t":"Mine Shaft and Eldritch Slime","y":"Mystery","e":"reveal","s":"Billabong and Orla read the infernal contract and discovered a loophole: Malchor is bound to the material plane as long "},{"i":"thread_051","t":"Zibblebottoms","y":"NPC","e":"advance","s":"The party summoned the gnomish engineer Zibblebottoms to help with the constructs, but they completed the ritual and lef"}],"gr":[{"p":"Gradles","c":"Corras","n":1,"d":"Stabilizing"},{"p":"HT","c":"Ash","n":-3,"d":"Questioning"},{"p":"Mary","c":"Billabong","n":8,"d":"Ascending"},{"p":"Christie","c":"Dahlia","n":0,"d":"Stabilizing"},{"p":"Lucy","c":"Orla","n":4,"d":"Softening"},{"p":"Tenderbittle","c":"SavannahBelle","n":4,"d":"Deepening"}]},{"sid":"S030","n":30,"l":"Training in the Bastion and Battle with the Maw","em":"Tension/Anxiety","th":[{"i":"thread_039","t":"Harbinger's Training","y":"Mystery","e":"advance","s":"The Harbinger whisked the party to a strange bastion where they bonded with statues (Warden, Conductor, Shadow Stalker, "},{"i":"thread_039","t":"Harbinger's Training","y":"Mystery","e":"reveal","s":"The party learned how to harvest shadow essence from creatures: Bio-Alchemist can extract via physical damage, Subjugato"},{"i":"thread_077","t":"Ceaseless Maww Threat","y":"Threat","e":"create","s":"The Harbinger warned of the Ceaseless Maww, a monstrous abomination devouring fertility as it moves through the world, c"}],"gr":[{"p":"Gradles","c":"Corras","n":7,"d":"Ascending"},{"p":"HT","c":"Ash","n":4,"d":"Ascending"},{"p":"Mary","c":"Billabong","n":-3,"d":"Fracturing"},{"p":"Christie","c":"Dahlia","n":4,"d":"Hardening"},{"p":"Lucy","c":"Orla","n":8,"d":"Awakening"},{"p":"Tenderbittle","c":"SavannahBelle","n":4,"d":"Ascending"}]},{"sid":"S031","n":31,"l":"Battle for Fertility and Aftermath","em":"Tension/Anxiety","th":[{"i":"thread_011","t":"Corras's Changeling Backstory and Family","y":"Character Arc","e":"advance","s":"The DM hinted that the shipping crate mystery ties to Corras's background and cult reports in his realm, suggesting pers"},{"i":"thread_026","t":"Mine Shaft and Eldritch Slime","y":"Mystery","e":"reveal","s":"Ash's soul was abducted by a mysterious black orb after her death, preventing natural resurrection. Only SavannahBelle w"},{"i":"thread_040","t":"Zabriel and Stunts Shipping","y":"Mystery","e":"create","s":"Ezrella arrives with information about suspicious shipping crates labeled 'Zabriel and Stunts' with powerful enchantment"},{"i":"thread_064","t":"Billabong's Demon Summoning Consequences","y":"Obligation","e":"escalate","s":"Billabong summoned two Vrocks during the battle; after fulfilling their contract, they remained free and attacked the pa"}],"gr":[{"p":"Gradles","c":"Corras","n":8,"d":"Ascending"},{"p":"Mary","c":"Billabong","n":7,"d":"Softening"},{"p":"Tenderbittle","c":"SavannahBelle","n":6,"d":"Hardening"},{"p":"Christie","c":"Dahlia","n":7,"d":"Deepening"},{"p":"Lucy","c":"Orla","n":5,"d":"Stabilizing"},{"p":"HT","c":"Ezrella","n":2,"d":"Stabilizing"}]},{"sid":"S032","n":32,"l":"Session 32","em":"Fear/Dread","th":[{"i":"thread_011","t":"Corras's Changeling Backstory and Family","y":"Character Arc","e":"escalate","s":"Asnar the Crimson, a lich and leader of the Red Wizards encountered, identified Corras as a changeling and target for ca"},{"i":"thread_018","t":"Red Wizards of Thay","y":"Faction","e":"advance","s":"The party investigated Warehouse 17 in Everlund, following Ezrella's tip about enchanted crates linked to the Red Wizard"},{"i":"thread_040","t":"Zabriel and Stunts Shipping","y":"Mystery","e":"reveal","s":"A metal box with a hand-dial was found in a crate, requiring a specific sequence (linked to runes on a silk glove) to op"},{"i":"thread_070","t":"Goblin Incursion and Fomorian Threat","y":"Threat","e":"escalate","s":"SavannahBelle was hit with a 9th-level imprisonment spell (chaining) by a Red Wizard, restraining her to the ground unti"}],"gr":[{"p":"Gradles","c":"Corras","n":-2,"d":"Stabilizing"},{"p":"Christie","c":"Dahlia","n":0,"d":"Stabilizing"},{"p":"Lucy","c":"Orla","n":-6,"d":"Fracturing"},{"p":"Tenderbittle","c":"SavannahBelle","n":-2,"d":"Questioning"},{"p":"HT","c":"Ezrella","n":-5,"d":"Fracturing"}]},{"sid":"S033","n":33,"l":"Session 33","em":"Tension/Anxiety","th":[{"i":"thread_003","t":"Corras's Eyelash Heist and Simulacrum","y":"Character Arc","e":"advance","s":"Billabong is dominated by the lich using Dominate Person but freed when Calm Emotions suppresses the charm effect. She l"},{"i":"thread_011","t":"Corras's Changeling Backstory and Family","y":"Character Arc","e":"advance","s":"Corras confronts the lich Asnar the Crimson, who reveals he has been torturing Corras's family and friends instead of ki"},{"i":"thread_012","t":"Ezrella's Modified Memory and Vampiric Corruption","y":"Character Arc","e":"reveal","s":"Ezrella has her memory modified by the lich using Modify Memory, making her believe the lich saved her life and that she"},{"i":"thread_065","t":"SavannahBelle's Imprisonment and Recovery","y":"Obligation","e":"advance","s":"SavannahBelle remains chained to the floor by a level 9 Imprisonment spell, with the condition that she is freed only if"},{"i":"thread_070","t":"Goblin Incursion and Fomorian Threat","y":"Threat","e":"escalate","s":"After Corras surrenders, the lich and Red Wizards capture the entire party (except SavannahBelle), strip them of their b"}],"gr":[{"p":"Gradles","c":"Corras","n":-6,"d":"Fracturing"},{"p":"HT","c":"Ezrella","n":-8,"d":"Fracturing"},{"p":"Mary","c":"Billabong","n":-7,"d":"Fracturing"},{"p":"Christie","c":"Dahlia","n":-5,"d":"Stabilizing"},{"p":"Lucy","c":"Orla","n":-3,"d":"Stabilizing"},{"p":"Tenderbittle","c":"SavannahBelle","n":-8,"d":"Fracturing"}]},{"sid":"S034","n":34,"l":"Prison Break and Lich Confrontation","em":"Tension/Anxiety","th":[{"i":"thread_011","t":"Corras's Changeling Backstory and Family","y":"Character Arc","e":"reveal","s":"A twin brother named Sarek, who is Corras's opposite and had been imprisoned, is revealed. Sarek claims Corras took his "},{"i":"thread_026","t":"Mine Shaft and Eldritch Slime","y":"Mystery","e":"reveal","s":"Corras finds black obsidian crystal dust left by Asnar that resembles Ash's face, hinting at a connection to Ash's soul "},{"i":"thread_052","t":"SavannahBelle and Bovanacell","y":"NPC","e":"create","s":"SavannahBelle forms a blood pact with a Nothic named Bovanacell (nicknamed SavannahBelle Jr.), creating a psychic tether"},{"i":"thread_065","t":"SavannahBelle's Imprisonment and Recovery","y":"Obligation","e":"advance","s":"SavannahBelle recovers most of the party's stolen equipment from a sewer area with help from an Otyug named Wally, thoug"},{"i":"thread_070","t":"Goblin Incursion and Fomorian Threat","y":"Threat","e":"advance","s":"The party escapes their cells in a Thayan prison, confronts Asnar the Crimson (a lich) and Drek'nar (Lord of Terror), an"}],"gr":[{"p":"Gradles","c":"Corras","n":27,"d":"Ascending"},{"p":"HT","c":"Ezrella","n":8,"d":"Stabilizing"},{"p":"Mary","c":"Billabong","n":0,"d":"Stabilizing"},{"p":"Christie","c":"Dahlia","n":2,"d":"Hardening"},{"p":"Lucy","c":"Orla","n":7,"d":"Ascending"},{"p":"Tenderbittle","c":"SavannahBelle","n":14,"d":"Awakening"}]},{"sid":"S035","n":35,"l":"BWB Session - Barovia Entry","em":"Fear/Dread","th":[{"i":"thread_003","t":"Corras's Eyelash Heist and Simulacrum","y":"Character Arc","e":"advance","s":"Corras stole Dahlia's broken dragon turtle hood and gave it to Foehammer along with his ring of mind shielding to craft "},{"i":"thread_023","t":"Death House and Barovia Village","y":"Location","e":"create","s":"The party entered the sentient Durst Manor in Barovia, encountering ghostly children, haunted objects, a hanged corpse, "},{"i":"thread_024","t":"Locked Basement Door Mystery","y":"Mystery","e":"advance","s":"The party traveled to Sigil, retrieved the first Rod of Seven Parts piece from Mordenkainen, and learned the next piece "},{"i":"thread_078","t":"Lord of Terror and Bastion Defense","y":"Threat","e":"escalate","s":"The Lord of Terror's army (goblins, orcs, Lord's Alliance) is preparing to attack Ash's bastion. The party must return q"}],"gr":[{"p":"Gradles","c":"Corras","n":0,"d":"Stabilizing"},{"p":"HT","c":"Ezrella","n":0,"d":"Stabilizing"},{"p":"Lucy","c":"Orla","n":2,"d":"Softening"},{"p":"Tenderbittle","c":"SavannahBelle","n":0,"d":"Hardening"}]},{"sid":"S036","n":36,"l":"Death House Session - Barovia Encounter","em":"Tension/Anxiety","th":[{"i":"thread_012","t":"Ezrella's Modified Memory and Vampiric Corruption","y":"Character Arc","e":"create","s":"Ezrella is cursed with vampiric corruption after being bitten by a Priest of Osibus, causing disadvantage on constitutio"},{"i":"thread_013","t":"SavannahBelle's Paranoia and Vampiric Transformation","y":"Character Arc","e":"create","s":"SavannahBelle is cursed with extreme paranoia after an encounter with Strahd von Zarovich's illusion, giving her disadva"},{"i":"thread_019","t":"Ulmist Inquisition","y":"Faction","e":"create","s":"The party meets Sarusanda of the Ulmist Inquisition, a secret order hunting existential evils, who proposes an alliance "},{"i":"thread_024","t":"Locked Basement Door Mystery","y":"Mystery","e":"advance","s":"The Death House in Barovia is undergoing a ritual shift due to the presence of a powerful artifact (rod piece), drawing "},{"i":"thread_070","t":"Goblin Incursion and Fomorian Threat","y":"Threat","e":"reveal","s":"The Priests of Osibus have undeath boons that allow them to resurrect stronger each time they are killed, requiring spec"}],"gr":[{"p":"Gradles","c":"Corras","n":1,"d":"Stabilizing"},{"p":"Christie","c":"Dahlia","n":5,"d":"Ascending"},{"p":"Lucy","c":"Orla","n":3,"d":"Deepening"},{"p":"Tenderbittle","c":"SavannahBelle","n":-4,"d":"Fracturing"},{"p":"HT","c":"Ezrella","n":5,"d":"Ascending"}]},{"sid":"S037","n":37,"l":"Session 37","em":"Tension/Anxiety","th":[{"i":"thread_024","t":"Locked Basement Door Mystery","y":"Mystery","e":"advance","s":"Strahd von Zarovich appears, reveals he knows about the Rod of Seven Parts, and offers a deal: he gives the Staff of Kaz"},{"i":"thread_045","t":"Mortimer von Schatten","y":"NPC","e":"reveal","s":"Strahd uses vampiric charm on SavannahBelle, making her see him as a trusted friend. She is compelled to hand over the r"},{"i":"thread_070","t":"Goblin Incursion and Fomorian Threat","y":"Threat","e":"resolve","s":"The Crimson Abbot, a cult leader with a rod piece, is disintegrated by SavannahBelle. His remains form a blood baby that"},{"i":"thread_070","t":"Goblin Incursion and Fomorian Threat","y":"Threat","e":"escalate","s":"The Death House mimic demands a sacrifice ('one must die') as the party tries to escape. The walls close in, and a skill"},{"i":"thread_070","t":"Goblin Incursion and Fomorian Threat","y":"Threat","e":"advance","s":"The party fights two shambling mounds in the reliquary. One is killed, and the other retreats, with the encounter reveal"}],"gr":[{"p":"Gradles","c":"Corras","n":2,"d":"Hardening"},{"p":"Christie","c":"Dahlia","n":4,"d":"Ascending"},{"p":"Lucy","c":"Orla","n":5,"d":"Deepening"},{"p":"Tenderbittle","c":"SavannahBelle","n":-1,"d":"Fracturing"},{"p":"HT","c":"Ezrella","n":6,"d":"Ascending"}]},{"sid":"S038","n":38,"l":"Death House Escape","em":"Tension/Anxiety","th":[{"i":"thread_023","t":"Death House and Barovia Village","y":"Location","e":"reveal","s":"Upon escaping Death House, the party observed that the village of Barovia is half-burned, overgrown, and infested with z"},{"i":"thread_045","t":"Mortimer von Schatten","y":"NPC","e":"advance","s":"The party discussed Strahd von Zarovich's deal: he will let them leave Barovia if they retrieve the second piece of the "},{"i":"thread_070","t":"Goblin Incursion and Fomorian Threat","y":"Threat","e":"advance","s":"The party navigated the Death House skill challenge, encountering ghouls, animated armor, spinning blades, and psychic h"}],"gr":[{"p":"Gradles","c":"Corras","n":2,"d":"Ascending"},{"p":"HT","c":"Ezrella","n":0,"d":"Stabilizing"},{"p":"Christie","c":"Dahlia","n":2,"d":"Ascending"},{"p":"Lucy","c":"Orla","n":3,"d":"Ascending"},{"p":"Tenderbittle","c":"SavannahBelle","n":7,"d":"Ascending"}]},{"sid":"S039","n":39,"l":"Barovia Adventure: Rescue and Rest","em":"Anticipation","th":[{"i":"thread_070","t":"Goblin Incursion and Fomorian Threat","y":"Threat","e":"escalate","s":"During watch, zombies approached the Tser Pool Camp, attracted by a failed minor illusion. Protective shimmering barrier"}],"gr":[{"p":"Gradles","c":"Corras","n":2,"d":"Ascending"},{"p":"HT","c":"Ash","n":0,"d":"Stabilizing"},{"p":"Lucy","c":"Orla","n":2,"d":"Deepening"},{"p":"Tenderbittle","c":"SavannahBelle","n":0,"d":"Stabilizing"},{"p":"Christie","c":"Dahlia","n":0,"d":"Stabilizing"}]},{"sid":"S040","n":40,"l":"Curse of Strahd Session - Tser Pool Camp","em":"Tension/Anxiety","th":[{"i":"thread_043","t":"Madam Eva's Deck of Many Things","y":"Mystery","e":"advance","s":"Corras stole the Deck of Many Things from Madam Eva's tent, triggering a magical trap that sent him to a latrine pit. Af"},{"i":"thread_070","t":"Goblin Incursion and Fomorian Threat","y":"Threat","e":"advance","s":"Corras successfully stole the Holy Symbol of Ravenkind from Madam Eva by swapping it with a cursed necklace while she sl"},{"i":"thread_070","t":"Goblin Incursion and Fomorian Threat","y":"Threat","e":"escalate","s":"After the thefts, Madam Eva trapped SavannahBelle and Dahlia in her tent with an anti-magic field, demanded the Deck's r"}],"gr":[{"p":"Gradles","c":"Corras","n":-5,"d":"Hardening"},{"p":"HT","c":"Ezrella","n":-4,"d":"Questioning"},{"p":"Christie","c":"Dahlia","n":0,"d":"Stabilizing"},{"p":"Lucy","c":"Orla","n":0,"d":"Stabilizing"},{"p":"Tenderbittle","c":"SavannahBelle","n":-1,"d":"Questioning"}]},{"sid":"S041","n":41,"l":"Session with Madam Eva and Strahd","em":"Tension/Anxiety","th":[{"i":"thread_013","t":"SavannahBelle's Paranoia and Vampiric Transformation","y":"Character Arc","e":"escalate","s":"SavannahBelle drank from a cursed chalice in Strahd's heart chamber, was paralyzed, attacked by Ezrella under a crown's "},{"i":"thread_045","t":"Mortimer von Schatten","y":"NPC","e":"advance","s":"The party fought Madam Eva, who cursed several members before disappearing. They looted her tent, acquiring magical item"},{"i":"thread_070","t":"Goblin Incursion and Fomorian Threat","y":"Threat","e":"escalate","s":"Strahd transported the party to his heart chamber, where they must destroy a crystalline heart powered by coffins repres"}],"gr":[{"p":"Gradles","c":"Corras","n":-2,"d":"Questioning"},{"p":"HT","c":"Ezrella","n":-10,"d":"Fracturing"},{"p":"Lucy","c":"Orla","n":1,"d":"Ascending"},{"p":"Tenderbittle","c":"SavannahBelle","n":-31,"d":"Fracturing"},{"p":"Christie","c":"Dahlia","n":4,"d":"Ascending"}]},{"sid":"S042","n":42,"l":"Curse of Strahd: Rahadin and Strahd Confrontation","em":"Determination/Resolve","th":[{"i":"thread_013","t":"SavannahBelle's Paranoia and Vampiric Transformation","y":"Character Arc","e":"advance","s":"SavannahBelle, turned into a vampire spawn by Strahd, is now an enemy combatant under Strahd's control. She uses etherea"},{"i":"thread_014","t":"Shrum's Memory Restoration","y":"Character Arc","e":"reveal","s":"Shrum stabilizes the reassembled mirror, restoring his memories. He learns he was a bard enslaved by Strahd, his soul tr"},{"i":"thread_045","t":"Mortimer von Schatten","y":"NPC","e":"advance","s":"Baba Lysaga appears to Lydia, calling her 'little leech' and revealing she is Strahd's mother. She gives Lydia the Sunsw"},{"i":"thread_054","t":"Rahadin","y":"NPC","e":"resolve","s":"The party defeats Rahadin in combat, destroying his soul-scimitar and freeing the trapped dusk elf souls. This removes a"},{"i":"thread_055","t":"Baba Lysaga","y":"NPC","e":"advance","s":"Baba Lysaga appears to Lydia, calling her 'little leech' and revealing she is Strahd's mother. She gives Lydia the Sunsw"},{"i":"thread_056","t":"Van Richten","y":"NPC","e":"advance","s":"Van Richten takes a Power Word Kill spell meant for Zal, leaving him dying. Zal stabilizes him with a medicine check, an"},{"i":"thread_070","t":"Goblin Incursion and Fomorian Threat","y":"Threat","e":"resolve","s":"Dahlia purifies the profane blood in the coffin using Remove Curse, sacrificing half her max HP. This destroys the Heart"},{"i":"thread_070","t":"Goblin Incursion and Fomorian Threat","y":"Threat","e":"escalate","s":"After the Heart of Sorrow is destroyed, the Brides (Popovsky, Ludmilla, Anastrazia, Escher) appear and join the combat, "}],"gr":[{"p":"Gradles","c":"Corras","n":7,"d":"Ascending"},{"p":"HT","c":"Ash","n":4,"d":"Ascending"},{"p":"Christie","c":"Dahlia","n":7,"d":"Hardening"},{"p":"Lucy","c":"Orla","n":7,"d":"Softening"},{"p":"Tenderbittle","c":"SavannahBelle","n":9,"d":"Awakening"}]},{"sid":"S043","n":43,"l":"BWB Campaign Return Session","em":"Tension/Anxiety","th":[{"i":"thread_015","t":"Graymark Mercenaries","y":"Faction","e":"escalate","s":"After being forced into the Matron's ritual and freed, Isteval accuses the party of violating his mind and leaves with h"},{"i":"thread_041","t":"Barovia Sacrificial Goat","y":"Mystery","e":"create","s":"A mysterious spoilage is affecting rations in the refugee camps, spreading and threatening food supplies. The Matron pro"},{"i":"thread_041","t":"Barovia Sacrificial Goat","y":"Mystery","e":"reveal","s":"The Matron's coma ritual is revealed to be a curse that puts victims into a dreamless stasis, making them obedient to he"},{"i":"thread_044","t":"Underground Poison Crisis","y":"Mystery","e":"create","s":"Radoth warns Orla of a poison underground affecting the land and crops, linked to waste backing up in the castle's septi"},{"i":"thread_070","t":"Goblin Incursion and Fomorian Threat","y":"Threat","e":"advance","s":"The party returns to Castle Corras after months away to find the Fey (Gloaming Court) have invaded and besieged the Swor"}],"gr":[{"p":"Gradles","c":"Corras","n":-2,"d":"Hardening"},{"p":"HT","c":"Ash","n":-1,"d":"Questioning"},{"p":"Christie","c":"Dahlia","n":-1,"d":"Hardening"},{"p":"Lucy","c":"Orla","n":0,"d":"Stabilizing"},{"p":"Tenderbittle","c":"SavannahBelle","n":0,"d":"Hardening"}]},{"sid":"S044","n":44,"l":"Session 44","em":"Tension/Anxiety","th":[{"i":"thread_009","t":"Ash's Shadow Glass Heritage and Feywild Connections","y":"Character Arc","e":"advance","s":"Ash was banished to the Feywild by SavannahBelle, spent months there evading the Wild Hunt, reclaimed her familiar Spark"},{"i":"thread_015","t":"Graymark Mercenaries","y":"Faction","e":"escalate","s":"Lord Isteval is rallying refugees and Lord's Alliance soldiers against BWB, accusing them of mind control and murder. Th"},{"i":"thread_021","t":"Poisoned Fey Tree Portal and Seed of the Elder Grove","y":"Location","e":"create","s":"Radoth gave Orla the Seed of the Elder Grove, a magical seed that can create hallowed ground when activated by a green d"},{"i":"thread_045","t":"Mortimer von Schatten","y":"NPC","e":"advance","s":"Dahlia and Corras freed Valerius (Master of Whispers) from the Matron's control by amputating his leg to remove a rune s"},{"i":"thread_070","t":"Goblin Incursion and Fomorian Threat","y":"Threat","e":"reveal","s":"Orla discovered through Radoth's vision that Lieutenant Calen Vane (the Butcher) is experimenting with a geode-like ston"}],"gr":[{"p":"Gradles","c":"Corras","n":-1,"d":"Hardening"},{"p":"HT","c":"Ash","n":4,"d":"Awakening"},{"p":"Christie","c":"Dahlia","n":-1,"d":"Hardening"},{"p":"Lucy","c":"Orla","n":4,"d":"Ascending"},{"p":"Tenderbittle","c":"SavannahBelle","n":2,"d":"Ascending"}]},{"sid":"S045","n":45,"l":"The Red Council Aftermath","em":"Tension/Anxiety","th":[{"i":"thread_026","t":"Mine Shaft and Eldritch Slime","y":"Mystery","e":"reveal","s":"After capturing the Butcher, Dahlia stripped him and discovered he is a mechanical construct with human skin stitched ov"},{"i":"thread_026","t":"Mine Shaft and Eldritch Slime","y":"Mystery","e":"advance","s":"The party investigated the warehouse where Orla previously saw the Butcher handling a heartbeat stone in a lead box. The"},{"i":"thread_060","t":"Spark Rescue Heist at Castle Corras","y":"Obligation","e":"advance","s":"The party accidentally interrupted Lord Neverember's funeral procession led by SavannahBelle bees. They gave improvised "},{"i":"thread_070","t":"Goblin Incursion and Fomorian Threat","y":"Threat","e":"advance","s":"The party faced a riot of 9,000 people (peasants, Lord's Alliance soldiers, paladins) after failing persuasion checks. C"}],"gr":[{"p":"Gradles","c":"Corras","n":-2,"d":"Hardening"},{"p":"HT","c":"Ash","n":3,"d":"Ascending"},{"p":"Christie","c":"Dahlia","n":-1,"d":"Hardening"},{"p":"Lucy","c":"Orla","n":2,"d":"Stabilizing"},{"p":"Tenderbittle","c":"SavannahBelle","n":-1,"d":"Fracturing"}]},{"sid":"S046","n":46,"l":"Session 46","em":"Tension/Anxiety","th":[{"i":"thread_020","t":"Castle Corras Upgrades and Obsidian Dome","y":"Location","e":"advance","s":"Zibblebottom claims to have improved the obsidian dome's stability with his Ziblomatic Integrity Monitoring Array, reduc"},{"i":"thread_026","t":"Mine Shaft and Eldritch Slime","y":"Mystery","e":"reveal","s":"Zibblebottom discovers that the Butcher (B7) is a triple agent: originally a Thayan construct serving the Lord's Allianc"},{"i":"thread_041","t":"Barovia Sacrificial Goat","y":"Mystery","e":"advance","s":"The Matron reveals her plan for the party to enter the Feywild using a modified obsidian stone to mask their presence, a"},{"i":"thread_042","t":"Holy Symbol of Ravenkind","y":"Mystery","e":"reveal","s":"Zibblebottom discovers that the Butcher (B7) is a triple agent: originally a Thayan construct serving the Lord's Allianc"},{"i":"thread_053","t":"Tser Pool Camp","y":"NPC","e":"create","s":"The party encounters Cernunnos, leader of the Wild Hunt, who offers a compact: if they win a chase within 10 miles, he r"},{"i":"thread_066","t":"Cernunnos's Wild Hunt Compact","y":"Obligation","e":"create","s":"The party encounters Cernunnos, leader of the Wild Hunt, who offers a compact: if they win a chase within 10 miles, he r"},{"i":"thread_070","t":"Goblin Incursion and Fomorian Threat","y":"Threat","e":"advance","s":"Zibblebottom claims to have improved the obsidian dome's stability with his Ziblomatic Integrity Monitoring Array, reduc"}],"gr":[{"p":"Gradles","c":"Corras","n":-6,"d":"Hardening"},{"p":"HT","c":"Ash","n":-6,"d":"Questioning"},{"p":"Tenderbittle","c":"SavannahBelle","n":0,"d":"Stabilizing"},{"p":"Lucy","c":"Orla","n":-3,"d":"Softening"},{"p":"Christie","c":"Dahlia","n":-1,"d":"Stabilizing"}]}];
+
+const PC = {Gradles:'#4A90D9',HT:'#E57373',Mary:'#81C784',Christie:'#BA68C8',Lucy:'#FFB74D',Tenderbittle:'#4DB6AC',Meijinx:'#FF8A65',Drenek:'#7986CB'};
+const TC = {'Mystery':'#ad6bff','Character Arc':'#4A90D9','Threat':'#ff4444','Faction':'#ffd700','NPC':'#44ff88','Obligation':'#FF8A65','Location':'#4DB6AC','Other':'#8888aa'};
+const EC = {'tension':'#ff6b6b','amusement':'#ffd93d','curiosity':'#6bcbff','joy':'#44ff88','fear':'#ff4444','suspense':'#c77dff','determination':'#50fa7b','anticipation':'#ffb347'};
+
+function eColor(em) {
+  if (!em) return '#555570';
+  const low = em.toLowerCase();
+  for (const [k,v] of Object.entries(EC)) { if (low.includes(k)) return v; }
+  return '#555570';
+}
+
+// Stats
+let tEvt = 0, tGr = 0;
+RAW.forEach(s => { tEvt += s.th.length; tGr += s.gr.length; });
+document.getElementById('stat-events').textContent = tEvt;
+document.getElementById('stat-growth').textContent = tGr;
+
+// ===== CANVAS =====
+const canvas = document.getElementById('helixCanvas');
+const ctx = canvas.getContext('2d');
+const DPR = window.devicePixelRatio || 1;
+let W, H;
+
+function resize() {
+  W = Math.min(window.innerWidth, 1400);
+  H = 46 * 82 + 260;
+  canvas.width = W * DPR;
+  canvas.height = H * DPR;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ===== HELIX PARAMS =====
+let R = 180, PERSP = 600, VSPACE = 78, NR = 6;
+let rotA = 0, rotSpd = 0.008, paused = false;
+const TURNS = 46 / 5.5;
+
+// ===== PARTICLES =====
+const parts = [];
+for (let i = 0; i < 90; i++) {
+  parts.push({
+    x: Math.random() * 1400, y: Math.random() * 4200,
+    z: Math.random() * 400 - 200,
+    vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.2 - 0.05,
+    r: Math.random() * 2 + 0.3,
+    a: Math.random() * 0.2 + 0.04,
+    c: ['#ad6bff','#4A90D9','#44ff88','#ffd700','#ff6b6b','#BA68C8'][Math.floor(Math.random()*6)]
+  });
+}
+
+// ===== HIT TESTING =====
+let projected = [];
+let hovered = null;
+let mX = 0, mY = 0;
+const tip = document.getElementById('tooltip');
+
+canvas.addEventListener('mousemove', e => {
+  const rect = canvas.getBoundingClientRect();
+  mX = e.clientX - rect.left;
+  mY = e.clientY - rect.top;
+  hovered = null;
+  let best = 20;
+  for (const n of projected) {
+    const d = Math.hypot(mX - n.px, mY - n.py);
+    const hitR = Math.max(n.pr + 5, 14);
+    if (d < hitR && d < best) { best = d; hovered = n; }
+  }
+  if (hovered) {
+    canvas.style.cursor = 'pointer';
+    showTip(hovered, e.clientX, e.clientY);
+  } else {
+    canvas.style.cursor = 'default';
+    tip.classList.remove('visible');
+  }
+});
+
+canvas.addEventListener('click', () => {
+  if (hovered && hovered.sd) openPanel(hovered.sd);
+});
+
+canvas.addEventListener('mouseleave', () => { hovered = null; tip.classList.remove('visible'); });
+
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function showTip(item, cx, cy) {
+  let h = '';
+  if (item.k === 'thread') {
+    const c = TC[item.d.y] || '#8888aa';
+    h = '<div class="tt-title" style="color:'+c+'">'+esc(item.d.t)+'</div>'
+      + '<div class="tt-type" style="color:'+c+'">'+esc(item.d.y)+' &middot; '+esc(item.d.e)+'</div>'
+      + '<div class="tt-body">'+esc(item.d.s)+'</div>';
+  } else if (item.k === 'growth') {
+    const c = PC[item.d.p] || '#8888aa';
+    const v = item.d.n, cls = v > 0 ? 'growth-pos' : v < 0 ? 'growth-neg' : 'growth-zero';
+    h = '<div class="tt-title" style="color:'+c+'"><span style="font-family:Cinzel">'+esc(item.d.c)+'</span></div>'
+      + '<div class="tt-type" style="color:'+c+'">'+esc(item.d.p)+' &middot; '+esc(item.d.d)+'</div>'
+      + '<div class="tt-body">Net Growth: <span class="growth-val '+cls+'">'+(v>0?'+':'')+v+'</span></div>';
+  } else if (item.k === 'rung') {
+    const sd = item.sd, ec = eColor(sd.em);
+    h = '<div class="tt-title" style="color:'+ec+'">'+esc(sd.sid)+': '+esc(sd.l)+'</div>'
+      + '<div class="tt-type" style="color:'+ec+'">'+esc(sd.em)+'</div><div class="tt-body">'
+      + '<div>'+sd.th.length+' thread events &middot; '+sd.gr.length+' characters</div>';
+    sd.gr.forEach(g => {
+      const pc = PC[g.p]||'#8888aa', v=g.n, cls=v>0?'growth-pos':v<0?'growth-neg':'growth-zero';
+      h += '<div class="char-line"><span class="char-dot" style="background:'+pc+'"></span>'
+        + '<span style="font-family:Cinzel;font-size:12px">'+esc(g.c)+'</span>'
+        + ' <span class="growth-val '+cls+'">'+(v>0?'+':'')+v+'</span></div>';
+    });
+    h += '<div style="margin-top:6px;color:#666;font-size:11px">Click for details</div></div>';
+  }
+  tip.innerHTML = h;
+  tip.classList.add('visible');
+  const tw = tip.offsetWidth, th2 = tip.offsetHeight;
+  let tx = cx + 16, ty = cy - 10;
+  if (tx + tw > window.innerWidth - 10) tx = cx - tw - 16;
+  if (ty + th2 > window.innerHeight - 10) ty = window.innerHeight - th2 - 10;
+  if (ty < 10) ty = 10;
+  tip.style.left = tx + 'px'; tip.style.top = ty + 'px';
+}
+
+// ===== DETAIL PANEL =====
+const panel = document.getElementById('detail-panel');
+const panelC = document.getElementById('panel-content');
+
+function openPanel(sd) {
+  const ec = eColor(sd.em);
+  let h = '<h2>'+esc(sd.sid)+'</h2>'
+    + '<div class="panel-label">'+esc(sd.l)+'</div>'
+    + '<div class="panel-emotion" style="background:'+ec+'22;color:'+ec+';border:1px solid '+ec+'44">'+esc(sd.em)+'</div>';
+  h += '<div class="section-title">PLOT THREADS ('+sd.th.length+')</div>';
+  sd.th.forEach(t => {
+    const tc = TC[t.y]||'#8888aa';
+    h += '<div class="thread-item"><div class="thread-name" style="color:'+tc+'">'+esc(t.t)+'</div>'
+      + '<div class="thread-event" style="color:'+tc+'88">'+esc(t.y)+' &middot; '+esc(t.e)+'</div>'
+      + '<div class="thread-summary">'+esc(t.s)+'</div></div>';
+  });
+  h += '<div class="section-title">CHARACTER GROWTH ('+sd.gr.length+')</div>';
+  sd.gr.forEach(g => {
+    const pc = PC[g.p]||'#8888aa', v=g.n, cls=v>0?'growth-pos':v<0?'growth-neg':'growth-zero';
+    h += '<div class="growth-item"><div class="gi-dot" style="background:'+pc+';box-shadow:0 0 8px '+pc+'"></div>'
+      + '<div class="gi-name" style="color:'+pc+'">'+esc(g.c)+'</div>'
+      + '<div class="gi-score '+cls+'">'+(v>0?'+':'')+v+'</div>'
+      + '<div class="gi-dir">'+esc(g.d)+'</div></div>';
+  });
+  panelC.innerHTML = h;
+  panel.classList.add('open');
+}
+
+function closePanel() { panel.classList.remove('open'); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closePanel(); });
+
+// ===== CONTROLS =====
+document.getElementById('btn-pause').addEventListener('click', function() {
+  paused = !paused;
+  this.textContent = paused ? 'PLAY' : 'PAUSE';
+  this.classList.toggle('active', paused);
+});
+document.getElementById('speed-slider').addEventListener('input', function() { rotSpd = 0.008 * parseFloat(this.value); });
+document.getElementById('radius-slider').addEventListener('input', function() { R = parseInt(this.value); });
+document.getElementById('btn-reset').addEventListener('click', () => {
+  rotA = 0; rotSpd = 0.008; R = 180; paused = false;
+  document.getElementById('speed-slider').value = 1;
+  document.getElementById('radius-slider').value = 180;
+  document.getElementById('btn-pause').textContent = 'PAUSE';
+  document.getElementById('btn-pause').classList.remove('active');
+});
+
+// ===== 3D PROJECTION =====
+function proj(x3, y3, z3, cx) {
+  const s = PERSP / (PERSP + z3);
+  return { x: cx + x3 * s, y: y3, s, z: z3 };
+}
+
+// Helper to convert hex + alpha(0-1) to rgba string
+function hexAlpha(hex, a) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return 'rgba('+r+','+g+','+b+','+a.toFixed(3)+')';
+}
+
+// ===== RENDER =====
+function render() {
+  ctx.clearRect(0, 0, W, H);
+
+  // BG gradient
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#06060c'); bg.addColorStop(0.3, '#0a0a18');
+  bg.addColorStop(0.7, '#080816'); bg.addColorStop(1, '#06060c');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+  // Particles
+  parts.forEach(p => {
+    p.x += p.vx; p.y += p.vy;
+    p.z += Math.sin(Date.now() * 0.0008 + p.x * 0.01) * 0.2;
+    if (p.x < -20) p.x = W + 20; if (p.x > W + 20) p.x = -20;
+    if (p.y < -20) p.y = H + 20; if (p.y > H + 20) p.y = -20;
+    const sc = PERSP / (PERSP + p.z);
+    ctx.beginPath();
+    ctx.arc(W/2 + (p.x - W/2) * sc, p.y, p.r * sc, 0, Math.PI * 2);
+    ctx.fillStyle = hexAlpha(p.c, p.a * Math.max(0.2, sc));
+    ctx.fill();
+  });
+
+  const cx = W / 2;
+  const startY = 70;
+  const items = [];
+
+  // Draw spine curves (background, always behind)
+  ctx.save();
+  // Left spine segments with depth-varying opacity
+  for (let seg = 0; seg < 500; seg++) {
+    const t0 = seg / 500, t1 = (seg + 1) / 500;
+    const theta0 = rotA + t0 * Math.PI * 2 * TURNS;
+    const theta1 = rotA + t1 * Math.PI * 2 * TURNS;
+    const x0 = R * Math.cos(theta0), z0 = R * Math.sin(theta0);
+    const x1 = R * Math.cos(theta1), z1 = R * Math.sin(theta1);
+    const p0 = proj(x0, 0, z0, cx), p1 = proj(x1, 0, z1, cx);
+    const y0 = startY + t0 * 45 * VSPACE, y1 = startY + t1 * 45 * VSPACE;
+    const depth = (z0 + R) / (2 * R);
+    ctx.beginPath(); ctx.moveTo(p0.x, y0); ctx.lineTo(p1.x, y1);
+    ctx.strokeStyle = hexAlpha('#ad6bff', 0.04 + 0.14 * depth);
+    ctx.lineWidth = 2 + depth * 2; ctx.stroke();
+  }
+  // Right spine segments
+  for (let seg = 0; seg < 500; seg++) {
+    const t0 = seg / 500, t1 = (seg + 1) / 500;
+    const theta0 = rotA + Math.PI + t0 * Math.PI * 2 * TURNS;
+    const theta1 = rotA + Math.PI + t1 * Math.PI * 2 * TURNS;
+    const x0 = R * Math.cos(theta0), z0 = R * Math.sin(theta0);
+    const x1 = R * Math.cos(theta1), z1 = R * Math.sin(theta1);
+    const p0 = proj(x0, 0, z0, cx), p1 = proj(x1, 0, z1, cx);
+    const y0 = startY + t0 * 45 * VSPACE, y1 = startY + t1 * 45 * VSPACE;
+    const depth = (z0 + R) / (2 * R);
+    ctx.beginPath(); ctx.moveTo(p0.x, y0); ctx.lineTo(p1.x, y1);
+    ctx.strokeStyle = hexAlpha('#44ff88', 0.03 + 0.12 * depth);
+    ctx.lineWidth = 2 + depth * 2; ctx.stroke();
+  }
+  ctx.restore();
+
+  // Build render items per session
+  RAW.forEach((session, idx) => {
+    const y = startY + idx * VSPACE;
+    const theta = rotA + (idx / 46) * Math.PI * 2 * TURNS;
+
+    // Left strand position
+    const lx = R * Math.cos(theta), lz = R * Math.sin(theta);
+    const lp = proj(lx, 0, lz, cx);
+    const ld = (lz + R) / (2 * R);
+
+    // Right strand position (PI offset)
+    const rx = R * Math.cos(theta + Math.PI), rz = R * Math.sin(theta + Math.PI);
+    const rp = proj(rx, 0, rz, cx);
+    const rd = (rz + R) / (2 * R);
+
+    const rungZ = (lz + rz) / 2;
+    const avgD = (ld + rd) / 2;
+
+    // Rung (connects the two strands)
+    items.push({ t: 'rung', z: rungZ, x1: lp.x, x2: rp.x, y, d: avgD, c: eColor(session.em), sd: session });
+
+    // Session label
+    items.push({ t: 'lbl', z: rungZ - 1, x: (lp.x + rp.x) / 2, y, d: avgD, txt: session.sid, sd: session });
+
+    // Thread nodes on left strand
+    const tc = session.th.length;
+    session.th.forEach((thread, ti) => {
+      const spread = (ti - (tc-1)/2) * 0.05;
+      const tx3 = R * Math.cos(theta + spread), tz3 = R * Math.sin(theta + spread);
+      const tp = proj(tx3, 0, tz3, cx);
+      const td = (tz3 + R) / (2 * R);
+      const nr = (NR + Math.min(tc * 0.35, 3.5)) * tp.s;
+      items.push({ t: 'tn', z: tz3, px: tp.x, py: y + (ti-(tc-1)/2)*4, r: nr, d: td, sc: tp.s,
+                    c: TC[thread.y]||'#8888aa', data: thread, sd: session });
+    });
+
+    // Growth nodes on right strand
+    const gc = session.gr.length;
+    session.gr.forEach((g, gi) => {
+      const spread = Math.PI + (gi - (gc-1)/2) * 0.05;
+      const gx3 = R * Math.cos(theta + spread), gz3 = R * Math.sin(theta + spread);
+      const gp = proj(gx3, 0, gz3, cx);
+      const gd = (gz3 + R) / (2 * R);
+      const absG = Math.abs(g.n);
+      const nr = (NR + Math.min(absG * 0.5, 9)) * gp.s;
+      items.push({ t: 'gn', z: gz3, px: gp.x, py: y + (gi-(gc-1)/2)*4, r: nr, d: gd, sc: gp.s,
+                    c: PC[g.p]||'#8888aa', data: g, sd: session, neg: g.n < 0 });
+    });
+  });
+
+  // Sort by z (farthest first = painters algorithm)
+  items.sort((a, b) => a.z - b.z);
+  projected = [];
+
+  items.forEach(item => {
+    const alpha = 0.15 + 0.85 * item.d;
+
+    if (item.t === 'rung') {
+      ctx.save();
+      ctx.globalAlpha = alpha * 0.5;
+      ctx.shadowColor = item.c; ctx.shadowBlur = 10 * item.d;
+      // Draw dashed rung for style
+      ctx.setLineDash([6, 3]);
+      ctx.beginPath(); ctx.moveTo(item.x1, item.y); ctx.lineTo(item.x2, item.y);
+      ctx.strokeStyle = item.c; ctx.lineWidth = 1.2 + item.d * 0.8;
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.shadowBlur = 0; ctx.restore();
+
+      projected.push({ px: (item.x1+item.x2)/2, py: item.y, pr: 16, k: 'rung', sd: item.sd, z: item.z });
+
+    } else if (item.t === 'lbl') {
+      ctx.save(); ctx.globalAlpha = alpha * 0.65;
+      const fs = Math.round(10 * (0.7 + item.d * 0.3));
+      ctx.font = '600 '+fs+'px "Barlow Condensed",sans-serif';
+      ctx.fillStyle = '#8888aa'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(item.txt, item.x, item.y - 2);
+      ctx.restore();
+
+    } else if (item.t === 'tn') {
+      // Thread node (circle with glow)
+      const isH = hovered && hovered.k === 'thread' && hovered.data === item.data && hovered.sd === item.sd;
+      const r = isH ? item.r * 1.4 : item.r;
+      ctx.save(); ctx.globalAlpha = alpha;
+      ctx.shadowColor = item.c; ctx.shadowBlur = isH ? 28 : 12 * item.d;
+      ctx.beginPath(); ctx.arc(item.px, item.py, r, 0, Math.PI * 2);
+      ctx.fillStyle = item.c; ctx.fill();
+      ctx.shadowBlur = 0;
+      // Specular highlight
+      const grad = ctx.createRadialGradient(item.px - r*0.25, item.py - r*0.25, 0, item.px, item.py, r);
+      grad.addColorStop(0, 'rgba(255,255,255,0.35)');
+      grad.addColorStop(0.5, 'rgba(255,255,255,0.05)');
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.beginPath(); ctx.arc(item.px, item.py, r, 0, Math.PI * 2);
+      ctx.fillStyle = grad; ctx.fill();
+      ctx.restore();
+
+      projected.push({ px: item.px, py: item.py, pr: r, k: 'thread', d: item.data, sd: item.sd, z: item.z, data: item.data });
+
+    } else if (item.t === 'gn') {
+      // Growth node (diamond)
+      const isH = hovered && hovered.k === 'growth' && hovered.data === item.data && hovered.sd === item.sd;
+      const r = isH ? item.r * 1.4 : item.r;
+      ctx.save(); ctx.globalAlpha = alpha;
+      ctx.shadowColor = item.c; ctx.shadowBlur = isH ? 28 : 12 * item.d;
+
+      ctx.beginPath();
+      ctx.moveTo(item.px, item.py - r);
+      ctx.lineTo(item.px + r * 0.7, item.py);
+      ctx.lineTo(item.px, item.py + r);
+      ctx.lineTo(item.px - r * 0.7, item.py);
+      ctx.closePath();
+      ctx.fillStyle = item.c; ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // Specular
+      const grad = ctx.createRadialGradient(item.px - r*0.15, item.py - r*0.2, 0, item.px, item.py, r);
+      grad.addColorStop(0, 'rgba(255,255,255,0.3)');
+      grad.addColorStop(0.4, 'rgba(255,255,255,0.03)');
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.beginPath();
+      ctx.moveTo(item.px, item.py - r);
+      ctx.lineTo(item.px + r * 0.7, item.py);
+      ctx.lineTo(item.px, item.py + r);
+      ctx.lineTo(item.px - r * 0.7, item.py);
+      ctx.closePath();
+      ctx.fillStyle = grad; ctx.fill();
+
+      if (item.neg) {
+        ctx.strokeStyle = 'rgba(255,50,50,0.6)'; ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(item.px, item.py - r);
+        ctx.lineTo(item.px + r * 0.7, item.py);
+        ctx.lineTo(item.px, item.py + r);
+        ctx.lineTo(item.px - r * 0.7, item.py);
+        ctx.closePath();
+        ctx.stroke();
+        // Small crack/X
+        const xs = r * 0.25;
+        ctx.beginPath();
+        ctx.moveTo(item.px - xs, item.py - xs); ctx.lineTo(item.px + xs, item.py + xs);
+        ctx.moveTo(item.px + xs, item.py - xs); ctx.lineTo(item.px - xs, item.py + xs);
+        ctx.strokeStyle = 'rgba(255,80,80,0.5)'; ctx.lineWidth = 1; ctx.stroke();
+      }
+      ctx.restore();
+
+      projected.push({ px: item.px, py: item.py, pr: r, k: 'growth', d: item.data, sd: item.sd, z: item.z, data: item.data });
+    }
+  });
+
+  if (!paused) rotA += rotSpd;
+  requestAnimationFrame(render);
+}
+
+render();
+</script>
+</body>
+</html>

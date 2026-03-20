@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BWB Campaign Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@300;400;600&family=Barlow:wght@300;400;500;600&family=Cinzel:wght@600&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background:#06060c;
+    color:#c8c8e0;
+    font-family:'Barlow',system-ui,sans-serif;
+    min-height:100vh;
+  }
+  body::before {
+    content:'';
+    position:fixed; inset:0;
+    background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(255,255,255,.015) 2px,rgba(255,255,255,.015) 4px);
+    pointer-events:none; z-index:999;
+  }
+
+  .hero {
+    text-align:center;
+    padding:3rem 1rem 2rem;
+    background:linear-gradient(180deg,#0a0a1a 0%,#06060c 100%);
+    border-bottom:1px solid rgba(167,139,250,.15);
+  }
+  .hero h1 {
+    font-family:'Bebas Neue',sans-serif;
+    font-size:clamp(2.5rem,8vw,4.5rem);
+    letter-spacing:.08em;
+    background:linear-gradient(135deg,#e0c097,#a78bfa);
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+    text-shadow:0 0 40px rgba(167,139,250,.3);
+  }
+  .hero p {
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:1.1rem;
+    color:#666;
+    margin-top:.5rem;
+    letter-spacing:.05em;
+  }
+
+  .grid {
+    max-width:1200px;
+    margin:0 auto;
+    padding:2rem 1rem;
+  }
+  .category {
+    margin-bottom:2.5rem;
+  }
+  .category h2 {
+    font-family:'Bebas Neue',sans-serif;
+    font-size:1.6rem;
+    letter-spacing:.1em;
+    color:#a78bfa;
+    border-bottom:1px solid rgba(167,139,250,.2);
+    padding-bottom:.4rem;
+    margin-bottom:1rem;
+    text-shadow:0 0 20px rgba(167,139,250,.2);
+  }
+  .cards {
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+    gap:12px;
+  }
+  .card {
+    display:block;
+    padding:14px 18px;
+    background:linear-gradient(135deg,#12121f,#1a1a2e);
+    border:1px solid rgba(167,139,250,.08);
+    border-top:2px solid #a78bfa;
+    border-radius:8px;
+    color:#e0e0ff;
+    text-decoration:none;
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:1.1rem;
+    letter-spacing:.03em;
+    transition:all .2s ease;
+  }
+  .card:hover {
+    background:linear-gradient(135deg,#1a1a30,#252545);
+    border-color:rgba(167,139,250,.3);
+    box-shadow:0 0 20px rgba(167,139,250,.1);
+    transform:translateY(-1px);
+  }
+  .card span {
+    display:block;
+    font-family:'Barlow',sans-serif;
+    font-size:.75rem;
+    color:#555;
+    margin-top:4px;
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>BWB Campaign</h1>
+  <p>Visualization Preview Gallery</p>
+</div>
+
+<div class="grid">
+
+  <div class="category">
+    <h2>Analytics</h2>
+    <div class="cards">
+      <a class="card" href="analytics/campaign-film.html">Campaign Film<span>Cinematic session replay</span></a>
+      <a class="card" href="analytics/character-odyssey.html">Character Odyssey<span>Character journey arcs</span></a>
+      <a class="card" href="analytics/tapestry-of-fates.html">Tapestry of Fates<span>Interwoven character destinies</span></a>
+      <a class="card" href="analytics/narrative-tapestry.html">Narrative Tapestry<span>Story thread weaving</span></a>
+      <a class="card" href="analytics/spiral-chronicle.html">Spiral Chronicle<span>Campaign timeline spiral</span></a>
+      <a class="card" href="analytics/session-heartbeat.html">Session Heartbeat<span>Pacing pulse monitor</span></a>
+      <a class="card" href="analytics/campaign-war-table.html">Campaign War Table<span>Strategic overview</span></a>
+      <a class="card" href="analytics/war-table.html">War Table<span>Combat strategic view</span></a>
+      <a class="card" href="analytics/mvp-race.html">MVP Race<span>Player performance race</span></a>
+      <a class="card" href="analytics/dice-luck-rivers.html">Dice Luck Rivers<span>Fortune flow over time</span></a>
+      <a class="card" href="analytics/dm-fairness-radar.html">DM Fairness Radar<span>Balance analysis</span></a>
+      <a class="card" href="analytics/awards-timeline.html">Awards Timeline<span>Achievement chronology</span></a>
+      <a class="card" href="analytics/biggest-moments.html">Biggest Moments<span>Peak dramatic events</span></a>
+      <a class="card" href="analytics/character-dna.html">Character DNA<span>Personality genome</span></a>
+      <a class="card" href="analytics/voice-fingerprint.html">Voice Fingerprint<span>Speech pattern analysis</span></a>
+      <a class="card" href="analytics/relationship-tides.html">Relationship Tides<span>Bond ebb and flow</span></a>
+      <a class="card" href="analytics/archetype-alluvial.html">Archetype Alluvial<span>Role evolution streams</span></a>
+      <a class="card" href="analytics/scene-mosaic.html">Scene Mosaic<span>Session composition grid</span></a>
+      <a class="card" href="analytics/entity-vault.html">Entity Vault<span>NPC/entity database</span></a>
+      <a class="card" href="analytics/npc-census.html">NPC Census<span>Character population data</span></a>
+      <a class="card" href="analytics/campaign-atlas.html">Campaign Atlas<span>World geography</span></a>
+      <a class="card" href="analytics/fog-of-war.html">Fog of War<span>Knowledge boundaries</span></a>
+      <a class="card" href="analytics/dimensional-rift.html">Dimensional Rift<span>Planar visualization</span></a>
+      <a class="card" href="analytics/the-after-party.html">The After Party<span>Post-session analysis</span></a>
+      <a class="card" href="analytics/the-broadsheet.html">The Broadsheet<span>Campaign newspaper</span></a>
+      <a class="card" href="analytics/philosophy-theater.html">Philosophy Theater<span>Moral alignment debates</span></a>
+    </div>
+  </div>
+
+  <div class="category">
+    <h2>Campaign</h2>
+    <div class="cards">
+      <a class="card" href="campaign/session-fingerprints.html">Session Fingerprints<span>Unique session signatures</span></a>
+    </div>
+  </div>
+
+  <div class="category">
+    <h2>Characters</h2>
+    <div class="cards">
+      <a class="card" href="characters/dark-triad-radar.html">Dark Triad Radar<span>Personality dark traits</span></a>
+      <a class="card" href="characters/growth-sparklines.html">Growth Sparklines<span>Character development tracks</span></a>
+    </div>
+  </div>
+
+  <div class="category">
+    <h2>Combat</h2>
+    <div class="cards">
+      <a class="card" href="combat/danger-timeline.html">Danger Timeline<span>Threat level over time</span></a>
+      <a class="card" href="combat/kill-leaderboard.html">Kill Leaderboard<span>Combat elimination rankings</span></a>
+    </div>
+  </div>
+
+  <div class="category">
+    <h2>Moments</h2>
+    <div class="cards">
+      <a class="card" href="moments/energy-landscape.html">Energy Landscape<span>Session energy topography</span></a>
+      <a class="card" href="moments/quote-galaxy.html">Quote Galaxy<span>Memorable quotes constellation</span></a>
+    </div>
+  </div>
+
+  <div class="category">
+    <h2>Narrative</h2>
+    <div class="cards">
+      <a class="card" href="narrative/conspiracy-web.html">Conspiracy Web<span>Plot connection network</span></a>
+    </div>
+  </div>
+
+  <div class="category">
+    <h2>Relationships</h2>
+    <div class="cards">
+      <a class="card" href="relationships/chemistry-chord.html">Chemistry Chord<span>Party dynamic harmonics</span></a>
+      <a class="card" href="relationships/spotlight-heatmap.html">Spotlight Heatmap<span>Attention distribution</span></a>
+    </div>
+  </div>
+
+  <div class="category">
+    <h2>Experimental</h2>
+    <div class="cards">
+      <a class="card" href="experimental/combat-heartbeat.html">Combat Heartbeat<span>Battle rhythm pulse</span></a>
+      <a class="card" href="experimental/narrative-dna.html">Narrative DNA<span>Story genetic structure</span></a>
+      <a class="card" href="experimental/player-auras.html">Player Auras<span>Character energy fields</span></a>
+      <a class="card" href="experimental/session-waveforms.html">Session Waveforms<span>Audio-style session viz</span></a>
+    </div>
+  </div>
+
+  <div class="category">
+    <h2>Standalone</h2>
+    <div class="cards">
+      <a class="card" href="emotional-spectrum.html">Emotional Spectrum<span>Feeling range analysis</span></a>
+      <a class="card" href="entity-constellation.html">Entity Constellation<span>Character star map</span></a>
+      <a class="card" href="player-mandala.html">Player Mandala<span>Player identity patterns</span></a>
+      <a class="card" href="thread-tapestry.html">Thread Tapestry<span>Story thread weaving</span></a>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

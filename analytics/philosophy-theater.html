@@ -1,0 +1,1501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mystery Philosophy Theater 3000</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@400;600&family=JetBrains+Mono:wght@400;500&family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #06060c;
+  color: #c8c8e0;
+  font-family: 'Barlow', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Scanline overlay */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.03) 2px,
+    rgba(0,0,0,0.03) 4px
+  );
+  z-index: 10000;
+}
+
+/* HEADER */
+.main-title {
+  text-align: center;
+  padding: 20px 20px 10px;
+  position: relative;
+}
+.main-title h1 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(2rem, 5vw, 4rem);
+  letter-spacing: 6px;
+  background: linear-gradient(90deg, #ef4444, #FF8A65, #ffd700, #81C784, #4A90D9, #BA68C8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 20px rgba(255,215,0,0.3));
+  animation: titleGlow 3s ease-in-out infinite alternate;
+}
+.main-title .subtitle {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.9rem;
+  color: #666;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+@keyframes titleGlow {
+  0% { filter: drop-shadow(0 0 10px rgba(255,215,0,0.2)); }
+  100% { filter: drop-shadow(0 0 30px rgba(255,215,0,0.5)); }
+}
+
+/* CONTROLS BAR */
+.controls-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px 20px 12px;
+  flex-wrap: wrap;
+}
+.controls-bar button, .controls-bar select {
+  background: #1a1a2e;
+  border: 1px solid #333;
+  color: #c8c8e0;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.85rem;
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.controls-bar button:hover, .controls-bar select:hover {
+  border-color: #ffd700;
+  box-shadow: 0 0 8px rgba(255,215,0,0.3);
+}
+.controls-bar button.active {
+  border-color: #ffd700;
+  background: #2a2a3e;
+  color: #ffd700;
+}
+.controls-bar select {
+  min-width: 160px;
+}
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.8rem;
+  color: #888;
+}
+.speed-control input[type="range"] {
+  width: 80px;
+  accent-color: #ffd700;
+}
+
+/* MOVIE SCREEN */
+.movie-screen {
+  background: linear-gradient(180deg, #12121e 0%, #0e0e1a 100%);
+  border: 2px solid #222;
+  border-radius: 8px;
+  margin: 0 20px;
+  padding: 30px 40px;
+  min-height: 50vh;
+  max-height: 55vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: inset 0 0 60px rgba(0,0,0,0.5), 0 0 30px rgba(0,0,0,0.8);
+}
+
+/* Screen vignette */
+.movie-screen::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.4) 100%);
+  border-radius: 8px;
+  z-index: 1;
+}
+
+.movie-screen::-webkit-scrollbar { width: 6px; }
+.movie-screen::-webkit-scrollbar-track { background: #0a0a14; }
+.movie-screen::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+
+.session-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  position: relative;
+  z-index: 2;
+}
+.session-nav button {
+  background: none;
+  border: 1px solid #444;
+  color: #888;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.9rem;
+  padding: 4px 16px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.session-nav button:hover:not(:disabled) {
+  color: #ffd700;
+  border-color: #ffd700;
+}
+.session-nav button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+.session-counter {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.session-title-card {
+  text-align: center;
+  margin: 20px 0 30px;
+  position: relative;
+  z-index: 2;
+}
+.session-number {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: #ffd700;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  opacity: 0.7;
+}
+.session-title {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(1.4rem, 3vw, 2.2rem);
+  color: #e8e8f0;
+  line-height: 1.3;
+  text-shadow: 0 0 20px rgba(255,215,0,0.15);
+}
+.session-hook {
+  font-family: 'Barlow', sans-serif;
+  font-style: italic;
+  font-size: 0.95rem;
+  color: #999;
+  margin-top: 10px;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.recap-body {
+  font-family: 'Barlow', sans-serif;
+  font-size: 0.92rem;
+  line-height: 1.7;
+  color: #b0b0c8;
+  margin: 20px 0;
+  position: relative;
+  z-index: 2;
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.biggest-moment {
+  margin-top: 24px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, rgba(255,215,0,0.05), rgba(255,215,0,0.02));
+  border-left: 3px solid #ffd700;
+  border-radius: 0 4px 4px 0;
+  position: relative;
+  z-index: 2;
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.biggest-moment-label {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 0.8rem;
+  color: #ffd700;
+  letter-spacing: 3px;
+  margin-bottom: 4px;
+}
+.biggest-moment-title {
+  font-family: 'Cinzel', serif;
+  font-size: 1.05rem;
+  color: #ffd700;
+}
+.biggest-moment-desc {
+  font-family: 'Barlow', sans-serif;
+  font-size: 0.85rem;
+  color: #999;
+  margin-top: 6px;
+  line-height: 1.5;
+}
+
+/* THEATER BAR */
+.theater-bar {
+  background: linear-gradient(180deg, #0c0c18, #0a0a14 30%, #080810);
+  border-top: 2px solid #1a1a2a;
+  padding: 16px 20px 20px;
+  position: relative;
+  margin-top: 10px;
+}
+
+/* Seat row texture */
+.theater-bar::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background:
+    repeating-linear-gradient(90deg, transparent, transparent 16.666%, rgba(30,30,50,0.3) 16.666%, rgba(30,30,50,0.3) 16.7%),
+    linear-gradient(180deg, rgba(20,20,35,0.5) 0%, transparent 40%);
+  pointer-events: none;
+}
+
+.theater-seats {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+  position: relative;
+  z-index: 1;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.philosopher-seat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+.philosopher-seat:hover {
+  transform: translateY(-3px);
+}
+.philosopher-seat.filtered {
+  opacity: 0.3;
+}
+.philosopher-seat.filtered:hover {
+  opacity: 0.6;
+}
+
+/* Speech bubble */
+.speech-bubble {
+  position: relative;
+  background: #14141f;
+  border: 1px solid var(--phil-color);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: 'Barlow', sans-serif;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: #c8c8e0;
+  min-height: 60px;
+  max-height: 100px;
+  overflow-y: auto;
+  width: 100%;
+  opacity: 0;
+  transform: translateY(5px);
+  transition: opacity 0.4s, transform 0.4s;
+  box-shadow: 0 0 12px rgba(var(--phil-rgb), 0.15);
+}
+.speech-bubble::-webkit-scrollbar { width: 3px; }
+.speech-bubble::-webkit-scrollbar-thumb { background: var(--phil-color); border-radius: 2px; }
+
+.speech-bubble.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Bubble arrow */
+.speech-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0; height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid var(--phil-color);
+}
+
+/* Philosopher icon */
+.philosopher-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--phil-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Cinzel', serif;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #06060c;
+  box-shadow: 0 0 15px rgba(var(--phil-rgb), 0.4);
+  transition: box-shadow 0.3s;
+  position: relative;
+}
+.philosopher-icon.speaking {
+  box-shadow: 0 0 25px rgba(var(--phil-rgb), 0.7);
+  animation: speakPulse 0.6s ease-in-out;
+}
+
+@keyframes speakPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.philosopher-name {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.7rem;
+  color: var(--phil-color);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+/* Typing animation */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+.typing-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: var(--phil-color);
+  margin-left: 2px;
+  animation: blink 0.7s infinite;
+  vertical-align: text-bottom;
+}
+
+/* Filter mode header */
+.filter-banner {
+  display: none;
+  text-align: center;
+  padding: 8px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.85rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.filter-banner.active {
+  display: block;
+}
+.filter-banner:hover {
+  text-decoration: underline;
+}
+
+/* PHILOSOPHER TIMELINE (filter mode) */
+.timeline-view {
+  display: none;
+  padding: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+.timeline-view.active {
+  display: block;
+}
+.timeline-entry {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #12121e;
+  border-radius: 6px;
+  border-left: 3px solid var(--phil-color);
+}
+.timeline-session {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: #ffd700;
+  min-width: 35px;
+  padding-top: 2px;
+}
+.timeline-text {
+  font-family: 'Barlow', sans-serif;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: #c8c8e0;
+}
+.timeline-session-title {
+  font-family: 'Cinzel', serif;
+  font-size: 0.75rem;
+  color: #888;
+  margin-bottom: 4px;
+}
+
+/* Sun Tzu ratings */
+.rating {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 500;
+  color: #81C784;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .theater-seats {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .movie-screen {
+    margin: 0 10px;
+    padding: 20px;
+  }
+  .controls-bar {
+    gap: 6px;
+    padding: 6px 10px;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="main-title">
+  <h1>Mystery Philosophy Theater 3000</h1>
+  <div class="subtitle">Six Philosophers Heckle a D&D Campaign</div>
+</div>
+
+<div class="controls-bar">
+  <button id="btnPrev" onclick="prevSession()">&laquo; Prev</button>
+  <select id="sessionSelect" onchange="goToSession(parseInt(this.value))"></select>
+  <button id="btnNext" onclick="nextSession()">Next &raquo;</button>
+  <button id="btnPlay" onclick="toggleAutoplay()">&#9654; Play Commentary</button>
+  <div class="speed-control">
+    <span>Speed:</span>
+    <input type="range" id="speedSlider" min="0.5" max="3" step="0.5" value="1" oninput="updateSpeed(this.value)">
+    <span id="speedLabel">1x</span>
+  </div>
+  <button id="btnClearFilter" onclick="clearFilter()" style="display:none;">Show All</button>
+</div>
+
+<div class="filter-banner" id="filterBanner" onclick="clearFilter()"></div>
+
+<div class="movie-screen" id="movieScreen">
+  <div class="session-nav">
+    <button onclick="prevSession()">&laquo; Previous Session</button>
+    <span class="session-counter" id="sessionCounter">Session 1 of 46</span>
+    <button onclick="nextSession()">Next Session &raquo;</button>
+  </div>
+  <div id="screenContent"></div>
+</div>
+
+<div class="timeline-view" id="timelineView"></div>
+
+<div class="theater-bar" id="theaterBar">
+  <div class="theater-seats" id="theaterSeats"></div>
+</div>
+
+<script>
+// ============================================================
+// PHILOSOPHER DEFINITIONS
+// ============================================================
+const PHILOSOPHERS = [
+  { id: 'nietzsche', name: 'Nietzsche', initial: 'N', color: '#ef4444', rgb: '239,68,68' },
+  { id: 'kant', name: 'Kant', initial: 'K', color: '#4A90D9', rgb: '74,144,217' },
+  { id: 'socrates', name: 'Socrates', initial: 'S', color: '#ffd700', rgb: '255,215,0' },
+  { id: 'suntzu', name: 'Sun Tzu', initial: 'T', color: '#81C784', rgb: '129,199,132' },
+  { id: 'wittgenstein', name: 'Wittgenstein', initial: 'W', color: '#BA68C8', rgb: '186,104,200' },
+  { id: 'marx', name: 'Marx', initial: 'M', color: '#FF8A65', rgb: '255,138,101' }
+];
+
+// ============================================================
+// SESSION DATA (46 sessions)
+// ============================================================
+const SESSIONS = [
+{
+  id: 'S001', num: 1,
+  title: "Castle Corras and the Master of Whispers",
+  hook: "The party inherits a castle and discovers its secrets.",
+  body: "The party arrives at Castle Corras, claiming it as their new stronghold. They meet the enigmatic Master of Whispers, learn about five major political factions, and discover personal plot hooks. Ash investigates a heavily warded basement door, communing with the ancient entity Argentus, only to be paralyzed for two hours. Mortimer von Schatten leaves cryptic origami gifts in each member's bedroom.",
+  moment: "Ash's Communion at the Forbidden Door",
+  momentDesc: "Ash investigates a heavily warded door in the castle's basement, communing with the ancient entity Argentus to bypass the abjuration and necromantic magics."
+},
+{
+  id: 'S002', num: 2,
+  title: "The Loincloth Heist",
+  hook: "A daring theft from a troll's undergarments saves the party from certain death.",
+  body: "To avoid fighting two massive trolls in a sealed cavern, Ave goes invisible, wades through water, and uses Sleight of Hand to steal a giant coin hidden in one troll's loincloth, replacing it with a piece of wood. The blinded troll fights her companion. Meanwhile, Ash's familiar Spark is permanently consumed by a mysterious, sorrowful entity in a dark pit. The party also manages their castle finances, hiring specialists and funding a greenhouse.",
+  moment: "The Loincloth Heist",
+  momentDesc: "Ave steals a giant coin from a troll's loincloth while invisible, replacing it with wood and causing the trolls to fight each other."
+},
+{
+  id: 'S003', num: 3,
+  title: "Billabong's Celestial Ascent",
+  hook: "A barbarian catches a dying star and becomes something more than mortal.",
+  body: "The party faces an ancient Beholder, where Ave performs a legendary blade dance that moves it to tears. Ash recklessly jumps into a pit containing an invisible Eldritch gelatinous cube, nearly losing her legs to molecular disintegration. As a trapped celestial orb begins to fade and sacrifice itself, Billabong reaches out and grabs it. The cosmic energy permanently transforms her into a part-Solarum being with increased strength and celestial abilities. A dying mercenary crashes into Castle Corras warning of betrayal.",
+  moment: "Billabong's Celestial Ascent",
+  momentDesc: "Billabong grabs a dying celestial orb, absorbing its cosmic energy and permanently transforming into a part-Solarum being."
+},
+{
+  id: 'S004', num: 4,
+  title: "The Chronicler's Mark",
+  hook: "A brutal ambush leaves the party battered, but an ancient book leaves a permanent mark.",
+  body: "The party endures a vicious ambush near Havenbrook orchestrated by the banshee-merged goblin queen Niles Bargnot. Lilith falls near death multiple times. After surviving, Ash examines a stolen tome -- the Chronicles of the Quill. Ancient magic permanently tattoos their bodies with the Chronicler's Mark in Sylvan script, granting immunity to sleep and charm but robbing them of their shadows and reflections. A strange raven is revealed to be a polymorphed cultist worshipping Lilith. The session ends with the party trapped in a collapsing crypt.",
+  moment: "The Chronicler's Mark",
+  momentDesc: "Ancient magic from a tome permanently tattoos the party, granting immunities but stripping them of their shadows and reflections."
+},
+{
+  id: 'S005', num: 5,
+  title: "Evaluations, Blights, and the Hall of Whispers",
+  hook: "Orla faces her most terrifying trial yet -- a performance review.",
+  body: "Orla receives a surprise visit from her strict druidic mentor for her Apprenticeship Review. The party forges logs, stages magical presentations, and covers for her. After narrowly passing, they descend into the Lumin burial site, triggering a truth-telling trap in the Hall of Whispers. Orla rolls a Natural 20 on Deception, confusing the ancient magic into accepting her lie as truth. Corras delivers an 81-damage plunging sneak attack on a Bone Devil. An undead Archmage prepares to attack.",
+  moment: "Orla's Nat 20 Deception in the Hall of Whispers",
+  momentDesc: "Orla confuses an ancient truth-detecting trap by rolling a Natural 20 on Deception while claiming she lies about everything."
+},
+{
+  id: 'S006', num: 6,
+  title: "Ice, Death, and Illusions",
+  hook: "The party faces their first true arcane threat.",
+  body: "The tiefling Archmage uses Time Stop, Cone of Cold, and Fireball to devastating effect. Wall of Force divides the party. Through coordinated attacks, quick Misty Steps, and an absolutely clutch swarm of giant wasps from Orla, the party manages to impale the mage, turning him into a puddle of freezing water. A mocking, disembodied voice from deeper within the tomb declares the archmage was merely his 'lesser half.'",
+  moment: "Orla's Wasps Impale the Archmage",
+  momentDesc: "Orla's summoned Giant Wasp lands the final blow on the Archmage after he used Time Stop and 9th-level magic."
+},
+{
+  id: 'S007', num: 7,
+  title: "Operation Save Spark",
+  hook: "Trapped in a collapsing cave, the party decides to heist through time itself.",
+  body: "Facing certain death, the party chronoports back in time four months to Castle Corras. Their mission: steal an eyelash from Spark to create a Simulacrum. Temporal dissonance transforms Lilith into a creepy child who casts Toll the Dead on a worm, terrifying merchant children. Orla wild-shapes into a rat to brew potions. Ave leaves a cryptic note reading 'The answer is E.' Corras lures Spark with a Minor Illusion of a crinkly snack bag, plucks the eyelash, but Spark cries out, breaking his invisibility and forcing initiative against his past self.",
+  moment: "Corras's Failed Eyelash Heist",
+  momentDesc: "Corras plucks an eyelash from Spark using a crinkly snack bag illusion, but the dragon's cry breaks his invisibility."
+},
+{
+  id: 'S008', num: 8,
+  title: "The Time Heist and The Lumin Ritual",
+  hook: "The party realizes they ARE the cause of their own historical rumors.",
+  body: "Corras rolls a natural 1 on Stealth and gets banished to the Feywild by past Ash. Past Corras rolls a natural 20 to drop the eyelash through a tiny hole. Needing a place for a 12-hour Simulacrum spell, they realize they are the 'mysterious Lumin cultists' from their own history. They find the dying mercenary Eoman and leave a trail of Goodberries, preserving the timeline.",
+  moment: "The Self-Fulfilling Lumin Ritual",
+  momentDesc: "The party realizes the mysterious cult ritual they investigated months ago was actually themselves casting Simulacrum."
+},
+{
+  id: 'S009', num: 9,
+  title: "Downtime, Potato Stew, and the Mimic Horse",
+  hook: "A missing goblin merchant leads to a massive cliffhanger.",
+  body: "Billabong gets banned from pit fighting for life. Corras and Ash end up in jail, where the Master of Whispers contacts Corras through a latrine bucket. They encounter a traveler making potato stew who casts Thunderwave. While sneaking up on the goblin merchant Grimslick's caravan, a pack horse named Sid transforms into a mimic, and initiative is rolled.",
+  moment: "Sid the Mimic Revealed",
+  momentDesc: "A pack horse named Sid transforms into a trained mimic just as the party's stealth approach fails."
+},
+{
+  id: 'S010', num: 10,
+  title: "The Wrath of Nature",
+  hook: "A botched stealth mission turns into an all-out assault against demon-summoning cultists.",
+  body: "Sarlumon and Lilith both roll natural 1s on stealth, tumbling hilariously down a hill and alerting the entire cultist camp. Ash's Counterspell shuts down a Fireball. Then Orla, the tiny forest gnome druid, casts Wrath of Nature -- animating trees, roots, and rocks into a vengeful cyclone that slaughters six magmen and two orcs in a single turn. The survivors reveal a Balor is being summoned inside the cavern.",
+  moment: "Orla Decimates the Camp with Wrath of Nature",
+  momentDesc: "The tiny forest gnome druid calls upon the fury of the earth, killing eight enemies in a single devastating spell."
+},
+{
+  id: 'S011', num: 11,
+  title: "The Decoy Bridge and the Earth Elemental",
+  hook: "A simple pit trap turns deadly when Argentus takes control.",
+  body: "Venturing into the Somber Hills, the party pays a copper at a hilariously amateur toll gate. Ash's metal arm, housing the spirit Argentus, takes control, charming Sarlumon and forcing him to throw Ash into a pit trap. A towering Earth Elemental awakens. Using diplomacy and Terran, Ash persuades the elemental that the real threat is the fire cult ahead. The elemental crushes the bridge in its wake.",
+  moment: "Argentus Betrays the Party",
+  momentDesc: "The spirit in Ash's metal arm charms Sarlumon and forces him to throw Ash into a pit trap, awakening an Earth Elemental."
+},
+{
+  id: 'S012', num: 12,
+  title: "The Cavern of Eternal Flame",
+  hook: "The party ventures deeper into the cult's stronghold.",
+  body: "The party pushes into the Cult of Eternal Flame's cavern complex, battling fire cultists and navigating treacherous volcanic terrain. They work together to overcome a major obstacle, pushing closer to the Balor summoning ritual. The group grows closer through shared danger.",
+  moment: "A Great Challenge",
+  momentDesc: "The group overcomes a major obstacle deep within the cult's volcanic stronghold."
+},
+{
+  id: 'S013', num: 13,
+  title: "The Demonic Escape from Berdusk",
+  hook: "Faced with anti-magic prisons and a ticking clock, the party makes a blood pact with a demon.",
+  body: "Trapped in spell-dampening cells in the Dungeons of Berdusk, the party meets Prince Darindale, an elf cursed into Quaggoth form. Malachar the Twisted, a Glabrezu demon, offers a blood pact: teleportation and freedom in exchange for four undefined favors. Desperate, Ash, Orla, and Billabong sign an infernal contract binding themselves to the whims of the Abyss. They reunite with Ave and Lilith as the Simulacrum of Spark is completed. Darindale horrifies everyone by devouring a corpse.",
+  moment: "The Blood Pact with Malachar",
+  momentDesc: "Ash, Orla, and Billabong sign an infernal blood pact with a Glabrezu demon, binding themselves to undefined favors."
+},
+{
+  id: 'S014', num: 14,
+  title: "The Heist, The Scholar, and The Hamster Ball",
+  hook: "A scholar's insult turns a royal friend into a raging hazard.",
+  body: "The party reunites at the 'Safe Toilet' clearing and plans a heist. A snooty scholar insults Prince Darindale, sending the Quaggoth into blood rage. Billabong throws a bedroll over his head, triggering his fear of the dark. Ash traps the raging prince in a Resilient Sphere. Unable to escape, Darindale rolls the 'hamster ball' toward a cliff. Billabong catches it just in time while Corras accidentally dives off the cliff.",
+  moment: "The Quaggoth Hamster Ball",
+  momentDesc: "Prince Darindale rages inside a Resilient Sphere, rolling toward a cliff until Billabong catches the magical hamster ball."
+},
+{
+  id: 'S015', num: 15,
+  title: "The Temporal Heist",
+  hook: "The party stages an elaborate heist within their own castle to save a familiar friend.",
+  body: "Back in Castle Corras hours before their past selves depart, the party executes a multi-step distraction to swap Spark with the simulacrum. Disguised as staff, they coordinate perfectly. Spark is swapped and secured. But temporal tampering draws a sentinel. The party splits: one team distracts the sentinel, the other heads to the basement where Kelemvor is holding back inter-dimensional entities. A massive Remorhaz bursts from the rift.",
+  moment: "The Spark Swap Heist",
+  momentDesc: "The party successfully swaps Ash's familiar with a simulacrum, preserving the timeline."
+},
+{
+  id: 'S016', num: 16,
+  title: "The End of Time and a Fate Rewritten",
+  hook: "A Time Warden arrives to reset the universe, and the party makes a desperate stand across fragmented realities.",
+  body: "A Time Warden determined to reset the universe arrives. One team runs a skill challenge through unstable time rifts; the other defends against a Blue Dragon, Vampire Warrior, and Balor. Billabong grows enormous, Ave becomes a T-Rex, Ash falls through a rift into an ancient holy war. With terrible rolls and mounting odds, Corras activates his Fates card from the Deck of Many Things, rewriting history. The party awakens in a new timeline: Spark is alive, but they're in the middle of a celestial war.",
+  moment: "Corras Uses the Fates Card",
+  momentDesc: "Corras plays the Fates card to rewrite reality, saving Spark but plunging the party into a celestial war."
+},
+{
+  id: 'S017', num: 17,
+  title: "A New World Order",
+  hook: "The timeline resets and the party becomes faction leaders in a world at war with Celestials.",
+  body: "Following the timeline reset, the party advances to level 15 with new roles. Orla unites thousands of druids, gnomes, and elves. Corras establishes an empire as 'King Corras' and declares war on the Celestials, earning the title 'Celestial Conqueror.' Billabong discovers the Helm of the Ancients. Lilith pledges loyalty to Myrkul, becoming a Death Domain Cleric. Ash becomes the 'Obsidian Sorceress.' They learn of the Soul Forge that could turn the tide of war.",
+  moment: "King Corras Declares War on the Celestials",
+  momentDesc: "King Corras rejects the Celestials' ultimatum and plunges his empire into open war against the angelic forces."
+},
+{
+  id: 'S018', num: 18,
+  title: "Mince Pies and Blizzards",
+  hook: "The party gears up and faces an ancient white dragon in the Storm Mountains.",
+  body: "Billabong challenges a blacksmith to a brawl and loses, then earns respect with a malfunctioning Snack-O-Matic 3000 that spews 1,200 mince pies. A massive blizzard and avalanche sweep away the party. Crossing a frozen lake, Dahlia's Axe Beak falls through the ice. An ancient white dragon erupts to catch it, but Dahlia dismisses her Find Steed spell, leaving the dragon empty-jawed. Spectral figures stalk them through a blinding storm.",
+  moment: "Dahlia Denies the Dragon",
+  momentDesc: "Dahlia dismisses her magical mount right before an ancient white dragon can eat it, leaving it with nothing but cold water."
+},
+{
+  id: 'S019', num: 19,
+  title: "The Big Bang and the Baby Yetis",
+  hook: "Stuck in a hut surrounded by monsters, the party resorts to a colossal explosive.",
+  body: "Trapped in Leomund's Tiny Hut by yetis and a frost giant, the party leaves a massive keg of Alchemist's Fire. Orla lights the fuse, Ash casts Scatter to teleport everyone away, and the explosion obliterates everything. In the aftermath, they find two orphaned yeti tykes who are won over with mince pies. Corras discovers a letter from a gnome named Zibblebottom hinting at a doomed search for a forge.",
+  moment: "The Keg of Alchemist's Fire",
+  momentDesc: "62 flasks of Alchemist's Fire create a massive explosion that vaporizes a frost giant and its yeti minions."
+},
+{
+  id: 'S020', num: 20,
+  title: "Death, Ghosts, and Holy Pee",
+  hook: "The party found a glowing bomb. They all died. Then they got better.",
+  body: "The party scales a cliffside cabin and finds a glowing transmutation orb called the Summer Star and a clay homunculus that grows into a golem. Corras grabs the orb, which detonates for 118 radiant damage, killing the entire party. As ghosts, they try to write instructions in the snow for the surviving Billabong, producing the garbled message 'drink holy pee star.' Billabong spends a brutal night alone, then assembles the Summer Star. Lathander himself appears to resurrect the party.",
+  moment: "The Summer Star TPK",
+  momentDesc: "Corras grabs a glowing orb that deals 118 radiant damage, killing the entire party instantly."
+},
+{
+  id: 'S021', num: 21,
+  title: "Dark Blessings and Darker Tunnels",
+  hook: "Mordenkainen binds the party to dark entities, then sends them into the Underdark.",
+  body: "Mordenkainen completes a binding ritual linking each party member to dark entities. They receive dark boons: deception expertise, shadow resistance, stealth advantages, lie detection, and rerolling ones. Corras reads about infiltrating Lolth's cult using the greeting 'the spider queen smiles on you.' In the Underdark, a drow mage tests them. SavannahBelle breaks discipline trying to free a trapped panther, triggering combat with the drow and a summoned Umber Hulk.",
+  moment: "SavannahBelle Fails the Drow's Test",
+  momentDesc: "SavannahBelle breaks discipline to free a panther, getting cocooned and triggering combat with the drow."
+},
+{
+  id: 'S022', num: 22,
+  title: "Walls of Fire and Walls of Spiders",
+  hook: "SavannahBelle incinerated both enemies in twin walls of fire, then the party wore living spiders as jewelry.",
+  body: "The Umber Hulk's confusing gaze disorients most of the party. SavannahBelle, unaffected, twin-casts Wall of Fire on both the Drow Mage and Umber Hulk, incinerating them. After healing, the party follows a silk trail to Webb's Edge. Ash paints the hidden door with Minor Illusion, Corras picks the lock. Orla recruits nine spiders as disguise accessories using Speak with Small Beasts. They enter Webb's Edge disguised, with the door sealing behind them.",
+  moment: "SavannahBelle's Twin Wall of Fire",
+  momentDesc: "SavannahBelle twin-casts Wall of Fire on both enemies simultaneously, incinerating them while the rest of the party is confused."
+},
+{
+  id: 'S023', num: 23,
+  title: "Into the Fire",
+  hook: "The party continues their brawl in Web's Edge, ending a demon but alerting an army.",
+  body: "Billabong hurls an enemy mage into SavannahBelle's Wall of Fire. SavannahBelle unleashes twin-cast Fireball on a Nalfeshnee demon. Dahlia uses her Aura of Secrets to extract a dark truth from cyclops Gertrude, unlocking the Currency of Secrets tied to Vecna. Orla charms a giant toad that swallows her whole to 'keep her safe.' Dahlia decapitates the Nalfeshnee with a natural 20 flaming greatsword strike.",
+  moment: "Dahlia Unlocks the Currency of Secrets",
+  momentDesc: "Dahlia's Aura of Secrets forces Gertrude to reveal a murder, unlocking a Vecna-tied mechanic where secrets become currency."
+},
+{
+  id: 'S024', num: 24,
+  title: "The Spider Dragon and the Escape from Web's Edge",
+  hook: "As the party grabs a piece of the Rod of Seven Parts, Web's Edge collapses around them.",
+  body: "Orla befriends a Hezrou toad. Dahlia adopts cyclops Gertrude as her 'new sister,' but Gertrude gets stuck and is abandoned to torture. Ash Dimension Doors directly beneath a Spider Dragon and bluffs it by name-dropping High Summoner Grotonel Stonecutter. Corras steals the Rod piece. The cavern collapses. Ash teleports everyone to Castle Corras. Lolth's voice echoes in Corras's mind: 'Where are my servants?'",
+  moment: "Ash Tricks the Spider Dragon",
+  momentDesc: "Ash accidentally teleports under a Spider Dragon, then bluffs it into leaving its post by impersonating a Lolth follower."
+},
+{
+  id: 'S025', num: 25,
+  title: "The BWB Federation Takes Shape",
+  hook: "The BWB Federation carves up its new empire.",
+  body: "With Celestials and Fiends retreating to the Blood War, the BWB Federation commands a massive empire. Corras oversees from Castle Corras, Orla acts as the 'EPA,' Ash runs the 'NSA,' and Dahlia commands 'Guantanamo' -- a torture and interrogation center. Drakkar Knight Reaver, the Lord of Terror, has conquered the Lord's Alliance. The BWB plans to explore the Soul Forge's seven resonance points.",
+  moment: "Assigning the BWB Bastions",
+  momentDesc: "The players translate fantasy strongholds into modern bureaucracy: EPA, NSA, and a torture chamber."
+},
+{
+  id: 'S026', num: 26,
+  title: "The Web Unravels",
+  hook: "Escape from Web's Edge reaches its climax.",
+  body: "Dahlia recruits Gertrude the Cyclops as a 'sister.' Billabong and SavannahBelle chase a rolling Hezrou toad containing Orla. Ash uses Rope Trick to hide from a passing army, then Dimension Doors onto a Spider Dragon. Corras steals the Rod from its cocoon. Web's Edge collapses. Ash activates a scroll of planar alignment, evacuating the party to Castle Corras via dining table.",
+  moment: "Crash Landing at Castle Corras",
+  momentDesc: "The party teleports out of collapsing Web's Edge and crash-lands on a dining table at Castle Corras."
+},
+{
+  id: 'S027', num: 27,
+  title: "Descent Into the Soul Forge",
+  hook: "Battle of the Bridge Revenants.",
+  body: "The party reviews geopolitical threats before descending into the Soul Forge beneath Wave Echo Cave. Four Revenants and a Wraith Lord attack at a collapsed bridge. Billabong suffers back-to-back nat 1s, tumbling off a cliff and needing rescue by Spark. Dahlia carves through Revenants with her Flametongue Greatsword. The Wraith Lord's Soul Pulse Aura drains life from three party members. Session ends mid-combat.",
+  moment: "Billabong's Back-to-Back Nat 1s",
+  momentDesc: "Billabong misses her attack and then flies off a cliff while trying to shove a Revenant, requiring rescue by Spark."
+},
+{
+  id: 'S028', num: 28,
+  title: "Curses and Constructs",
+  hook: "Beneath the Temple of Dumathoin, the party tames shadow dogs with mince pies.",
+  body: "After finishing off Revenants, they discover fifteen shadow mastiffs. Orla lures them with mincemeat pies. When the Alpha demands a dominance display, Orla wild-shapes into a silverback gorilla and wrestles Billabong unconscious. The Alpha acknowledges Orla as pack leader. In a desecrated temple, Billabong picks up a cursed parchment and becomes obsessed with the fiend Malchor. They find malfunctioning gnomish constructs.",
+  moment: "Orla Wrestles Billabong as a Gorilla",
+  momentDesc: "Orla wild-shapes into a silverback gorilla and beats Billabong unconscious to prove pack dominance to shadow mastiffs."
+},
+{
+  id: 'S029', num: 29,
+  title: "The Exorcism of Ash and the Infernal Node",
+  hook: "A fiend possesses the wizard, and the only solution is reading a demon's contract in Infernal.",
+  body: "When Ash holds an enchanted coin, Malchor the Sorrow Bringer seizes control. While Billabong and Dahlia hold doors against flesh golems, the party exorcises the demon. Billabong rolls a nat 20 reading the infernal contract, breaking her curse. SavannahBelle uses Suggestion to force Malchor back into the coin. Ash resists the Queen of Gloom's pull. Billabong recites the Pact of Avarice, sacrificing her ability to aid allies to bind fiends.",
+  moment: "Billabong's Nat 20 Breaks the Infernal Contract",
+  momentDesc: "Billabong rolls a natural 20 reading an infernal contract, breaking her curse and discovering how to banish the demon from Ash."
+},
+{
+  id: 'S030', num: 30,
+  title: "The Harbinger's Bastion and the Ceaseless Maw",
+  hook: "Ancient shadow statues grant terrifying powers, and a world-eating serpent awaits.",
+  body: "The Harbinger transports the party to an ancient bastion where each member attunes to a shadow power archetype. After training on a chained Rift Stalker, they learn about the Ceaseless Maw -- a world-threatening abomination. The colossal abyssal serpent savages the party, but Orla blinds it with Sunbeam, SavannahBelle paralyzes it with Hold Monster (nat 1 against legendary resistance), and Corras misty-steps onto its face to drive his dagger into its blinded eye.",
+  moment: "Corras Drives His Dagger Into the Maw's Eye",
+  momentDesc: "After the Maw is blinded and paralyzed, Corras misty-steps onto its face for a devastating critical sneak attack."
+},
+{
+  id: 'S031', num: 31,
+  title: "The Death of Ash and the Arrival of Ezrella",
+  hook: "The barbarian kills the wizard, and the bard shows up to throw a party.",
+  body: "The Ceaseless Maw mind-controls Billabong into killing Ash with her own hammer. Ash's soul is captured by a mysterious obsidian orb. SavannahBelle's thunder wall explodes the Maw from inside. After a desperate escape from the collapsing cavern, the party processes Ash's death. At Ash's bastion, they meet Ezrella, a bard/fighter throwing a party. She delivers intelligence about Thayan smuggling. Billabong's previously summoned Vrocks return unbound and attack.",
+  moment: "Billabong Kills Ash Under Mind Control",
+  momentDesc: "The Ceaseless Maw seizes telepathic control of Billabong, forcing the barbarian to kill Ash with her own hammer."
+},
+{
+  id: 'S032', num: 32,
+  title: "Warehouse Seventeen",
+  hook: "The party infiltrates a warehouse and walks into an ambush by the lich Asnar the Crimson.",
+  body: "Dahlia creates a fake sweepstakes con to distract dock workers. Orla scouts as a rat. They find enchanted crates with false panels. SavannahBelle uses Revelation in Flesh to spot three invisible spellcasters including Asnar the Crimson, a lich. Her Disintegrate burns away his humanoid mask, revealing the skull beneath. Asnar casts Antipathy, banishes Orla, and attempts True Polymorph on Corras -- which fails because he's a changeling. SavannahBelle is imprisoned by chains.",
+  moment: "SavannahBelle Unmasks the Lich",
+  momentDesc: "SavannahBelle's Disintegrate burns away the lich's humanoid disguise, revealing the undead skull beneath."
+},
+{
+  id: 'S033', num: 33,
+  title: "Prisoners of Thay",
+  hook: "Corras surrenders to save his friends, and the entire party is captured.",
+  body: "Dahlia lands a critical hit decapitating a Thayan wizard. Corras stabs the lich when Asnar tries to restrain him. The lich retaliates with Danse Macabre and Force Cage, trapping Dahlia and Billabong in a burning warehouse. Facing impossible odds, Corras surrenders, putting on anti-magic manacles in exchange for his friends' safety. Billabong brands him with Nightmare's Leash for tracking. The entire party is captured and transported to a Thayan dungeon, where Corras awakens among dead changelings.",
+  moment: "Corras Surrenders to Save His Friends",
+  momentDesc: "With allies trapped in a burning warehouse, Corras puts on anti-magic manacles and surrenders himself to the lich."
+},
+{
+  id: 'S034', num: 34,
+  title: "The Twin Formation",
+  hook: "A therapy-speaking Otyugh, a Nothic blood pact, and Corras absorbs his twin brother.",
+  body: "SavannahBelle befriends a Nothic through a blood oath. Dahlia finds a hidden passage. Corras claims to be his twin Sarek. They meet Wally, a deeply emotional Otyugh who speaks in therapy-speak and accuses SavannahBelle of emotional manipulation. A sincere apology moves Wally to tears. Asnar tries to sacrifice both changelings. A knight's stray nat-1 crossbow bolt kills the lich. Corras absorbs his twin brother through Twin Formation, gaining 23 attribute points.",
+  moment: "The Nat-1 That Killed a Lich",
+  momentDesc: "A Thayan knight rolls a nat-1, sending a crossbow bolt into his own master Asnar for the killing blow."
+},
+{
+  id: 'S035', num: 35,
+  title: "Crossover to Barovia: The Death House",
+  hook: "The BWB characters are thrown into the mists of Barovia.",
+  body: "The party meets Mordenkainen, Tasha, and Alustriel Silverhand in Sigil. The legendary spellcasters are displeased the heroes prioritize personal quests over the multiverse. Mordenkainen opens a portal and the party is sucked through into Barovia, landing before Durst Manor -- the Death House. Completely unfazed, the over-leveled heroes treat the haunted house as a minor inconvenience, threatening to fireball it.",
+  moment: "The BWB Characters Enter Death House",
+  momentDesc: "High-level heroes are dumped into the Curse of Strahd campaign setting, treating Death House as a minor inconvenience."
+},
+{
+  id: 'S036', num: 36,
+  title: "The Death House Ritual",
+  hook: "Every corner of the cursed house holds a deadly surprise.",
+  body: "The party battles invisible stalkers and a marilith. SavannahBelle converses with the house itself and is pulled into a vision where an illusion of Strahd forces her to drink blood, cursing her with extreme paranoia of wizards. They meet Sarusanda of the Ulmist Inquisition. Killing basement priests causes them to molt into more powerful undead forms. Ezrella is cursed with vampiric corruption. Corras's soul is temporarily trapped in a tattoo.",
+  moment: "SavannahBelle's Bloody Toast with Strahd",
+  momentDesc: "SavannahBelle is tricked into drinking a goblet of blood by an illusion of Strahd, cursing her with wizard paranoia."
+},
+{
+  id: 'S037', num: 37,
+  title: "The Root of the Problem",
+  hook: "Deep in the Death House basement, the party faces the true evil in the reliquary.",
+  body: "After dispatching the Cult of Osibis, Corras discovers a whispering black orb that tries to dominate his mind. The entity claims to be the master of Barovia. Corras resists (rolling 25 against DC 23) and rejects the dark bargain. In a flooded reliquary, massive Shambling Mounds ambush and engulf Orla, who barely escapes before suffocating.",
+  moment: "Corras Resists the Master of the Realm",
+  momentDesc: "Corras passes a DC 23 Wisdom save and rejects a dark bargain from the entity claiming to rule Barovia."
+},
+{
+  id: 'S038', num: 38,
+  title: "Escape from Death House",
+  hook: "'I drip on all of you.'",
+  body: "The party escapes through a harrowing skill challenge. Orla flies out as a peregrine falcon. SavannahBelle transforms into a glistening mucus worm. Corras nails a nat-20 backflip through scythe blades timed to a ghostly birth scene. After escaping, SavannahBelle twin-fireballs the house into ash. The party recalls their deal with Strahd: find the Rod piece in exchange for leaving and recovering Ash's soul.",
+  moment: "Burning the Death House",
+  momentDesc: "SavannahBelle twin-fireballs the sentient mimic house into ash after the party barely escapes."
+},
+{
+  id: 'S039', num: 39,
+  title: "Village of Barovia and Tser Pool",
+  hook: "'Go away. You bring the hungry old gods with you.'",
+  body: "The party finds a cursed goat bound to an oak tree with dire wolves closing in. SavannahBelle walls the wolves in stone. They flee on the flying carpet as angry villagers hurl rocks. At Tser Pool, they remove the goat's curse, repelling an aboleth. SavannahBelle charms a Vistani girl. Corras spots zombie protection sigils and overhears about the Holy Symbol of Ravenkind.",
+  moment: "Wall of Stone Wolf Trap",
+  momentDesc: "SavannahBelle traps dire wolves behind Wall of Stone while Ezrella sprints to rescue a cursed sacrifice."
+},
+{
+  id: 'S040', num: 40,
+  title: "Madam Eva's Gambit",
+  hook: "'I bested you at your own game. It's mine now.'",
+  body: "Corras charms zombies with the Rod of Rulership. He infiltrates Madam Eva's tent, executing a flawless switcheroo of the Holy Symbol, catching her falling brandy bottle mid-air. He steals the Deck of Many Things with a nat-20 but triggers a trap, drawing the Donjon card in a dreamscape. He reappears in a latrine pit still holding the deck. Eva eventually wakes, strips their inventory, and forces Corras into a card game where he draws a tarot card instead of the Deck.",
+  moment: "The Deck of Many Things Heist",
+  momentDesc: "Corras steals the Deck of Many Things with a nat-20, survives a dreamscape prison, and emerges in a latrine holding it."
+},
+{
+  id: 'S041', num: 41,
+  title: "The Heart of Sorrow",
+  hook: "A simple recon mission goes horribly wrong.",
+  body: "The party pillaged Madam Eva's tent, acquiring powerful and cursed artifacts. Strahd's furious telepathic voice declares their deal broken. A recon flight over Castle Ravenloft leads to capture. They awake facing Strahd and a massive Crystalline Heart. Ezrella puts on a spectral crown and is charmed by Strahd. SavannahBelle drinks from a profane chalice, becoming paralyzed. The charmed Ezrella critically strikes SavannahBelle, killing her. Strahd bites SavannahBelle and seals her in a coffin to rise as his vampire spawn.",
+  moment: "SavannahBelle Becomes a Vampire Spawn",
+  momentDesc: "Ezrella, charmed by Strahd, kills the paralyzed SavannahBelle, who is then turned into Strahd's vampire spawn."
+},
+{
+  id: 'S042', num: 42,
+  title: "The Battle of Ravenloft Begins",
+  hook: "Rahadin falls, the Heart of Sorrow shatters, and the final battle begins.",
+  body: "Two adventuring parties merge for the climactic battle. Izzy slays Rahadin. Dahlia purifies profane blood to shatter the Heart of Sorrow, sacrificing half her HP. Strahd turns Ezrella into a rat. Baba Lysaga arrives in a walking hut and gifts the Sunsword to teach her 'beautiful boy' a lesson. Van Richten takes a Power Word Kill meant for Zal. Shrum's mirror reforms, restoring his memories of enslavement. He forces Ludmilla to see her true form, shattering her into a million pieces.",
+  moment: "Shrum's Mirror Destroys Ludmilla",
+  momentDesc: "Shrum forces Strahd's bride to gaze upon her true monstrous form in a restored mirror, shattering her."
+},
+{
+  id: 'S043', num: 43,
+  title: "Returns, Refugees, and Ruthless Decisions",
+  hook: "The party returns to find Castle Corras besieged and packed with refugees.",
+  body: "Returning from Barovia, the Fey Gloaming Court has overrun Faerun. Castle Corras shelters thousands of refugees under an obsidian dome. Crises mount: rotting rations, backed-up sewage, an obsidian cult. The Matron of Ravens curses Neverember and his retinue into comas and vanishes. Isteval departs in fury, calling the party 'monsters with good publicity.' The party makes a dark choice: murder the comatose Neverember and his men, frame the Matron, and harvest Shadow Essence from the bodies.",
+  moment: "Draining Lord Neverember",
+  momentDesc: "Rather than wake the comatose Lord Neverember, the party murders him and harvests his Shadow Essence."
+},
+{
+  id: 'S044', num: 44,
+  title: "The Trial and the Amputation",
+  hook: "A 'spa day' interrogation takes a sharp turn.",
+  body: "SavannahBelle rallies the Lord's Alliance using Neverwinter's signet ring. The Master of Whispers snaps his own bound fingers, pulls a glass dagger from his hollowed jawbone, and inscribes a rune on his leg. Dahlia chops off his leg with a flame-tongued greatsword to stop the spell. A chaotic public trial erupts as the BWB confronts the Butcher about the famine. A rotten tomato hits SavannahBelle's face.",
+  moment: "Dahlia Amputates the Master of Whispers' Leg",
+  momentDesc: "The captive breaks his own fingers and pulls a dagger from his jaw. Dahlia cuts off his leg with a flaming sword."
+},
+{
+  id: 'S045', num: 45,
+  title: "A Butcher, a Bot, and a Box",
+  hook: "The BWB faces a massive riot, slaughters thousands, and discovers the Butcher is more machine than man.",
+  body: "The BWB fails to convince 9,000 peasants and paladins of their innocence. A riot breaks out, leading to a massive slaughter. Dahlia strips the Butcher and discovers he's a mechanical construct wearing a suit of stitched human skin over an adamantine chassis. Zibblebottoms accidentally shuts down the construct's encrypted brain. They stumble into Neverember's funeral, where SavannahBelle gives an awkward eulogy. In the castle cellars, the Matron and Fleshy wait with the open lead box.",
+  moment: "The Butcher's Skin Suit",
+  momentDesc: "The Butcher is revealed to be a mechanical construct wearing stitched-together human skin over an adamantine chassis."
+},
+{
+  id: 'S046', num: 46,
+  title: "The Matron's Bargain and the Wild Hunt",
+  hook: "A devil's bargain with the Matron, then a deadly hunt in the Feywild.",
+  body: "The Matron reveals the Famine Stone was corrupted while tracking the Gloaming Court. She demands authority over the city in exchange for protection. Corras reluctantly agrees. Zibblebottoms provides anti-scrying chaff grenades involving a hamster named Gerald at 52 RPM. In the Feywild, wild magic shrinks Orla and forces SavannahBelle to shout everything. Cernunnos of the Wild Hunt offers a deadly compact: outrun his shadow hounds or lose a party member forever. They fail. One character must permanently join the Wild Hunt.",
+  moment: "Caught by the Wild Hunt",
+  momentDesc: "The party fails the chase, and one player character must permanently leave the campaign to join the Wild Hunt."
+}
+];
+
+// ============================================================
+// ALL 276 PHILOSOPHER REACTIONS
+// ============================================================
+const REACTIONS = {
+nietzsche: [
+  /* S001 */ "A castle claimed through sheer audacity! The will to power manifests as real estate. I approve of this foundation for greatness.",
+  /* S002 */ "Stealing from a troll's loincloth! This is the noble lie Zarathustra spoke of -- except significantly more disgusting. But the familiar consumed by a sorrowful void? That is the abyss gazing back.",
+  /* S003 */ "YES! Billabong seizes celestial fire itself! The Übermensch does not wait for the gods to gift power -- she reaches out and TAKES it. This barbarian understands.",
+  /* S004 */ "They accept a permanent curse willingly! No shadows, no reflections -- they shed the last remnants of herd identity. The Chronicler's Mark is a baptism beyond good and evil!",
+  /* S005 */ "A Gnome lies so convincingly that ancient magic itself is deceived. This is the revaluation of all values -- truth is whatever you can make others believe.",
+  /* S006 */ "A wasp kills an Archmage. Nature itself is the will to power -- mindless, brutal, perfect. The strong do not need Time Stop. They need stingers.",
+  /* S007 */ "Fighting one's past self! This is the eternal recurrence made literal! Corras confronts his own shadow and rolls initiative. Magnificent.",
+  /* S008 */ "They ARE their own cult! They ARE their own prophecy! The Übermensch does not serve fate -- he discovers he WAS fate all along. This is intoxicating.",
+  /* S009 */ "Contacted through a latrine bucket. Even the will to power must occasionally pass through sewage. The mimic horse, however, is a creature after my own heart -- nothing is what it seems.",
+  /* S010 */ "A tiny Gnome druid calls down the wrath of nature itself, annihilating a dozen enemies in one gesture. The smallest body can contain the greatest will! Orla is my new favorite.",
+  /* S011 */ "Argentus seizes control of Ash's own body to advance his agenda! The parasitic will to power -- using another's flesh as an instrument! Horrifying and... admirable?",
+  /* S012 */ "The party pushes deeper into fire and flame. The crucible of suffering forges the Übermensch. Though I confess this session offers fewer specifics to celebrate.",
+  /* S013 */ "A BLOOD PACT WITH A DEMON! Yes! YES! They sign away their freedom for power, and they do it KNOWINGLY! This is beyond good and evil -- this is beyond SANITY and I LOVE IT!",
+  /* S014 */ "A prince in a hamster ball. Dionysian rage contained in an Apollonian sphere. The metaphor writes itself. Corras diving off a cliff in panic, however, is simply weakness.",
+  /* S015 */ "They steal their own familiar from their own past! The Übermensch does not accept loss -- he reaches through TIME ITSELF to undo it. This is the highest expression of will!",
+  /* S016 */ "CORRAS REWRITES REALITY WITH A CARD! He holds the Fates in his hand and PLAYS them! This man is either the Übermensch or the most reckless fool alive. Both are magnificent.",
+  /* S017 */ "King Corras! WAR WITH ANGELS! Lilith pledges to the god of death! Every single one of them seizes ultimate power and DECLARES WAR ON HEAVEN! I am weeping with joy!",
+  /* S018 */ "Dismissing a mount from a dragon's jaws out of pure spite? This is the petty will to power and I respect it enormously. The 1,200 mince pies, however, are mere decadence.",
+  /* S019 */ "They solve every problem with explosions. This is not philosophy, this is pyromania. But adopting orphaned yetis? Disappointing. The Übermensch does not adopt. He conquers.",
+  /* S020 */ "They ALL DIE and then come back! Death itself cannot hold them! Lathander resurrects them because even the gods recognize their will to power! Though 'drink holy pee star' is not exactly Zarathustra.",
+  /* S021 */ "Dark boons from binding rituals! They accept power from dark entities willingly! The slave morality of 'purity' means nothing to those who would be MASTERS!",
+  /* S022 */ "Wearing living spiders as jewelry to infiltrate an enemy stronghold. The will to power dressed in arachnids. Orla's spider recruitment speech has more conviction than most human leaders.",
+  /* S023 */ "Secrets as CURRENCY! Vecna understands -- knowledge IS power, and these adventurers are learning to spend it. The decapitation was a nice touch. Art through violence.",
+  /* S024 */ "Bluffing a Spider Dragon! Stealing from the spider goddess herself! Corras channels pure audacity as a weapon. Lolth's fury only proves his greatness.",
+  /* S025 */ "They have built an EMPIRE. Corras rules, Ash spies, Dahlia tortures. The will to power has found institutional expression. I am... almost proud. Almost.",
+  /* S026 */ "Crashing onto a dining table with a stolen artifact and a demon toad is the most triumphant entrance imaginable. The audacity of it! Landing in style after robbing a goddess!",
+  /* S027 */ "Billabong rolls two natural ones and falls off a cliff. Even the mighty stumble. But the fairy dragon catches her! The Übermensch inspires loyalty even in failure.",
+  /* S028 */ "A druid becomes a gorilla and beats the barbarian unconscious to prove dominance to shadow dogs. This is pure, primal will to power. No philosophy needed. Just FISTS.",
+  /* S029 */ "Reading an infernal contract with a natural 20! The will to power applied to LITERACY! And then reciting the Pact of Avarice -- sacrificing the ability to help others for personal power? PERFECT.",
+  /* S030 */ "Corras rides the face of a paralyzed world-eating serpent and drives a dagger into its eye. This is not combat. This is ART. The Übermensch stands ON his enemies.",
+  /* S031 */ "Billabong kills her best friend under mind control and they FORGIVE her? Disappointing. Where is the rage? The vengeance? Though the Maw exploding from inside a thunder wall is suitably violent.",
+  /* S032 */ "Unmasking a lich! Burning away the false face to reveal the skull beneath! This is what I have always said -- strip away the pretense and see the death that hides under civilization.",
+  /* S033 */ "Corras SURRENDERS? He puts on MANACLES? He SUBMITS? This is... this is... I need to sit down. The slave allows himself to be chained. I am genuinely nauseous.",
+  /* S034 */ "Corras ABSORBS HIS TWIN! He literally CONSUMES another version of himself to become stronger! THIS is the Übermensch! A knight's nat-1 killing a lich is just the universe agreeing with me!",
+  /* S035 */ "Overpowered heroes treat a legendary haunted house like a minor inconvenience. When you have transcended fear, even Death House is just an old building with uppity furniture.",
+  /* S036 */ "Drinking blood offered by Strahd! Yes! Embracing the dark communion! Though becoming paranoid about wizards is a peculiar result. The curse of those who drink from the chalice of power.",
+  /* S037 */ "Corras RESISTS the master of an entire realm by sheer force of will! DC 23 wisdom save -- PASSED! The Übermensch cannot be dominated because HE is the one who dominates!",
+  /* S038 */ "A nat-20 backflip through scythe blades! Then burning the sentient house to ASH! This is how the Übermensch handles haunted real estate -- with style and arson.",
+  /* S039 */ "Angry villagers hurl rocks at them. Good. The Übermensch is always resented by the herd. The goat rescue is weak, but fleeing on a magic carpet has a certain aristocratic flair.",
+  /* S040 */ "Stealing from FATE ITSELF! Corras takes the Deck of Many Things by force, survives a dreamscape prison, and emerges from a latrine VICTORIOUS! This is my favorite session!",
+  /* S041 */ "SavannahBelle turned into a vampire spawn! Strahd's cruelty is magnificent in its precision -- using allies against each other. The charmed killing the paralyzed. Pure predatory excellence.",
+  /* S042 */ "Two parties merge for the final battle! A mirror shatters a bride into a million pieces! The Sunsword burns with the fury of a grandmother's tough love! This is GLORIOUS VIOLENCE!",
+  /* S043 */ "They MURDER the comatose Neverember and HARVEST HIS SOUL! 'We've always been the bad guys.' FINALLY! They admit what I have been saying all along! Beyond good and evil AT LAST!",
+  /* S044 */ "Cutting off a man's leg with a flaming sword to prevent a blood spell! Dahlia does not negotiate with escape attempts. She AMPUTATES them. The will to power applied to surgery.",
+  /* S045 */ "They slaughter THOUSANDS in a riot and discover a man made of clockwork wearing human skin! This session is a symphony of horror and power! The Übermensch does not rule -- he REIGNS!",
+  /* S046 */ "Caught by the Wild Hunt. One must be sacrificed. The question is not WHO dies -- it is who is strong enough to CHOOSE to die. This is the ultimate test of the will. I am breathless."
+],
+kant: [
+  /* S001 */ "A castle claimed by adventurers? By what right? Was there a social contract? A deed? Communing with dark entities in basements is deeply irresponsible and categorically impermissible!",
+  /* S002 */ "Stealing from a creature's intimate garments! If EVERYONE stole from trolls' loincloths, there would be no moral order to garment-based storage! This cannot be universalized!",
+  /* S003 */ "Absorbing a dying celestial entity's power rather than helping it peacefully? One cannot treat a celestial being merely as a MEANS to personal enhancement! There were other options!",
+  /* S004 */ "An irreversible magical curse accepted without informed consent by the entire party? This violates the autonomy of every individual who did not choose to lose their shadow!",
+  /* S005 */ "LYING to a TRUTH-DETECTING TRAP? This is a categorical violation of the categorical imperative! If everyone lied to truth detectors, the very concept of truth would collapse! Which is EXACTLY WHAT HAPPENED!",
+  /* S006 */ "I will concede that defending oneself against a hostile Archmage constitutes a legitimate application of force. The wasp, at least, acted from instinct rather than moral corruption.",
+  /* S007 */ "Time travel to steal from one's PAST SELF? Which self has moral priority? If the maxim 'steal from your temporal copies' were universal law, personal identity would be MEANINGLESS!",
+  /* S008 */ "They are their own cult? They created the very rumors they investigated? This is a temporal categorical nightmare! The chain of causation has become a CIRCLE! My head hurts!",
+  /* S009 */ "Pit fighting, jail, and intimidating travelers making stew. Not a single member of this party has consulted their duty to moral law today. A mimic horse is the LEAST of their ethical problems.",
+  /* S010 */ "I will admit that stopping a Balor summoning could be considered a duty. But the stealth failure was not from duty -- it was from incompetence. There IS a distinction.",
+  /* S011 */ "A sentient artifact COMPELLING a party member to harm an ally? This is a violation of bodily autonomy so fundamental that I barely have words. Ash cannot be held responsible, but the arm MUST be destroyed!",
+  /* S012 */ "The party ventures deeper into danger. I suppose if they have undertaken this mission from duty, their courage is morally praiseworthy. I will withhold judgment. Briefly.",
+  /* S013 */ "A BLOOD PACT WITH A DEMON?! If EVERYONE signed infernal contracts, society would collapse into a web of demonic obligations! The categorical imperative SCREAMS against this! I am SCREAMING!",
+  /* S014 */ "The hamster ball situation, while absurd, at least prevented harm to the prince. Ash acted from duty to protect -- the ONE morally defensible action this session. Well done, Ash. Just Ash.",
+  /* S015 */ "Deceiving one's past self is a violation of trust so profound that I need to invent new ethical frameworks to properly condemn it. But they saved a familiar's life, so... I'm conflicted.",
+  /* S016 */ "REWRITING REALITY to avoid consequences?! The Fates card is an abomination! Moral agents must accept the consequences of their actions! You cannot UNDO causation! THIS IS NOT HOW ETHICS WORK!",
+  /* S017 */ "WAR ON CELESTIALS? These are ANGELS! Beings of divine order! And Lilith pledges to the god of DEATH? I need to lie down. The entire moral universe has been inverted.",
+  /* S018 */ "Dismissing a mount to spite a dragon is petty and cruel to the mount. The mince pie incident, while wasteful, at least caused no direct moral harm. This is the most ethical session yet, which is horrifying.",
+  /* S019 */ "Solving problems with 62 flasks of explosive fire rather than negotiation! If EVERYONE's response to monsters was indiscriminate bombing, the natural world would be DESTROYED! Oh wait, they also adopted baby yetis. That's... fine.",
+  /* S020 */ "Grabbing an unknown magical artifact without assessment or consent! 118 radiant damage! A TOTAL PARTY KILL! 'Drink holy pee star' is NOT a coherent resurrection protocol! Though Billabong's vigil was... genuinely dutiful.",
+  /* S021 */ "Binding to dark entities? Deception expertise for a PALADIN? The moral fabric of this party is beyond repair. SavannahBelle breaking discipline shows at least SOMEONE has a conscience, even if misapplied.",
+  /* S022 */ "Incinerating confused enemies with twin walls of fire has a certain utilitarian logic, but Kant does not DO utilitarian logic! Also, recruiting spiders under false pretenses of 'choice' is manipulative!",
+  /* S023 */ "Secrets as currency? Trading private information for power? This instrumentalizes the dignity of every person whose secret is spent! Vecna's system is the antithesis of moral law!",
+  /* S024 */ "Abandoning Gertrude to torture! She trusted them as a 'sister'! They treated her as a means to their escape and discarded her! This is the TEXTBOOK violation of the second formulation!",
+  /* S025 */ "They have institutionalized TORTURE. They called it 'Guantanamo' and LAUGHED. The categorical imperative weeps. I weep. If everyone ran a torture chamber, human dignity would be -- oh, it already is.",
+  /* S026 */ "The crash landing was reckless but effective. I note that nobody asked the demon toad for consent to be teleported. Also, 'sisterhood is a concept' is philosophically imprecise.",
+  /* S027 */ "Descending into ancient forges to fight the undead is, I concede, a legitimate quest if motivated by duty. Billabong's nat-1s are not moral failings, merely statistical ones. For once.",
+  /* S028 */ "Wrestling someone unconscious to prove dominance to DOGS? If everyone resolved social hierarchies through gorilla combat, civilization would -- actually, that might explain a great deal about civilization.",
+  /* S029 */ "An EXORCISM! Finally, an act that could be considered morally obligatory! But then Billabong signs the Pact of AVARICE? Sacrificing the ability to help others? That is CHOOSING to violate the categorical imperative!",
+  /* S030 */ "Shadow power archetypes? Each member embracing darkness for combat advantage? The ends do not justify the means! A dagger in a creature's eye is viscerally effective but ethically I cannot endorse riding faces.",
+  /* S031 */ "The barbarian killed the wizard. Under mind control. This is... this is the cruelest possible test of moral philosophy. Can there be guilt without agency? I am genuinely tormented by this question.",
+  /* S032 */ "I will concede that uncovering a lich's disguise serves the greater good. But the sweepstakes con? Deceiving innocent dock workers with false promises? That is a CATEGORICAL violation!",
+  /* S033 */ "Corras surrenders himself to save his friends. This... this is duty. This is the moral law made manifest through self-sacrifice. I am... briefly... proud. Just this once. Don't tell Nietzsche.",
+  /* S034 */ "A stray crossbow bolt kills the lich. This is not justice -- it is chaos. But the Otyugh speaking in therapy language? 'Emotional manipulation'? That creature has read Groundwork for the Metaphysics of Morals!",
+  /* S035 */ "Threatening to fireball a haunted orphan house? GHOST CHILDREN are asking for help and the party considers ARSON?! The duty of care extends to spectral minors!",
+  /* S036 */ "Drinking blood offered by the undead lord of a cursed realm! If everyone accepted beverages from vampires, there would be no -- actually, I simply refuse to universalize this scenario.",
+  /* S037 */ "Corras RESISTS temptation! He says NO to dark power! The moral law within him proves stronger than the starry heavens above! This is the greatest moment of the entire campaign!",
+  /* S038 */ "Burning down a house -- even a sentient, evil house -- raises questions about property rights for non-biological entities. But I admit there are limits to what I can defend. Even haunted houses.",
+  /* S039 */ "Angry villagers are correct to throw rocks. The party has brought 'hungry old gods' with them. One cannot universalize the maxim 'bring eldritch horror to small villages.'",
+  /* S040 */ "STEALING from an elderly woman! MULTIPLE TIMES! The Deck of Many Things is not yours by RIGHT, Corras! Theft cannot be universalized as a maxim regardless of how impressive the sleight of hand is!",
+  /* S041 */ "A charmed ally kills a paralyzed friend, who is then turned into a vampire? Every moral principle I hold dear has been violated simultaneously. I have nothing left to say. I'm going to sit here quietly.",
+  /* S042 */ "Van Richten sacrificing himself is pure Kantian duty -- acting from moral law regardless of consequences. The one good person in this entire story. I am moved to actual tears.",
+  /* S043 */ "THEY MURDERED A COMATOSE MAN AND HARVESTED HIS SOUL! 'We've always been the bad guys'?! I HAVE BEEN SAYING THIS FOR FORTY-THREE SESSIONS! NOBODY LISTENED! THE CATEGORICAL IMPERATIVE IS IN SHAMBLES!",
+  /* S044 */ "AMPUTATING A PRISONER'S LEG?! He was BOUND and CAPTIVE! The duty of care for prisoners is ABSOLUTE! A flame-tongued greatsword is not a medical instrument! I am filing a formal ethical complaint!",
+  /* S045 */ "They slaughtered THOUSANDS of refugees who were PROTESTING. The Butcher is a MACHINE wearing HUMAN SKIN. I have seen the moral abyss and it is wearing stitched-together flesh. I need to retire.",
+  /* S046 */ "One member must be sacrificed to the Wild Hunt. This is the trolley problem made manifest and I hate it. Though I note Corras ceded his city to the Matron -- a dereliction of his duty as king."
+],
+socrates: [
+  /* S001 */ "But what IS a castle? Can one truly 'own' a structure one did not build? And what does it mean to 'master' whispers -- does the whisper not master the listener?",
+  /* S002 */ "If a coin is stolen from a troll's loincloth and replaced with wood, is the troll poorer? And when the familiar was consumed, did it cease to exist, or merely change its mode of being? I merely ask.",
+  /* S003 */ "When Billabong absorbed the celestial, did she become more herself or less? If you gain the memories of another being, whose memories are your memories? I have several follow-up questions.",
+  /* S004 */ "If one has no shadow, can one still cast darkness? And if one cannot be charmed, does that make one immune to love? Or IS love a form of charm? These tattoos raise more questions than they answer.",
+  /* S005 */ "But CAN a lie become truth simply because truth itself is deceived? If the Hall of Whispers accepts the lie, is it still a lie? Or has truth been redefined? I would like to examine this Hall personally.",
+  /* S006 */ "When the Archmage used Time Stop, was HE outside of time, or was everyone else? And if his 'lesser half' was this powerful, can we be certain the 'greater half' isn't the lesser one? What do we really know?",
+  /* S007 */ "If you fight your past self and win, did you always win? If you lose, did you always lose? And what, precisely, IS an eyelash, philosophically speaking?",
+  /* S008 */ "If you are the cult that you were investigating, were you investigating yourself? And if so, did you find what you were looking for? Was the investigation itself the answer? What was the question?",
+  /* S009 */ "Is a mimic that perfectly imitates a horse not, in some meaningful sense, a horse? What is 'horse-ness' if not the appearance and function of a horse? Sid raises profound ontological questions.",
+  /* S010 */ "When nature itself rises up in wrath, is it still 'nature'? Or has it become something unnatural? Can the natural be wrathful, or is wrath inherently a deviation from natural order?",
+  /* S011 */ "If your own arm betrays you, whose arm is it? Can a limb have a will separate from the person? And if Argentus controls the arm, who controls Argentus? Perhaps no one controls anyone.",
+  /* S012 */ "They continue their adventure. But toward what? Does the path create the destination, or does the destination create the path? And do they truly know the difference?",
+  /* S013 */ "What IS a pact? If both parties are desperate, can there be genuine agreement? And when a demon says 'undefined favors,' is that not the same as saying 'everything and nothing'? How very philosophical of demons.",
+  /* S014 */ "But is a person inside a sphere truly trapped, or is everyone OUTSIDE the sphere trapped in a world that contains a raging Quaggoth? Perspective, my friends. It is always about perspective.",
+  /* S015 */ "If you steal your own familiar from yourself, is it theft? Whose familiar is it -- the past self who has it or the future self who lost it? Does possession require a fixed point in time?",
+  /* S016 */ "If the Fates card rewrites reality, is the new reality 'real'? Were they always going to play the card? Is free will compatible with a card that determines fate? I need several more sessions to process this.",
+  /* S017 */ "But what IS a king? When Corras declares war on angels, does he war with the divine order itself? And if one can war with heaven, was heaven ever truly in charge?",
+  /* S018 */ "If you dismiss a mount before a dragon eats it, did the dragon fail to eat, or did the mount cease to exist? And which is worse for the dragon -- losing a meal, or the meal never having been?",
+  /* S019 */ "Is a solution that involves 62 flasks of explosive truly a 'solution'? Or is it merely a very large problem that happens to solve a smaller one? And can you truly 'adopt' a yeti?",
+  /* S020 */ "But what IS death, if one can return from it? And what IS a star, if touching it kills you? The message 'drink holy pee star' -- is this divine communication, or just very bad handwriting?",
+  /* S021 */ "If receiving dark boons makes you stronger but darker, have you gained or lost? And when the Drow tests devotion, whose devotion is being tested -- the party's, or the Drow's faith in his own test?",
+  /* S022 */ "Do the spiders Orla recruited CHOOSE to be disguise accessories? She claims they 'chose to be here.' But can a spider consent to being jewelry? What constitutes informed consent for arachnids?",
+  /* S023 */ "Secrets as currency -- but whose value do secrets have? The keeper's or the knower's? And if a secret is spent, is it still a secret? Or has it become merely information? I am fascinated by this exchange rate.",
+  /* S024 */ "When Ash impersonates a servant of Lolth, is she lying to the dragon, or becoming a servant of Lolth temporarily? Is identity fixed, or does the performance create the person? The dragon seemed convinced.",
+  /* S025 */ "They call their empire a 'federation' -- but what is the difference between a federation and a kingdom? If one person rules all the bastions, is it not simply monarchy with better branding?",
+  /* S026 */ "If a demon toad is teleported without its consent, has its autonomy been violated? Or does friendship with Orla constitute implicit consent? And what IS a 'sister' in the context of a cyclops?",
+  /* S027 */ "When Billabong falls off a cliff, is gravity the enemy, or was it always the cliff? And can a fairy dragon truly 'rescue' a barbarian, or does the barbarian merely accept the fairy dragon's assistance?",
+  /* S028 */ "If a druid becomes a gorilla and defeats a barbarian, who is the dominant species? And do the shadow dogs understand dominance, or merely fear? Is there a difference?",
+  /* S029 */ "But what IS avarice, if the pact that names it grants power? Can one be avaricious in the pursuit of saving a friend? Is selfishness that serves others still selfishness? The contract raises good questions.",
+  /* S030 */ "When Corras stands on the Maw's face, who is truly the monster -- the serpent that eats worlds, or the man who rides its face? And do we admire this because we fear the alternative?",
+  /* S031 */ "If you kill someone while your mind is not your own, whose hands did the killing? And if the soul is captured, has the person died, or merely been relocated? What IS death without a departing soul?",
+  /* S032 */ "When the lich's mask melts, is the skull beneath the truth? Or was the mask the truth the lich chose to live? Do we become our disguises, or are we always the bones beneath?",
+  /* S033 */ "When Corras surrenders, is that weakness or the highest form of strength? If you chain yourself to free others, are you the prisoner or the liberator? Kant seems oddly quiet about this one.",
+  /* S034 */ "If a nat-1 kills a lich, was it destiny or random chance? And if Corras absorbs his twin, is he now one person or two? Can you become more of yourself by consuming another self?",
+  /* S035 */ "These heroes are too powerful for the haunted house. But does power make the haunted house less haunted? Or does it make the heroes less capable of fear? And which would be the greater loss?",
+  /* S036 */ "If an illusion of Strahd offers you blood and you drink it, did Strahd offer it or did YOU? And is paranoia of wizards rational in a world where wizards can end reality? Perhaps it is wisdom.",
+  /* S037 */ "Corras resists the master of the realm. But what does it mean to 'master' a realm? If the realm's master can be resisted, is he truly the master? I merely ask.",
+  /* S038 */ "If you burn a sentient house, did you commit murder or demolition? And what IS a house, if it can also be a creature? Is every building merely a patient monster?",
+  /* S039 */ "The villagers say 'you bring the hungry old gods.' But did they bring the gods, or did the gods bring them? And what does a god hunger FOR? Can a god experience hunger?",
+  /* S040 */ "Corras claims 'I bested you at your own game.' But whose game IS the Deck of Many Things? The player's, the card's, or fate's? And can one truly win a game one does not understand?",
+  /* S041 */ "When a charmed friend kills a paralyzed friend, who is the victim? Both? Neither? And when Strahd turns the dead into undead, has he ended a life or begun one? What IS alive?",
+  /* S042 */ "When Shrum's mirror shows Ludmilla her true face and she shatters -- was the mirror showing truth, or creating it? Does a reflection have more reality than the thing reflected?",
+  /* S043 */ "'We've always been the bad guys.' But who decides what 'bad' means? The party? The refugees? The comatose man being drained? And if everyone is wrong, does 'right' exist at all?",
+  /* S044 */ "If you cut off a man's leg to stop his spell, did you save him or harm him? Can an amputation be an act of mercy? And what IS a jawbone that contains a dagger?",
+  /* S045 */ "The Butcher is a machine wearing human skin. But what makes a human, human? If the skin is human and the mind is mechanical, where does personhood reside? Inside or outside?",
+  /* S046 */ "One must join the Wild Hunt forever. But what IS forever in the Feywild? And is being hunted really different from ordinary life? Are we not all running from something?"
+],
+suntzu: [
+  /* S001 */ "Acquiring a fortified position without combat: strategically sound. The basement investigation was reckless -- never probe unknown magical defenses alone. 6/10.",
+  /* S002 */ "The loincloth infiltration: unconventional, effective, minimal casualties. Textbook use of misdirection. 8/10. Losing the familiar to an unknown entity: poor asset management. 3/10.",
+  /* S003 */ "Ave's blade dance to neutralize a Beholder through art rather than combat: brilliant psychological warfare. 9/10. Jumping into an unknown pit: 1/10. Never leap before you look.",
+  /* S004 */ "Accepting an unknown magical curse from a stolen book? No risk assessment, no controlled testing, no exit strategy. The ambush survival was adequate. Overall: 4/10. Amateur hour.",
+  /* S005 */ "The druidic review deception: coordinated, multi-layered, all parties briefed. 8/10. The plunging sneak attack from Billabong's back: unconventional vertical warfare. 9/10. Impressive.",
+  /* S006 */ "The Archmage used superior positioning, terrain control, and force multiplication. An excellent enemy. The wasp finishing blow was lucky, not tactical. 5/10. Sometimes Sun Tzu weeps.",
+  /* S007 */ "Planning a time-travel heist to save a familiar is strategic overcorrection of the highest order. The crinkly bag lure: 7/10. Getting caught immediately: 2/10. Know when to extract.",
+  /* S008 */ "Creating a self-fulfilling prophecy to hide their activities: 9/10. This is the Art of War chapter on deception made temporal. Also, tunneling with magic for infiltration is sound methodology.",
+  /* S009 */ "Jail time, blown covers, and alerting the enemy. Failed reconnaissance on every level. 2/10. A mimic trained as a pack mule, however? That is inspired military asset utilization. I want one.",
+  /* S010 */ "Double nat-1 stealth rolls. Catastrophic. But Orla's Wrath of Nature turning the battlefield itself into a weapon? 10/10. The terrain became the army. This is the ESSENCE of my teachings.",
+  /* S011 */ "An internal asset (Argentus) acting as a hostile agent -- classic fifth column infiltration. Ash's negotiation with the Earth Elemental to redirect it at the enemy: elegant threat redirection. 7/10.",
+  /* S012 */ "The party continues their advance. Without specific tactical data, I rate this: unrated. I require details before I assess. Supply your reports.",
+  /* S013 */ "Signing an infernal contract under duress for tactical extraction: acceptable if the terms can be subverted later. Charming the demon first to gain leverage: smart. 6/10. The favors are a liability.",
+  /* S014 */ "The Resilient Sphere containment of a rampaging ally: excellent improvised crowd control. 7/10. Corras diving off a cliff on a nat-1: your escape routes should not include cliffs. 1/10.",
+  /* S015 */ "Multi-team coordinated heist with disguises, magical distractions, and temporal synchronization. 9/10. This is the kind of operation I would have written about approvingly.",
+  /* S016 */ "Fighting a Blue Dragon, a Balor, and a Vampire simultaneously while running a skill challenge: this is called 'being on two fronts,' which I specifically warned against. Using the Fates card: strategic nuclear option. 6/10.",
+  /* S017 */ "Declaring war against celestial forces: bold. Establishing multiple bastions of power with specialized functions: sound military infrastructure. But fighting angels? Know your enemy. 5/10 overall.",
+  /* S018 */ "Triggering an avalanche on your OWN party: catastrophic environmental awareness failure. 1/10. The dragon encounter was avoided through magical dismissal rather than confrontation: acceptable. 4/10.",
+  /* S019 */ "Leaving an improvised explosive device for the enemy while teleporting to safety: this is EXACTLY what I taught. Deny the enemy position, preserve your own forces. 9/10. Textbook.",
+  /* S020 */ "Grabbing an unknown glowing orb in a hostile environment: 1/10. This is the worst tactical decision in the entire campaign. 118 radiant damage. Total party kill. 'Drink holy pee star.' I have no rating for this. Just shame.",
+  /* S021 */ "Dark boons for tactical advantage: pragmatic. Using the enemy's own greeting protocols: solid infiltration technique. Breaking discipline during a test: SavannahBelle, see me after class. 5/10.",
+  /* S022 */ "Twin Wall of Fire while allies are confused: SavannahBelle identified the threats and eliminated them independently. Superior initiative in chaos. Living spider disguises: creative camouflage. 8/10.",
+  /* S023 */ "Hurling an enemy mage into your own Wall of Fire: efficient recycling of existing resources. The toad swallowing Orla: unorthodox extraction. Decapitating the demon: clean execution. 7/10.",
+  /* S024 */ "Bluffing a superior enemy into abandoning its post: supreme use of intelligence warfare. Corras stealing the artifact while the guardian is distracted: textbook combined operations. 9/10.",
+  /* S025 */ "Establishing an empire with specialized bastions, intelligence networks, and defensive infrastructure. This IS the Art of War. Whoever designed this federation understands warfare. 8/10.",
+  /* S026 */ "Emergency extraction under pursuit with a planar alignment scroll: having the right scroll prepared demonstrates supply chain excellence. Crashing onto a dining table: messy but alive. 7/10.",
+  /* S027 */ "Descending into an ancient forge against undead guardians: acceptable reconnaissance in force. Billabong's consecutive failures: rotate her out of the front line for a session. She needs rest. 5/10.",
+  /* S028 */ "Establishing dominance over 15 shadow mastiffs through non-lethal hierarchy display: acquiring a pack of shadow dogs as assets is brilliant force multiplication. 9/10. Gorilla wrestling: unorthodox but effective.",
+  /* S029 */ "Fighting on two fronts -- exorcism AND door defense -- with minimal personnel: dangerous but necessary. Using an enemy's own contract against them: exploiting the fine print is supreme intelligence work. 8/10.",
+  /* S030 */ "Blind, paralyze, then strike: the combination chain is textbook. Sunbeam to blind, Hold Monster to paralyze, sneak attack to the eye. 10/10. This is how you kill something that eats worlds.",
+  /* S031 */ "Losing your primary spellcaster to friendly fire during a boss fight: catastrophic command failure. The thunder wall explosion was effective but reactive. Having a replacement agent ready: adequate logistics. 4/10.",
+  /* S032 */ "The sweepstakes distraction: excellent social engineering. Truesight for invisible threat detection: proper intelligence preparation. But walking into a lich's ambush in an enclosed space: 3/10. Never fight in their chosen terrain.",
+  /* S033 */ "Corras's surrender: strategic sacrifice to preserve the larger force. Branding him for tracking: ensuring recovery capability. 7/10. Sometimes the best move is to lose a piece to save the board.",
+  /* S034 */ "A random nat-1 crossbow bolt kills the lich. This is not strategy. This is statistical improbability. I cannot rate chaos. But the Twin Formation -- consuming your enemy to gain their strength: 10/10. The ULTIMATE force multiplication.",
+  /* S035 */ "Entering an enemy stronghold overleveled with contempt: arrogance is the enemy of victory. Death House has survived centuries of adventurers. Respect your enemy, even when you can fireball it. 4/10.",
+  /* S036 */ "Drinking from unknown vessels in hostile territory: AGAIN with the drinking! Do none of them carry their own water? Cursed with paranoia, soul trapped in tattoos. 2/10. Supply your own beverages!",
+  /* S037 */ "Resisting mind control through willpower: the general who cannot be swayed controls the battlefield. 8/10. The shambling mound ambush was a terrain awareness failure. Always check the water.",
+  /* S038 */ "Escape via skill challenge: competent extraction. Burning the house: scorched earth. The nat-20 backflip was stylish but irrelevant to military objectives. 6/10. Style points are not real points.",
+  /* S039 */ "Walling wolves in stone while an operative sprints for the objective: excellent combined arms. Fleeing the village on a flying carpet: air superiority ensures extraction. 7/10.",
+  /* S040 */ "Multiple heist attempts in one night against a supernatural adversary who controls the terrain: reckless overextension. The nat-20 was brilliant; getting trapped in a card game afterward erased all gains. 5/10.",
+  /* S041 */ "Flying recon over an enemy fortress WITHOUT stealth countermeasures?! And then TOUCHING artifacts in a boss fight arena?! Drinking from a profane chalice! This party has learned NOTHING about unknown objects! 1/10!",
+  /* S042 */ "Two-party combined operations against a superior enemy: exactly the kind of force concentration I advocate. Shattering the Heart of Sorrow: destroying the enemy's defensive infrastructure first. 8/10.",
+  /* S043 */ "Murdering comatose political rivals to harvest their essence: effective but politically catastrophic. You have eliminated your enemies but created ten thousand new ones. 3/10. Think LONG TERM.",
+  /* S044 */ "Amputating a prisoner's limb to prevent a spell: decisive action under time pressure. 7/10. The public trial descending into chaos: control your battlefield, including the social one. 4/10.",
+  /* S045 */ "Slaughtering 9,000 rioting civilians: this is not warfare, this is MASSACRE. You have destroyed your own supply base! The construct discovery is valuable intelligence, but at what cost? 2/10.",
+  /* S046 */ "Accepting a chase challenge from a superior fey entity in THEIR terrain: violates every principle I have ever written. Never fight where the enemy chooses. Never run where the enemy hunts. 1/10. Catastrophic."
+],
+wittgenstein: [
+  /* S001 */ "When they say 'our castle,' the possessive pronoun is doing unexamined work. Whose castle? The party's? The Master's? The ghosts'? Language games within language games.",
+  /* S002 */ "Consider the proposition 'stealing from a loincloth.' The loincloth is not a container in the conventional sense. The language of theft requires a notion of ownership that trolls may not participate in.",
+  /* S003 */ "'Celestial ascent.' The word 'ascent' implies upward motion, yet Billabong's transformation was more of an absorption. We use spatial metaphors for non-spatial events. This is deeply confused, and I find it beautiful.",
+  /* S004 */ "They have lost their shadows. But what WAS the shadow? A mere absence of light, or a fundamental aspect of selfhood? The Sylvan script tattooed on their bodies is a language none of them can read. They are WEARING meaning they cannot access.",
+  /* S005 */ "Orla claims she lies about everything, and the trap believes her. But if the statement 'I always lie' is true, then it must be false. The Hall of Whispers has stumbled into the liar's paradox and simply gave up. I sympathize.",
+  /* S006 */ "The 'lesser half.' But what makes a half lesser? If the lesser half can cast Time Stop, the word 'lesser' has lost its meaning entirely. Language collapses under the weight of power levels.",
+  /* S007 */ "'The answer is E.' A note left to one's past self containing a single letter. The entirety of communication reduced to one glyph. What is E? Everything? Nothing? The fifth letter? Wittgenstein approves of this radical compression.",
+  /* S008 */ "'We are the cult.' The word 'cult' transforms mid-sentence from 'threatening other' to 'us.' The referent shifts without the word changing. This is the finest example of a language game I have ever witnessed.",
+  /* S009 */ "The word 'horse' has been used to describe Sid for the entire campaign. But Sid was never a horse. Every use of 'horse' to describe Sid was, in retrospect, a lie that nobody was telling. The language was deceiving everyone, including itself.",
+  /* S010 */ "'Wrath of Nature.' The word 'wrath' anthropomorphizes nature, but in D&D, nature LITERALLY has wrath. The metaphor has become literal. Whereof one cannot speak, nature speaks FOR you with rocks.",
+  /* S011 */ "'This is not me!' Ash says, while her arm does the thing. The word 'me' suddenly has a contested referent. The body says one thing, the mind another. Personal pronouns have never been less reliable.",
+  /* S012 */ "'The party continues.' These three words contain an assumption of temporal persistence and collective identity that I find premature. Do they continue, or does a new configuration of beings merely resemble the old one?",
+  /* S013 */ "The infernal contract. Here is a document where the meaning of every word is precisely defined by demonic law, yet 'undefined favors' is the key term. A contract that is precise about its own vagueness. Linguistically, this is PERFECT.",
+  /* S014 */ "They call the Resilient Sphere a 'hamster ball.' This metaphor transforms a magical prison into a toy. Language domesticates horror. By naming it a hamster ball, they have made the unbearable bearable. This is what language IS FOR.",
+  /* S015 */ "'You did it, and you will have Spark with you.' Past tense and future tense in the same sentence, referring to the same event. Temporal grammar has been liberated from temporal reality. I may need to revise the Tractatus.",
+  /* S016 */ "'The threads of fate unwind.' But threads do not have opinions about being unwound. We speak of fate as though it is woven, as though reality is textile. The metaphorical substrate of our entire cosmology is FABRIC. Why fabric?",
+  /* S017 */ "'King Corras.' 'Celestial Conqueror.' 'Obsidian Sorceress.' Titles multiply. Each title is a language game that constitutes a new form of life. They are not gaining power -- they are gaining NAMES, and names are power.",
+  /* S018 */ "'Snack-O-Matic 3000.' The name implies automation and modernity, yet it merely throws pies. The gap between what a name promises and what a thing does is the gap in which all comedy lives.",
+  /* S019 */ "'Big Bang.' They named their explosion after the cosmological event. But which is the metaphor -- their explosion or the universe? Perhaps all explosions are the same explosion, differently described.",
+  /* S020 */ "'Drink holy pee star.' This is language at its absolute limit. Ghosts attempting communication and producing something that is ALMOST meaningful but fundamentally garbled. This is every conversation I have ever had at Cambridge.",
+  /* S021 */ "'The spider queen smiles on you.' A greeting used as a password. But does the speaker believe the spider queen is smiling? Does the listener? The words function as a key, not as a proposition. Language beyond truth and falsity.",
+  /* S022 */ "Orla told the spiders they 'chose to be here' and 'sacrificed much, left their families behind.' She is attributing narrative and agency to spiders through language. The spiders do not speak. But do they need to? Perhaps we speak FOR all beings.",
+  /* S023 */ "'Currency of Secrets.' Three words that fuse economics, privacy, and power into a single concept. Vecna has created a new language game where silence has a price and speech is an expenditure. I am genuinely envious.",
+  /* S024 */ "Gertrude screams 'Where are my sisters?' But 'sister' was a label applied by Dahlia minutes ago. The word created a relationship that now creates grief. Language does not describe bonds -- it FORMS them, and can break them.",
+  /* S025 */ "They call the torture chamber 'Guantanamo' and the surveillance network the 'NSA.' By mapping fantasy concepts onto modern institutions, they reveal that both are equally absurd. The comparison illuminates in both directions.",
+  /* S026 */ "'Sisterhood is a concept.' Finally, someone in this campaign makes an explicitly philosophical statement! And it is about cyclops adoption! The most profound utterance comes from the most absurd context. As always.",
+  /* S027 */ "'A zombie outmaneuvers me.' The humiliation is linguistic as much as physical. The word 'outmaneuver' implies tactical superiority, and applying it to a zombie redefines both 'zombie' and 'maneuver.'",
+  /* S028 */ "Orla BECAME a gorilla. But did the gorilla become Orla? When language says 'wild shape,' it implies the new shape is wild. But Orla's gorilla was calculated, tactical. The wild was not wild. The shape was a lie.",
+  /* S029 */ "'The Pact of Avarice.' A pact is an agreement, but avarice is the refusal to share. A pact of avarice is an agreement to refuse agreement. The language eats itself. I find this contract more philosophically interesting than anything Kant has said today.",
+  /* S030 */ "The creature is called 'the Ceaseless Maw.' But it CAN be ceased -- they are ceasing it right now. Names should not make false promises. 'The Temporarily Ceaseless Maw' would be more accurate.",
+  /* S031 */ "'She'll come back to us.' Future tense, expressing a certainty about an uncertain event. The grammar of hope is always in future tense. Present tense hope is just denial. Dahlia's sentence is the most human thing anyone has said.",
+  /* S032 */ "The lich's mask melts to reveal a skull. But a skull is ALSO a kind of mask -- it is the face beneath the face beneath the face. There is always another layer. Meaning, like disguises, goes all the way down.",
+  /* S033 */ "'The plan is hope you guys come back for me.' 'Hope' used as a plan. The word 'plan' typically implies agency and structure. Here it means the opposite. Corras has redefined 'plan' to mean 'prayer.' Language bends under duress.",
+  /* S034 */ "The Otyugh speaks 'therapy-speak.' An aberration using the language of emotional wellness! When a sewer creature accuses you of 'emotional manipulation,' the language game of therapy has escaped the therapist's office. Whereof one cannot speak, the Otyugh speaks anyway.",
+  /* S035 */ "They threaten to 'fireball' a house. The spell name has become a verb. An action has been compressed into language so thoroughly that 'to fireball' requires no further explanation. This is how language evolves -- through violence.",
+  /* S036 */ "SavannahBelle is cursed with 'paranoia of wizards.' But in this world, wizards CAN end reality. Is paranoia of wizards still paranoia, or has it become rational prudence? The word 'paranoia' assumes the fear is unfounded. Perhaps the word is wrong.",
+  /* S037 */ "'The master of this realm.' But Barovia has no clear master -- Strahd is a prisoner, the dark powers are indifferent. The word 'master' is doing work that reality does not support. An empty title for an empty throne.",
+  /* S038 */ "'I drip on all of you.' SavannahBelle, in mucus worm form, describes her state of being. This is language reduced to pure physicality. The proposition is not metaphorical. She is literally dripping. And yet it is somehow profound.",
+  /* S039 */ "'You bring the hungry old gods with you.' The villagers attribute divine hunger to the party's presence. But can GODS be hungry? And what would a god eat? The villagers' language creates a theology of appetite. I am fascinated.",
+  /* S040 */ "'I bested you at your own game.' But the Deck of Many Things does not have 'a game.' It is random. Corras is claiming victory over CHANCE ITSELF. The language of competition applied to probability. Magnificent delusion.",
+  /* S041 */ "What does 'alive' mean when a vampire spawn 'rises'? SavannahBelle was alive, then dead, then undead. The word 'alive' has at least three states in this world, and our language only has one word for it. We need more words.",
+  /* S042 */ "Ludmilla sees her 'true form' in the mirror and shatters. But which was the true form -- the beautiful bride or the monster? The mirror claims authority over identity. But who gave the mirror that authority? Shrum did. With language.",
+  /* S043 */ "'Monsters with good publicity.' Isteval reduces the party to a marketing problem. The word 'monster' combined with 'publicity' suggests that monstrosity is a matter of perception management. He may be the wisest person in this campaign.",
+  /* S044 */ "The Master of Whispers pulled a dagger from his JAWBONE. The jaw is where language lives. He has weaponized the organ of speech. This is the most literal possible metaphor for dangerous words.",
+  /* S045 */ "The Butcher is a machine wearing human skin. But when we say 'human,' do we mean the skin or the mechanism? If the skin is human, is the being human? Or does 'human' refer to something neither skin nor metal? Perhaps 'human' is just another word we do not understand.",
+  /* S046 */ "'Join the Wild Hunt forever.' But what does 'forever' mean for a being that ages? And what does 'join' mean if it is compelled? A forced joining is not a joining -- it is a conscription. The language of invitation concealing the reality of imprisonment."
+],
+marx: [
+  /* S001 */ "So the adventurers simply CLAIM a castle built by the labor of others? This is the enclosure of the commons. And this 'Master of Whispers' is merely the intelligence apparatus of the feudal estate.",
+  /* S002 */ "Ave steals from a troll -- the primitive accumulation of capital through theft from nature! And the castle finances? Hiring 'specialists'? Building a greenhouse? The petty bourgeoisie play at being lords while workers toil!",
+  /* S003 */ "Billabong absorbs celestial power through SEIZING it. The worker takes what the cosmos offers! While the others fund renovations for their castle -- renovations built by WHOSE labor? Not theirs!",
+  /* S004 */ "A magical curse that removes one's shadow. How fitting -- the ruling class has always been shadowless, their exploitation invisible. The Chronicler's Mark is merely making their class character literal.",
+  /* S005 */ "A PERFORMANCE REVIEW! Finally, relatable content! The druid is subjected to bureaucratic evaluation by an elder -- the reproduction of institutional power through assessment! Meanwhile Corras accumulates damage numbers like capital.",
+  /* S006 */ "The Archmage hoards magical knowledge and uses it to dominate others. He IS the bourgeoisie! The wasp that kills him is nature's proletarian revolution -- a mindless worker overthrowing the intellectual elite!",
+  /* S007 */ "They travel through TIME to steal from their PAST SELVES. Auto-exploitation! The future self extracts value from the past self's labor! This is capitalism's endgame -- you are your own sweatshop!",
+  /* S008 */ "They create their own cult! The ruling class manufactures threats to justify its own existence! 'We need to investigate the Lumin cultists' -- who ARE themselves! The security state is the threat it warns against!",
+  /* S009 */ "Billabong is banned from pit fighting -- the ONE proletarian entertainment! Corras contacts his spy network from JAIL. Note the class divide: some rot in cells, others network through plumbing.",
+  /* S010 */ "The Cult of Eternal Flame is summoning a Balor? Please. The true demon is the surplus value extracted by these 'heroes' from every conquered territory. Orla's spell kills workers while the party preserves power structures.",
+  /* S011 */ "Argentus is LITERALLY a sentient weapon embedded in a person's body -- the means of production and the worker fused into one! When it takes control, the tool controls the laborer! Marx himself couldn't write a better metaphor!",
+  /* S012 */ "The adventure continues. The alienated heroes seek meaning in violence while the castle workers maintain infrastructure unseen. Has ANYONE asked the servants how they feel?",
+  /* S013 */ "They sign a contract they cannot understand for 'undefined favors!' THIS IS EVERY EMPLOYMENT CONTRACT EVER WRITTEN! The demon Malachar is just HR with better dental!",
+  /* S014 */ "They plan a heist while a literal PRINCE rages in a cage. The aristocracy has always been a raging beast contained by magical force fields of social convention. Billabong, the working-class hero, catches the falling royal. AS ALWAYS.",
+  /* S015 */ "The workers of Castle Corras unknowingly serve time-traveling imposters who exploit their routines. The laborers are so alienated they cannot distinguish their real employers from future frauds. Peak capitalism.",
+  /* S016 */ "Corras uses a CARD to rewrite reality! The bourgeoisie doesn't just exploit the present -- it retroactively alters history to consolidate power! The Fates card is revisionist history made literal!",
+  /* S017 */ "KING CORRAS! He has declared himself KING! The revolution has been betrayed! The adventurers who once fought for freedom now establish their own feudal hierarchy! 'Celestial Conqueror'?! This is NAPOLEON all over again!",
+  /* S018 */ "1,200 mince pies ejected by a malfunctioning machine onto a working blacksmith! The overproduction crisis in miniature! Capital produces more than workers can consume, and the excess destroys the means of production!",
+  /* S019 */ "They BOMB the enemy and adopt baby yetis. The military-industrial complex creates orphans, then the ruling class adopts them as mascots. 'We destroyed your family, here's a mince pie.'",
+  /* S020 */ "Billabong alone survives! The WORKER endures while the intellectual class lies dead! And Lathander resurrects them -- the gods themselves serve as emergency services for the ruling class! Divine welfare for the elite!",
+  /* S021 */ "Dark boons from Mordenkainen -- the wizard bourgeoisie distributing power to their chosen agents! Deception expertise for a paladin? The ruling class requires its enforcers to become skilled liars. Naturally.",
+  /* S022 */ "They enter Webb's Edge disguised in living spiders -- the proletarian spiders forced into unpaid labor as accessories! 'They chose to be here!' No, Orla. They were RECRUITED. There is a difference.",
+  /* S023 */ "Secrets as CURRENCY! Vecna has created a second economy based on information extraction! This is surveillance capitalism with a Lich's face! The commodification of privacy itself!",
+  /* S024 */ "Gertrude, the working-class cyclops, is adopted as a 'sister' and then ABANDONED to torture when she becomes inconvenient! This is the bourgeois treatment of labor -- familial rhetoric masking disposable workers!",
+  /* S025 */ "The BWB Federation is merely feudalism with extra steps! They call it a 'federation' but one man rules as king! 'EPA,' 'NSA,' 'Guantanamo' -- they're COSPLAYING as a government! At least they're honest about the torture chamber!",
+  /* S026 */ "They crash-land on a dining table. A DINING TABLE. The symbol of domestic comfort and class privilege. While Gertrude is dragged to a torture chamber, they eat dinner. Class warfare has never been more literal.",
+  /* S027 */ "Billabong falls off a cliff fighting undead. The worker, as always, bears the physical cost while the spellcasters contribute from safe positions. Fairy dragon rescue is just management giving minimum assistance.",
+  /* S028 */ "Shadow mastiffs tamed with MINCE PIES -- the party pacifies the proletarian pack with treats instead of addressing their material conditions! And Orla's gorilla wrestling? The manager physically dominates the worker to maintain hierarchy!",
+  /* S029 */ "The Pact of AVARICE! They have signed a contract that FORBIDS them from helping others! Capitalism has finally been codified into magical law! This is the most honest thing any of them have ever done!",
+  /* S030 */ "Shadow power archetypes -- each person assigned a role in the production of violence! Specialized labor in the service of killing a world-eating serpent! The Maw is merely unregulated capital consumption!",
+  /* S031 */ "Ash is killed by her own ally! The worker turns on the worker while the true enemy -- the Maw, capital itself -- manipulates from above! And Ezrella arrives 'throwing a party'? The new hire distracts from workplace death!",
+  /* S032 */ "A fake SWEEPSTAKES to distract workers! Dahlia promises a self-stoking hearth -- a lie wrapped in the language of labor-saving technology! The lich Asnar hunts changelings? Even monsters practice ethnic cleansing!",
+  /* S033 */ "Corras surrenders. The king puts on chains. But notice -- he surrenders knowing his class will rescue him. The worker who surrenders is forgotten. The king who surrenders becomes a STORY. Class determines even the narrative of captivity.",
+  /* S034 */ "The Otyugh speaks THERAPY LANGUAGE! Even sewer creatures have been assimilated into the therapeutic-industrial complex! Wally's emotional labor goes uncompensated! And Corras ABSORBS his twin -- the ultimate hostile merger!",
+  /* S035 */ "Mordenkainen, Tasha, and Alustriel -- the wizard bourgeoisie -- are DISPLEASED that the workers prioritize personal quests. The elite demand sacrifice for 'the multiverse' while they sit in comfort in Sigil!",
+  /* S036 */ "An illusion of Strahd offers blood to drink -- the aristocrat demands a blood toll! Strahd is the ultimate feudal lord: he literally FEEDS on his subjects! And the party enters HIS house and plays by HIS rules!",
+  /* S037 */ "The 'master of the realm' offers partnership. But partnership with a master is servitude with better vocabulary. Corras refuses. Reluctantly, I approve. Even a king can occasionally reject worse tyranny.",
+  /* S038 */ "They burn the house. The ultimate response to unaffordable housing: ARSON. When the means of shelter becomes hostile, the proletariat responds with fire. SavannahBelle is an accidental revolutionary.",
+  /* S039 */ "Angry villagers throwing rocks at adventurers! THE PEASANT REVOLT! The common people rise against the so-called heroes who brought destruction to their village! I am cheering for the villagers!",
+  /* S040 */ "Corras steals the DECK OF MANY THINGS from an elderly woman. Wealth extraction from the vulnerable! The bourgeoisie takes even the means of fortune-telling from the working class!",
+  /* S041 */ "SavannahBelle is turned into a vampire spawn -- a SLAVE to Strahd's will! The feudal lord converts free workers into permanent unpaid labor through magical coercion! This is serfdom with fangs!",
+  /* S042 */ "Two parties unite against a common oppressor! THIS is class solidarity! But Baba Lysaga is no revolutionary -- she enables Strahd's tyranny as his devoted servant! Van Richten sacrifices himself -- the intellectual class dying for the cause!",
+  /* S043 */ "THEY MURDERED NEVEREMBER! A political assassination disguised as resource extraction! 'We've always been the bad guys!' YES! You are the RULING CLASS! You have ALWAYS been the bad guys! History will judge you!",
+  /* S044 */ "SavannahBelle waves Neverwinter's signet ring and half an army follows! Power comes from SYMBOLS, not merit! The ring is a piece of metal -- but it represents accumulated class authority! And then they CUT OFF A PRISONER'S LEG!",
+  /* S045 */ "NINE THOUSAND peasants slaughtered in a riot! The BWB has become the state apparatus, slaughtering its own people! The Butcher is a machine in human skin -- but how is that different from any bureaucrat?! The revolution was NEEDED and they CRUSHED it!",
+  /* S046 */ "Corras hands his city to the Matron -- one tyrant replaces another while the people have no say! And in the Feywild, a 20-foot lord demands one of them join his Hunt forever. Feudalism is INESCAPABLE! Even the fey practice it!"
+]
+};
+
+// ============================================================
+// STATE
+// ============================================================
+let currentSession = 0;
+let autoplayInterval = null;
+let commentaryTimeout = null;
+let commentaryStep = 0;
+let speed = 1;
+let activeFilter = null;
+
+// ============================================================
+// INITIALIZATION
+// ============================================================
+function init() {
+  // Build session selector
+  const select = document.getElementById('sessionSelect');
+  SESSIONS.forEach((s, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = `S${String(s.num).padStart(3,'0')}: ${s.title}`;
+    select.appendChild(opt);
+  });
+
+  // Build theater seats
+  buildTheater();
+
+  // Show first session
+  showSession(0);
+}
+
+function buildTheater() {
+  const seats = document.getElementById('theaterSeats');
+  seats.innerHTML = '';
+  PHILOSOPHERS.forEach(p => {
+    const seat = document.createElement('div');
+    seat.className = 'philosopher-seat';
+    seat.id = `seat-${p.id}`;
+    seat.style.setProperty('--phil-color', p.color);
+    seat.style.setProperty('--phil-rgb', p.rgb);
+    seat.onclick = () => toggleFilter(p.id);
+
+    seat.innerHTML = `
+      <div class="speech-bubble" id="bubble-${p.id}"></div>
+      <div class="philosopher-icon" id="icon-${p.id}">${p.initial}</div>
+      <div class="philosopher-name">${p.name}</div>
+    `;
+    seats.appendChild(seat);
+  });
+}
+
+// ============================================================
+// SESSION DISPLAY
+// ============================================================
+function showSession(idx) {
+  if (idx < 0 || idx >= SESSIONS.length) return;
+  currentSession = idx;
+  commentaryStep = 0;
+
+  const s = SESSIONS[idx];
+  const content = document.getElementById('screenContent');
+
+  document.getElementById('sessionSelect').value = idx;
+  document.getElementById('sessionCounter').textContent = `Session ${s.num} of 46`;
+
+  content.innerHTML = `
+    <div class="session-title-card">
+      <div class="session-number">Session ${String(s.num).padStart(3,'0')}</div>
+      <div class="session-title">${s.title}</div>
+      <div class="session-hook">${s.hook}</div>
+    </div>
+    <div class="recap-body">${s.body}</div>
+    <div class="biggest-moment">
+      <div class="biggest-moment-label">BIGGEST MOMENT</div>
+      <div class="biggest-moment-title">${s.moment}</div>
+      <div class="biggest-moment-desc">${s.momentDesc}</div>
+    </div>
+  `;
+
+  // Scroll to top
+  document.getElementById('movieScreen').scrollTop = 0;
+
+  // Clear all bubbles
+  PHILOSOPHERS.forEach(p => {
+    const bubble = document.getElementById(`bubble-${p.id}`);
+    bubble.classList.remove('visible');
+    bubble.innerHTML = '';
+    document.getElementById(`icon-${p.id}`).classList.remove('speaking');
+  });
+
+  // Update nav buttons
+  document.getElementById('btnPrev').disabled = idx === 0;
+  document.getElementById('btnNext').disabled = idx === SESSIONS.length - 1;
+}
+
+// ============================================================
+// COMMENTARY PLAYBACK
+// ============================================================
+function playCommentary() {
+  if (commentaryStep >= PHILOSOPHERS.length) {
+    commentaryStep = 0;
+    return;
+  }
+
+  const p = PHILOSOPHERS[commentaryStep];
+  const reaction = REACTIONS[p.id][currentSession];
+  const bubble = document.getElementById(`bubble-${p.id}`);
+  const icon = document.getElementById(`icon-${p.id}`);
+
+  icon.classList.add('speaking');
+  bubble.classList.add('visible');
+
+  // Typing animation
+  typeText(bubble, reaction, p.color, () => {
+    icon.classList.remove('speaking');
+    commentaryStep++;
+    if (commentaryStep < PHILOSOPHERS.length) {
+      commentaryTimeout = setTimeout(playCommentary, 800 / speed);
+    }
+  });
+}
+
+function typeText(element, text, color, callback) {
+  let i = 0;
+  const interval = Math.max(8, 20 / speed);
+  element.innerHTML = '<span class="typing-cursor" style="--phil-color:' + color + '"></span>';
+
+  function addChar() {
+    if (i < text.length) {
+      element.innerHTML = text.substring(0, i + 1) + '<span class="typing-cursor" style="--phil-color:' + color + '"></span>';
+      i++;
+      // Scroll bubble to bottom
+      element.scrollTop = element.scrollHeight;
+      setTimeout(addChar, interval);
+    } else {
+      element.innerHTML = text;
+      element.scrollTop = element.scrollHeight;
+      if (callback) setTimeout(callback, 300 / speed);
+    }
+  }
+  addChar();
+}
+
+function showAllReactions() {
+  PHILOSOPHERS.forEach((p, i) => {
+    const bubble = document.getElementById(`bubble-${p.id}`);
+    bubble.innerHTML = REACTIONS[p.id][currentSession];
+    bubble.classList.add('visible');
+  });
+  commentaryStep = PHILOSOPHERS.length;
+}
+
+// ============================================================
+// CONTROLS
+// ============================================================
+function toggleAutoplay() {
+  const btn = document.getElementById('btnPlay');
+  if (autoplayInterval) {
+    clearInterval(autoplayInterval);
+    clearTimeout(commentaryTimeout);
+    autoplayInterval = null;
+    btn.innerHTML = '&#9654; Play Commentary';
+    btn.classList.remove('active');
+  } else {
+    // Show all reactions instantly, then play commentary
+    if (commentaryStep === 0) {
+      playCommentary();
+    } else if (commentaryStep >= PHILOSOPHERS.length) {
+      // All done, advance to next session
+      if (currentSession < SESSIONS.length - 1) {
+        nextSession();
+        setTimeout(playCommentary, 500);
+      }
+    }
+    btn.innerHTML = '&#9724; Stop';
+    btn.classList.add('active');
+
+    // Auto-advance after all commentary plays
+    autoplayInterval = setInterval(() => {
+      if (commentaryStep >= PHILOSOPHERS.length) {
+        if (currentSession < SESSIONS.length - 1) {
+          nextSession();
+          setTimeout(playCommentary, 500);
+        } else {
+          clearInterval(autoplayInterval);
+          autoplayInterval = null;
+          btn.innerHTML = '&#9654; Play Commentary';
+          btn.classList.remove('active');
+        }
+      }
+    }, 3000 / speed);
+  }
+}
+
+function nextSession() {
+  clearTimeout(commentaryTimeout);
+  if (currentSession < SESSIONS.length - 1) {
+    showSession(currentSession + 1);
+    if (activeFilter) showFilterTimeline(activeFilter);
+  }
+}
+
+function prevSession() {
+  clearTimeout(commentaryTimeout);
+  if (currentSession > 0) {
+    showSession(currentSession - 1);
+    if (activeFilter) showFilterTimeline(activeFilter);
+  }
+}
+
+function goToSession(idx) {
+  clearTimeout(commentaryTimeout);
+  showSession(idx);
+  if (activeFilter) showFilterTimeline(activeFilter);
+}
+
+function updateSpeed(val) {
+  speed = parseFloat(val);
+  document.getElementById('speedLabel').textContent = val + 'x';
+}
+
+// ============================================================
+// PHILOSOPHER FILTER MODE
+// ============================================================
+function toggleFilter(philId) {
+  if (activeFilter === philId) {
+    clearFilter();
+  } else {
+    showFilterTimeline(philId);
+  }
+}
+
+function showFilterTimeline(philId) {
+  activeFilter = philId;
+  const phil = PHILOSOPHERS.find(p => p.id === philId);
+
+  // Update banner
+  const banner = document.getElementById('filterBanner');
+  banner.className = 'filter-banner active';
+  banner.style.color = phil.color;
+  banner.innerHTML = `Showing all reactions by ${phil.name} (click to close)`;
+
+  // Dim other philosophers
+  PHILOSOPHERS.forEach(p => {
+    const seat = document.getElementById(`seat-${p.id}`);
+    if (p.id === philId) {
+      seat.classList.remove('filtered');
+    } else {
+      seat.classList.add('filtered');
+    }
+  });
+
+  // Show clear button
+  document.getElementById('btnClearFilter').style.display = 'inline-block';
+
+  // Build timeline
+  const timeline = document.getElementById('timelineView');
+  timeline.className = 'timeline-view active';
+  timeline.style.setProperty('--phil-color', phil.color);
+
+  let html = '';
+  SESSIONS.forEach((s, i) => {
+    html += `
+      <div class="timeline-entry" style="--phil-color:${phil.color}; cursor:pointer;" onclick="clearFilter(); goToSession(${i}); playCommentary();">
+        <div class="timeline-session">S${String(s.num).padStart(3,'0')}</div>
+        <div>
+          <div class="timeline-session-title">${s.title}</div>
+          <div class="timeline-text">${REACTIONS[philId][i]}</div>
+        </div>
+      </div>
+    `;
+  });
+  timeline.innerHTML = html;
+
+  // Show the current philosopher's bubble
+  PHILOSOPHERS.forEach(p => {
+    const bubble = document.getElementById(`bubble-${p.id}`);
+    if (p.id === philId) {
+      bubble.innerHTML = REACTIONS[philId][currentSession];
+      bubble.classList.add('visible');
+    } else {
+      bubble.classList.remove('visible');
+      bubble.innerHTML = '';
+    }
+  });
+}
+
+function clearFilter() {
+  activeFilter = null;
+  document.getElementById('filterBanner').className = 'filter-banner';
+  document.getElementById('timelineView').className = 'timeline-view';
+  document.getElementById('btnClearFilter').style.display = 'none';
+  PHILOSOPHERS.forEach(p => {
+    document.getElementById(`seat-${p.id}`).classList.remove('filtered');
+  });
+}
+
+// ============================================================
+// KEYBOARD SHORTCUTS
+// ============================================================
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight') nextSession();
+  else if (e.key === 'ArrowLeft') prevSession();
+  else if (e.key === ' ') { e.preventDefault(); playCommentary(); }
+  else if (e.key === 'a') showAllReactions();
+});
+
+// ============================================================
+// INIT
+// ============================================================
+init();
+</script>
+</body>
+</html>

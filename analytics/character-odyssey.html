@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>THE CHARACTER ODYSSEY | BWB Campaign</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@300;400;500;600;700&family=Barlow:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;700&family=Cinzel:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg-deep:#06060c;--bg-primary:#0a0a14;--bg-card:#0f1020;--bg-card-hover:#141530;
+  --bg-surface:#1a1a2e;--bg-elevated:#22223a;
+  --text-primary:#eef0ff;--text-secondary:#9494bf;--text-muted:#8a8ab5;
+  --border:#2a2a4a;--border-glow:#3a3a6a;
+  --accent-blue:#00d4ff;--accent-gold:#ffd700;--accent-red:#ff4444;
+  --accent-green:#44ff88;--accent-purple:#ad6bff;--accent-orange:#ff8844;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg-deep);color:var(--text-primary);font-family:'Barlow',sans-serif;overflow:hidden;height:100vh}
+body::after{content:'';position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;
+  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.015) 3px,rgba(0,0,0,0.015) 4px)}
+
+/* === HEADER === */
+.page-header{position:fixed;top:0;left:0;right:0;z-index:100;
+  background:linear-gradient(180deg,rgba(6,6,12,0.98),rgba(6,6,12,0.88));
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
+.header-inner{padding:6px 24px;display:flex;align-items:center;gap:24px}
+.header-title{font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:4px;
+  background:linear-gradient(135deg,var(--accent-gold),var(--accent-orange));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;white-space:nowrap;line-height:1.1}
+.header-sub{font-family:'Barlow Condensed',sans-serif;font-size:12px;color:var(--text-muted);
+  text-transform:uppercase;letter-spacing:3px;white-space:nowrap}
+
+/* === TABS === */
+.tabs{display:flex;gap:3px;flex:1;justify-content:center}
+.tab{position:relative;padding:7px 16px;cursor:pointer;border:1px solid transparent;
+  border-radius:6px 6px 0 0;font-family:'Cinzel',serif;font-size:12px;font-weight:600;
+  color:var(--text-muted);transition:all .3s;background:transparent;text-transform:uppercase;letter-spacing:1px;user-select:none}
+.tab:hover{color:var(--text-primary);background:rgba(255,255,255,.03);border-color:var(--border)}
+.tab.active{color:var(--text-primary);background:linear-gradient(180deg,rgba(255,255,255,.05),transparent)}
+.tab .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}
+
+/* === LAYOUT === */
+.wrap{display:flex;margin-top:50px;height:calc(100vh - 50px)}
+.viewport{flex:1;overflow-y:auto;overflow-x:hidden;position:relative}
+.viewport::-webkit-scrollbar{width:5px}
+.viewport::-webkit-scrollbar-track{background:var(--bg-deep)}
+.viewport::-webkit-scrollbar-thumb{background:var(--border-glow);border-radius:3px}
+
+/* === SIDE PANEL === */
+.panel{width:320px;min-width:320px;background:linear-gradient(180deg,var(--bg-card),var(--bg-primary));
+  border-left:1px solid var(--border);overflow-y:auto;padding:18px}
+.panel::-webkit-scrollbar{width:3px}
+.panel::-webkit-scrollbar-track{background:transparent}
+.panel::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+.portrait{width:100%;aspect-ratio:1;border-radius:12px;margin-bottom:14px;position:relative;overflow:hidden;
+  background:var(--bg-surface);border:2px solid var(--border)}
+.portrait .glow{position:absolute;inset:0;border-radius:12px}
+.portrait .init{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-family:'Cinzel',serif;font-size:80px;font-weight:700;opacity:.08}
+.portrait .nm{position:absolute;bottom:0;left:0;right:0;padding:14px;
+  background:linear-gradient(transparent,rgba(0,0,0,.85));text-align:center}
+.portrait .ch{font-family:'Cinzel',serif;font-size:22px;letter-spacing:3px;display:block}
+.portrait .pl{font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--text-muted);
+  text-transform:uppercase;letter-spacing:4px;display:block;margin-top:2px}
+
+.badge{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent-blue);
+  padding:5px 10px;background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.15);
+  border-radius:6px;margin-bottom:14px;text-align:center;line-height:1.4}
+.badge .sl{display:block;font-family:'Barlow',sans-serif;font-size:11px;color:var(--text-secondary);margin-top:2px}
+
+.sec{margin-bottom:16px}
+.sec-t{font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:2px;
+  color:var(--text-muted);margin-bottom:6px;padding-bottom:3px;border-bottom:1px solid var(--border)}
+
+.radar{width:100%;aspect-ratio:1;margin:0 auto 8px}
+
+.ri{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:5px;
+  background:var(--bg-surface);margin-bottom:3px;font-size:12px}
+.ri .sc{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;min-width:30px}
+.ri .rn{font-family:'Cinzel',serif;font-size:11px;flex:1}
+.ri .rt{font-family:'Barlow Condensed',sans-serif;font-size:9px;color:var(--text-muted);text-transform:uppercase}
+
+.dtm{height:6px;background:var(--bg-surface);border-radius:3px;overflow:hidden;margin-top:3px}
+.dtf{height:100%;border-radius:3px;transition:width .8s ease}
+.dtl{display:flex;justify-content:space-between;font-size:10px;margin-top:2px}
+
+.mvps{width:100%;height:36px;margin-top:3px}
+
+.sg{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.sc2{padding:5px 7px;background:var(--bg-surface);border-radius:5px;text-align:center}
+.sc2 .lb{font-size:8px;color:var(--text-muted);text-transform:uppercase;font-family:'Barlow Condensed',sans-serif;letter-spacing:1px}
+.sc2 .vl{font-family:'JetBrains Mono',monospace;font-size:13px;margin-top:1px}
+
+/* === PATH CANVAS === */
+.canvas{position:relative;width:100%}
+.tlayer{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
+
+/* === LANDMARKS === */
+.lm{position:absolute;cursor:pointer;transition:transform .3s;z-index:10;pointer-events:auto}
+.lm:hover{transform:scale(1.15)}
+.lm .d{width:22px;height:22px;border-radius:50%;border:2px solid;display:flex;align-items:center;
+  justify-content:center;font-size:9px;font-weight:700;font-family:'JetBrains Mono',monospace;background:rgba(6,6,12,.6)}
+.lm .tp{position:absolute;left:30px;top:-8px;width:220px;padding:9px 12px;
+  background:var(--bg-elevated);border:1px solid var(--border-glow);border-radius:7px;
+  font-size:11px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:20;
+  box-shadow:0 8px 30px rgba(0,0,0,.6)}
+.lm:hover .tp{opacity:1;pointer-events:auto}
+.lm .tt{font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:1px;margin-bottom:3px}
+.lm .trs{display:flex;flex-wrap:wrap;gap:2px;margin-top:3px}
+.lm .tr{font-family:'JetBrains Mono',monospace;font-size:8px;padding:1px 4px;border-radius:2px}
+
+/* === SIGNPOSTS === */
+.sp{position:absolute;z-index:8;max-width:195px;pointer-events:auto}
+.sp .bd{position:relative;padding:7px 10px;background:rgba(15,16,32,.92);border:1px solid var(--border);
+  border-radius:5px;font-size:10.5px;font-style:italic;color:var(--text-secondary);line-height:1.35;
+  transition:border-color .3s}
+.sp:hover .bd{border-color:var(--border-glow)}
+.sp .cx{font-family:'Barlow Condensed',sans-serif;font-size:8px;color:var(--text-muted);
+  text-transform:uppercase;margin-top:3px;font-style:normal;letter-spacing:1px}
+
+/* === ARCHETYPE SIGNS === */
+.as{position:absolute;z-index:9;pointer-events:none}
+.as .ai{padding:4px 12px;border:2px solid var(--accent-purple);border-radius:3px;
+  font-family:'Bebas Neue',sans-serif;font-size:11px;color:var(--accent-purple);
+  letter-spacing:2px;text-transform:uppercase;background:rgba(6,6,12,.92);
+  box-shadow:0 0 12px rgba(173,107,255,.15)}
+
+/* === SCROLL PROGRESS === */
+.spg{position:fixed;left:0;top:50px;width:3px;height:calc(100vh - 50px);z-index:50}
+.spf{width:100%;transition:height .1s}
+
+/* === SHADOW PATH === */
+.shadow-path{filter:blur(3px);pointer-events:none}
+
+/* === MEMORY ORBS === */
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes shatter{0%{transform:scale(1);opacity:1}100%{transform:scale(2.5);opacity:0}}
+@keyframes particle-burst{0%{transform:translate(0,0) scale(1);opacity:1}100%{transform:translate(var(--px),var(--py)) scale(0);opacity:0}}
+.morb{position:absolute;z-index:12;cursor:pointer;pointer-events:auto;animation:float 3s ease-in-out infinite}
+.morb circle{transition:r .2s ease}
+.morb:hover circle{r:14}
+.morb-tip{position:absolute;left:22px;top:-18px;min-width:180px;max-width:240px;padding:8px 11px;
+  background:rgba(15,16,32,.95);border:1px solid var(--border-glow);border-radius:6px;
+  font-size:10.5px;font-style:italic;color:var(--text-secondary);line-height:1.35;
+  opacity:0;pointer-events:none;transition:opacity .2s;z-index:30;
+  box-shadow:0 6px 24px rgba(0,0,0,.7)}
+.morb:hover .morb-tip{opacity:1}
+.morb-overlay{position:fixed;top:0;left:0;right:0;bottom:0;z-index:200;background:rgba(6,6,12,.85);
+  display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);cursor:pointer}
+.morb-overlay-inner{max-width:480px;padding:28px 32px;background:var(--bg-card);border:1px solid var(--border-glow);
+  border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,.8)}
+.morb-overlay q{display:block;font-family:'Barlow',sans-serif;font-size:16px;font-style:italic;
+  color:var(--text-primary);line-height:1.5;margin-bottom:10px}
+.morb-overlay .ctx{font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--text-muted);
+  text-transform:uppercase;letter-spacing:2px}
+.morb-particles{position:absolute;pointer-events:none;z-index:13}
+.morb-particles span{position:absolute;width:3px;height:3px;border-radius:50%;animation:particle-burst .5s ease-out forwards}
+
+/* === COMPANION SILHOUETTES === */
+.comp-dot{position:absolute;z-index:11;pointer-events:auto;cursor:default}
+.comp-dot circle{transition:r .15s}
+.comp-dot:hover circle{r:7}
+.comp-tip{position:absolute;left:12px;top:-10px;white-space:nowrap;padding:3px 8px;
+  background:rgba(15,16,32,.92);border:1px solid var(--border);border-radius:4px;
+  font-family:'Barlow Condensed',sans-serif;font-size:9px;color:var(--text-secondary);
+  text-transform:uppercase;letter-spacing:1px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:30}
+.comp-dot:hover .comp-tip{opacity:1}
+
+/* === WEATHER CANVAS === */
+#weather-canvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:6}
+
+/* === MILESTONE STONES === */
+.milestone{position:absolute;z-index:9;pointer-events:auto}
+.milestone-inner{padding:5px 14px;background:#12121e;border:2px solid #2a2a40;border-radius:6px;
+  font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:2px;
+  color:var(--text-primary);text-align:center;line-height:1.3;white-space:nowrap}
+.milestone-sub{font-size:8px;font-weight:400;color:var(--text-muted);letter-spacing:1px;margin-top:1px}
+
+/* === BEFORE/AFTER SIGNPOSTS === */
+.ba-pair{position:absolute;z-index:9;pointer-events:auto;display:flex;align-items:center;gap:6px}
+.ba-sign{padding:5px 10px;border:1.5px solid #8B6914;border-radius:4px;background:rgba(40,30,10,.85);
+  font-family:'Barlow Condensed',sans-serif;font-size:9.5px;line-height:1.3;max-width:140px}
+.ba-sign .ba-label{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;
+  letter-spacing:2px;margin-bottom:2px;text-transform:uppercase}
+.ba-sign.before .ba-label{color:#ff8844}
+.ba-sign.after .ba-label{color:#44ff88}
+.ba-sign .ba-text{color:#e8dcc8;font-style:italic;font-size:9px}
+.ba-sign .ba-trait{font-size:8px;color:var(--text-muted);margin-top:2px}
+.ba-arrow{color:#8B6914;font-size:16px;font-family:'JetBrains Mono',monospace;line-height:1}
+</style>
+</head>
+<body>
+<div class="page-header"><div class="header-inner">
+  <div><div class="header-title">THE CHARACTER ODYSSEY</div>
+  <div class="header-sub">Personal Biographies Across 46 Sessions</div></div>
+  <div class="tabs" id="tabs"></div>
+</div></div>
+<div class="wrap">
+  <div class="viewport" id="vp">
+    <div class="canvas" id="cv">
+      <svg id="tsvg" class="tlayer"></svg>
+      <svg id="psvg" class="tlayer" style="z-index:5"></svg>
+      <div id="ovl" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></div>
+      <canvas id="weather-canvas"></canvas>
+    </div>
+  </div>
+  <div class="panel" id="pan"></div>
+</div>
+<div class="spg"><div class="spf" id="sf"></div></div>
+<script>
+const RAW={"players":{"Gradles":{"character":"Corras","sessions":{"S001":{"session_id":"S001","growth":{"net_growth_score":9,"growth_direction":"Ascending","growth_moments":[{"title":"Claiming the Castle","traits_affected":[{"trait":"confidence","change":1},{"trait":"goals_purpose","change":1}]},{"title":"Royal Procession to Lumin","traits_affected":[{"trait":"confidence","change":1},{"trait":"emotional_state","change":1},{"trait":"connection_to_party","change":1}]},{"title":"Recruiting the Etten","traits_affected":[{"trait":"trust_in_others","change":1},{"trait":"moral_compass","change":1}]}],"trait_snapshot":{"confidence":8,"trust_in_others":6,"moral_compass":5,"emotional_state":7,"goals_purpose":8,"connection_to_party":7,"combat_instincts":5,"self_awareness":5}},"sentiment":{"mean":3.2,"arc_description":"Corras started frustrated with technical problems, but quickly became curious and engaged with Morty's introduction. His sentiment peaked during the triumphant recruitment of Urgle Gurgle, showing a journey from irritation to elation as he embraced his role as castle lord."},"stats":{"dialogue_share_pct":17.0,"archetype":"The Face","best_one_liner":"What are you doing in my castle?","one_liner_context":"Confronting Morty in the castle","mvp_score":6.95},"dark_triad":46.7,"chemistry":[{"other":"Ash","score":7.5,"type":"The Brain Trust"},{"other":"Billabong","score":7.0,"type":"Loyal Companions"},{"other":"Dahlia","score":6.5,"type":"Volatile Mix"},{"other":"Orla","score":5.5,"type":"New Acquaintances"}]},"S004":{"session_id":"S004","growth":{"net_growth_score":5,"growth_direction":"Ascending","growth_moments":[{"title":"Acquiring the Shadow Glass Shard","traits_affected":[{"trait":"confidence","change":1},{"trait":"goals_purpose","change":1}]},{"title":"Counterspelling the Goblin Queen","traits_affected":[{"trait":"combat_instincts","change":1},{"trait":"connection_to_party","change":1}]},{"title":"Strategic Diplomatic Planning","traits_affected":[{"trait":"trust_in_others","change":1}]}],"trait_snapshot":{"confidence":9,"trust_in_others":8,"moral_compass":6,"emotional_state":7,"goals_purpose":8,"connection_to_party":9,"combat_instincts":9,"self_awareness":7}},"sentiment":{"mean":0.4,"arc_description":"Corras experienced a rollercoaster of emotions, from initial curiosity and excitement during planning to fear during combat, peaking with triumph at Sarlumon's rescue, and ending with suspense in the crypt. His arc shows adaptability and resilience in face of danger."},"stats":{"dialogue_share_pct":15.0,"archetype":"The Strategist","best_one_liner":"I've picked up a thingy.","one_liner_context":"After looting shard from goblin","mvp_score":6.85},"dark_triad":48.3,"chemistry":[{"other":"Ash","score":7.5,"type":"The Brain Trust"},{"other":"Billabong","score":7.0,"type":"Battle Siblings"},{"other":"Lilith","score":5.0,"type":"New Acquaintances"},{"other":"Orla","score":6.5,"type":"Unspoken Bond"},{"other":"Ave","score":6.0,"type":"Loyal Companions"}]},"S007":{"session_id":"S007","growth":{"net_growth_score":0,"growth_direction":"Stabilizing","growth_moments":[{"title":"Leading Time Travel Strategy","traits_affected":[{"trait":"confidence","change":0},{"trait":"goals_purpose","change":0}]},{"title":"Stealth Infiltration for Spark's Eyelash","traits_affected":[{"trait":"combat_instincts","change":1},{"trait":"emotional_state","change":-1}]},{"title":"Confrontation with Past Self","traits_affected":[{"trait":"self_awareness","change":0},{"trait":"confidence","change":0}]}],"trait_snapshot":{"confidence":8,"trust_in_others":7,"moral_compass":5,"emotional_state":5,"goals_purpose":8,"connection_to_party":7,"combat_instincts":8,"self_awareness":6}},"sentiment":{"mean":1.5,"arc_description":"Corras shows a generally neutral to positive arc, with peaks during key action moments like time travel execution. Emotional range is limited, mostly centered around tension and curiosity, with brief excitement."},"stats":{"dialogue_share_pct":12.0,"archetype":"The Strategist","best_one_liner":"I feel like there'll be a hard reset.","one_liner_context":"Discussing time travel paradoxes","mvp_score":7.35},"dark_triad":36.7,"chemistry":[{"other":"Ash","score":7.5,"type":"The Brain Trust"},{"other":"Billabong","score":4.0,"type":"New Acquaintances"},{"other":"Dahlia","score":6.5,"type":"Loyal Companions"},{"other":"Orla","score":3.5,"type":"New Acquaintances"},{"other":"Meijinx","score":2.0,"type":"Ships Passing"}]},"S010":{"session_id":"S010","growth":{"net_growth_score":-1,"growth_direction":"Stabilizing","growth_moments":[{"title":"Stealth Failure Alert","traits_affected":[{"trait":"confidence","change":-1},{"trait":"self_awareness","change":1}]},{"title":"Casting Moonbeam","traits_affected":[{"trait":"combat_instincts","change":0},{"trait":"problem_solving","change":0}]},{"title":"Attack Miss and Recovery","traits_affected":[{"trait":"emotional_state","change":-1},{"trait":"self_awareness","change":1}]}],"trait_snapshot":{"confidence":6,"trust_in_others":6,"moral_compass":5,"emotional_state":5,"goals_purpose":8,"connection_to_party":7,"combat_instincts":6,"self_awareness":6}},"sentiment":{"mean":2.6666666666666665,"arc_description":"Corras stays positively engaged throughout, with high amusement during casual talk and steady excitement as the game unfolds, showing a player who enjoys both social and gameplay aspects."},"stats":{"dialogue_share_pct":15.8,"archetype":"The Strategist","best_one_liner":"I just... Tear's pretty strong, man.","one_liner_context":"After casting Moonbeam near the cave","mvp_score":5.8},"chemistry":[{"other":"Ash","score":6.5,"type":"The Brain Trust"},{"other":"Billabong","score":3.5,"type":"New Acquaintances"},{"other":"Dahlia","score":5.5,"type":"Volatile Mix"},{"other":"Orla","score":7.0,"type":"Comic Relief Duo"},{"other":"Drenek","score":7.5,"type":"Battle Siblings"}]},"S013":{"session_id":"S013","growth":{"net_growth_score":2,"growth_direction":"Stabilizing","growth_moments":[{"title":"Playing Billabong and Supporting Escape","traits_affected":[{"trait":"trust_in_others","change":1},{"trait":"connection_to_party","change":1}]}],"trait_snapshot":{"confidence":8,"trust_in_others":5,"moral_compass":5,"emotional_state":6,"goals_purpose":7,"connection_to_party":7,"combat_instincts":6,"self_awareness":7}},"sentiment":{"mean":1.5,"arc_description":"Corras showed high engagement throughout, with peaks during humorous moments and the successful escape, and valleys during tense scenes. Overall, a positive and excited arc."},"stats":{"dialogue_share_pct":15.0,"archetype":"The Comic Relief","best_one_liner":"Royal rat thunker, you say. I suppose that is a 15 profession for a half-orc.","one_liner_context":"Mocking Billabong's accomplishments to the demon.","mvp_score":6.6},"dark_triad":33.3,"chemistry":[{"other":"Ash","score":7.5,"type":"The Brain Trust"},{"other":"Orla","score":5.0,"type":"New Acquaintances"},{"other":"Billabong","score":3.0,"type":"Ships Passing"},{"other":"Dahlia","score":1.0,"type":"Ships Passing"}]},"S016":{"session_id":"S016","growth":{"net_growth_score":2,"growth_direction":"Deepening","growth_moments":[{"title":"Fleeing from the Time Rift","traits_affected":[{"trait":"confidence","change":-1},{"trait":"emotional_state","change":-1}]},{"title":"Using the Fates Card","traits_affected":[{"trait":"goals_purpose","change":1},{"trait":"self_awareness","change":1}]}],"trait_snapshot":{"confidence":6,"trust_in_others":7,"moral_compass":5,"emotional_state":5,"goals_purpose":8,"connection_to_party":8,"combat_instincts":5,"self_awareness":7}},"sentiment":{"mean":0.63,"arc_description":"Corras started cautiously, faced tension during the crisis, showed determination in planning, and peaked with the triumphant use of the Fates card to rewrite events, ending with satisfaction."},"stats":{"dialogue_share_pct":6.7,"archetype":"The Strategist","best_one_liner":"I guess when do we when would we want to undo a decision my thought was undo the decision to enter the greenhouse cave for the first time.","one_liner_context":"Discussing timeline manipulation options","mvp_score":7.8},"dark_triad":35.0,"chemistry":[{"other":"Ash","score":7.5,"type":"The Brain Trust"},{"other":"Billabong","score":4.0,"type":"New Acquaintances"},{"other":"Dahlia","score":3.5,"type":"Ships Passing"},{"other":"Orla","score":6.5,"type":"Comic Relief Duo"},{"other":"Meijinx","score":3.0,"type":"Ships Passing"}]},"S019":{"session_id":"S019","growth":{"net_growth_score":0,"growth_direction":"Stabilizing","growth_moments":[{"title":"Holy Water Preparation","traits_affected":[{"trait":"confidence","change":0},{"trait":"teamwork","change":0}]},{"title":"Invisibility Suggestion","traits_affected":[{"trait":"combat_instincts","change":0},{"trait":"problem_solving","change":0}]},{"title":"Explosive Plan Contribution","traits_affected":[{"trait":"goals_purpose","change":0},{"trait":"connection_to_party","change":0}]}],"trait_snapshot":{"confidence":7,"trust_in_others":6,"moral_compass":5,"emotional_state":6,"goals_purpose":7,"connection_to_party":6,"combat_instincts":5,"self_awareness":7}},"sentiment":{"mean":0.0,"arc_description":"Corras remained mostly neutral throughout, with occasional sarcastic remarks but no major emotional shifts."},"stats":{"dialogue_share_pct":15.0,"archetype":"The Strategist","best_one_liner":"Trust me, you'll thank me later.","one_liner_context":"When discussing Cyril and Zibblebottom with the party","mvp_score":6.75},"dark_triad":33.3,"chemistry":[{"other":"Ash","score":7.5,"type":"The Brain Trust"},{"other":"Billabong","score":4.0,"type":"New Acquaintances"},{"other":"Dahlia","score":6.0,"type":"Strategic Allies"},{"other":"Orla","score":6.5,"type":"Comic Relief Duo"}]},"S022":{"session_id":"S022","growth":{"net_growth_score":8,"growth_direction":"Ascending","growth_moments":[{"title":"Shapechanging Infiltration","traits_affected":[{"trait":"confidence","change":1},{"trait":"goals_purpose","change":1}]},{"title":"Lock Picking Success","traits_affected":[{"trait":"combat_instincts","change":1},{"trait":"self_awareness","change":1}]},{"title":"Leading Infiltration Strategy","traits_affected":[{"trait":"connection_to_party","change":1},{"trait":"confidence","change":1}]}],"trait_snapshot":{"confidence":9,"trust_in_others":6,"moral_compass":6,"emotional_state":7,"goals_purpose":9,"connection_to_party":7,"combat_instincts":9,"self_awareness":6}},"sentiment":{"mean":2.25,"arc_description":""},"stats":{"dialogue_share_pct":14.1,"archetype":"The Strategist","best_one_liner":"I'll just grab onto her and you're coming with me pull her out","one_liner_context":"Rescuing Orla from cloud kill","mvp_score":6.7},"dark_triad":36.0,"chemistry":[{"other":"Ash","score":8.0,"type":"The Brain Trust"},{"other":"Billabong","score":7.0,"type":"Battle Siblings"},{"other":"Dahlia","score":7.5,"type":"Loyal Companions"},{"other":"Orla","score":6.0,"type":"New Acquaintances"},{"other":"SavannahBelle","score":5.5,"type":"Ships Passing"}]},"S025":{"session_id":"S025","growth":{"net_growth_score":0,"growth_direction":"Stabilizing","growth_moments":[],"trait_snapshot":{"confidence":5,"trust_in_others":5,"moral_compass":5,"emotional_state":5,"goals_purpose":5,"connection_to_party":5,"combat_instincts":5,"self_awareness":5}},"sentiment":{"mean":2.8,"arc_description":"Corras started with amusement during casual talk, experienced confusion during plot discussions, and ended with elation as plans solidified. Their engagement fluctuated but remained overall positive."},"stats":{"dialogue_share_pct":29.2,"archetype":"The Strategist","best_one_liner":"I'm trying to own the Material Plane, for sure.","one_liner_context":"When discussing expansionist goals for the BWB Federation","mvp_score":7.3},"dark_triad":42.3,"chemistry":[]},"S028":{"session_id":"S028","growth":{"net_growth_score":5,"growth_direction":"Ascending","growth_moments":[{"title":"Sneak Attack Success","traits_affected":[{"trait":"confidence","change":1},{"trait":"combat_instincts","change":0}]},{"title":"Investigating Constructs","traits_affected":[{"trait":"connection_to_party","change":1},{"trait":"goals_purpose","change":1}]},{"title":"Suggesting Zibblebottoms","traits_affected":[{"trait":"self_awareness","change":1}]}],"trait_snapshot":{"confidence":7,"trust_in_others":6,"moral_compass":5,"emotional_state":5,"goals_purpose":7,"connection_to_party":7,"combat_instincts":7,"self_awareness":6}},"sentiment":{"mean":0.8,"arc_description":"Corras shows high engagement during humorous moments like bastion planning and wrestling, with dips during tense combat and curses. Overall, the arc reflects a player who enjoys social interactions but gets anxious in dangerous situations."},"stats":{"dialogue_share_pct":15.0,"archetype":"The Strategist","best_one_liner":"It's very intimidating.","one_liner_context":"Referring to a cow in a torture chamber","mvp_score":6.05},"dark_triad":0,"chemistry":[{"other":"Ash","score":7.5,"type":"The Brain Trust"},{"other":"Billabong","score":5.0,"type":"New Acquaintances"},{"other":"Dahlia","score":6.0,"type":"Volatile Mix"},{"other":"Orla","score":5.5,"type":"New Acquaintances"},{"other":"SavannahBelle","score":4.0,"type":"Ships Passing"}]},"S031":{"session_id":"S031","growth":{"net_growth_score":8,"growth_direction":"Ascending","growth_moments":[{"title":"Shadow Blade Assault","traits_affected":[{"trait":"confidence","change":1},{"trait":"combat_instincts","change":1}]},{"title":"Aiding Billabong During Escape","traits_affected":[{"trait":"trust_in_others","change":1},{"trait":"connection_to_party","change":1}]},{"title":"Leadership with Ezrella","traits_affected":[{"trait":"goals_purpose","change":1},{"trait":"self_awareness","change":1}]}],"trait_snapshot":{"confidence":8,"trust_in_others":8,"moral_compass":7,"emotional_state":7,"goals_purpose":8,"connection_to_party":9,"combat_instincts":8,"self_awareness":8}},"sentiment":{"mean":0.6875,"arc_description":"Corras started frustrated from the battle recap but showed determination during healing efforts. Peaked with joy after defeating the Maw, then faced tension during escape and new threats, ending with curiosity about future quests. The arc reflects a rollercoaster of emotions with strong highs and lows."},"stats":{"dialogue_share_pct":16.8,"archetype":"The Strategist","best_one_liner":"Hey you big dumb idiot look at me","one_liner_context":"Taunting the Maw to distract it","mvp_score":7.05},"dark_triad":33.3,"chemistry":[{"other":"Ash","score":8.5,"type":"Loyal Companions"},{"other":"Billabong","score":7.0,"type":"The Odd Couple"},{"other":"Dahlia","score":9.0,"type":"Battle Siblings"},{"other":"Orla","score":6.5,"type":"New Acquaintances"},{"other":"SavannahBelle","score":5.5,"type":"Ships Passing"}]},"S034":{"session_id":"S034","growth":{"net_growth_score":27,"growth_direction":"Ascending","growth_moments":[{"title":"Amnesiac Escape Attempt","traits_affected":[{"trait":"confidence","change":-1},{"trait":"trust_in_others","change":-2},{"trait":"connection_to_party","change":-3}]},{"title":"Lockpick Fiasco with Broken Rapier","traits_affected":[{"trait":"combat_instincts","change":1},{"trait":"self_awareness","change":1}]},{"title":"Twin Brother Revelation","traits_affected":[{"trait":"self_awareness","change":3},{"trait":"goals_purpose","change":2}]}],"trait_snapshot":{"confidence":8,"trust_in_others":4,"moral_compass":6,"emotional_state":7,"goals_purpose":8,"connection_to_party":5,"combat_instincts":9,"self_awareness":7}},"sentiment":{"mean":0.85,"arc_description":"Corras starts confused and frustrated, discovers his twin Sarek, leading to conflict and a low point during the ritual. After a climactic battle, he absorbs Sarek, gaining power and ending in triumph and excitement."},"stats":{"dialogue_share_pct":16.4,"archetype":"The Wildcard","best_one_liner":"I'm a victim we're just training places you know like i had like you know it's fine","one_liner_context":"When accused of being an imposter by Dahlia","mvp_score":7.55},"dark_triad":52.7,"chemistry":[{"other":"Dahlia","score":4.5,"type":"Rivals"},{"other":"Ash","score":3.0,"type":"Volatile Mix"},{"other":"Orla","score":7.0,"type":"Loyal Companions"},{"other":"SavannahBelle","score":3.0,"type":"Ships Passing"},{"other":"Billabong","score":2.0,"type":"New Acquaintances"}]},"S037":{"session_id":"S037","growth":{"net_growth_score":2,"growth_direction":"Hardening","growth_moments":[{"title":"Resisting the Orb's Temptation","traits_affected":[{"trait":"confidence","change":1},{"trait":"self_awareness","change":1}]},{"title":"Negotiating with Strahd von Zarovich","traits_affected":[{"trait":"confidence","change":1},{"trait":"moral_compass","change":-1}]},{"title":"Combat Effectiveness against Shambling Mound","traits_affected":[{"trait":"combat_instincts","change":1}]}],"trait_snapshot":{"confidence":8,"trust_in_others":5,"moral_compass":4,"emotional_state":6,"goals_purpose":8,"connection_to_party":7,"combat_instincts":8,"self_awareness":7}},"sentiment":{"mean":2.033,"arc_description":"Corras's arc shows highs from successful combat moves and lows from dangerous encounters, reflecting a rollercoaster of engagement. He starts amused, faces tension in battles, peaks with triumphant moments, and ends anticipating the next challenge."},"stats":{"dialogue_share_pct":16.8,"archetype":"The Strategist","best_one_liner":"Lying to me is like trying to put a shadow around a flame.","one_liner_context":"Mocking Strahd's insult to Corras","mvp_score":7.3},"dark_triad":35.0,"chemistry":[{"other":"Dahlia","score":7.5,"type":"Loyal Companions"},{"other":"Orla","score":5.0,"type":"New Acquaintances"},{"other":"SavannahBelle","score":6.5,"type":"Chaos Partners"},{"other":"Ezrella","score":4.0,"type":"Ships Passing"}]},"S040":{"session_id":"S040","growth":{"net_growth_score":-5,"growth_direction":"Hardening","growth_moments":[{"title":"Rod of Rulership Control","traits_affected":[{"trait":"confidence","change":1},{"trait":"combat_instincts","change":1}]},{"title":"Stealing from Madam Eva","traits_affected":[{"trait":"moral_compass","change":-1},{"trait":"self_awareness","change":-2}]},{"title":"Confrontation with Madam Eva","traits_affected":[{"trait":"emotional_state","change":-1},{"trait":"connection_to_party","change":-1}]}],"trait_snapshot":{"confidence":7,"trust_in_others":4,"moral_compass":3,"emotional_state":5,"goals_purpose":9,"connection_to_party":5,"combat_instincts":8,"self_awareness":4}},"stats":{"dialogue_share_pct":23.1,"archetype":"The Strategist","best_one_liner":"I bested you at your own game, at the deck's own game. It's mine now.","one_liner_context":"Taunting Madame Eva after stealing the Deck of Many Things","mvp_score":7.7},"dark_triad":56.7,"chemistry":[{"other":"Ash","score":7.5,"type":"The Brain Trust"},{"other":"Billabong","score":3.0,"type":"Ships Passing"},{"other":"Dahlia","score":6.0,"type":"Volatile Mix"},{"other":"Orla","score":7.0,"type":"Loyal Companions"},{"other":"SavannahBelle","score":5.0,"type":"New Acquaintances"}]},"S043":{"session_id":"S043","growth":{"net_growth_score":-2,"growth_direction":"Hardening","growth_moments":[{"title":"Confronting the Council","traits_affected":[{"trait":"confidence","change":1},{"trait":"trust_in_others","change":-1}]},{"title":"Framing the Matron","traits_affected":[{"trait":"moral_compass","change":-2},{"trait":"emotional_state","change":-1}]},{"title":"Planning the Cover-up","traits_affected":[{"trait":"connection_to_party","change":1},{"trait":"self_awareness","change":-1}]}],"trait_snapshot":{"confidence":8,"trust_in_others":4,"moral_compass":4,"emotional_state":5,"goals_purpose":8,"connection_to_party":8,"combat_instincts":7,"self_awareness":5}},"sentiment":{"mean":0.0,"arc_description":"Corras started with positive engagement during casual chat and excitement discussion, but sentiment dropped significantly during the political conflict and cover-up planning, showing frustration and tension as the session progressed."},"stats":{"dialogue_share_pct":18.2,"archetype":"The Strategist","best_one_liner":"Join us or die.","one_liner_context":"When discussing castle slogan with party","mvp_score":6.65},"dark_triad":53.3,"chemistry":[{"other":"Ash","score":7.5,"type":"The Brain Trust"},{"other":"Dahlia","score":8.0,"type":"Loyal Companions"},{"other":"Orla","score":6.0,"type":"New Acquaintances"},{"other":"SavannahBelle","score":7.0,"type":"Chaos Partners"}]},"S046":{"session_id":"S046","growth":{"net_growth_score":-6,"growth_direction":"Hardening","growth_moments":[{"title":"Negotiating Power with the Matron","traits_affected":[{"trait":"trust_in_others","change":-1},{"trait":"moral_compass","change":-1}]},{"title":"Handing Over the Ring","traits_affected":[{"trait":"confidence","change":-1},{"trait":"emotional_state","change":-1}]},{"title":"Creating a False Trail in the Hunt","traits_affected":[{"trait":"combat_instincts","change":0},{"trait":"connection_to_party","change":0}]}],"trait_snapshot":{"confidence":7,"trust_in_others":3,"moral_compass":4,"emotional_state":5,"goals_purpose":6,"connection_to_party":8,"combat_instincts":7,"self_awareness":5}},"stats":{"dialogue_share_pct":17.6,"archetype":"The Face","best_one_liner":"I'm not good at anything, let's be clear.","one_liner_context":"Responding to a comment about distractions.","mvp_score":6.45},"dark_triad":43.3,"chemistry":[{"other":"Ash","score":7.5,"type":"The Brain Trust"},{"other":"SavannahBelle","score":4.0,"type":"Volatile Mix"},{"other":"Orla","score":6.5,"type":"Loyal Companions"},{"other":"Dahlia","score":3.0,"type":"New Acquaintances"}]}}},"HT":{"character":"Ash","sessions":{"S001":{"session_id":"S001","growth":{"net_growth_score":-4,"growth_direction":"Questioning","growth_moments":[{"title":"Investigating the Locked Door","traits_affected":[{"trait":"confidence","change":-1},{"trait":"goals_purpose","change":1}]},{"title":"Voice Change and Social Interactions","traits_affected":[{"trait":"self_awareness","change":-1},{"trait":"emotional_state","change":-1},{"trait":"connection_to_party","change":-1}]},{"title":"Dealing with the Artisan","traits_affected":[{"trait":"trust_in_others","change":-1}]}],"trait_snapshot":{"confidence":6,"trust_in_others":5,"moral_compass":5,"emotional_state":5,"goals_purpose":8,"connection_to_party":5,"combat_instincts":5,"self_awareness":4}},"sentiment":{"mean":2.0,"arc_description":"Ash experienced frustration early on, with a significant low when paralyzed by magical traps. She recovered with curiosity and had peaks of excitement during magical discoveries, ending satisfied but wary after the town events."},"stats":{"dialogue_share_pct":14.6,"archetype":"The Strategist","best_one_liner":"Do you come here often?","one_liner_context":"Trying to flirt with the Etten","mvp_score":6.2},"dark_triad":25.0,"chemistry":[{"other":"Corras","score":7.5,"type":"The Brain Trust"},{"other":"Billabong","score":6.0,"type":"Comic Relief Duo"},{"other":"Dahlia","score":5.5,"type":"Rivals"},{"other":"Orla","score":6.5,"type":"Mentor & Student"}]},"S004":{"session_id":"S004","growth":{"net_growth_score":6,"growth_direction":"Ascending","growth_moments":[{"title":"Scrying on Xalvador","traits_affected":[{"trait":"confidence","change":1},{"trait":"goals_purpose","change":1}]},{"title":"Casting Aid and Death Ward","traits_affected":[{"trait":"connection_to_party","change":1},{"trait":"combat_instincts","change":1}]},{"title":"Investigating the Tome","traits_affected":[{"trait":"self_awareness","change":1},{"trait":"trust_in_others","change":1}]}],"trait_snapshot":{"confidence":8,"trust_in_others":7,"moral_compass":5,"emotional_state":7,"goals_purpose":8,"connection_to_party":8,"combat_instincts":7,"self_awareness":7}},"sentiment":{"mean":-0.2,"arc_description":"Ash's emotional journey was marked by high points during creative moments and low points during combat peril. She showed concern for allies, especially during the Xalvador crisis, and ended with fear in the crypt, reflecting a protective and investigative nature."},"stats":{"dialogue_share_pct":18.3,"archetype":"The Strategist","best_one_liner":"I have an idea I have an idea which Meght be really dumb I don't know what this Meght be but maybe it Meght delay them a little bit.","one_liner_context":"Proposing false trails for Lilith","mvp_score":7.15},"dark_triad":31.7,"chemistry":[{"other":"Corras","score":7.5,"type":"The Brain Trust"},{"other":"Billabong","score":6.5,"type":"The Odd Couple"},{"other":"Lilith","score":8.0,"type":"Mentor & Student"},{"other":"Orla","score":8.5,"type":"Comic Relief Duo"},{"other":"Ave","score":6.0,"type":"Loyal Companions"}]},"S007":{"session_id":"S007","growth":{"net_growth_score":3,"growth_direction":"Ascending","growth_moments":[{"title":"Expressing Concern for Spark","traits_affected":[{"trait":"emotional_state","change":1},{"trait":"trust_in_others","change":1}]},{"title":"Casting Invisibility and Support Spells","traits_affected":[{"trait":"confidence","change":1},{"trait":"connection_to_party","change":1}]},{"title":"Moral Compromise for Spark","traits_affected":[{"trait":"moral_compass","change":-1}]}],"trait_snapshot":{"confidence":7,"trust_in_others":7,"moral_compass":6,"emotional_state":6,"goals_purpose":8,"connection_to_party":8,"combat_instincts":5,"self_awareness":7}},"sentiment":{"mean":2.6,"arc_description":"Ash experiences a rollercoaster of emotions, from frustration during planning to elation upon time travel. The arc highlights her analytical nature and investment in saving Spark, with significant emotional swings."},"stats":{"dialogue_share_pct":14.7,"archetype":"The Strategist","best_one_liner":"I have a really horrifying idea but i don't think we can do it now it involves your skill set.","one_liner_context":"Discussing feign death spell for Spark","mvp_score":7.7},"dark_triad":16.7,"chemistry":[{"other":"Corras","score":7.5,"type":"The Brain Trust"},{"other":"Billabong","score":4.5,"type":"New Acquaintances"},{"other":"Dahlia","score":8.0,"type":"The Brain Trust / Comic Relief Duo"},{"other":"Orla","score":3.0,"type":"New Acquaintances"},{"other":"Meijinx","score":2.5,"type":"Ships Passing"}]},"S010":{"session_id":"S010","growth":{"net_growth_score":3,"growth_direction":"Ascending","growth_moments":[{"title":"Counterspelling Fireball","traits_affected":[{"trait":"combat_instincts","change":1},{"trait":"confidence","change":0}]},{"title":"Casting Invisibility on Allies","traits_affected":[{"trait":"trust_in_others","change":1},{"trait":"connection_to_party","change":1}]},{"title":"Polymorphing an Orog","traits_affected":[{"trait":"problem_solving","change":0},{"trait":"combat_instincts","change":1}]}],"trait_snapshot":{"confidence":7,"trust_in_others":7,"moral_compass":5,"emotional_state":6,"goals_purpose":8,"connection_to_party":8,"combat_instincts":7,"self_awareness":6}},"sentiment":{"mean":0.16666666666666666,"arc_description":"Ash is largely silent initially, with a slight rise in sentiment when reacting to strange stories, showing cautious engagement."},"stats":{"dialogue_share_pct":14.0,"archetype":"The Strategist","best_one_liner":"Keep your fires yourself, sir.","one_liner_context":"After Counterspelling the fireball","mvp_score":6.2},"dark_triad":16.7,"chemistry":[{"other":"Corras","score":6.5,"type":"The Brain Trust"},{"other":"Billabong","score":2.5,"type":"Ships Passing"},{"other":"Dahlia","score":6.0,"type":"The Brain Trust"},{"other":"Orla","score":8.5,"type":"Mentor & Student"},{"other":"Drenek","score":4.0,"type":"New Acquaintances"}]},"S013":{"session_id":"S013","growth":{"net_growth_score":5,"growth_direction":"Questioning","growth_moments":[{"title":"Signing the Demon Pact","traits_affected":[{"trait":"moral_compass","change":-1},{"trait":"confidence","change":1}]},{"title":"Planning the Spark Swap","traits_affected":[{"trait":"goals_purpose","change":1},{"trait":"connection_to_party","change":1}]}],"trait_snapshot":{"confidence":7,"trust_in_others":6,"moral_compass":4,"emotional_state":5,"goals_purpose":8,"connection_to_party":7,"combat_instincts":5,"self_awareness":6}},"sentiment":{"mean":1.1,"arc_description":"Ash experienced a rollercoaster of emotions, from curiosity and amusement to fear and triumph, with key peaks during the charm success and escape, and valleys during tense moments."},"stats":{"dialogue_share_pct":18.3,"archetype":"The Strategist","best_one_liner":"You mortals are so presumptuous. You think that I stand here shackled by some lesser human beings will?","one_liner_context":"Mimicking the demon's arrogance during negotiation.","mvp_score":8.1},"dark_triad":36.7,"chemistry":[{"other":"Corras","score":7.5,"type":"The Brain Trust"},{"other":"Orla","score":8.0,"type":"Loyal Companions"},{"other":"Billabong","score":2.5,"type":"Ships Passing"},{"other":"Dahlia","score":1.0,"type":"Ships Passing"}]},"S016":{"session_id":"S016","growth":{"net_growth_score":7,"growth_direction":"Ascending","growth_moments":[{"title":"Falling into the Portal","traits_affected":[{"trait":"confidence","change":-1},{"trait":"emotional_state","change":-1}]},{"title":"Escaping with Sacrifice","traits_affected":[{"trait":"confidence","change":2},{"trait":"self_awareness","change":2},{"trait":"goals_purpose","change":1}]}],"trait_snapshot":{"confidence":7,"trust_in_others":6,"moral_compass":6,"emotional_state":6,"goals_purpose":8,"connection_to_party":7,"combat_instincts":6,"self_awareness":7}},"sentiment":{"mean":0.53,"arc_description":"Ash experienced fear and confusion early on, hit a low when trapped in an alternate timeline, but rallied with creative magic to escape, peaking with joy during the resolution and ending excitedly."},"stats":{"dialogue_share_pct":9.2,"archetype":"The Wildcard","best_one_liner":"I'm going to hold out my uh my metal arm and say here's your sign uh this was my arm my metal arm.","one_liner_context":"Trying to convince soldiers she is a celestial messenger","mvp_score":7.4},"dark_triad":31.7,"chemistry":[{"other":"Corras","score":7.5,"type":"The Brain Trust"},{"other":"Billabong","score":4.5,"type":"New Acquaintances"},{"other":"Dahlia","score":6.0,"type":"The Brain Trust / Volatile Mix"},{"other":"Orla","score":7.0,"type":"Comic Relief Duo"},{"other":"Meijinx","score":4.0,"type":"Ships Passing"}]},"S019":{"session_id":"S019","growth":{"net_growth_score":0,"growth_direction":"Stabilizing","growth_moments":[{"title":"Divination Augury","traits_affected":[{"trait":"confidence","change":0},{"trait":"self_awareness","change":0}]},{"title":"Contingency Setup","traits_affected":[{"trait":"emotional_state","change":0},{"trait":"combat_instincts","change":0}]},{"title":"Scatter Escape","traits_affected":[{"trait":"teamwork","change":0},{"trait":"goals_purpose","change":0}]}],"trait_snapshot":{"confidence":8,"trust_in_others":5,"moral_compass":4,"emotional_state":6,"goals_purpose":7,"connection_to_party":6,"combat_instincts":4,"self_awareness":7}},"sentiment":{"mean":0.75,"arc_description":"Ash showed consistent curiosity and determination, especially when using divination magic to guide the group."},"stats":{"dialogue_share_pct":18.3,"archetype":"The Strategist","best_one_liner":"I am become a dome.","one_liner_context":"When glitching in the virtual tabletop during combat","mvp_score":7.8},"dark_triad":28.3,"chemistry":[{"other":"Corras","score":7.5,"type":"The Brain Trust"},{"other":"Billabong","score":6.0,"type":"Battle Siblings"},{"other":"Dahlia","score":6.5,"type":"The Odd Couple"},{"other":"Orla","score":8.0,"type":"Loyal Companions"}]},"S022":{"session_id":"S022","growth":{"net_growth_score":5,"growth_direction":"Ascending","growth_moments":[{"title":"Detecting Magic Illusion","traits_affected":[{"trait":"combat_instincts","change":1},{"trait":"connection_to_party","change":1}]},{"title":"Supporting with Minor Illusion","traits_affected":[{"trait":"trust_in_others","change":1},{"trait":"self_awareness","change":1}]}],"trait_snapshot":{"confidence":7,"trust_in_others":6,"moral_compass":7,"emotional_state":6,"goals_purpose":8,"connection_to_party":7,"combat_instincts":8,"self_awareness":7}},"sentiment":{"mean":3.5,"arc_description":""},"stats":{"dialogue_share_pct":16.3,"archetype":"The Strategist","best_one_liner":"I'm going to cast my illusions in","one_liner_context":"Helping Corras see the invisible door","mvp_score":6.9},"dark_triad":22.0,"chemistry":[{"other":"Corras","score":8.0,"type":"The Brain Trust"},{"other":"Billabong","score":5.0,"type":"Ships Passing"},{"other":"Dahlia","score":6.5,"type":"The Odd Couple"},{"other":"Orla","score":5.0,"type":"New Acquaintances"},{"other":"SavannahBelle","score":7.0,"type":"Battle Siblings"}]},"S025":{"session_id":"S025","growth":{"net_growth_score":0,"growth_direction":"Stabilizing","growth_moments":[],"trait_snapshot":{"confidence":5,"trust_in_others":5,"moral_compass":5,"emotional_state":5,"goals_purpose":5,"connection_to_party":5,"combat_instincts":5,"self_awareness":5}},"sentiment":{"mean":2.5,"arc_description":"Ash showed curiosity early on, had neutral periods during detailed planning, and peaked with excitement when discussing personal storylines. Their sentiment was generally steady with notable highs."},"stats":{"dialogue_share_pct":20.8,"archetype":"The Strategist","best_one_liner":"100% she would tell Corras and she would be like hey listen i know you can't legally say yes or no so i'm gonna just tell you that i will do this so just so that you know","one_liner_context":"Discussing covert surveillance within the BWB Federation","mvp_score":7.0},"dark_triad":27.3,"chemistry":[]},"S028":{"session_id":"S028","growth":{"net_growth_score":6,"growth_direction":"Ascending","growth_moments":[{"title":"Banishing the Wraith","traits_affected":[{"trait":"confidence","change":1},{"trait":"combat_instincts","change":1}]},{"title":"Scouting with Arcane Eye","traits_affected":[{"trait":"goals_purpose","change":1},{"trait":"connection_to_party","change":1}]},{"title":"Sending to Valtor","traits_affected":[{"trait":"self_awareness","change":1},{"trait":"emotional_state","change":1}]}],"trait_snapshot":{"confidence":8,"trust_in_others":7,"moral_compass":6,"emotional_state":7,"goals_purpose":8,"connection_to_party":8,"combat_instincts":7,"self_awareness":7}},"sentiment":{"mean":0.1,"arc_description":"Ash's arc is marked by curiosity and problem-solving, with peaks during successful spells and triumphs, and valleys during combat frustration and threats. The player shows engagement through strategic thinking but experiences stress in dire situations."},"stats":{"dialogue_share_pct":18.3,"archetype":"The Strategist","best_one_liner":"This is 100% me.","one_liner_context":"Reacting to being paired with Billabong in a group project","mvp_score":7.25},"dark_triad":0,"chemistry":[{"other":"Corras","score":7.5,"type":"The Brain Trust"},{"other":"Billabong","score":8.0,"type":"Loyal Companions"},{"other":"Dahlia","score":7.0,"type":"The Brain Trust"},{"other":"Orla","score":6.5,"type":"Mentor & Student"},{"other":"SavannahBelle","score":4.5,"type":"Ships Passing"}]},"S031":{"session_id":"S031","growth":{"net_growth_score":2,"growth_direction":"Stabilizing","growth_moments":[{"title":"Introducing Herself and Quest","traits_affected":[{"trait":"trust_in_others","change":1},{"trait":"connection_to_party","change":1}]},{"title":"Fighting Vrocks with Steel Wind Strike","traits_affected":[{"trait":"confidence","change":0},{"trait":"combat_instincts","change":0}]},{"title":"Offering Tea to SavannahBelle","traits_affected":[{"trait":"connection_to_party","change":1}]}],"trait_snapshot":{"confidence":8,"trust_in_others":7,"moral_compass":7,"emotional_state":7,"goals_purpose":8,"connection_to_party":6,"combat_instincts":8,"self_awareness":7}},"sentiment":{"mean":-0.25,"arc_description":"Ash's arc is dominated by neutrality after death, with initial sadness from the battle recap. As a ghost, sentiment remains flat, reflecting disengagement from active events, though the party carries her body with care."},"dark_triad":10.0,"chemistry":[{"other":"Corras","score":8.5,"type":"Loyal Companions"},{"other":"Billabong","score":6.0,"type":"Volatile Mix"},{"other":"Dahlia","score":8.0,"type":"Loyal Companions"},{"other":"Orla","score":6.0,"type":"New Acquaintances"},{"other":"SavannahBelle","score":4.5,"type":"Ships Passing"}]},"S034":{"session_id":"S034","growth":{"net_growth_score":8,"growth_direction":"Stabilizing","growth_moments":[{"title":"Frustration with Corras","traits_affected":[{"trait":"emotional_state","change":1},{"trait":"connection_to_party","change":1}]},{"title":"Combat Spellcasting","traits_affected":[{"trait":"confidence","change":1},{"trait":"combat_instincts","change":1}]}],"trait_snapshot":{"confidence":7,"trust_in_others":6,"moral_compass":6,"emotional_state":6,"goals_purpose":7,"connection_to_party":8,"combat_instincts":8,"self_awareness":7}},"sentiment":{"mean":1.81,"arc_description":"Ash experiences initial amusement, frustration during conflicts, and joy in comedic moments. After overcoming challenges in combat, she ends the session with high excitement and satisfaction."},"stats":{"dialogue_share_pct":17.8,"archetype":"The Strategist","best_one_liner":"I'm supposed to be the performer here chill yeah actually oh really this explains a lot about him damn oh gosh and i thought SavannahBelle was a crazy one but oh no i was so wrong i gotta apologize to her i'm sorry what","one_liner_context":"Reacting to Corras's chaotic behavior","mvp_score":6.65},"dark_triad":0.0,"chemistry":[{"other":"Corras","score":3.0,"type":"Volatile Mix"},{"other":"Dahlia","score":7.5,"type":"The Brain Trust"},{"other":"Orla","score":7.0,"type":"The Brain Trust"},{"other":"SavannahBelle","score":6.0,"type":"Comic Relief Duo"},{"other":"Billabong","score":2.0,"type":"New Acquaintances"}]},"S037":{"session_id":"S037","growth":{"net_growth_score":6,"growth_direction":"Ascending","growth_moments":[{"title":"Casting Spirit Guardians","traits_affected":[{"trait":"combat_instincts","change":1},{"trait":"confidence","change":1}]},{"title":"Using Counter Charm against Strahd","traits_affected":[{"trait":"self_awareness","change":1},{"trait":"emotional_state","change":1}]},{"title":"Supporting the Party with Bardic Inspiration","traits_affected":[{"trait":"connection_to_party","change":1},{"trait":"goals_purpose","change":1}]}],"trait_snapshot":{"confidence":8,"trust_in_others":7,"moral_compass":6,"emotional_state":7,"goals_purpose":7,"connection_to_party":9,"combat_instincts":8,"self_awareness":7}},"sentiment":{"mean":0.0,"arc_description":"Ash was not present or active in this session, resulting in a neutral arc with no emotional fluctuations."},"chemistry":[]},"S040":{"session_id":"S040","growth":{"net_growth_score":-4,"growth_direction":"Questioning","growth_moments":[{"title":"Assisting in the Tent","traits_affected":[{"trait":"confidence","change":1},{"trait":"trust_in_others","change":-1}]},{"title":"Diplomacy with Madam Eva","traits_affected":[{"trait":"moral_compass","change":-1},{"trait":"emotional_state","change":-1}]}],"trait_snapshot":{"confidence":7,"trust_in_others":6,"moral_compass":7,"emotional_state":6,"goals_purpose":7,"connection_to_party":7,"combat_instincts":6,"self_awareness":6}},"stats":{"dialogue_share_pct":20.2,"archetype":"The Strategist","best_one_liner":"I'm starting to see why you guys don't like wizards.","one_liner_context":"Reflecting on party's chaotic history with wizards","mvp_score":6.7},"chemistry":[{"other":"Corras","score":7.5,"type":"The Brain Trust"},{"other":"Billabong","score":3.0,"type":"Ships Passing"},{"other":"Dahlia","score":8.0,"type":"Comic Relief Duo"},{"other":"Orla","score":7.0,"type":"Loyal Companions"},{"other":"SavannahBelle","score":6.0,"type":"New Acquaintances"}]},"S043":{"session_id":"S043","growth":{"net_growth_score":-1,"growth_direction":"Questioning","growth_moments":[{"title":"Identifying the Potion","traits_affected":[{"trait":"confidence","change":1},{"trait":"moral_compass","change":-1}]},{"title":"Attempting to Pluck Hair","traits_affected":[{"trait":"trust_in_others","change":-1},{"trait":"combat_instincts","change":1}]},{"title":"Supporting the Cover-up","traits_affected":[{"trait":"connection_to_party","change":1},{"trait":"emotional_state","change":-1}]}],"trait_snapshot":{"confidence":7,"trust_in_others":5,"moral_compass":6,"emotional_state":4,"goals_purpose":7,"connection_to_party":7,"combat_instincts":6,"self_awareness":6}},"sentiment":{"mean":-0.31,"arc_description":"Ash showed high excitement early on but became increasingly negative as the session turned to conflict, with significant drops in sentiment during the Mass Suggestion and cover-up discussions, reflecting anxiety and frustration."},"stats":{"dialogue_share_pct":15.9,"archetype":"The Strategist","best_one_liner":"I wouldn't do that here, for reasons I've learned.","one_liner_context":"Warning against using Shatter spell in the castle","mvp_score":6.2},"dark_triad":35.0,"chemistry":[{"other":"Corras","score":7.5,"type":"The Brain Trust"},{"other":"Dahlia","score":7.0,"type":"The Odd Couple"},{"other":"Orla","score":5.5,"type":"New Acquaintances"},{"other":"SavannahBelle","score":6.0,"type":"Rivals"}]},"S046":{"session_id":"S046","growth":{"net_growth_score":-6,"growth_direction":"Questioning","growth_moments":[{"title":"Casting See Invisibility on the Matron","traits_affected":[{"trait":"trust_in_others","change":-1},{"trait":"confidence","change":0}]},{"title":"Using Augury for Guidance","traits_affected":[{"trait":"emotional_state","change":-1},{"trait":"self_awareness","change":-1}]},{"title":"History Check in the Wild Hunt","traits_affected":[{"trait":"confidence","change":-1},{"trait":"goals_purpose","change":-1}]}],"trait_snapshot":{"confidence":6,"trust_in_others":4,"moral_compass":5,"emotional_state":4,"goals_purpose":7,"connection_to_party":7,"combat_instincts":6,"self_awareness":6}},"stats":{"dialogue_share_pct":21.5,"archetype":"The Strategist","best_one_liner":"I feel like we cannot risk her running off to this thing.","one_liner_context":"Telepathically advising the party during negotiation.","mvp_score":7.55},"dark_triad":18.3,"chemistry":[{"other":"Corras","score":7.5,"type":"The Brain Trust"},{"other":"SavannahBelle","score":5.5,"type":"The Odd Couple"},{"other":"Orla","score":7.0,"type":"Mentor & Student"},{"other":"Dahlia","score":3.5,"type":"New Acquaintances"}]}}},"Mary":{"character":"Billabong","sessions":{"S001":{"session_id":"S001","growth":{"net_growth_score":7,"growth_direction":"Ascending","growth_moments":[{"title":"Enthusiastic Participation","traits_affected":[{"trait":"confidence","change":1},{"trait":"connection_to_party","change":1},{"trait":"emotional_state","change":1}]},{"title":"Intimidating Gray Mark Mercenaries","traits_affected":[{"trait":"trust_in_others","change":1},{"trait":"moral_compass","change":1}]},{"title":"Celebrating with the Etten","traits_affected":[{"trait":"goals_purpose","change":1},{"trait":"self_awareness","change":1}]}],"trait_snapshot":{"confidence":8,"trust_in_others":7,"moral_compass":6,"emotional_state":8,"goals_purpose":7,"connection_to_party":8,"combat_instincts":8,"self_awareness":6}},"sentiment":{"mean":4.5,"arc_description":"Billabong maintained high positivity throughout, delighted by Morty and the Etten, and actively participated in the royal progress with enthusiasm, showing little negative sentiment."},"stats":{"dialogue_share_pct":6.5,"archetype":"The Protector","best_one_liner":"I'll carry you.","one_liner_context":"Offering to carry Corras during the royal procession","mvp_score":5.55},"dark_triad":13.3,"chemistry":[{"other":"Corras","score":7.0,"type":"Loyal Companions"},{"other":"Ash","score":6.0,"type":"Comic Relief Duo"},{"other":"Dahlia","score":7.0,"type":"Comic Relief Duo"},{"other":"Orla","score":6.5,"type":"Battle Siblings"}]},"S004":{"session_id":"S004","growth":{"net_growth_score":4,"growth_direction":"Hardening","growth_moments":[{"title":"Slaying the Goblin Horde","traits_affected":[{"trait":"emotional_state","change":1},{"trait":"connection_to_party","change":1}]},{"title":"Offering Healing Potions","traits_affected":[{"trait":"trust_in_others","change":1},{"trait":"goals_purpose","change":1}]},{"title":"Investigating the Raven","traits_affected":[{"trait":"self_awareness","change":1}]}],"trait_snapshot":{"confidence":9,"trust_in_others":7,"moral_compass":5,"emotional_state":8,"goals_purpose":7,"connection_to_party":8,"combat_instincts":9,"self_awareness":5}},"sentiment":{"mean":0.2,"arc_description":"Billabong maintained a generally determined and neutral demeanor, with peaks of triumph during combat and valleys of tension in dangerous situations. His arc highlights a barbarian's focus on action and resilience, with emotional spikes tied to battle outcomes."},"stats":{"dialogue_share_pct":12.5,"archetype":"The Protector","best_one_liner":"I want to slam my axe down, like, right in the middle of his... head and like split him down the middle but like not all the way like just most of the way.","one_liner_context":"Describing critical hit on goblin","mvp_score":6.8},"dark_triad":21.7,"chemistry":[{"other":"Corras","score":7.0,"type":"Battle Siblings"},{"other":"Ash","score":6.5,"type":"The Odd Couple"},{"other":"Lilith","score":7.0,"type":"Battle Siblings"},{"other":"Orla","score":7.5,"type":"Comic Relief Duo"},{"other":"Ave","score":7.0,"type":"Battle Siblings"}]},"S007":{"session_id":"S007","growth":{"net_growth_score":-8,"growth_direction":"Fracturing","growth_moments":[{"title":"Chasing the Giant Condor","traits_affected":[{"trait":"combat_instincts","change":-1},{"trait":"emotional_state","change":-1}]},{"title":"Being Dominated by Ave","traits_affected":[{"trait":"trust_in_others","change":-1},{"trait":"self_awareness","change":-1},{"trait":"confidence","change":-1}]},{"title":"Supporting Lilith's Tantrum","traits_affected":[{"trait":"connection_to_party","change":-1},{"trait":"goals_purpose","change":-1}]}],"trait_snapshot":{"confidence":6,"trust_in_others":7,"moral_compass":6,"emotional_state":5,"goals_purpose":6,"connection_to_party":7,"combat_instincts":7,"self_awareness":4}},"sentiment":{"mean":1.6,"arc_description":"Billabong has periods of neutrality interspersed with peaks of amusement during action sequences. The arc reflects her playful and supportive role, with emotional spikes tied to group dynamics."},"stats":{"dialogue_share_pct":8.0,"archetype":"The Protector","best_one_liner":"It will be a thunk-off, thunk-off, yep, thunk-off.","one_liner_context":"Joking about fighting past selves","mvp_score":5.8},"dark_triad":13.3,"chemistry":[{"other":"Corras","score":4.0,"type":"New Acquaintances"},{"other":"Ash","score":4.5,"type":"New Acquaintances"},{"other":"Dahlia","score":7.0,"type":"Comic Relief Duo"},{"other":"Orla","score":3.0,"type":"New Acquaintances"},{"other":"Meijinx","score":1.0,"type":"Ships Passing"}]},"S010":{"session_id":"S010","sentiment":{"mean":0.0,"arc_description":"Billabong does not speak in these windows, with neutral sentiment scores reflecting absence from dialogue."},"chemistry":[{"other":"Corras","score":3.5,"type":"New Acquaintances"},{"other":"Ash","score":2.5,"type":"Ships Passing"},{"other":"Dahlia","score":2.5,"type":"Ships Passing"},{"other":"Orla","score":2.0,"type":"Ships Passing"},{"other":"Drenek","score":2.0,"type":"Ships Passing"}]},"S013":{"session_id":"S013","growth":{"net_growth_score":5,"growth_direction":"Awakening","growth_moments":[{"title":"Investigating the Loose Stone","traits_affected":[{"trait":"confidence","change":1},{"trait":"connection_to_party","change":1},{"trait":"self_awareness","change":1}]}],"trait_snapshot":{"confidence":6,"trust_in_others":7,"moral_compass":5,"emotional_state":6,"goals_purpose":5,"connection_to_party":7,"combat_instincts":7,"self_awareness":5}},"sentiment":{"mean":0.6,"arc_description":"Billabong, played by Corras, showed neutral sentiment when not active, with peaks during action scenes and valleys during tense moments. Overall, a character-driven arc with moments of determination and relief."},"stats":{"dialogue_share_pct":7.5,"archetype":"The Comic Relief","best_one_liner":"Breakfast's not a joke.","one_liner_context":"Defending pancake talk to the demon.","mvp_score":6.4},"dark_triad":11.7,"chemistry":[{"other":"Corras","score":3.0,"type":"Ships Passing"},{"other":"Ash","score":2.5,"type":"Ships Passing"},{"other":"Orla","score":4.5,"type":"New Acquaintances"},{"other":"Dahlia","score":1.0,"type":"Ships Passing"}]},"S016":{"session_id":"S016","growth":{"net_growth_score":8,"growth_direction":"Hardening","growth_moments":[{"title":"Enlarging with the Potion","traits_affected":[{"trait":"confidence","change":1},{"trait":"combat_instincts","change":1}]},{"title":"Saving the Ethereal Beings","traits_affected":[{"trait":"connection_to_party","change":1},{"trait":"goals_purpose","change":1}]}],"trait_snapshot":{"confidence":9,"trust_in_others":8,"moral_compass":7,"emotional_state":8,"goals_purpose":9,"connection_to_party":9,"combat_instincts":10,"self_awareness":7}},"sentiment":{"mean":0.63,"arc_description":"Billabong showed initial amusement, faced frustration when her axe broke, but demonstrated resilience by contributing to combat and healing, ending with relief and satisfaction at the session's outcome."},"stats":{"dialogue_share_pct":7.5,"archetype":"The Protector","best_one_liner":"I'm bigger than the dragon.","one_liner_context":"After enlarging to large size","mvp_score":6.7},"dark_triad":15.0,"chemistry":[{"other":"Corras","score":4.0,"type":"New Acquaintances"},{"other":"Ash","score":4.5,"type":"New Acquaintances"},{"other":"Dahlia","score":8.5,"type":"Battle Siblings"},{"other":"Orla","score":7.0,"type":"Loyal Companions"},{"other":"Meijinx","score":5.0,"type":"New Acquaintances"}]},"S019":{"session_id":"S019","growth":{"net_growth_score":0,"growth_direction":"Stabilizing","growth_moments":[{"title":"Frost Giant Confrontation","traits_affected":[{"trait":"courage","change":0},{"trait":"combat_instincts","change":0}]},{"title":"Illusion Ring Use","traits_affected":[{"trait":"self_awareness","change":0},{"trait":"problem_solving","change":0}]},{"title":"Escape and Apology","traits_affected":[{"trait":"connection_to_party","change":0},{"trait":"emotional_state","change":0}]}],"trait_snapshot":{"confidence":8,"trust_in_others":6,"moral_compass":4,"emotional_state":7,"goals_purpose":5,"connection_to_party":7,"combat_instincts":9,"self_awareness":5}},"sentiment":{"mean":0.0,"arc_description":"Billabong was largely silent early on, with emotional engagement increasing later during combat."},"stats":{"dialogue_share_pct":7.5,"archetype":"The Protector","best_one_liner":"Look at the devastation that we have brought here.","one_liner_context":"After the alchemist fire explosion, looking back","mvp_score":6.4},"dark_triad":15.0,"chemistry":[{"other":"Corras","score":4.0,"type":"New Acquaintances"},{"other":"Ash","score":6.0,"type":"Battle Siblings"},{"other":"Dahlia","score":6.5,"type":"Battle Siblings"},{"other":"Orla","score":5.0,"type":"Chaos Partners"}]},"S022":{"session_id":"S022","growth":{"net_growth_score":4,"growth_direction":"Deepening","growth_moments":[{"title":"Rescuing Companions from Cloud Kill","traits_affected":[{"trait":"trust_in_others","change":1},{"trait":"moral_compass","change":1}]},{"title":"Leading with Strength","traits_affected":[{"trait":"self_awareness","change":1},{"trait":"connection_to_party","change":1}]}],"trait_snapshot":{"confidence":9,"trust_in_others":8,"moral_compass":7,"emotional_state":8,"goals_purpose":7,"connection_to_party":9,"combat_instincts":8,"self_awareness":6}},"sentiment":{"mean":2.5,"arc_description":""},"stats":{"dialogue_share_pct":9.4,"archetype":"The Protector","best_one_liner":"If I had more arms, I would have grabbed all of you, I swear.","one_liner_context":"After pulling Dahlia and Corras from cloud kill","mvp_score":6.3},"dark_triad":14.0,"chemistry":[{"other":"Corras","score":7.0,"type":"Battle Siblings"},{"other":"Ash","score":5.0,"type":"Ships Passing"},{"other":"Dahlia","score":7.0,"type":"Loyal Companions"},{"other":"Orla","score":4.5,"type":"Volatile Mix"},{"other":"SavannahBelle","score":5.0,"type":"Ships Passing"}]},"S025":{"session_id":"S025","sentiment":{"mean":0.0,"arc_description":"Billabong was silent throughout the session, resulting in a flat, neutral emotional arc with no significant peaks or valleys."},"dark_triad":11.7,"chemistry":[]},"S028":{"session_id":"S028","growth":{"net_growth_score":-9,"growth_direction":"Fracturing","growth_moments":[{"title":"Fighting with Low HP","traits_affected":[{"trait":"confidence","change":0},{"trait":"combat_instincts","change":0}]},{"title":"Cursed by Malchor","traits_affected":[{"trait":"emotional_state","change":-2},{"trait":"self_awareness","change":-2},{"trait":"moral_compass","change":-1}]},{"title":"Holding the Door with Dahlia","traits_affected":[{"trait":"connection_to_party","change":-1},{"trait":"trust_in_others","change":-1}]}],"trait_snapshot":{"confidence":6,"trust_in_others":5,"moral_compass":4,"emotional_state":4,"goals_purpose":5,"connection_to_party":6,"combat_instincts":8,"self_awareness":3}},"sentiment":{"mean":-0.35,"arc_description":"Billabong experiences high joy during social moments but severe frustration from combat injuries and curses. The arc shows a player who invests heavily in role-play but is easily affected by negative game events, leading to dramatic emotional shifts."},"stats":{"dialogue_share_pct":16.7,"archetype":"The Wildcard","best_one_liner":"I have the markers, and I'm ready to do the presentation, and I'm going to give it my all, you know. I brought candy to pass out to everyone.","one_liner_context":"Describing preparedness for a bastion presentation","mvp_score":6.95},"dark_triad":0,"chemistry":[{"other":"Corras","score":5.0,"type":"New Acquaintances"},{"other":"Ash","score":8.0,"type":"Loyal Companions"},{"other":"Dahlia","score":8.5,"type":"Comic Relief Duo"},{"other":"Orla","score":7.0,"type":"Battle Siblings"},{"other":"SavannahBelle","score":5.0,"type":"New Acquaintances"}]},"S031":{"session_id":"S031","growth":{"net_growth_score":7,"growth_direction":"Softening","growth_moments":[{"title":"Killing Ash Under Control","traits_affected":[{"trait":"emotional_state","change":-2},{"trait":"self_awareness","change":1}]},{"title":"Summoning Vrocks for Aid","traits_affected":[{"trait":"goals_purpose","change":1},{"trait":"combat_instincts","change":1}]},{"title":"Negotiating with Demons","traits_affected":[{"trait":"confidence","change":1},{"trait":"moral_compass","change":1}]}],"trait_snapshot":{"confidence":5,"trust_in_others":6,"moral_compass":7,"emotional_state":4,"goals_purpose":6,"connection_to_party":7,"combat_instincts":7,"self_awareness":7}},"sentiment":{"mean":-0.8125,"arc_description":"Billabong's arc is marked by deep frustration and guilt from uncontrolled actions, peaking with relief after the Maw's defeat. Tension returns during escape and new battles, but ends with neutral acceptance, showing a struggle with remorse and resilience."},"stats":{"dialogue_share_pct":14.4,"archetype":"The Wildcard","best_one_liner":"I want one of them to attack the ma's face and not harm any of the people in my party at all","one_liner_context":"Commanding summoned Vrocks with precise instructions","mvp_score":6.15},"dark_triad":21.7,"chemistry":[{"other":"Corras","score":7.0,"type":"The Odd Couple"},{"other":"Ash","score":6.0,"type":"Volatile Mix"},{"other":"Dahlia","score":6.5,"type":"Rivals"},{"other":"Orla","score":6.0,"type":"New Acquaintances"},{"other":"SavannahBelle","score":5.5,"type":"Volatile Mix"}]},"S034":{"session_id":"S034","growth":{"net_growth_score":0,"growth_direction":"Stabilizing","growth_moments":[],"trait_snapshot":{"confidence":5,"trust_in_others":6,"moral_compass":6,"emotional_state":4,"goals_purpose":5,"connection_to_party":6,"combat_instincts":7,"self_awareness":5}},"dark_triad":20.0,"chemistry":[{"other":"Corras","score":2.0,"type":"New Acquaintances"},{"other":"Dahlia","score":2.5,"type":"New Acquaintances"},{"other":"Ash","score":2.0,"type":"New Acquaintances"},{"other":"Orla","score":2.0,"type":"New Acquaintances"},{"other":"SavannahBelle","score":2.0,"type":"New Acquaintances"}]},"S037":{"session_id":"S037","sentiment":{"mean":0.0,"arc_description":"Billabong was not present or active in this session, resulting in a neutral arc with no emotional fluctuations."},"chemistry":[]},"S040":{"session_id":"S040","chemistry":[{"other":"Corras","score":3.0,"type":"Ships Passing"},{"other":"Ash","score":3.0,"type":"Ships Passing"},{"other":"Dahlia","score":3.0,"type":"Ships Passing"},{"other":"Orla","score":3.0,"type":"Ships Passing"},{"other":"SavannahBelle","score":3.0,"type":"Ships Passing"}]},"S043":{"session_id":"S043","sentiment":{"mean":0.0,"arc_description":"Billabong was silent throughout the session, maintaining a neutral sentiment with no engagement in the discussions."},"chemistry":[]},"S046":{"session_id":"S046","stats":{"dialogue_share_pct":7.8,"archetype":"The Quiet Professional","best_one_liner":"I don't see any other way around it but I also understand that it's not my castle.","one_liner_context":"Discussing the Matron deal.","mvp_score":5.1},"chemistry":[]}}},"Christie":{"character":"Dahlia","sessions":{"S001":{"session_id":"S001","growth":{"net_growth_score":4,"growth_direction":"Hardening","growth_moments":[{"title":"Scheming Against Authority","traits_affected":[{"trait":"confidence","change":1},{"trait":"goals_purpose","change":1}]},{"title":"Announcing Corras's Kingship","traits_affected":[{"trait":"emotional_state","change":1},{"trait":"connection_to_party","change":0}]},{"title":"Dealing with Gray Mark Mercenaries","traits_affected":[{"trait":"self_awareness","change":1}]}],"trait_snapshot":{"confidence":7,"trust_in_others":5,"moral_compass":6,"emotional_state":6,"goals_purpose":8,"connection_to_party":6,"combat_instincts":7,"self_awareness":6}},"sentiment":{"mean":3.8,"arc_description":"Dahlia showed initial frustration, but became engaged with humorous and suspenseful elements. She had a low point upon hearing about ecclesiastical threats, but peaked with amusement and triumph in later interactions."},"stats":{"dialogue_share_pct":20.3,"archetype":"The Instigator","best_one_liner":"We don't lie in this house, Morty, at least not to each other.","one_liner_context":"Confronting Morty about lying","mvp_score":6.65},"dark_triad":30.0,"chemistry":[{"other":"Corras","score":6.5,"type":"Volatile Mix"},{"other":"Ash","score":5.5,"type":"Rivals"},{"other":"Billabong","score":7.0,"type":"Comic Relief Duo"},{"other":"Orla","score":7.0,"type":"Unspoken Bond"}]},"S004":{"session_id":"S004","growth":{"net_growth_score":5,"growth_direction":"Awakening","growth_moments":[{"title":"Surviving Near-Death Experiences","traits_affected":[{"trait":"trust_in_others","change":1},{"trait":"emotional_state","change":1}]},{"title":"Discovering Cult Followers","traits_affected":[{"trait":"confidence","change":1},{"trait":"goals_purpose","change":1}]},{"title":"Casting Detect Magic on the Tome","traits_affected":[{"trait":"self_awareness","change":1},{"trait":"connection_to_party","change":1}]}],"trait_snapshot":{"confidence":7,"trust_in_others":6,"moral_compass":7,"emotional_state":6,"goals_purpose":9,"connection_to_party":7,"combat_instincts":7,"self_awareness":7}},"sentiment":{"mean":-1.0,"arc_description":"Lilith faced extreme danger early in combat, nearly dying, but showed resilience with moments of relief and compassion. Her arc reflects the weight of her role as a spiritual figure, with emotional lows from physical peril and highs from newfound devotion."},"stats":{"dialogue_share_pct":6.7,"archetype":"The Heart","best_one_liner":"my lady my lady lilith we've sought you out for so long please let us come worship before your feet","one_liner_context":"Cultist revealing devotion to Lilith","mvp_score":7.15},"dark_triad":31.7,"chemistry":[{"other":"Corras","score":5.0,"type":"New Acquaintances"},{"other":"Ash","score":8.0,"type":"Mentor & Student"},{"other":"Billabong","score":7.0,"type":"Battle Siblings"},{"other":"Orla","score":5.0,"type":"New Acquaintances"},{"other":"Ave","score":6.5,"type":"Loyal Companions"}]},"S007":{"session_id":"S007","growth":{"net_growth_score":1,"growth_direction":"Questioning","growth_moments":[{"title":"Casting Toll the Dead as a Child","traits_affected":[{"trait":"confidence","change":1},{"trait":"combat_instincts","change":1},{"trait":"emotional_state","change":-1}]},{"title":"Throwing a Tantrum to Distract","traits_affected":[{"trait":"emotional_state","change":0},{"trait":"goals_purpose","change":0}]},{"title":"Interrogating Orla Duplicate","traits_affected":[{"trait":"trust_in_others","change":0},{"trait":"combat_instincts","change":0}]}],"trait_snapshot":{"confidence":7,"trust_in_others":5,"moral_compass":6,"emotional_state":6,"goals_purpose":6,"connection_to_party":6,"combat_instincts":6,"self_awareness":5}},"sentiment":{"mean":3.4,"arc_description":"Dahlia maintains a high positive sentiment throughout, with peaks during humorous and creative moments. Her arc shows engagement and enjoyment, driven by playful interactions and strategic thinking."},"stats":{"dialogue_share_pct":16.7,"archetype":"The Face","best_one_liner":"I want to be a ghost story.","one_liner_context":"Scaring children with Toll the Dead","mvp_score":7.55},"dark_triad":40.0,"chemistry":[{"other":"Corras","score":6.5,"type":"Loyal Companions"},{"other":"Ash","score":8.0,"type":"The Brain Trust / Comic Relief Duo"},{"other":"Billabong","score":7.0,"type":"Comic Relief Duo"},{"other":"Orla","score":4.0,"type":"Volatile Mix"},{"other":"Meijinx","score":2.0,"type":"Ships Passing"}]},"S010":{"session_id":"S010","growth":{"net_growth_score":2,"growth_direction":"Deepening","growth_moments":[{"title":"Casting Sanctuary on Drenek","traits_affected":[{"trait":"trust_in_others","change":1},{"trait":"connection_to_party","change":1}]},{"title":"Using Toll the Dead","traits_affected":[{"trait":"combat_instincts","change":0},{"trait":"goals_purpose","change":0}]},{"title":"Discussing Demon Summoning","traits_affected":[{"trait":"moral_compass","change":0},{"trait":"problem_solving","change":0}]}],"trait_snapshot":{"confidence":7,"trust_in_others":6,"moral_compass":8,"emotional_state":6,"goals_purpose":9,"connection_to_party":7,"combat_instincts":7,"self_awareness":5}},"sentiment":{"mean":1.8333333333333333,"arc_description":"Dahlia maintains a generally positive sentiment with amusement during social talk, but shows confusion during weird backstories, reflecting engagement with both light and bizarre elements."},"stats":{"dialogue_share_pct":12.3,"archetype":"The Protector","best_one_liner":"I'll cast Sanctuary on Drenek as an apology.","one_liner_context":"After Drenek failed a stealth check","mvp_score":6.1},"dark_triad":18.3,"chemistry":[{"other":"Corras","score":5.5,"type":"Volatile Mix"},{"other":"Ash","score":6.0,"type":"The Brain Trust"},{"other":"Billabong","score":2.5,"type":"Ships Passing"},{"other":"Orla","score":6.0,"type":"Unspoken Bond"},{"other":"Drenek","score":7.0,"type":"Loyal Companions"}]},"S013":{"session_id":"S013","growth":{"net_growth_score":1,"growth_direction":"Stabilizing","growth_moments":[{"title":"Supporting the Spark Swap Plan","traits_affected":[{"trait":"connection_to_party","change":1}]}],"trait_snapshot":{"confidence":6,"trust_in_others":4,"moral_compass":6,"emotional_state":5,"goals_purpose":7,"connection_to_party":6,"combat_instincts":5,"self_awareness":6}},"dark_triad":46.7,"chemistry":[{"other":"Corras","score":1.0,"type":"Ships Passing"},{"other":"Ash","score":1.0,"type":"Ships Passing"},{"other":"Orla","score":1.0,"type":"Ships Passing"},{"other":"Billabong","score":1.0,"type":"Ships Passing"}]},"S016":{"session_id":"S016","growth":{"net_growth_score":8,"growth_direction":"Ascending","growth_moments":[{"title":"Casting Mass Cure Wounds","traits_affected":[{"trait":"connection_to_party","change":1},{"trait":"confidence","change":1}]},{"title":"Hexing the Dragon","traits_affected":[{"trait":"combat_instincts","change":1},{"trait":"moral_compass","change":1}]}],"trait_snapshot":{"confidence":8,"trust_in_others":7,"moral_compass":9,"emotional_state":7,"goals_purpose":9,"connection_to_party":8,"combat_instincts":7,"self_awareness":7}},"sentiment":{"mean":0.35,"arc_description":"Dahlia provided steady support, faced anxiety during the crisis, peaked with effective healing spells, and ended relieved after the timeline was reset."},"stats":{"dialogue_share_pct":7.9,"archetype":"The Heart","best_one_liner":"I feel comforted by your giant strength above me.","one_liner_context":"Reacting to Billabong's enlarged size","mvp_score":6.4},"dark_triad":33.3,"chemistry":[{"other":"Corras","score":3.5,"type":"Ships Passing"},{"other":"Ash","score":6.0,"type":"The Brain Trust / Volatile Mix"},{"other":"Billabong","score":8.5,"type":"Battle Siblings"},{"other":"Orla","score":6.5,"type":"The Odd Couple"},{"other":"Meijinx","score":3.5,"type":"Ships Passing"}]},"S019":{"session_id":"S019","growth":{"net_growth_score":0,"growth_direction":"Stabilizing","growth_moments":[{"title":"Aura of Purity Casting","traits_affected":[{"trait":"connection_to_party","change":0},{"trait":"moral_compass","change":0}]},{"title":"Healing Hands on Billabong","traits_affected":[{"trait":"trust_in_others","change":0},{"trait":"emotional_state","change":0}]},{"title":"Baby Yeti Interaction","traits_affected":[{"trait":"moral_compass","change":0},{"trait":"self_awareness","change":0}]}],"trait_snapshot":{"confidence":7,"trust_in_others":6,"moral_compass":7,"emotional_state":6,"goals_purpose":8,"connection_to_party":7,"combat_instincts":6,"self_awareness":6}},"sentiment":{"mean":0.0,"arc_description":"Dahlia entered late and showed compassion later, but initially neutral."},"stats":{"dialogue_share_pct":12.5,"archetype":"The Protector","best_one_liner":"Your mama was kind of a jerk, buddy.","one_liner_context":"Comforting a yeti tyke after its parents died","mvp_score":7.05},"dark_triad":23.3,"chemistry":[{"other":"Corras","score":6.0,"type":"Strategic Allies"},{"other":"Ash","score":6.5,"type":"The Odd Couple"},{"other":"Billabong","score":6.5,"type":"Battle Siblings"},{"other":"Orla","score":7.0,"type":"Unspoken Bond"}]},"S022":{"session_id":"S022","growth":{"net_growth_score":5,"growth_direction":"Ascending","growth_moments":[{"title":"Healing with Aura of Vitality","traits_affected":[{"trait":"trust_in_others","change":1},{"trait":"emotional_state","change":1}]},{"title":"Freeing the Panther with Flame Sword","traits_affected":[{"trait":"combat_instincts","change":1},{"trait":"self_awareness","change":1}]}],"trait_snapshot":{"confidence":8,"trust_in_others":7,"moral_compass":9,"emotional_state":7,"goals_purpose":8,"connection_to_party":8,"combat_instincts":8,"self_awareness":7}},"sentiment":{"mean":2.5,"arc_description":""},"stats":{"dialogue_share_pct":12.5,"archetype":"The Heart","best_one_liner":"I'm laying my hands on you.","one_liner_context":"Healing SavannahBelle after combat","mvp_score":6.5},"dark_triad":22.7,"chemistry":[{"other":"Corras","score":7.5,"type":"Loyal Companions"},{"other":"Ash","score":6.5,"type":"The Odd Couple"},{"other":"Billabong","score":7.0,"type":"Loyal Companions"},{"other":"Orla","score":6.0,"type":"New Acquaintances"},{"other":"SavannahBelle","score":6.0,"type":"The Odd Couple"}]},"S025":{"session_id":"S025","growth":{"net_growth_score":0,"growth_direction":"Stabilizing","growth_moments":[],"trait_snapshot":{"confidence":5,"trust_in_others":5,"moral_compass":5,"emotional_state":5,"goals_purpose":5,"connection_to_party":5,"combat_instincts":5,"self_awareness":5}},"sentiment":{"mean":2.0,"arc_description":"Dahlia remained mostly neutral or slightly positive, with few emotional shifts. They showed satisfaction at the end as plans were set."},"stats":{"dialogue_share_pct":16.7,"archetype":"The Protector","best_one_liner":"We're very transparent about what we do. We publish monthly reports, so I present that.","one_liner_context":"When describing her torture chamber operations","mvp_score":6.5},"dark_triad":32.7,"chemistry":[]},"S028":{"session_id":"S028","growth":{"net_growth_score":-7,"growth_direction":"Fracturing","growth_moments":[{"title":"Healing Billabong","traits_affected":[{"trait":"moral_compass","change":0},{"trait":"connection_to_party","change":0}]},{"title":"Cursed by Malchor","traits_affected":[{"trait":"emotional_state","change":-1},{"trait":"self_awareness","change":-1}]},{"title":"Flashback to Corras Incident","traits_affected":[{"trait":"trust_in_others","change":-1},{"trait":"confidence","change":-1}]}],"trait_snapshot":{"confidence":6,"trust_in_others":5,"moral_compass":7,"emotional_state":5,"goals_purpose":6,"connection_to_party":6,"combat_instincts":7,"self_awareness":5}},"sentiment":{"mean":0.4,"arc_description":"Dahlia shows compassion and humor, with highs during social interactions and healing moments, but experiences fear and frustration during combat and curses. The arc reflects a player who cares for the group but is vulnerable to threats."},"stats":{"dialogue_share_pct":15.8,"archetype":"The Heart","best_one_liner":"I have two things in this world Infinite steeds and infinite pies","one_liner_context":"Boasting about magical bag contents","mvp_score":5.95},"dark_triad":0,"chemistry":[{"other":"Corras","score":6.0,"type":"Volatile Mix"},{"other":"Ash","score":7.0,"type":"The Brain Trust"},{"other":"Billabong","score":8.5,"type":"Comic Relief Duo"},{"other":"Orla","score":8.0,"type":"Loyal Companions"},{"other":"SavannahBelle","score":4.5,"type":"Ships Passing"}]},"S031":{"session_id":"S031","growth":{"net_growth_score":7,"growth_direction":"Deepening","growth_moments":[{"title":"Breaking Free from Paralyzation","traits_affected":[{"trait":"confidence","change":1},{"trait":"emotional_state","change":1}]},{"title":"Using Lay on Hands on Orla","traits_affected":[{"trait":"moral_compass","change":1},{"trait":"connection_to_party","change":1}]},{"title":"Casting Bless on the Party","traits_affected":[{"trait":"goals_purpose","change":1},{"trait":"self_awareness","change":1}]}],"trait_snapshot":{"confidence":7,"trust_in_others":8,"moral_compass":8,"emotional_state":7,"goals_purpose":8,"connection_to_party":9,"combat_instincts":7,"self_awareness":8}},"sentiment":{"mean":0.375,"arc_description":"Dahlia experienced anxiety early in battle but showed relief after healing and elation at the Maw's defeat. Faced suspense during escape and anger in new fights, ending with anticipation for future quests, displaying a paladin's resolve and emotional depth."},"stats":{"dialogue_share_pct":12.8,"archetype":"The Protector","best_one_liner":"I immediately lunged to kill Billabong. Just kidding.","one_liner_context":"Reacting after breaking free from paralysis","mvp_score":6.95},"dark_triad":9.0,"chemistry":[{"other":"Corras","score":9.0,"type":"Battle Siblings"},{"other":"Ash","score":8.0,"type":"Loyal Companions"},{"other":"Billabong","score":6.5,"type":"Rivals"},{"other":"Orla","score":7.5,"type":"Loyal Companions"},{"other":"SavannahBelle","score":5.0,"type":"Ships Passing"}]},"S034":{"session_id":"S034","growth":{"net_growth_score":2,"growth_direction":"Hardening","growth_moments":[{"title":"Vow of Enmity Against Corras","traits_affected":[{"trait":"trust_in_others","change":-1},{"trait":"emotional_state","change":1}]},{"title":"Combat Against the Lich","traits_affected":[{"trait":"confidence","change":1},{"trait":"combat_instincts","change":1}]}],"trait_snapshot":{"confidence":8,"trust_in_others":5,"moral_compass":8,"emotional_state":6,"goals_purpose":8,"connection_to_party":7,"combat_instincts":8,"self_awareness":7}},"sentiment":{"mean":1.27,"arc_description":"Dahlia shows curiosity early on, then intense anger towards Sarek. After a vengeful combat performance, she achieves satisfaction and relief in the victory, ending on a high note."},"stats":{"dialogue_share_pct":19.6,"archetype":"The Protector","best_one_liner":"I'm changing my vow of enmity to him, as is my right.","one_liner_context":"When Sarek attacks Corras in the finale","mvp_score":7.45},"dark_triad":16.7,"chemistry":[{"other":"Corras","score":4.5,"type":"Rivals"},{"other":"Ash","score":7.5,"type":"The Brain Trust"},{"other":"Orla","score":6.5,"type":"Loyal Companions"},{"other":"SavannahBelle","score":3.5,"type":"New Acquaintances"},{"other":"Billabong","score":2.5,"type":"New Acquaintances"}]},"S037":{"session_id":"S037","growth":{"net_growth_score":4,"growth_direction":"Ascending","growth_moments":[{"title":"Healing Corras from Paralysis","traits_affected":[{"trait":"connection_to_party","change":1},{"trait":"self_awareness","change":1}]},{"title":"Confronting the Crimson Abbot","traits_affected":[{"trait":"confidence","change":1},{"trait":"combat_instincts","change":1},{"trait":"moral_compass","change":-1}]},{"title":"Questioning Strahd's Motives","traits_affected":[{"trait":"goals_purpose","change":1},{"trait":"self_awareness","change":1}]}],"trait_snapshot":{"confidence":9,"trust_in_others":7,"moral_compass":8,"emotional_state":7,"goals_purpose":9,"connection_to_party":9,"combat_instincts":9,"self_awareness":7}},"sentiment":{"mean":1.933,"arc_description":"Dahlia experiences high engagement with dramatic combat successes and deep concerns for allies, leading to a wide emotional range. She shows compassion, triumph in battles, and anxiety in tense moments, ending with anticipation for the next challenge."},"stats":{"dialogue_share_pct":22.4,"archetype":"The Face","best_one_liner":"He is my king.","one_liner_context":"Deferring to Corras during Strahd negotiation","mvp_score":8.2},"dark_triad":16.7,"chemistry":[{"other":"Corras","score":7.5,"type":"Loyal Companions"},{"other":"Orla","score":5.0,"type":"New Acquaintances"},{"other":"SavannahBelle","score":5.5,"type":"Volatile Mix"},{"other":"Ezrella","score":4.0,"type":"Ships Passing"}]},"S040":{"session_id":"S040","growth":{"net_growth_score":0,"growth_direction":"Stabilizing","growth_moments":[{"title":"Secret Extraction on Madam Eva","traits_affected":[{"trait":"self_awareness","change":1}]},{"title":"Role-Playing Dragons and Dungeons","traits_affected":[{"trait":"connection_to_party","change":1}]}],"trait_snapshot":{"confidence":8,"trust_in_others":6,"moral_compass":9,"emotional_state":7,"goals_purpose":9,"connection_to_party":8,"combat_instincts":7,"self_awareness":7}},"stats":{"dialogue_share_pct":18.1,"archetype":"The Heart","best_one_liner":"I think we Meght make somebody mad if we disintegrate her, but I don't know their family dynamics well enough.","one_liner_context":"Discussing potential consequences of attacking Madame Eva","mvp_score":6.4},"dark_triad":16.7,"chemistry":[{"other":"Corras","score":6.0,"type":"Volatile Mix"},{"other":"Ash","score":8.0,"type":"Comic Relief Duo"},{"other":"Billabong","score":3.0,"type":"Ships Passing"},{"other":"Orla","score":7.0,"type":"Comic Relief Duo"},{"other":"SavannahBelle","score":6.5,"type":"Chaos Partners"}]},"S043":{"session_id":"S043","growth":{"net_growth_score":-1,"growth_direction":"Hardening","growth_moments":[{"title":"Casting Hold Person","traits_affected":[{"trait":"confidence","change":1},{"trait":"moral_compass","change":-1}]},{"title":"Proposing Executions","traits_affected":[{"trait":"moral_compass","change":-1},{"trait":"goals_purpose","change":1}]},{"title":"Essence Draining","traits_affected":[{"trait":"connection_to_party","change":1},{"trait":"self_awareness","change":-1}]}],"trait_snapshot":{"confidence":9,"trust_in_others":3,"moral_compass":3,"emotional_state":5,"goals_purpose":8,"connection_to_party":7,"combat_instincts":8,"self_awareness":4}},"sentiment":{"mean":-0.25,"arc_description":"Dahlia began with positive sentiments but quickly turned negative during the political meeting, showing significant frustration and tension as ethical conflicts arose."},"stats":{"dialogue_share_pct":19.9,"archetype":"The Protector","best_one_liner":"Treason, treason, treason.","one_liner_context":"Reacting to Lord Neverember's insults","mvp_score":7.25},"dark_triad":31.7,"chemistry":[{"other":"Corras","score":8.0,"type":"Loyal Companions"},{"other":"Ash","score":7.0,"type":"The Odd Couple"},{"other":"Orla","score":7.5,"type":"Comic Relief Duo"},{"other":"SavannahBelle","score":8.0,"type":"Chaos Partners"}]},"S046":{"session_id":"S046","growth":{"net_growth_score":-1,"growth_direction":"Stabilizing","growth_moments":[{"title":"Potential Sacrifice in the Wild Hunt","traits_affected":[{"trait":"confidence","change":-1}]},{"title":"Using Find Greater Steed in the Hunt","traits_affected":[]}],"trait_snapshot":{"confidence":6,"trust_in_others":6,"moral_compass":8,"emotional_state":5,"goals_purpose":7,"connection_to_party":7,"combat_instincts":7,"self_awareness":6}},"stats":{"dialogue_share_pct":5.9,"archetype":"The Protector","best_one_liner":"I think we're stuck.","one_liner_context":"Responding to the Matron's offer.","mvp_score":4.45},"dark_triad":16.7,"chemistry":[{"other":"Corras","score":3.0,"type":"New Acquaintances"},{"other":"Ash","score":3.5,"type":"New Acquaintances"},{"other":"SavannahBelle","score":2.5,"type":"Ships Passing"},{"other":"Orla","score":3.0,"type":"New Acquaintances"}]}}},"Lucy":{"character":"Orla","sessions":{"S001":{"session_id":"S001","growth":{"net_growth_score":7,"growth_direction":"Awakening","growth_moments":[{"title":"Communicating with the Etten","traits_affected":[{"trait":"confidence","change":1},{"trait":"moral_compass","change":1},{"trait":"connection_to_party","change":1}]},{"title":"Using Druidcraft for the Procession","traits_affected":[{"trait":"emotional_state","change":1},{"trait":"goals_purpose","change":1}]},{"title":"Empathizing with Distressed Plants","traits_affected":[{"trait":"trust_in_others","change":1},{"trait":"self_awareness","change":1}]}],"trait_snapshot":{"confidence":7,"trust_in_others":8,"moral_compass":8,"emotional_state":7,"goals_purpose":7,"connection_to_party":8,"combat_instincts":6,"self_awareness":7}},"sentiment":{"mean":3.0,"arc_description":"Orla was often neutral or curious, with peaks of compassion when interacting with the Etten. She showed consistent engagement, ending satisfied with the group's achievements."},"stats":{"dialogue_share_pct":9.7,"archetype":"The Heart","best_one_liner":"Stop, stop, stop.","one_liner_context":"Yelling at the Etten in Giant to prevent violence","mvp_score":6.05},"dark_triad":8.3,"chemistry":[{"other":"Corras","score":5.5,"type":"New Acquaintances"},{"other":"Ash","score":6.5,"type":"Mentor & Student"},{"other":"Billabong","score":6.5,"type":"Battle Siblings"},{"other":"Dahlia","score":7.0,"type":"Unspoken Bond"}]},"S004":{"session_id":"S004","growth":{"net_growth_score":6,"growth_direction":"Awakening","growth_moments":[{"title":"Planting the Heartwood Seed with the Shard","traits_affected":[{"trait":"confidence","change":1},{"trait":"goals_purpose","change":1}]},{"title":"Using Speak with Animals on the Raven","traits_affected":[{"trait":"self_awareness","change":1},{"trait":"connection_to_party","change":1}]},{"title":"Casting Hold Person on the Cultist","traits_affected":[{"trait":"combat_instincts","change":1},{"trait":"emotional_state","change":1}]}],"trait_snapshot":{"confidence":7,"trust_in_others":8,"moral_compass":8,"emotional_state":7,"goals_purpose":8,"connection_to_party":8,"combat_instincts":6,"self_awareness":8}},"sentiment":{"mean":0.4,"arc_description":"Orla's emotions shifted from curiosity and joy during planning and social moments to suspense and fear in combat. She showed determination in investigations and ended with unease in the crypt, highlighting her druidic connection to nature and mystery."},"stats":{"dialogue_share_pct":16.7,"archetype":"The Heart","best_one_liner":"You think you can ignore me?","one_liner_context":"Confronting the raven spy","mvp_score":7.1},"dark_triad":15.0,"chemistry":[{"other":"Corras","score":6.5,"type":"Unspoken Bond"},{"other":"Ash","score":8.5,"type":"Comic Relief Duo"},{"other":"Billabong","score":7.5,"type":"Comic Relief Duo"},{"other":"Lilith","score":5.0,"type":"New Acquaintances"},{"other":"Ave","score":7.0,"type":"Comic Relief Duo"}]},"S007":{"session_id":"S007","growth":{"net_growth_score":-6,"growth_direction":"Fracturing","growth_moments":[{"title":"Brewing Time Stop Potion","traits_affected":[{"trait":"goals_purpose","change":-1},{"trait":"emotional_state","change":-1}]},{"title":"Fleeing as a Giant Condor","traits_affected":[{"trait":"combat_instincts","change":1},{"trait":"trust_in_others","change":-1},{"trait":"connection_to_party","change":-1}]},{"title":"Interrogation by Lilith","traits_affected":[{"trait":"confidence","change":-1},{"trait":"self_awareness","change":-1},{"trait":"emotional_state","change":-1}]}],"trait_snapshot":{"confidence":6,"trust_in_others":6,"moral_compass":6,"emotional_state":5,"goals_purpose":6,"connection_to_party":6,"combat_instincts":7,"self_awareness":5}},"sentiment":{"mean":2.0,"arc_description":"Orla's arc is characterized by curiosity and determination, with peaks during transformative actions. She shows consistent involvement, with emotional shifts tied to the success of stealth and creative plans."},"stats":{"dialogue_share_pct":9.3,"archetype":"The Wildcard","best_one_liner":"I'm just gonna squeakity squeak on in, but not like obnoxious squeaks, like maybe like a tasteful a tasteful squeak here or there.","one_liner_context":"Planning rat stealth mission","mvp_score":6.65},"dark_triad":13.3,"chemistry":[{"other":"Corras","score":3.5,"type":"New Acquaintances"},{"other":"Ash","score":3.0,"type":"New Acquaintances"},{"other":"Billabong","score":3.0,"type":"New Acquaintances"},{"other":"Dahlia","score":4.0,"type":"Volatile Mix"},{"other":"Meijinx","score":1.0,"type":"Ships Passing"}]},"S010":{"session_id":"S010","growth":{"net_growth_score":7,"growth_direction":"Awakening","growth_moments":[{"title":"Casting Wrath of Nature","traits_affected":[{"trait":"confidence","change":2},{"trait":"combat_instincts","change":2},{"trait":"emotional_state","change":1}]},{"title":"Conjuring Pixies","traits_affected":[{"trait":"connection_to_party","change":1},{"trait":"self_awareness","change":1}]},{"title":"Herbalism and Role-playing","traits_affected":[{"trait":"moral_compass","change":0},{"trait":"emotional_state","change":1}]}],"trait_snapshot":{"confidence":8,"trust_in_others":7,"moral_compass":7,"emotional_state":7,"goals_purpose":8,"connection_to_party":8,"combat_instincts":8,"self_awareness":7}},"sentiment":{"mean":0.0,"arc_description":"Orla remains silent in these early windows, with neutral sentiment inferred from lack of dialogue, indicating disengagement or observation mode."},"stats":{"dialogue_share_pct":10.5,"archetype":"The Heart","best_one_liner":"this is for my uncle that you set on fire.","one_liner_context":"When casting Wrath of Nature","mvp_score":7.6},"dark_triad":13.3,"chemistry":[{"other":"Corras","score":7.0,"type":"Comic Relief Duo"},{"other":"Ash","score":8.5,"type":"Mentor & Student"},{"other":"Billabong","score":2.0,"type":"Ships Passing"},{"other":"Dahlia","score":6.0,"type":"Unspoken Bond"},{"other":"Drenek","score":4.5,"type":"New Acquaintances"}]},"S013":{"session_id":"S013","growth":{"net_growth_score":4,"growth_direction":"Softening","growth_moments":[{"title":"Distracting the Guards","traits_affected":[{"trait":"confidence","change":1},{"trait":"connection_to_party","change":1}]},{"title":"Bonding with the Hellhound","traits_affected":[{"trait":"emotional_state","change":1},{"trait":"self_awareness","change":1}]}],"trait_snapshot":{"confidence":6,"trust_in_others":7,"moral_compass":6,"emotional_state":6,"goals_purpose":6,"connection_to_party":8,"combat_instincts":4,"self_awareness":6}},"sentiment":{"mean":1.3,"arc_description":"Orla remained curious and positive throughout, with peaks during successful interactions and valleys during disturbing scenes. Overall, an engaged and compassionate arc."},"stats":{"dialogue_share_pct":16.7,"archetype":"The Heart","best_one_liner":"I will remember you forever, Mrs. Nibbles.","one_liner_context":"Sentimental farewell to her squirrel companion.","mvp_score":7.2},"dark_triad":16.7,"chemistry":[{"other":"Corras","score":5.0,"type":"New Acquaintances"},{"other":"Ash","score":8.0,"type":"Loyal Companions"},{"other":"Billabong","score":4.5,"type":"New Acquaintances"},{"other":"Dahlia","score":1.0,"type":"Ships Passing"}]},"S016":{"session_id":"S016","growth":{"net_growth_score":8,"growth_direction":"Softening","growth_moments":[{"title":"Diplomacy with the Dragon","traits_affected":[{"trait":"confidence","change":1},{"trait":"emotional_state","change":1}]},{"title":"Summoning Spirit Totem","traits_affected":[{"trait":"connection_to_party","change":1},{"trait":"goals_purpose","change":1}]}],"trait_snapshot":{"confidence":7,"trust_in_others":8,"moral_compass":8,"emotional_state":7,"goals_purpose":8,"connection_to_party":9,"combat_instincts":6,"self_awareness":7}},"sentiment":{"mean":0.75,"arc_description":"Orla displayed curiosity throughout, engaged creatively with the dragon, faced fear during combat, and ended with joy after the resolution, showing a wide emotional range."},"stats":{"dialogue_share_pct":8.8,"archetype":"The Heart","best_one_liner":"I want to boop his nose, okay, a boop?","one_liner_context":"Attempting to interact with a dragon","mvp_score":7.4},"dark_triad":8.3,"chemistry":[{"other":"Corras","score":6.5,"type":"Comic Relief Duo"},{"other":"Ash","score":7.0,"type":"Comic Relief Duo"},{"other":"Billabong","score":7.0,"type":"Loyal Companions"},{"other":"Dahlia","score":6.5,"type":"The Odd Couple"},{"other":"Meijinx","score":3.0,"type":"Ships Passing"}]},"S019":{"session_id":"S019","growth":{"net_growth_score":0,"growth_direction":"Stabilizing","growth_moments":[{"title":"Scouting and Perception","traits_affected":[{"trait":"confidence","change":0},{"trait":"connection_to_party","change":0}]},{"title":"Minor Illusion Communication","traits_affected":[{"trait":"moral_compass","change":0},{"trait":"teamwork","change":0}]},{"title":"Baby Yeti Interaction","traits_affected":[{"trait":"emotional_state","change":0},{"trait":"self_awareness","change":0}]}],"trait_snapshot":{"confidence":6,"trust_in_others":7,"moral_compass":6,"emotional_state":7,"goals_purpose":5,"connection_to_party":7,"combat_instincts":4,"self_awareness":6}},"sentiment":{"mean":0.5,"arc_description":"Orla was engaged and helpful, with moments of curiosity and attempts at diplomacy."},"stats":{"dialogue_share_pct":16.7,"archetype":"The Heart","best_one_liner":"I will not make two more Orphan Yetis. I will not do it.","one_liner_context":"When discussing burning down the cabin with yeti tykes present","mvp_score":7.25},"dark_triad":6.7,"chemistry":[{"other":"Corras","score":6.5,"type":"Comic Relief Duo"},{"other":"Ash","score":8.0,"type":"Loyal Companions"},{"other":"Billabong","score":5.0,"type":"Chaos Partners"},{"other":"Dahlia","score":7.0,"type":"Unspoken Bond"}]},"S022":{"session_id":"S022","growth":{"net_growth_score":7,"growth_direction":"Awakening","growth_moments":[{"title":"Speaking with Spiders for Disguises","traits_affected":[{"trait":"confidence","change":1},{"trait":"moral_compass","change":1},{"trait":"connection_to_party","change":1}]},{"title":"Supporting Stealth Efforts","traits_affected":[{"trait":"self_awareness","change":1},{"trait":"emotional_state","change":1}]}],"trait_snapshot":{"confidence":6,"trust_in_others":8,"moral_compass":8,"emotional_state":7,"goals_purpose":8,"connection_to_party":7,"combat_instincts":6,"self_awareness":7}},"sentiment":{"mean":2.25,"arc_description":""},"stats":{"dialogue_share_pct":10.9,"archetype":"The Heart","best_one_liner":"They have chosen to be here with us. They've sacrificed much.","one_liner_context":"Rallying spiders for disguise","mvp_score":6.5},"dark_triad":7.0,"chemistry":[{"other":"Corras","score":6.0,"type":"New Acquaintances"},{"other":"Ash","score":5.0,"type":"New Acquaintances"},{"other":"Billabong","score":4.5,"type":"Volatile Mix"},{"other":"Dahlia","score":6.0,"type":"New Acquaintances"},{"other":"SavannahBelle","score":5.0,"type":"Ships Passing"}]},"S025":{"session_id":"S025","growth":{"net_growth_score":0,"growth_direction":"Stabilizing","growth_moments":[],"trait_snapshot":{"confidence":5,"trust_in_others":5,"moral_compass":5,"emotional_state":5,"goals_purpose":5,"connection_to_party":5,"combat_instincts":5,"self_awareness":5}},"sentiment":{"mean":3.2,"arc_description":"Orla was highly excited at the start, dipped during technical discussions, and ended amused. Their arc is predominantly positive with minor lows."},"stats":{"dialogue_share_pct":20.8,"archetype":"The Heart","best_one_liner":"She's OSHA.","one_liner_context":"When assigning government roles in the BWB Federation","mvp_score":6.3},"dark_triad":7.0,"chemistry":[]},"S028":{"session_id":"S028","growth":{"net_growth_score":11,"growth_direction":"Ascending","growth_moments":[{"title":"Communicating with Shadow Mastiffs","traits_affected":[{"trait":"confidence","change":1},{"trait":"connection_to_party","change":1}]},{"title":"Establishing Dominance by Wrestling","traits_affected":[{"trait":"confidence","change":1},{"trait":"self_awareness","change":2},{"trait":"emotional_state","change":2}]},{"title":"Using Goodberry Wine","traits_affected":[{"trait":"connection_to_party","change":1},{"trait":"moral_compass","change":0}]}],"trait_snapshot":{"confidence":8,"trust_in_others":8,"moral_compass":7,"emotional_state":8,"goals_purpose":8,"connection_to_party":9,"combat_instincts":7,"self_awareness":8}},"sentiment":{"mean":0.55,"arc_description":"Orla's arc features confidence and triumph during key moments like dominating the mastiffs, with lower points during combat and investigation. The player shows leadership and problem-solving, but anxiety rises in dangerous scenarios."},"stats":{"dialogue_share_pct":17.5,"archetype":"The Heart","best_one_liner":"He could still come home with those if he wants.","one_liner_context":"Trying to befriend a shadow mastiff","mvp_score":7.4},"dark_triad":0,"chemistry":[{"other":"Corras","score":5.5,"type":"New Acquaintances"},{"other":"Ash","score":6.5,"type":"Mentor & Student"},{"other":"Billabong","score":7.0,"type":"Battle Siblings"},{"other":"Dahlia","score":8.0,"type":"Loyal Companions"},{"other":"SavannahBelle","score":6.5,"type":"Unspoken Bond"}]},"S031":{"session_id":"S031","growth":{"net_growth_score":5,"growth_direction":"Stabilizing","growth_moments":[{"title":"Casting Mass Cure Wounds","traits_affected":[{"trait":"confidence","change":1},{"trait":"connection_to_party","change":1}]},{"title":"Using Moonbeam on the Vrock","traits_affected":[{"trait":"combat_instincts","change":1},{"trait":"self_awareness","change":1}]},{"title":"Planning Transport via Plants","traits_affected":[{"trait":"goals_purpose","change":1},{"trait":"emotional_state","change":1}]}],"trait_snapshot":{"confidence":7,"trust_in_others":8,"moral_compass":7,"emotional_state":7,"goals_purpose":8,"connection_to_party":9,"combat_instincts":7,"self_awareness":8}},"sentiment":{"mean":0.9375,"arc_description":"Orla's arc is centered on healing and support, starting neutral but peaking with joy after effective spells. Faced confusion during escape and battles, but maintained curiosity and excitement, embodying a druid's nurturing and adaptive spirit."},"stats":{"dialogue_share_pct":11.2,"archetype":"The Heart","best_one_liner":"I hope to see you all on the next round","one_liner_context":"After casting Mass Cure Wounds","mvp_score":6.55},"dark_triad":7.7,"chemistry":[{"other":"Corras","score":6.5,"type":"New Acquaintances"},{"other":"Ash","score":6.0,"type":"New Acquaintances"},{"other":"Billabong","score":6.0,"type":"New Acquaintances"},{"other":"Dahlia","score":7.5,"type":"Loyal Companions"},{"other":"SavannahBelle","score":4.5,"type":"Ships Passing"}]},"S034":{"session_id":"S034","growth":{"net_growth_score":7,"growth_direction":"Ascending","growth_moments":[{"title":"Interaction with Intellect Devourer","traits_affected":[{"trait":"confidence","change":1},{"trait":"self_awareness","change":1}]},{"title":"Casting Sunbeam in Combat","traits_affected":[{"trait":"combat_instincts","change":1},{"trait":"connection_to_party","change":1}]}],"trait_snapshot":{"confidence":6,"trust_in_others":6,"moral_compass":7,"emotional_state":5,"goals_purpose":7,"connection_to_party":8,"combat_instincts":7,"self_awareness":6}},"sentiment":{"mean":0.62,"arc_description":"Orla begins with anxiety, faces fear from creatures, but shows curiosity and resolve. After contributing in combat with spells, she ends the session joyful and excited."},"stats":{"dialogue_share_pct":15.1,"archetype":"The Heart","best_one_liner":"Corras, there's a brain! Corras!","one_liner_context":"Warning Corras about the intellect devourer","mvp_score":6.35},"dark_triad":10.0,"chemistry":[{"other":"Corras","score":7.0,"type":"Loyal Companions"},{"other":"Dahlia","score":6.5,"type":"Loyal Companions"},{"other":"Ash","score":7.0,"type":"The Brain Trust"},{"other":"SavannahBelle","score":3.0,"type":"New Acquaintances"},{"other":"Billabong","score":2.0,"type":"New Acquaintances"}]},"S037":{"session_id":"S037","growth":{"net_growth_score":5,"growth_direction":"Deepening","growth_moments":[{"title":"Casting Spirit Totem for the Party","traits_affected":[{"trait":"connection_to_party","change":1},{"trait":"confidence","change":1}]},{"title":"Using Moonbeam on the Crimson Abbot","traits_affected":[{"trait":"combat_instincts","change":1},{"trait":"goals_purpose","change":1}]},{"title":"Freezing the Blood Baby with Ice","traits_affected":[{"trait":"self_awareness","change":1},{"trait":"problem_solving","change":1}]}],"trait_snapshot":{"confidence":7,"trust_in_others":8,"moral_compass":7,"emotional_state":7,"goals_purpose":7,"connection_to_party":9,"combat_instincts":7,"self_awareness":7}},"sentiment":{"mean":1.067,"arc_description":"Orla's arc includes joyful moments from creative spells and frightening encounters, showing resilience. She contributes with utility spells, faces danger, and supports the group, ending with anticipation for the escape."},"stats":{"dialogue_share_pct":15.2,"archetype":"The Heart","best_one_liner":"Hope you find your dad.","one_liner_context":"Dismissing giant insects after combat","mvp_score":6.9},"dark_triad":11.7,"chemistry":[{"other":"Corras","score":5.0,"type":"New Acquaintances"},{"other":"Dahlia","score":5.0,"type":"New Acquaintances"},{"other":"SavannahBelle","score":5.0,"type":"New Acquaintances"},{"other":"Ezrella","score":4.0,"type":"Ships Passing"}]},"S040":{"session_id":"S040","growth":{"net_growth_score":0,"growth_direction":"Stabilizing","growth_moments":[{"title":"Waking and Offering Help","traits_affected":[{"trait":"connection_to_party","change":1}]}],"trait_snapshot":{"confidence":5,"trust_in_others":8,"moral_compass":8,"emotional_state":6,"goals_purpose":6,"connection_to_party":8,"combat_instincts":5,"self_awareness":6}},"stats":{"dialogue_share_pct":15.9,"archetype":"The Comic Relief","best_one_liner":"I'm going to go back to sleep.","one_liner_context":"Deciding to ignore combat after waking up to zombies","mvp_score":5.4},"dark_triad":10.0,"chemistry":[{"other":"Corras","score":7.0,"type":"Loyal Companions"},{"other":"Ash","score":7.0,"type":"Loyal Companions"},{"other":"Billabong","score":3.0,"type":"Ships Passing"},{"other":"Dahlia","score":7.0,"type":"Comic Relief Duo"},{"other":"SavannahBelle","score":5.0,"type":"New Acquaintances"}]},"S043":{"session_id":"S043","growth":{"net_growth_score":0,"growth_direction":"Stabilizing","growth_moments":[{"title":"Receiving the Druid Message","traits_affected":[{"trait":"goals_purpose","change":1},{"trait":"trust_in_others","change":-1}]},{"title":"Investigating with Raydoth","traits_affected":[{"trait":"confidence","change":1},{"trait":"emotional_state","change":-1}]},{"title":"Supporting the Cover-up","traits_affected":[{"trait":"connection_to_party","change":1},{"trait":"moral_compass","change":-1}]}],"trait_snapshot":{"confidence":6,"trust_in_others":5,"moral_compass":5,"emotional_state":4,"goals_purpose":7,"connection_to_party":7,"combat_instincts":6,"self_awareness":5}},"sentiment":{"mean":0.25,"arc_description":"Orla had a positive start with excitement but experienced tension and fear during the conflict, with a slight recovery at the end upon receiving new information."},"stats":{"dialogue_share_pct":12.5,"archetype":"The Comic Relief","best_one_liner":"I'm so glad we're starting our return with a cover-up. I see no way in which this will come back to bite us later in the future.","one_liner_context":"Reacting to the party's framing plan","mvp_score":5.9},"dark_triad":11.7,"chemistry":[{"other":"Corras","score":6.0,"type":"New Acquaintances"},{"other":"Ash","score":5.5,"type":"New Acquaintances"},{"other":"Dahlia","score":7.5,"type":"Comic Relief Duo"},{"other":"SavannahBelle","score":5.5,"type":"New Acquaintances"}]},"S046":{"session_id":"S046","growth":{"net_growth_score":-3,"growth_direction":"Softening","growth_moments":[{"title":"Shrinking Due to Wild Magic","traits_affected":[{"trait":"confidence","change":-1},{"trait":"self_awareness","change":-1}]},{"title":"Using Insight with Advantage in the Hunt","traits_affected":[{"trait":"emotional_state","change":-1}]},{"title":"Telepathic Communication with Party","traits_affected":[{"trait":"connection_to_party","change":0}]}],"trait_snapshot":{"confidence":5,"trust_in_others":7,"moral_compass":7,"emotional_state":4,"goals_purpose":7,"connection_to_party":8,"combat_instincts":6,"self_awareness":5}},"stats":{"dialogue_share_pct":15.6,"archetype":"The Heart","best_one_liner":"I just don't know why would you think we would want anything to do with you if you won't tell us the truth from the beginning?","one_liner_context":"Confronting the Matron about honesty.","mvp_score":6.8},"dark_triad":11.7,"chemistry":[{"other":"Corras","score":6.5,"type":"Loyal Companions"},{"other":"Ash","score":7.0,"type":"Mentor & Student"},{"other":"SavannahBelle","score":6.0,"type":"Comic Relief Duo"},{"other":"Dahlia","score":3.0,"type":"New Acquaintances"}]}}},"Tenderbittle":{"character":"SavannahBelle","sessions":{"S001":{"session_id":"S001","chemistry":[]},"S004":{"session_id":"S004","growth":{"net_growth_score":6,"growth_direction":"Ascending","growth_moments":[{"title":"Polymorphing into a T-Rex","traits_affected":[{"trait":"confidence","change":1},{"trait":"combat_instincts","change":1}]},{"title":"Using Hellish Rebuke and Healing","traits_affected":[{"trait":"connection_to_party","change":1},{"trait":"emotional_state","change":1}]},{"title":"Casting Detect Thoughts on the Cultist","traits_affected":[{"trait":"self_awareness","change":1},{"trait":"goals_purpose","change":1}]}],"trait_snapshot":{"confidence":8,"trust_in_others":7,"moral_compass":5,"emotional_state":7,"goals_purpose":7,"connection_to_party":8,"combat_instincts":8,"self_awareness":7}},"stats":{"dialogue_share_pct":4.2,"archetype":"The Quiet Professional","best_one_liner":"I think I could do something.","one_liner_context":"Offering help in combat","mvp_score":4.45},"dark_triad":21.7,"chemistry":[{"other":"Corras","score":6.0,"type":"Loyal Companions"},{"other":"Ash","score":6.0,"type":"Loyal Companions"},{"other":"Billabong","score":7.0,"type":"Battle Siblings"},{"other":"Lilith","score":6.5,"type":"Loyal Companions"},{"other":"Orla","score":7.0,"type":"Comic Relief Duo"}]},"S007":{"session_id":"S007","growth":{"net_growth_score":4,"growth_direction":"Ascending","growth_moments":[{"title":"Leaving a Message for Past Self","traits_affected":[{"trait":"confidence","change":1},{"trait":"goals_purpose","change":1}]},{"title":"Casting Dominate Person on Billabong","traits_affected":[{"trait":"combat_instincts","change":1},{"trait":"emotional_state","change":1}]},{"title":"Using Detect Thoughts for Stealth","traits_affected":[{"trait":"confidence","change":0},{"trait":"goals_purpose","change":0}]}],"trait_snapshot":{"confidence":8,"trust_in_others":6,"moral_compass":5,"emotional_state":7,"goals_purpose":8,"connection_to_party":6,"combat_instincts":7,"self_awareness":7}},"sentiment":{"mean":1.5,"arc_description":"Ave starts neutral but becomes more determined and involved as the session progresses. The arc shows a steady rise in sentiment, peaking during strategic spellcasting moments."},"stats":{"dialogue_share_pct":5.3,"archetype":"The Chronicler","best_one_liner":"so for clarification the thing we need needs to be made of metal and not from the material plan right okay","one_liner_context":"Asking about planar shift components","mvp_score":4.55},"dark_triad":31.7,"chemistry":[]},"S010":{"session_id":"S010","sentiment":{"mean":0.0,"arc_description":"SavannahBelle is not active in dialogue, with neutral sentiment throughout."},"chemistry":[]},"S013":{"session_id":"S013","growth":{"net_growth_score":2,"growth_direction":"Stabilizing","growth_moments":[{"title":"Completing the Simulacrum Ritual","traits_affected":[{"trait":"trust_in_others","change":1},{"trait":"connection_to_party","change":1}]}],"trait_snapshot":{"confidence":6,"trust_in_others":6,"moral_compass":5,"emotional_state":5,"goals_purpose":7,"connection_to_party":7,"combat_instincts":4,"self_awareness":6}},"stats":{"dialogue_share_pct":6.7,"archetype":"The Comic Relief","best_one_liner":"Well, it seems like you guys got out for good.","one_liner_context":"Understated reaction to the party's sudden teleportation.","mvp_score":5.3},"dark_triad":31.7,"chemistry":[]},"S016":{"session_id":"S016","growth":{"net_growth_score":8,"growth_direction":"Hardening","growth_moments":[{"title":"Polymorphing into a T-Rex","traits_affected":[{"trait":"combat_instincts","change":1},{"trait":"confidence","change":1}]},{"title":"Grappled by the Dragon","traits_affected":[{"trait":"emotional_state","change":1},{"trait":"connection_to_party","change":1}]}],"trait_snapshot":{"confidence":8,"trust_in_others":7,"moral_compass":6,"emotional_state":7,"goals_purpose":8,"connection_to_party":8,"combat_instincts":9,"self_awareness":7}},"sentiment":{"mean":0.0,"arc_description":"SavannahBelle was silent throughout the session, with no emotional variation, indicating minimal engagement or presence."},"stats":{"dialogue_share_pct":5.8,"archetype":"The Wildcard","best_one_liner":"Hey, you overgrown turtle. How about you shoot some Spark over here?","one_liner_context":"Taunting the dragon","mvp_score":5.5},"dark_triad":35.0,"chemistry":[]},"S019":{"session_id":"S019","stats":{"dialogue_share_pct":6.7,"archetype":"The Strategist","best_one_liner":"I think that's a good plan.","one_liner_context":"Agreeing with the alchemist fire explosion plan","mvp_score":5.1},"dark_triad":30.0,"chemistry":[]},"S022":{"session_id":"S022","growth":{"net_growth_score":6,"growth_direction":"Ascending","growth_moments":[{"title":"Casting Firewall to Defeat Enemies","traits_affected":[{"trait":"combat_instincts","change":1},{"trait":"confidence","change":1},{"trait":"moral_compass","change":1}]},{"title":"Volunteering for Stealth Mission","traits_affected":[{"trait":"trust_in_others","change":1},{"trait":"connection_to_party","change":1},{"trait":"self_awareness","change":1}]}],"trait_snapshot":{"confidence":7,"trust_in_others":6,"moral_compass":6,"emotional_state":6,"goals_purpose":7,"connection_to_party":6,"combat_instincts":8,"self_awareness":5}},"sentiment":{"mean":2.0,"arc_description":""},"stats":{"dialogue_share_pct":11.9,"archetype":"The Wildcard","best_one_liner":"I take I want to take Dahlia and leave the kitty","one_liner_context":"Rescuing Dahlia from webs","mvp_score":7.0},"dark_triad":20.7,"chemistry":[{"other":"Corras","score":5.5,"type":"Ships Passing"},{"other":"Ash","score":7.0,"type":"Battle Siblings"},{"other":"Billabong","score":5.0,"type":"Ships Passing"},{"other":"Dahlia","score":6.0,"type":"The Odd Couple"},{"other":"Orla","score":5.0,"type":"Ships Passing"}]},"S025":{"session_id":"S025","stats":{"dialogue_share_pct":12.5,"archetype":"The Wildcard","best_one_liner":"We can have a door that I throw people in when we determine that they match any of those criteria.","one_liner_context":"Discussing collaboration with Dahlia's torture chamber","mvp_score":6.3},"dark_triad":25.7,"chemistry":[]},"S028":{"session_id":"S028","growth":{"net_growth_score":7,"growth_direction":"Ascending","growth_moments":[{"title":"Using Mage Hand to Investigate","traits_affected":[{"trait":"problem_solving","change":1},{"trait":"self_awareness","change":1}]},{"title":"Helping with the Door","traits_affected":[{"trait":"connection_to_party","change":1},{"trait":"confidence","change":1}]},{"title":"Sharing Knowledge about Revenants","traits_affected":[{"trait":"goals_purpose","change":1},{"trait":"emotional_state","change":1}]}],"trait_snapshot":{"confidence":7,"trust_in_others":7,"moral_compass":6,"emotional_state":7,"goals_purpose":7,"connection_to_party":7,"combat_instincts":7,"self_awareness":7}},"sentiment":{"mean":-1.15,"arc_description":"SavannahBelle's arc is predominantly fearful and anxious, with brief neutral moments. The player shows low engagement during social parts and high stress during combat and threats, reflecting a cautious and reactive playstyle."},"stats":{"dialogue_share_pct":8.3,"archetype":"The Quiet Professional","best_one_liner":"I have packed thoughts.","one_liner_context":"Reacting to investigation of room","mvp_score":5.0},"dark_triad":0,"chemistry":[{"other":"Corras","score":4.0,"type":"Ships Passing"},{"other":"Ash","score":4.5,"type":"Ships Passing"},{"other":"Billabong","score":5.0,"type":"New Acquaintances"},{"other":"Dahlia","score":4.5,"type":"Ships Passing"},{"other":"Orla","score":6.5,"type":"Unspoken Bond"}]},"S031":{"session_id":"S031","growth":{"net_growth_score":6,"growth_direction":"Hardening","growth_moments":[{"title":"Confronting Billabong","traits_affected":[{"trait":"emotional_state","change":-1},{"trait":"moral_compass","change":1}]},{"title":"Casting Arms of Hadar","traits_affected":[{"trait":"combat_instincts","change":1},{"trait":"confidence","change":1}]},{"title":"Helping with Tea and Ash's Body","traits_affected":[{"trait":"emotional_state","change":1},{"trait":"connection_to_party","change":1}]}],"trait_snapshot":{"confidence":8,"trust_in_others":6,"moral_compass":6,"emotional_state":5,"goals_purpose":8,"connection_to_party":7,"combat_instincts":8,"self_awareness":7}},"sentiment":{"mean":-0.0625,"arc_description":"SavannahBelle's arc shows initial frustration, peaking with elation after successful attacks. Anxiety returned during escape and fear in new battles, but ended with relief and neutrality, reflecting a sorcerer's volatile but powerful emotional spectrum."},"stats":{"dialogue_share_pct":9.6,"archetype":"The Instigator","best_one_liner":"Murderer! You killed my best friend! I'm not making you shoes ever again.","one_liner_context":"Yelling at Billabong after Ash's death","mvp_score":6.3},"dark_triad":35.0,"chemistry":[{"other":"Corras","score":5.5,"type":"Ships Passing"},{"other":"Ash","score":4.5,"type":"Ships Passing"},{"other":"Billabong","score":5.5,"type":"Volatile Mix"},{"other":"Dahlia","score":5.0,"type":"Ships Passing"},{"other":"Orla","score":4.5,"type":"Ships Passing"}]},"S034":{"session_id":"S034","growth":{"net_growth_score":14,"growth_direction":"Awakening","growth_moments":[{"title":"Blood Pact with Nothic","traits_affected":[{"trait":"trust_in_others","change":2},{"trait":"self_awareness","change":2},{"trait":"confidence","change":2}]},{"title":"Finding Party Equipment","traits_affected":[{"trait":"connection_to_party","change":2},{"trait":"goals_purpose","change":1}]},{"title":"Disintegrate Spell on Lich","traits_affected":[{"trait":"combat_instincts","change":1},{"trait":"confidence","change":1}]}],"trait_snapshot":{"confidence":6,"trust_in_others":4,"moral_compass":5,"emotional_state":5,"goals_purpose":6,"connection_to_party":5,"combat_instincts":6,"self_awareness":5}},"sentiment":{"mean":1.73,"arc_description":"SavannahBelle starts neutral, bonds with creatures leading to joy, faces tension in combat, and achieves a triumphant high by defeating the lich, ending satisfied."},"stats":{"dialogue_share_pct":17.3,"archetype":"The Wildcard","best_one_liner":"I'm so over this place.","one_liner_context":"When trapped in the prison antechamber","mvp_score":7.2},"dark_triad":37.7,"chemistry":[{"other":"Corras","score":3.0,"type":"Ships Passing"},{"other":"Dahlia","score":3.5,"type":"New Acquaintances"},{"other":"Ash","score":6.0,"type":"Comic Relief Duo"},{"other":"Orla","score":3.0,"type":"New Acquaintances"},{"other":"Billabong","score":2.0,"type":"New Acquaintances"}]},"S037":{"session_id":"S037","growth":{"net_growth_score":-1,"growth_direction":"Fracturing","growth_moments":[{"title":"Being Charmed by Strahd von Zarovich","traits_affected":[{"trait":"trust_in_others","change":3},{"trait":"self_awareness","change":-1},{"trait":"connection_to_party","change":-2}]},{"title":"Using Disintegrate on the Crimson Abbot","traits_affected":[{"trait":"combat_instincts","change":1},{"trait":"confidence","change":-1}]},{"title":"Attempting to Hand the Rod to Strahd","traits_affected":[{"trait":"moral_compass","change":-1},{"trait":"goals_purpose","change":-1}]}],"trait_snapshot":{"confidence":5,"trust_in_others":8,"moral_compass":4,"emotional_state":7,"goals_purpose":5,"connection_to_party":4,"combat_instincts":8,"self_awareness":4}},"sentiment":{"mean":2.533,"arc_description":"SavannahBelle shows high engagement with powerful spellcasting and becomes charmed by Strahd, leading to peaks of triumph and awe. She remains positive throughout, with dips during dangerous encounters, ending anticipatory."},"stats":{"dialogue_share_pct":17.6,"archetype":"The Wildcard","best_one_liner":"My loins are tingling.","one_liner_context":"Reacting to wall of fire damage","mvp_score":7.3},"dark_triad":40.0,"chemistry":[{"other":"Corras","score":6.5,"type":"Chaos Partners"},{"other":"Dahlia","score":5.5,"type":"Volatile Mix"},{"other":"Orla","score":5.0,"type":"New Acquaintances"},{"other":"Ezrella","score":4.0,"type":"Ships Passing"}]},"S040":{"session_id":"S040","growth":{"net_growth_score":-1,"growth_direction":"Questioning","growth_moments":[{"title":"Causing Commotion in the Tent","traits_affected":[{"trait":"moral_compass","change":-1},{"trait":"emotional_state","change":-1}]},{"title":"Using Lockdown Ward","traits_affected":[{"trait":"confidence","change":1},{"trait":"self_awareness","change":1}]}],"trait_snapshot":{"confidence":7,"trust_in_others":3,"moral_compass":4,"emotional_state":6,"goals_purpose":7,"connection_to_party":5,"combat_instincts":6,"self_awareness":5}},"stats":{"dialogue_share_pct":14.4,"archetype":"The Wildcard","best_one_liner":"I told you we should have fireballed her.","one_liner_context":"After Madame Eva traps the party","mvp_score":5.9},"dark_triad":46.7,"chemistry":[{"other":"Corras","score":5.0,"type":"New Acquaintances"},{"other":"Ash","score":6.0,"type":"New Acquaintances"},{"other":"Billabong","score":3.0,"type":"Ships Passing"},{"other":"Dahlia","score":6.5,"type":"Chaos Partners"},{"other":"Orla","score":5.0,"type":"New Acquaintances"}]},"S043":{"session_id":"S043","growth":{"net_growth_score":0,"growth_direction":"Hardening","growth_moments":[{"title":"Casting Mass Suggestion","traits_affected":[{"trait":"confidence","change":1},{"trait":"moral_compass","change":-1}]},{"title":"Using Subtle Spell Power Word Stun","traits_affected":[{"trait":"combat_instincts","change":1},{"trait":"trust_in_others","change":-1}]},{"title":"Proposing the Sleep Study","traits_affected":[{"trait":"goals_purpose","change":1},{"trait":"self_awareness","change":-1}]}],"trait_snapshot":{"confidence":8,"trust_in_others":4,"moral_compass":4,"emotional_state":5,"goals_purpose":8,"connection_to_party":7,"combat_instincts":7,"self_awareness":4}},"sentiment":{"mean":0.81,"arc_description":"SavannahBelle maintained generally positive sentiment with peaks during excitement discussions, but turned negative after the Mass Suggestion, showing confusion and tension."},"stats":{"dialogue_share_pct":16.5,"archetype":"The Instigator","best_one_liner":"Lock her up, lock her up.","one_liner_context":"Reacting to the matron's betrayal","mvp_score":7.05},"dark_triad":51.7,"chemistry":[{"other":"Corras","score":7.0,"type":"Chaos Partners"},{"other":"Ash","score":6.0,"type":"Rivals"},{"other":"Dahlia","score":8.0,"type":"Chaos Partners"},{"other":"Orla","score":5.5,"type":"New Acquaintances"}]},"S046":{"session_id":"S046","growth":{"net_growth_score":0,"growth_direction":"Stabilizing","growth_moments":[{"title":"Confronting the Matron with Threats","traits_affected":[]},{"title":"Shouting Due to Wild Magic","traits_affected":[]},{"title":"Suggesting Violence in the Hunt","traits_affected":[]}],"trait_snapshot":{"confidence":8,"trust_in_others":3,"moral_compass":4,"emotional_state":7,"goals_purpose":6,"connection_to_party":6,"combat_instincts":8,"self_awareness":4}},"stats":{"dialogue_share_pct":19.5,"archetype":"The Instigator","best_one_liner":"I mean, I've yet to see that, but, I mean, it sounds nice, in theory.","one_liner_context":"Responding to the Matron's offer of civilization.","mvp_score":6.15},"dark_triad":33.3,"chemistry":[{"other":"Corras","score":4.0,"type":"Volatile Mix"},{"other":"Ash","score":5.5,"type":"The Odd Couple"},{"other":"Orla","score":6.0,"type":"Comic Relief Duo"},{"other":"Dahlia","score":2.5,"type":"Ships Passing"}]}}}},"sessions":["S001","S004","S007","S010","S013","S016","S019","S022","S025","S028","S031","S034","S037","S040","S043","S046"],"session_labels":{"S001":"Castle Corras: The Royal Progress","S004":"Goblin Battle and Mysteries","S007":"The Time Travel Heist","S010":"D&D Session: Cave Confrontation and Demon Summoning","S013":"Jailbreak and Demon Pact","S016":"Temporal Rift Crisis","S019":null,"S022":"Underdark Infiltration Session","S025":null,"S028":"Bastion Planning and Cavern Dangers","S031":"Battle for Fertility and Aftermath","S034":"Prison Break and Lich Confrontation","S037":null,"S040":"Curse of Strahd Session - Tser Pool Camp","S043":"BWB Campaign Return Session","S046":null}};
+
+const PC={"Gradles":"#4A90D9","HT":"#E57373","Mary":"#81C784","Christie":"#BA68C8","Lucy":"#FFB74D","Tenderbittle":"#4DB6AC"};
+const PN={"Gradles":"Corras","HT":"Ash","Mary":"Billabong","Christie":"Dahlia","Lucy":"Orla","Tenderbittle":"SavannahBelle"};
+const C2P={};Object.entries(PN).forEach(([p,c])=>C2P[c]=p);
+["Lilith","Ave","Savannah Belle"].forEach(a=>C2P[a]=a==="Lilith"?"Christie":"Tenderbittle");
+const SS=RAW.sessions,SL=RAW.session_labels,PL=Object.keys(PC);
+const TK=["confidence","trust_in_others","moral_compass","emotional_state","goals_purpose","connection_to_party","combat_instincts","self_awareness"];
+const TL={confidence:"CON",trust_in_others:"TRU",moral_compass:"MOR",emotional_state:"EMO",goals_purpose:"GOL",connection_to_party:"PTY",combat_instincts:"CMB",self_awareness:"AWR"};
+
+let curP="Gradles",curSI=0,CH=4200;
+const MG={t:80,b:80};
+
+function hx(h,a){const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);return`rgba(${r},${g},${b},${a})`}
+function bl(c1,c2,t=.5){const r1=parseInt(c1.slice(1,3),16),g1=parseInt(c1.slice(3,5),16),b1=parseInt(c1.slice(5,7),16),r2=parseInt(c2.slice(1,3),16),g2=parseInt(c2.slice(3,5),16),b2=parseInt(c2.slice(5,7),16);return`#${Math.round(r1+(r2-r1)*t).toString(16).padStart(2,'0')}${Math.round(g1+(g2-g1)*t).toString(16).padStart(2,'0')}${Math.round(b1+(b2-b1)*t).toString(16).padStart(2,'0')}`}
+function gsd(p,s){return RAW.players[p]?.sessions?.[s]||{}}
+function srng(seed){let s=seed;return()=>{s=(s*16807)%2147483647;return(s-1)/2147483646}}
+
+function buildTabs(){
+  const c=document.getElementById('tabs');c.innerHTML='';
+  PL.forEach(p=>{
+    const t=document.createElement('div');
+    t.className='tab'+(p===curP?' active':'');
+    t.innerHTML=`<span class="dot" style="background:${PC[p]};box-shadow:0 0 8px ${hx(PC[p],.5)}"></span>${PN[p]}`;
+    if(p===curP){t.style.borderColor=PC[p];t.style.boxShadow=`inset 0 -2px 0 ${PC[p]},0 2px 8px ${hx(PC[p],.15)}`}
+    t.onclick=()=>sw(p);c.appendChild(t);
+  });
+}
+
+function genTerrain(player){
+  const svg=d3.select('#tsvg');svg.selectAll('*').remove();
+  const W=document.getElementById('cv').offsetWidth,H=CH;
+  svg.attr('width',W).attr('height',H);
+  const col=PC[player],segH=(H-MG.t-MG.b)/(SS.length-1);
+  const rng=srng(PL.indexOf(player)*7919+31);
+
+  // Deep background mountains
+  const g1=svg.append('g').style('opacity',.12);
+  for(let i=0;i<SS.length;i++){
+    const sd=gsd(player,SS[i]),sent=sd.sentiment?.mean||0,dt=sd.dark_triad||20;
+    const y=MG.t+i*segH,amp=25+Math.abs(sent)*7,peaks=4+Math.floor(rng()*5);
+    let d=`M 0 ${y+50}`;
+    for(let j=0;j<=peaks;j++){const px=(W/peaks)*j,py=y+50-amp*(.2+.8*rng());d+=` Q ${px-W/(peaks*2.5)} ${py}, ${px} ${y+30+rng()*30}`}
+    d+=` L ${W} ${y+60} L 0 ${y+60} Z`;
+    g1.append('path').attr('d',d).attr('fill',hx(dt>40?bl(col,'#ff2222',.35):col,.12+dt/500));
+  }
+
+  // Mid hills
+  const g2=svg.append('g').style('opacity',.07);
+  for(let i=0;i<SS.length-1;i++){
+    const y=MG.t+i*segH,sd=gsd(player,SS[i]),mvp=sd.stats?.mvp_score||5;
+    const hw=W*.3+rng()*W*.3,side=rng()>.5?W*.05:W*.55;
+    g2.append('ellipse').attr('cx',side+hw/2).attr('cy',y+segH/2).attr('rx',hw/2).attr('ry',12+mvp*3).attr('fill',hx(col,.18));
+  }
+
+  // Foreground crystals + ambient tints
+  const g3=svg.append('g').style('opacity',.08);
+  SS.forEach((sid,i)=>{
+    const sd=gsd(player,sid),gr=sd.growth?.net_growth_score||0,y=MG.t+i*segH;
+    if(gr>5){const cx=W*.06+rng()*W*.12;for(let k=0;k<4;k++){const ch=12+rng()*22,cw=2+rng()*4;
+      g3.append('polygon').attr('points',`${cx+k*7},${y+25} ${cx+k*7-cw},${y+25+ch} ${cx+k*7+cw},${y+25+ch}`)
+        .attr('fill',hx('#ffd700',.35)).attr('stroke',hx('#ffd700',.15)).attr('stroke-width',.5)}}
+    if((sd.dark_triad||0)>35)g3.append('rect').attr('x',0).attr('y',y-segH/4).attr('width',W).attr('height',segH).attr('fill',hx('#ff2222',.025));
+    if((sd.sentiment?.mean||0)>4)g3.append('rect').attr('x',0).attr('y',y-segH/4).attr('width',W).attr('height',segH).attr('fill',hx('#44ff88',.015));
+  });
+
+  // Session markers
+  const g4=svg.append('g');
+  SS.forEach((sid,i)=>{
+    const y=MG.t+i*segH;
+    g4.append('line').attr('x1',0).attr('y1',y).attr('x2',W).attr('y2',y)
+      .attr('stroke',hx('#ffffff',.04)).attr('stroke-width',1).attr('stroke-dasharray','4,8');
+    g4.append('text').attr('x',12).attr('y',y-5).attr('fill',hx('#ffffff',.2))
+      .attr('font-family',"'JetBrains Mono',monospace").attr('font-size',9).text(sid);
+    const lb=SL[sid];
+    if(lb)g4.append('text').attr('x',12).attr('y',y+10).attr('fill',hx('#ffffff',.1))
+      .attr('font-family',"'Barlow Condensed',sans-serif").attr('font-size',9.5)
+      .text(lb.length>42?lb.slice(0,40)+'...':lb);
+  });
+}
+
+function genPath(player,anim=true){
+  const svg=d3.select('#psvg');svg.selectAll('*').remove();
+  const W=document.getElementById('cv').offsetWidth,H=CH;
+  svg.attr('width',W).attr('height',H);
+  const col=PC[player],cx=W*.42,swing=W*.22;
+  const segH=(H-MG.t-MG.b)/(SS.length-1);
+
+  const pts=[];
+  SS.forEach((sid,i)=>{
+    const sd=gsd(player,sid),sent=sd.sentiment?.mean||0;
+    const dpct=sd.stats?.dialogue_share_pct||12,dt=sd.dark_triad||20;
+    pts.push({x:cx+(sent/10)*swing,y:MG.t+i*segH,sent,dpct,dt,sid,i});
+  });
+
+  const defs=svg.append('defs');
+  // Glow filter
+  const gf=defs.append('filter').attr('id','pg').attr('x','-50%').attr('y','-50%').attr('width','200%').attr('height','200%');
+  gf.append('feGaussianBlur').attr('stdDeviation',8).attr('result','b');
+  gf.append('feComposite').attr('in','SourceGraphic').attr('in2','b').attr('operator','over');
+
+  // Segment gradients
+  pts.forEach((p,i)=>{
+    if(i>=pts.length-1)return;
+    const n=pts[i+1];
+    const gr=defs.append('linearGradient').attr('id',`g${i}`).attr('gradientUnits','userSpaceOnUse')
+      .attr('x1',p.x).attr('y1',p.y).attr('x2',n.x).attr('y2',n.y);
+    gr.append('stop').attr('offset','0%').attr('stop-color',bl(col,'#1a0000',Math.min(p.dt/120,.6)));
+    gr.append('stop').attr('offset','100%').attr('stop-color',bl(col,'#1a0000',Math.min(n.dt/120,.6)));
+  });
+
+  const lineG=d3.line().x(d=>d.x).y(d=>d.y).curve(d3.curveBasis);
+  const pathD=lineG(pts);
+
+  // Outer glow
+  svg.append('path').attr('d',pathD).attr('fill','none').attr('stroke',col)
+    .attr('stroke-width',24).attr('stroke-opacity',.07).attr('filter','url(#pg)');
+
+  // Width-varying segments
+  for(let i=0;i<pts.length-1;i++){
+    const p=pts[i],n=pts[i+1],w=3+(p.dpct/28)*9;
+    const mid={x:(p.x+n.x)/2,y:(p.y+n.y)/2};
+    svg.append('path').attr('d',d3.line().x(d=>d.x).y(d=>d.y).curve(d3.curveBasis)([p,mid,n]))
+      .attr('fill','none').attr('stroke',`url(#g${i})`).attr('stroke-width',w)
+      .attr('stroke-linecap','round').attr('stroke-opacity',.65);
+  }
+
+  // === SHADOW PATH (Dark Triad trajectory) ===
+  const shadowPts=pts.map(p=>{
+    const dt=p.dt||0;
+    const offsetX=40-35*Math.min(dt/50,1); // high dt = converges (5px), low dt = far (40px)
+    const opa=0.08+0.17*Math.min(dt/50,1); // high dt = more visible
+    return{x:p.x-offsetX,y:p.y,opacity:opa,dt};
+  });
+  const shadowLineD=d3.line().x(d=>d.x).y(d=>d.y).curve(d3.curveBasis)(shadowPts);
+
+  // Shadow blur filter
+  const sf=defs.append('filter').attr('id','shadowBlur').attr('x','-50%').attr('y','-50%').attr('width','200%').attr('height','200%');
+  sf.append('feGaussianBlur').attr('stdDeviation',3);
+
+  // Shadow path glow (underneath)
+  svg.append('path').attr('d',shadowLineD).attr('fill','none')
+    .attr('stroke','#3a0a0a').attr('stroke-width',14).attr('stroke-opacity',.04)
+    .attr('filter','url(#shadowBlur)').attr('class','shadow-path');
+
+  // Shadow path segments with varying opacity
+  for(let i=0;i<shadowPts.length-1;i++){
+    const sp=shadowPts[i],sn=shadowPts[i+1];
+    const avgOpa=(sp.opacity+sn.opacity)/2;
+    const mid={x:(sp.x+sn.x)/2,y:(sp.y+sn.y)/2};
+    svg.append('path')
+      .attr('d',d3.line().x(d=>d.x).y(d=>d.y).curve(d3.curveBasis)([sp,mid,sn]))
+      .attr('fill','none').attr('stroke','#3a0a0a').attr('stroke-width',5)
+      .attr('stroke-opacity',avgOpa).attr('stroke-linecap','round')
+      .attr('filter','url(#shadowBlur)').attr('class','shadow-path');
+    // When shadow converges with main path, darken the main path segment
+    if(sp.dt>40||sn.dt>40){
+      const darkOpa=Math.min((Math.max(sp.dt,sn.dt)-40)/60,0.15);
+      svg.append('path')
+        .attr('d',d3.line().x(d=>d.x).y(d=>d.y).curve(d3.curveBasis)([pts[i],{x:(pts[i].x+pts[i+1].x)/2,y:(pts[i].y+pts[i+1].y)/2},pts[i+1]]))
+        .attr('fill','none').attr('stroke','#1a0000').attr('stroke-width',8)
+        .attr('stroke-opacity',darkOpa).attr('stroke-linecap','round');
+    }
+  }
+
+  // Center line
+  const mp=svg.append('path').attr('d',pathD).attr('fill','none')
+    .attr('stroke',col).attr('stroke-width',2).attr('stroke-opacity',.85);
+  if(anim){
+    const tl=mp.node().getTotalLength();
+    mp.attr('stroke-dasharray',tl).attr('stroke-dashoffset',tl)
+      .transition().duration(2500).ease(d3.easeQuadOut).attr('stroke-dashoffset',0);
+  }
+
+  // Session nodes
+  pts.forEach((p,i)=>{
+    const sd=gsd(player,SS[i]),g=sd.growth?.net_growth_score||0;
+    const nc=g>5?'#ffd700':g<-2?'#ff4444':col,r=4.5+Math.abs(g)*.4;
+    svg.append('circle').attr('cx',p.x).attr('cy',p.y).attr('r',r)
+      .attr('fill',nc).attr('stroke',hx('#ffffff',.25)).attr('stroke-width',1)
+      .attr('opacity',anim?0:.85).style('cursor','pointer')
+      .on('click',()=>updPanel(player,i))
+      .on('mouseenter',function(){d3.select(this).transition().duration(150).attr('r',r+3).attr('opacity',1)})
+      .on('mouseleave',function(){d3.select(this).transition().duration(150).attr('r',r).attr('opacity',.85)})
+      .transition().delay(anim?300+i*130:0).duration(350).attr('opacity',.85);
+  });
+
+  // Chemistry bridges
+  const bG=svg.append('g');
+  pts.forEach((p,i)=>{
+    const sd=gsd(player,SS[i]);
+    (sd.chemistry||[]).filter(c=>c.score>7.5).forEach((rel,ri)=>{
+      const op=C2P[rel.other];if(!op)return;
+      const oc=PC[op]||'#888',bld=bl(col,oc,.5);
+      const ex=W*.82+ri*12,mdy=p.y-10-Math.abs(rel.score-7.5)*5;
+      const arc=d3.path();arc.moveTo(p.x+6,p.y);arc.quadraticCurveTo((p.x+ex)/2,mdy,ex,p.y+3);
+      bG.append('path').attr('d',arc.toString()).attr('fill','none')
+        .attr('stroke',bld).attr('stroke-width',1.2).attr('stroke-opacity',.2).attr('stroke-dasharray','3,5');
+      bG.append('text').attr('x',ex+3).attr('y',p.y+6).attr('fill',oc)
+        .attr('font-family',"'Cinzel',serif").attr('font-size',8).attr('opacity',.4)
+        .text(rel.other+' '+rel.score.toFixed(1));
+    });
+  });
+
+  return pts;
+}
+
+function genOverlays(player,pts,anim=true){
+  const el=document.getElementById('ovl');el.innerHTML='';
+  const W=document.getElementById('cv').offsetWidth;
+  let lastA=null;
+
+  pts.forEach((p,i)=>{
+    const sid=SS[i],sd=gsd(player,sid);
+
+    // Growth landmarks
+    if(sd.growth?.growth_moments){
+      sd.growth.growth_moments.forEach((m,mi)=>{
+        const pos=m.traits_affected?.some(t=>(t.change||0)>0);
+        const neg=m.traits_affected?.some(t=>(t.change||0)<0);
+        const mc=neg&&!pos?'#ff4444':'#ffd700';
+        const lm=document.createElement('div');lm.className='lm';
+        lm.style.left=(p.x+14+mi*26)+'px';lm.style.top=(p.y-11)+'px';
+        if(anim){lm.style.opacity='0';lm.style.transform='scale(0)';
+          setTimeout(()=>{lm.style.transition='transform .4s cubic-bezier(.175,.885,.32,1.275),opacity .3s';
+            lm.style.opacity='1';lm.style.transform='scale(1)'},900+i*140+mi*70)}
+
+        const trH=(m.traits_affected||[]).map(t=>{
+          const s=(t.change||0)>=0?'+':'';
+          const stl=(t.change||0)<0?'background:rgba(255,68,68,.12);color:#ff4444':'background:rgba(255,215,0,.12);color:#ffd700';
+          return`<span class="tr" style="${stl}">${TL[t.trait]||t.trait} ${s}${t.change||0}</span>`;
+        }).join('');
+
+        lm.innerHTML=`<div class="d" style="border-color:${mc};color:${mc};box-shadow:0 0 8px ${hx(mc,.3)}">${neg&&!pos?'!':'+'}</div>
+          <div class="tp"><div class="tt" style="color:${mc}">${m.title}</div>
+          <div style="color:var(--text-muted);font-size:10px">${sid}</div>
+          <div class="trs">${trH}</div></div>`;
+        el.appendChild(lm);
+      });
+    }
+
+    // Quote signposts (every other session)
+    if(sd.stats?.best_one_liner&&i%2===0){
+      const sp=document.createElement('div');sp.className='sp';
+      const side=p.x>W*.42;
+      sp.style.left=side?(p.x-210)+'px':(p.x+28)+'px';
+      sp.style.top=(p.y+14)+'px';
+      if(anim){sp.style.opacity='0';setTimeout(()=>{sp.style.transition='opacity .4s,transform .4s';sp.style.opacity='1'},1100+i*180)}
+      const q=sd.stats.best_one_liner.length>75?sd.stats.best_one_liner.slice(0,73)+'...':sd.stats.best_one_liner;
+      sp.innerHTML=`<div class="bd" style="border-left:2px solid ${hx(PC[player],.35)}">&ldquo;${q}&rdquo;<div class="cx">${sd.stats.one_liner_context||sid}</div></div>`;
+      el.appendChild(sp);
+    }
+
+    // Archetype road signs
+    if(sd.stats?.archetype&&sd.stats.archetype!==lastA){
+      const as=document.createElement('div');as.className='as';
+      as.style.left=(p.x-90)+'px';as.style.top=(p.y-32)+'px';
+      as.innerHTML=`<div class="ai">Now entering: THE ${sd.stats.archetype.toUpperCase()} zone</div>`;
+      if(anim){as.style.opacity='0';setTimeout(()=>{as.style.transition='opacity .5s';as.style.opacity='1'},1000+i*140)}
+      el.appendChild(as);lastA=sd.stats.archetype;
+    }
+
+    // === MEMORY ORBS (Feature 2) ===
+    if(sd.stats?.best_one_liner){
+      const orbSvg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+      orbSvg.setAttribute('class','morb');
+      orbSvg.setAttribute('width','32');orbSvg.setAttribute('height','32');
+      orbSvg.setAttribute('viewBox','0 0 32 32');
+      orbSvg.style.left=(p.x-(i%2===0?22:(-10)))+'px';
+      orbSvg.style.top=(p.y-16)+'px';
+      orbSvg.style.animationDelay=(i*0.4)+'s';
+      const orbDefs=document.createElementNS('http://www.w3.org/2000/svg','defs');
+      const rg=document.createElementNS('http://www.w3.org/2000/svg','radialGradient');
+      rg.setAttribute('id','orbG'+i);
+      const s1o=document.createElementNS('http://www.w3.org/2000/svg','stop');
+      s1o.setAttribute('offset','0%');s1o.setAttribute('stop-color',PC[player]);s1o.setAttribute('stop-opacity','0.9');
+      const s2o=document.createElementNS('http://www.w3.org/2000/svg','stop');
+      s2o.setAttribute('offset','60%');s2o.setAttribute('stop-color',PC[player]);s2o.setAttribute('stop-opacity','0.3');
+      const s3o=document.createElementNS('http://www.w3.org/2000/svg','stop');
+      s3o.setAttribute('offset','100%');s3o.setAttribute('stop-color',PC[player]);s3o.setAttribute('stop-opacity','0');
+      rg.appendChild(s1o);rg.appendChild(s2o);rg.appendChild(s3o);orbDefs.appendChild(rg);orbSvg.appendChild(orbDefs);
+      const orbC=document.createElementNS('http://www.w3.org/2000/svg','circle');
+      orbC.setAttribute('cx','16');orbC.setAttribute('cy','16');orbC.setAttribute('r','8');
+      orbC.setAttribute('fill','url(#orbG'+i+')');
+      orbSvg.appendChild(orbC);
+      const tip=document.createElement('div');tip.className='morb-tip';
+      const ql=sd.stats.best_one_liner.length>60?sd.stats.best_one_liner.slice(0,58)+'...':sd.stats.best_one_liner;
+      tip.innerHTML=`&ldquo;${ql}&rdquo;`;
+      const tipWrap=document.createElement('div');tipWrap.className='morb';
+      tipWrap.style.left=orbSvg.style.left;tipWrap.style.top=orbSvg.style.top;
+      tipWrap.style.animationDelay=orbSvg.style.animationDelay;
+      tipWrap.appendChild(orbSvg.cloneNode(true));tipWrap.appendChild(tip);
+      if(anim){tipWrap.style.opacity='0';setTimeout(()=>{tipWrap.style.transition='opacity .5s';tipWrap.style.opacity='1'},1200+i*160)}
+      // Click to shatter and show overlay
+      const quote=sd.stats.best_one_liner,ctx=sd.stats.one_liner_context||sid;
+      tipWrap.onclick=function(e){
+        e.stopPropagation();
+        // Particle burst
+        const rect=this.getBoundingClientRect();
+        const burst=document.createElement('div');burst.className='morb-particles';
+        burst.style.left=this.style.left;burst.style.top=this.style.top;
+        for(let k=0;k<8;k++){
+          const sp=document.createElement('span');
+          const angle=(k/8)*Math.PI*2,dist=15+Math.random()*20;
+          sp.style.setProperty('--px',Math.cos(angle)*dist+'px');
+          sp.style.setProperty('--py',Math.sin(angle)*dist+'px');
+          sp.style.left='16px';sp.style.top='16px';
+          sp.style.background=PC[player];sp.style.boxShadow='0 0 4px '+PC[player];
+          burst.appendChild(sp);
+        }
+        el.appendChild(burst);setTimeout(()=>burst.remove(),600);
+        // Shatter animation on orb
+        this.style.transition='transform .3s, opacity .3s';
+        this.style.transform='scale(0)';this.style.opacity='0';
+        setTimeout(()=>{this.style.transform='scale(1)';this.style.opacity='1'},1500);
+        // Show overlay
+        const ov=document.createElement('div');ov.className='morb-overlay';
+        ov.innerHTML='<div class="morb-overlay-inner" style="border-top:3px solid '+PC[player]+'"><q>&ldquo;'+quote+'&rdquo;</q><div class="ctx">'+ctx+' &mdash; '+sid+'</div></div>';
+        ov.onclick=function(){this.remove()};
+        document.body.appendChild(ov);
+      };
+      el.appendChild(tipWrap);
+    }
+
+    // === COMPANION SILHOUETTES (Feature 3) ===
+    const companions=(sd.chemistry||[]).filter(c=>c.score>6).sort((a,b)=>b.score-a.score);
+    companions.forEach((comp,ci)=>{
+      const op=C2P[comp.other];if(!op)return;
+      const oc=PC[op]||'#888';
+      const closeness=Math.max(0,(comp.score-6)/4); // 0 to 1
+      const yOff=18+ci*11-closeness*6; // closer = nearer to path
+      const xOff=p.x+8+ci*12;
+      const dot=document.createElementNS('http://www.w3.org/2000/svg','svg');
+      dot.setAttribute('class','comp-dot');dot.setAttribute('width','16');dot.setAttribute('height','16');
+      dot.setAttribute('viewBox','0 0 16 16');dot.style.position='absolute';
+      dot.style.left=xOff+'px';dot.style.top=(p.y+yOff)+'px';
+      const dc=document.createElementNS('http://www.w3.org/2000/svg','circle');
+      dc.setAttribute('cx','8');dc.setAttribute('cy','8');dc.setAttribute('r','5');
+      dc.setAttribute('fill',oc);dc.setAttribute('opacity',String(0.3+closeness*0.4));
+      dot.appendChild(dc);
+      const dtip=document.createElement('div');dtip.className='comp-tip';
+      dtip.textContent=comp.other+' ('+comp.type+')';
+      const dotWrap=document.createElement('div');dotWrap.className='comp-dot';
+      dotWrap.style.left=xOff+'px';dotWrap.style.top=(p.y+yOff)+'px';
+      dotWrap.appendChild(dot.cloneNode(true));dotWrap.appendChild(dtip);
+      if(anim){dotWrap.style.opacity='0';setTimeout(()=>{dotWrap.style.transition='opacity .4s';dotWrap.style.opacity='1'},1100+i*150+ci*50)}
+      el.appendChild(dotWrap);
+    });
+
+    // === MILESTONE STONES (Feature 5) ===
+    const milestoneMap={'S004':4,'S010':6,'S016':8,'S022':10,'S028':11,'S034':13,'S040':14,'S046':15};
+    if(milestoneMap[sid]){
+      const ms=document.createElement('div');ms.className='milestone';
+      ms.style.left=(p.x-80)+'px';ms.style.top=(p.y-8)+'px';
+      ms.innerHTML='<div class="milestone-inner" style="box-shadow:0 0 12px '+hx(PC[player],.2)+',inset 0 0 8px '+hx(PC[player],.08)+'">LEVEL '+milestoneMap[sid]+'<div class="milestone-sub">Milestone</div></div>';
+      if(anim){ms.style.opacity='0';ms.style.transform='translateY(8px)';
+        setTimeout(()=>{ms.style.transition='opacity .5s, transform .5s';ms.style.opacity='1';ms.style.transform='translateY(0)'},1000+i*140)}
+      el.appendChild(ms);
+    }
+  });
+
+  // === BEFORE/AFTER SIGNPOSTS (Feature 6) ===
+  // Compare trait_snapshot between consecutive sessions to find biggest changes
+  const traitLabels={confidence:'Confident',trust_in_others:'Trusting',moral_compass:'Moral',
+    emotional_state:'Emotionally stable',goals_purpose:'Purpose-driven',connection_to_party:'Party-connected',
+    combat_instincts:'Combat-ready',self_awareness:'Self-aware'};
+  const traitBefore={confidence:'Hesitant',trust_in_others:'Wary',moral_compass:'Morally flexible',
+    emotional_state:'Emotionally volatile',goals_purpose:'Aimless',connection_to_party:'Lone wolf',
+    combat_instincts:'Combat-shy',self_awareness:'Unaware'};
+  const traitAfter={confidence:'Bold and decisive',trust_in_others:'Open and trusting',moral_compass:'Firmly principled',
+    emotional_state:'Emotionally grounded',goals_purpose:'Driven by purpose',connection_to_party:'Deeply bonded',
+    combat_instincts:'Battle-hardened',self_awareness:'Deeply self-aware'};
+  for(let i=1;i<pts.length;i++){
+    const prevSd=gsd(player,SS[i-1]),curSd=gsd(player,SS[i]);
+    const prevSnap=prevSd.growth?.trait_snapshot||{},curSnap=curSd.growth?.trait_snapshot||{};
+    let maxTrait=null,maxChange=0;
+    for(const tk of TK){
+      const diff=Math.abs((curSnap[tk]||5)-(prevSnap[tk]||5));
+      if(diff>maxChange){maxChange=diff;maxTrait=tk}
+    }
+    if(maxChange>=2&&maxTrait){
+      const prevVal=prevSnap[maxTrait]||5,curVal=curSnap[maxTrait]||5;
+      const isGrowth=curVal>prevVal;
+      const beforeText=isGrowth?traitBefore[maxTrait]:(traitAfter[maxTrait]);
+      const afterText=isGrowth?traitAfter[maxTrait]:(traitBefore[maxTrait]);
+      const ba=document.createElement('div');ba.className='ba-pair';
+      const side=pts[i].x>W*.42;
+      ba.style.left=side?(pts[i].x-310)+'px':(pts[i].x+30)+'px';
+      ba.style.top=(pts[i].y+30)+'px';
+      ba.innerHTML=`<div class="ba-sign before"><div class="ba-label">Before</div><div class="ba-text">${beforeText}</div><div class="ba-trait">${(TL[maxTrait]||maxTrait)} ${prevVal}</div></div><div class="ba-arrow">${isGrowth?'&rarr;':'&larr;'}</div><div class="ba-sign after"><div class="ba-label">After</div><div class="ba-text">${afterText}</div><div class="ba-trait">${(TL[maxTrait]||maxTrait)} ${curVal}</div></div>`;
+      if(anim){ba.style.opacity='0';setTimeout(()=>{ba.style.transition='opacity .6s';ba.style.opacity='1'},1300+i*180)}
+      el.appendChild(ba);
+    }
+  }
+}
+
+function updPanel(player,si){
+  curSI=si;
+  const pan=document.getElementById('pan');
+  const col=PC[player],ch=PN[player],sid=SS[si],sd=gsd(player,sid),lb=SL[sid]||sid;
+  let h='';
+
+  h+=`<div class="portrait"><div class="glow" style="background:radial-gradient(circle at 50% 60%,${hx(col,.25)},transparent 70%)"></div>
+    <div class="init" style="color:${col}">${ch[0]}</div>
+    <div class="nm"><span class="ch" style="color:${col}">${ch}</span><span class="pl">${player}</span></div></div>`;
+
+  h+=`<div class="badge">${sid}<span class="sl">${lb||''}</span></div>`;
+
+  h+=`<div class="sec"><div class="sec-t">TRAIT RADAR</div><div class="radar" id="rdr"></div></div>`;
+
+  h+=`<div class="sec"><div class="sec-t">RELATIONSHIPS</div>`;
+  const rels=(sd.chemistry||[]).sort((a,b)=>b.score-a.score).slice(0,4);
+  if(!rels.length)h+='<div style="color:var(--text-muted);font-size:11px">No data</div>';
+  rels.forEach(r=>{const op=C2P[r.other],oc=op?PC[op]:'#888';
+    h+=`<div class="ri"><div class="sc" style="color:${oc}">${r.score.toFixed(1)}</div>
+    <div class="rn">${r.other}</div><div class="rt">${r.type||''}</div></div>`});
+  h+='</div>';
+
+  const dt=sd.dark_triad||0,dc=dt>50?'#ff4444':dt>30?'#ff8844':'#44ff88';
+  h+=`<div class="sec"><div class="sec-t">DARK TRIAD</div>
+    <div class="dtm"><div class="dtf" style="width:${dt}%;background:linear-gradient(90deg,${dc},${bl(dc,'#1a0000',.3)});box-shadow:0 0 6px ${hx(dc,.3)}"></div></div>
+    <div class="dtl"><span style="color:var(--text-muted)">Composite</span><span style="font-family:'JetBrains Mono',monospace;color:${dc}">${dt.toFixed(1)}</span></div></div>`;
+
+  h+=`<div class="sec"><div class="sec-t">MVP ACROSS SESSIONS</div><div class="mvps" id="mvp"></div></div>`;
+
+  if(sd.growth){
+    const gs=sd.growth.net_growth_score??0,gc=gs>5?'#ffd700':gs>0?'#44ff88':gs<0?'#ff4444':'#9494bf';
+    h+=`<div class="sec"><div class="sec-t">GROWTH</div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:12px;color:var(--text-secondary);text-transform:uppercase">${sd.growth.growth_direction||'?'}</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:${gc}">${gs>0?'+':''}${gs}</span></div></div>`;
+  }
+
+  h+=`<div class="sec"><div class="sec-t">SESSION STATS</div><div class="sg">`;
+  if(sd.stats?.archetype)h+=`<div class="sc2"><div class="lb">Archetype</div><div class="vl" style="color:${col};font-family:'Cinzel',serif;font-size:11px">${sd.stats.archetype}</div></div>`;
+  if(sd.sentiment){const sm=sd.sentiment.mean;h+=`<div class="sc2"><div class="lb">Sentiment</div><div class="vl" style="color:${sm>3?'#44ff88':sm>0?'#00d4ff':sm>-3?'#ff8844':'#ff4444'}">${sm.toFixed(1)}</div></div>`}
+  if(sd.stats?.dialogue_share_pct!=null)h+=`<div class="sc2"><div class="lb">Dialogue</div><div class="vl" style="color:${col}">${sd.stats.dialogue_share_pct.toFixed(1)}%</div></div>`;
+  if(sd.stats?.mvp_score!=null)h+=`<div class="sc2"><div class="lb">MVP</div><div class="vl" style="color:var(--accent-gold)">${sd.stats.mvp_score.toFixed(2)}</div></div>`;
+  h+='</div></div>';
+
+  pan.innerHTML=h;
+  setTimeout(()=>{drawRadar(player,si);drawMvp(player,si)},40);
+}
+
+function drawRadar(player,si){
+  const el=document.getElementById('rdr');if(!el)return;
+  const col=PC[player],sd=gsd(player,SS[si]),ts=sd.growth?.trait_snapshot||{};
+  const vals=TK.map(k=>ts[k]||5),W=el.offsetWidth,H=W,R=W*.36,cx=W/2,cy=H/2;
+  const svg=d3.select(el).html('').append('svg').attr('width',W).attr('height',H);
+  const a=2*Math.PI/TK.length;
+
+  [2,4,6,8,10].forEach(lv=>{const r=(lv/10)*R;
+    svg.append('polygon').attr('points',TK.map((_,j)=>{const an=j*a-Math.PI/2;return`${cx+r*Math.cos(an)},${cy+r*Math.sin(an)}`}).join(' '))
+      .attr('fill','none').attr('stroke',hx('#ffffff',.06)).attr('stroke-width',.5)});
+
+  TK.forEach((k,j)=>{const an=j*a-Math.PI/2,ex=cx+R*Math.cos(an),ey=cy+R*Math.sin(an);
+    svg.append('line').attr('x1',cx).attr('y1',cy).attr('x2',ex).attr('y2',ey)
+      .attr('stroke',hx('#ffffff',.07)).attr('stroke-width',.5);
+    svg.append('text').attr('x',cx+(R+16)*Math.cos(an)).attr('y',cy+(R+16)*Math.sin(an))
+      .attr('text-anchor','middle').attr('dominant-baseline','middle')
+      .attr('fill',hx('#ffffff',.35)).attr('font-family',"'JetBrains Mono',monospace").attr('font-size',7.5).text(TL[k])});
+
+  const dp=TK.map((k,j)=>{const an=j*a-Math.PI/2,r=(vals[j]/10)*R;return[cx+r*Math.cos(an),cy+r*Math.sin(an)]});
+  svg.append('polygon').attr('points',dp.map(p=>p.join(',')).join(' '))
+    .attr('fill',hx(col,.15)).attr('stroke',col).attr('stroke-width',1.5).attr('stroke-opacity',.8);
+  dp.forEach(p=>svg.append('circle').attr('cx',p[0]).attr('cy',p[1]).attr('r',2.5)
+    .attr('fill',col).attr('stroke','#fff').attr('stroke-width',.5));
+}
+
+function drawMvp(player,ai){
+  const el=document.getElementById('mvp');if(!el)return;
+  const col=PC[player],W=el.offsetWidth,H=36;
+  const svg=d3.select(el).html('').append('svg').attr('width',W).attr('height',H);
+  const mv=SS.map(s=>{const d=gsd(player,s);return d.stats?.mvp_score??null});
+  const vp=mv.map((v,i)=>[i,v]).filter(d=>d[1]!==null);
+  if(vp.length<2){svg.append('text').attr('x',W/2).attr('y',H/2).attr('text-anchor','middle')
+    .attr('fill',hx('#ffffff',.15)).attr('font-size',9).text('Insufficient data');return}
+  const xs=d3.scaleLinear().domain([0,SS.length-1]).range([3,W-3]);
+  const ys=d3.scaleLinear().domain([0,10]).range([H-3,3]);
+  svg.append('path').attr('d',d3.area().x(d=>xs(d[0])).y0(H).y1(d=>ys(d[1])).curve(d3.curveMonotoneX)(vp))
+    .attr('fill',hx(col,.08));
+  svg.append('path').attr('d',d3.line().x(d=>xs(d[0])).y(d=>ys(d[1])).curve(d3.curveMonotoneX)(vp))
+    .attr('fill','none').attr('stroke',col).attr('stroke-width',1.5).attr('stroke-opacity',.6);
+  if(mv[ai]!==null)svg.append('circle').attr('cx',xs(ai)).attr('cy',ys(mv[ai]))
+    .attr('r',3.5).attr('fill',col).attr('stroke','#fff').attr('stroke-width',1);
+}
+
+function setupScroll(){
+  const vp=document.getElementById('vp'),sf=document.getElementById('sf');
+  vp.addEventListener('scroll',()=>{
+    const pct=vp.scrollTop/(vp.scrollHeight-vp.clientHeight);
+    sf.style.height=(pct*100)+'%';sf.style.background=`linear-gradient(180deg,${PC[curP]},transparent)`;
+    const segH=(CH-MG.t-MG.b)/(SS.length-1);
+    const idx=Math.min(SS.length-1,Math.max(0,Math.round((vp.scrollTop+vp.clientHeight/3-MG.t)/segH)));
+    if(idx!==curSI)updPanel(curP,idx);
+    // Parallax
+    const sy=vp.scrollTop;
+    ['1','2','3'].forEach((n,ni)=>{
+      const g=document.querySelector(`#tsvg g:nth-child(${n})`);
+      if(g)g.style.transform=`translateY(${sy*[.06,.03,-.02][ni]}px)`;
+    });
+  });
+}
+
+function sw(p){
+  if(p===curP)return;
+  const cv=document.getElementById('cv'),pn=document.getElementById('pan');
+  cv.style.transition='opacity .35s';cv.style.opacity='0';
+  pn.style.transition='opacity .25s';pn.style.opacity='0';
+  setTimeout(()=>{
+    curP=p;curSI=0;buildTabs();
+    genTerrain(p);const pts=genPath(p,true);genOverlays(p,pts,true);updPanel(p,0);
+    weatherParticles=[];initWeather();
+    cv.style.opacity='1';pn.style.opacity='1';
+    document.getElementById('vp').scrollTop=0;
+  },380);
+}
+
+// === WEATHER LAYER (Feature 4) ===
+let weatherParticles=[],weatherType='none',weatherCtx=null,weatherAF=null;
+const WEATHER_MAX=30;
+
+function initWeather(){
+  const canvas=document.getElementById('weather-canvas');
+  const cv=document.getElementById('cv');
+  canvas.width=cv.offsetWidth;canvas.height=parseInt(cv.style.minHeight)||CH;
+  weatherCtx=canvas.getContext('2d');
+  weatherParticles=[];
+  if(!weatherAF)animateWeather();
+}
+
+function getWeatherForScroll(){
+  const vp=document.getElementById('vp');
+  const segH=(CH-MG.t-MG.b)/(SS.length-1);
+  const scrollY=vp.scrollTop+vp.clientHeight/3;
+  const idx=Math.min(SS.length-1,Math.max(0,Math.round((scrollY-MG.t)/segH)));
+  const sid=SS[idx],sd=gsd(curP,sid);
+  const sent=sd.sentiment?.mean||0;
+  const gr=sd.growth?.net_growth_score||0;
+  const sidNum=parseInt(sid.replace('S',''));
+  // Barovia fog: S035-S042 (map to our sessions S034,S037,S040)
+  const baroviaSessions=['S034','S037','S040'];
+  if(baroviaSessions.includes(sid))return{type:'fog',intensity:0.6,y:MG.t+idx*segH,viewH:vp.clientHeight};
+  if(sent<-2)return{type:'rain',intensity:Math.min(1,(-sent-2)/4),y:MG.t+idx*segH,viewH:vp.clientHeight};
+  if(sent>3)return{type:'sunshine',intensity:Math.min(1,(sent-3)/4),y:MG.t+idx*segH,viewH:vp.clientHeight};
+  if(gr>3)return{type:'sparkles',intensity:Math.min(1,(gr-3)/8),y:MG.t+idx*segH,viewH:vp.clientHeight};
+  return{type:'clear',intensity:0,y:MG.t+idx*segH,viewH:vp.clientHeight};
+}
+
+function spawnWeatherParticle(weather,canvasW){
+  const p={};
+  const baseY=weather.y-weather.viewH/2;
+  const rangeH=weather.viewH*1.5;
+  switch(weather.type){
+    case 'rain':
+      p.x=Math.random()*canvasW;
+      p.y=baseY+Math.random()*rangeH;
+      p.vx=-1.5-Math.random()*2;p.vy=6+Math.random()*4;
+      p.life=1;p.maxLife=1;p.size=1+Math.random();
+      p.color='rgba(120,140,180,';break;
+    case 'sunshine':
+      p.x=canvasW*0.8+Math.random()*canvasW*0.2;
+      p.y=baseY+Math.random()*rangeH*0.6;
+      p.vx=-0.3-Math.random()*0.5;p.vy=0.8+Math.random()*1.2;
+      p.life=1;p.maxLife=1;p.size=2+Math.random()*3;
+      p.color='rgba(255,215,0,';break;
+    case 'fog':
+      p.x=Math.random()*canvasW;
+      p.y=baseY+Math.random()*rangeH;
+      p.vx=0.3+Math.random()*0.6;p.vy=-0.1+Math.random()*0.2;
+      p.life=1;p.maxLife=1;p.size=20+Math.random()*40;
+      p.color='rgba(100,100,120,';break;
+    case 'sparkles':
+      p.x=Math.random()*canvasW;
+      p.y=baseY+Math.random()*rangeH;
+      p.vx=(Math.random()-0.5)*0.3;p.vy=-0.5-Math.random()*0.5;
+      p.life=1;p.maxLife=1;p.size=1+Math.random()*2;
+      p.twinkle=Math.random()*Math.PI*2;
+      p.color='rgba(255,215,0,';break;
+    default:return null;
+  }
+  return p;
+}
+
+function animateWeather(){
+  if(!weatherCtx)return;
+  const canvas=document.getElementById('weather-canvas');
+  const W=canvas.width,H=canvas.height;
+  weatherCtx.clearRect(0,0,W,H);
+  const weather=getWeatherForScroll();
+
+  // Spawn new particles
+  if(weather.type!=='clear'&&weatherParticles.length<WEATHER_MAX){
+    const toSpawn=Math.min(3,WEATHER_MAX-weatherParticles.length);
+    for(let i=0;i<toSpawn;i++){
+      const np=spawnWeatherParticle(weather,W);
+      if(np)weatherParticles.push(np);
+    }
+  }
+
+  // Update and draw
+  weatherParticles=weatherParticles.filter(p=>{
+    p.x+=p.vx;p.y+=p.vy;p.life-=0.008;
+    if(p.life<=0||p.y>H+50||p.y<-50||p.x<-50||p.x>W+50)return false;
+    const alpha=p.life*0.4*(weather.intensity||0.5);
+    weatherCtx.save();
+    if(weather.type==='fog'){
+      weatherCtx.globalAlpha=alpha*0.15;
+      weatherCtx.beginPath();
+      weatherCtx.arc(p.x,p.y,p.size,0,Math.PI*2);
+      weatherCtx.fillStyle=p.color+alpha*0.15+')';
+      weatherCtx.fill();
+    }else if(weather.type==='rain'){
+      weatherCtx.globalAlpha=alpha;
+      weatherCtx.strokeStyle=p.color+alpha+')';
+      weatherCtx.lineWidth=p.size;
+      weatherCtx.beginPath();
+      weatherCtx.moveTo(p.x,p.y);
+      weatherCtx.lineTo(p.x+p.vx*2,p.y+p.vy*2);
+      weatherCtx.stroke();
+    }else if(weather.type==='sunshine'){
+      weatherCtx.globalAlpha=alpha*0.5;
+      const grad=weatherCtx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.size*3);
+      grad.addColorStop(0,p.color+alpha*0.5+')');
+      grad.addColorStop(1,p.color+'0)');
+      weatherCtx.fillStyle=grad;
+      weatherCtx.beginPath();
+      weatherCtx.arc(p.x,p.y,p.size*3,0,Math.PI*2);
+      weatherCtx.fill();
+    }else if(weather.type==='sparkles'){
+      p.twinkle=(p.twinkle||0)+0.15;
+      const tw=0.3+0.7*Math.abs(Math.sin(p.twinkle));
+      weatherCtx.globalAlpha=alpha*tw;
+      weatherCtx.fillStyle=p.color+alpha*tw+')';
+      weatherCtx.beginPath();
+      weatherCtx.arc(p.x,p.y,p.size,0,Math.PI*2);
+      weatherCtx.fill();
+      // Tiny cross sparkle
+      weatherCtx.strokeStyle=p.color+alpha*tw*0.5+')';
+      weatherCtx.lineWidth=0.5;
+      weatherCtx.beginPath();
+      weatherCtx.moveTo(p.x-p.size*2,p.y);weatherCtx.lineTo(p.x+p.size*2,p.y);
+      weatherCtx.moveTo(p.x,p.y-p.size*2);weatherCtx.lineTo(p.x,p.y+p.size*2);
+      weatherCtx.stroke();
+    }
+    weatherCtx.restore();
+    return true;
+  });
+
+  // Gradually remove particles when weather changes to clear
+  if(weather.type==='clear'&&weatherParticles.length>0){
+    weatherParticles.forEach(p=>p.life-=0.03);
+  }
+
+  weatherAF=requestAnimationFrame(animateWeather);
+}
+
+function init(){
+  document.getElementById('cv').style.minHeight=CH+'px';
+  buildTabs();genTerrain(curP);
+  const pts=genPath(curP,true);genOverlays(curP,pts,true);
+  updPanel(curP,0);setupScroll();initWeather();
+  let rt;window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>{
+    genTerrain(curP);const p=genPath(curP,false);genOverlays(curP,p,false);initWeather()},200)});
+}
+document.addEventListener('DOMContentLoaded',init);
+</script>
+</body>
+</html>

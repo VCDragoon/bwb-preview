@@ -1,0 +1,1277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PLAYER VOICE FINGERPRINT</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@300;400;600;700&family=Barlow:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #06060c;
+  color: #c8c8e0;
+  font-family: 'Barlow', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+}
+
+.page-container {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 30px 40px 60px;
+}
+
+.page-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 4rem;
+  letter-spacing: 6px;
+  text-align: center;
+  background: linear-gradient(135deg, #00e5ff 0%, #7c4dff 50%, #00e5ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 20px rgba(0,229,255,0.4)) drop-shadow(0 0 40px rgba(124,77,255,0.2));
+  margin-bottom: 4px;
+}
+
+.page-subtitle {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 300;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  text-align: center;
+  color: #7a7a9e;
+  margin-bottom: 30px;
+}
+
+/* Stats bar */
+.stats-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.stat-pill {
+  background: linear-gradient(135deg, rgba(20,20,40,0.9), rgba(30,30,60,0.7));
+  border: 1px solid rgba(100,100,160,0.2);
+  border-radius: 8px;
+  padding: 14px 18px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-pill::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+}
+
+.stat-pill .stat-label {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.75rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #7a7a9e;
+  margin-bottom: 6px;
+}
+
+.stat-pill .stat-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.stat-pill .stat-player {
+  font-family: 'Cinzel', serif;
+  font-size: 0.85rem;
+  margin-top: 4px;
+  opacity: 0.8;
+}
+
+/* Mode toggle */
+.mode-controls {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+}
+
+.mode-btn {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 600;
+  font-size: 0.9rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 10px 24px;
+  border: 1px solid rgba(100,100,160,0.3);
+  border-radius: 6px;
+  background: rgba(20,20,40,0.6);
+  color: #8888aa;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.mode-btn:hover {
+  border-color: rgba(0,229,255,0.5);
+  color: #c8c8e0;
+}
+
+.mode-btn.active {
+  background: linear-gradient(135deg, rgba(0,229,255,0.15), rgba(124,77,255,0.15));
+  border-color: rgba(0,229,255,0.6);
+  color: #00e5ff;
+  box-shadow: 0 0 15px rgba(0,229,255,0.15);
+}
+
+/* Fingerprint grid */
+.fingerprint-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-bottom: 40px;
+}
+
+@media (max-width: 1100px) {
+  .fingerprint-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 700px) {
+  .fingerprint-grid { grid-template-columns: 1fr; }
+  .stats-bar { grid-template-columns: repeat(2, 1fr); }
+}
+
+.fingerprint-card {
+  background: linear-gradient(135deg, rgba(15,15,35,0.95), rgba(25,25,50,0.8));
+  border: 1px solid rgba(100,100,160,0.15);
+  border-radius: 12px;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.3s, box-shadow 0.3s;
+  cursor: pointer;
+}
+
+.fingerprint-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  border-radius: 12px 12px 0 0;
+}
+
+.fingerprint-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+}
+
+.fingerprint-card.selected {
+  border-color: rgba(0,229,255,0.5);
+  box-shadow: 0 0 20px rgba(0,229,255,0.1);
+}
+
+.card-header {
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.player-name {
+  font-family: 'Cinzel', serif;
+  font-size: 1.3rem;
+  font-weight: 600;
+  letter-spacing: 2px;
+}
+
+.char-name {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 300;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: #7a7a9e;
+}
+
+.archetype-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 10px;
+  display: inline-block;
+  margin-top: 4px;
+  border: 1px solid;
+  opacity: 0.7;
+}
+
+.radar-container {
+  width: 100%;
+  aspect-ratio: 1;
+  max-height: 280px;
+  margin: 0 auto;
+  min-height: 200px;
+}
+
+.explain-toggle {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 11px;
+  color: #6b6b8a;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 6px 0 2px;
+  transition: color 0.2s;
+  user-select: none;
+}
+.explain-toggle:hover { color: #a8a8c0; }
+.explain-toggle .explain-arrow {
+  display: inline-block;
+  font-size: 8px;
+  transition: transform 0.2s;
+  margin-right: 4px;
+}
+.explain-toggle.open .explain-arrow { transform: rotate(90deg); }
+.explain-panel {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease, opacity 0.3s ease;
+  opacity: 0;
+}
+.explain-panel.open {
+  max-height: 600px;
+  opacity: 1;
+}
+.explain-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+  border-bottom: 1px solid #1a1a2e;
+}
+.explain-row:last-child { border: none; }
+.explain-axis {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 11px;
+  color: #8888a8;
+  width: 80px;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.explain-bar-track {
+  flex: 1;
+  height: 5px;
+  background: #1a1a2e;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.explain-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
+}
+.explain-raw {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  width: 50px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.explain-why {
+  font-family: 'Barlow', sans-serif;
+  font-size: 10px;
+  color: #555570;
+  padding: 1px 0 3px 86px;
+  line-height: 1.3;
+}
+
+.card-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(100,100,160,0.12);
+}
+
+.card-stat {
+  text-align: center;
+}
+
+.card-stat .cs-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.card-stat .cs-label {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.65rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #7a7a9e;
+}
+
+.card-quote {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(100,100,160,0.08);
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: #9898b0;
+  font-style: italic;
+  min-height: 50px;
+  transition: opacity 0.4s;
+}
+
+.card-quote .quote-label {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.6rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-style: normal;
+  opacity: 0.5;
+  margin-bottom: 3px;
+}
+
+/* Compare overlay */
+.compare-overlay {
+  display: none;
+  background: linear-gradient(135deg, rgba(15,15,35,0.98), rgba(25,25,50,0.95));
+  border: 1px solid rgba(100,100,160,0.2);
+  border-radius: 12px;
+  padding: 30px;
+  margin-bottom: 40px;
+  position: relative;
+}
+
+.compare-overlay.visible { display: block; }
+
+.compare-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.8rem;
+  letter-spacing: 4px;
+  text-align: center;
+  color: #00e5ff;
+  margin-bottom: 4px;
+}
+
+.compare-subtitle {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 300;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  text-align: center;
+  color: #7a7a9e;
+  margin-bottom: 20px;
+}
+
+.compare-chart-container {
+  width: 100%;
+  max-width: 700px;
+  aspect-ratio: 1;
+  margin: 0 auto;
+  min-height: 400px;
+}
+
+.compare-legend {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.85rem;
+  letter-spacing: 1px;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.3s;
+}
+
+.legend-item:hover, .legend-item.active { opacity: 1; }
+
+.legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+/* Compare side-by-side */
+.compare-side {
+  display: none;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 24px;
+  margin-bottom: 40px;
+  align-items: start;
+}
+
+.compare-side.visible { display: grid; }
+
+.compare-panel {
+  background: linear-gradient(135deg, rgba(15,15,35,0.95), rgba(25,25,50,0.8));
+  border: 1px solid rgba(100,100,160,0.15);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.compare-panel .panel-name {
+  font-family: 'Cinzel', serif;
+  font-size: 1.2rem;
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.delta-column {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 60px;
+}
+
+.delta-row {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  text-align: center;
+  padding: 4px 8px;
+  border-radius: 4px;
+  min-height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.delta-row.pos { color: #81C784; }
+.delta-row.neg { color: #E57373; }
+.delta-row.even { color: #7a7a9e; }
+
+/* Gallery */
+.gallery-section {
+  margin-top: 40px;
+}
+
+.gallery-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2rem;
+  letter-spacing: 4px;
+  text-align: center;
+  color: #7c4dff;
+  margin-bottom: 16px;
+}
+
+.gallery-scroll {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding-bottom: 16px;
+  scroll-snap-type: x mandatory;
+}
+
+.gallery-scroll::-webkit-scrollbar { height: 6px; }
+.gallery-scroll::-webkit-scrollbar-track { background: rgba(20,20,40,0.5); border-radius: 3px; }
+.gallery-scroll::-webkit-scrollbar-thumb { background: rgba(100,100,160,0.3); border-radius: 3px; }
+.gallery-scroll::-webkit-scrollbar-thumb:hover { background: rgba(100,100,160,0.5); }
+
+.gallery-card {
+  min-width: 300px;
+  max-width: 320px;
+  background: linear-gradient(135deg, rgba(15,15,35,0.95), rgba(25,25,50,0.8));
+  border: 1px solid rgba(100,100,160,0.12);
+  border-radius: 10px;
+  padding: 16px;
+  scroll-snap-align: start;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+
+.gallery-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+}
+
+.gallery-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+.gallery-card.expanded {
+  min-width: 400px;
+  max-width: 440px;
+}
+
+.gc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.gc-player {
+  font-family: 'Cinzel', serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.gc-session {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  color: #7a7a9e;
+}
+
+.gc-fire {
+  font-size: 0.75rem;
+  letter-spacing: 2px;
+}
+
+.gc-quote {
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: #b8b8d0;
+  margin-bottom: 8px;
+}
+
+.gc-context {
+  font-size: 0.7rem;
+  line-height: 1.4;
+  color: #6a6a8a;
+  display: none;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(100,100,160,0.1);
+}
+
+.gallery-card.expanded .gc-context { display: block; }
+
+.gc-cats {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.gc-cat {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: rgba(100,100,160,0.1);
+  color: #8888aa;
+}
+
+/* Tooltip */
+.fp-tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: rgba(10,10,25,0.95);
+  border: 1px solid rgba(100,100,160,0.3);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: #c8c8e0;
+  z-index: 100;
+  opacity: 0;
+  transition: opacity 0.2s;
+  white-space: nowrap;
+}
+
+.fp-tooltip.visible { opacity: 1; }
+
+/* Pulse animation for vertices */
+@keyframes vertexPulse {
+  0%, 100% { r: 3; opacity: 0.8; }
+  50% { r: 5; opacity: 1; }
+}
+
+@keyframes drawIn {
+  from { stroke-dashoffset: 2000; opacity: 0; }
+  to { stroke-dashoffset: 0; opacity: 1; }
+}
+
+@keyframes fadeScale {
+  from { transform: scale(0.3); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes glowPulse {
+  0%, 100% { filter: drop-shadow(0 0 6px var(--glow-color)); }
+  50% { filter: drop-shadow(0 0 14px var(--glow-color)); }
+}
+</style>
+</head>
+<body>
+
+<div class="page-container">
+  <h1 class="page-title">PLAYER VOICE FINGERPRINT</h1>
+  <p class="page-subtitle">Communication patterns &amp; speaking styles across 46 sessions</p>
+
+  <!-- Stats Bar -->
+  <div class="stats-bar" id="statsBar"></div>
+
+  <!-- Mode Controls -->
+  <div class="mode-controls">
+    <button class="mode-btn active" data-mode="grid" onclick="setMode('grid')">Individual</button>
+    <button class="mode-btn" data-mode="compare-all" onclick="setMode('compare-all')">Compare All</button>
+    <button class="mode-btn" data-mode="compare-two" onclick="setMode('compare-two')">Compare Two</button>
+  </div>
+
+  <!-- Compare All Overlay -->
+  <div class="compare-overlay" id="compareAll">
+    <div class="compare-title">COMPOSITE OVERLAY</div>
+    <div class="compare-subtitle">All six voices superimposed</div>
+    <div class="compare-chart-container" id="compareChart"></div>
+    <div class="compare-legend" id="compareLegend"></div>
+  </div>
+
+  <!-- Compare Two Side-by-Side -->
+  <div class="compare-side" id="compareTwo">
+    <div class="compare-panel" id="compareLeft">
+      <div class="panel-name" id="leftName">Select Player 1</div>
+      <div class="radar-container" id="leftRadar"></div>
+    </div>
+    <div class="delta-column" id="deltaCol"></div>
+    <div class="compare-panel" id="compareRight">
+      <div class="panel-name" id="rightName">Select Player 2</div>
+      <div class="radar-container" id="rightRadar"></div>
+    </div>
+  </div>
+
+  <!-- Fingerprint Grid -->
+  <div class="fingerprint-grid" id="fingerprintGrid"></div>
+
+  <!-- Catchphrase Gallery -->
+  <div class="gallery-section">
+    <div class="gallery-title">CATCHPHRASE &amp; ONE-LINER GALLERY</div>
+    <div class="gallery-scroll" id="galleryScroll"></div>
+  </div>
+</div>
+
+<div class="fp-tooltip" id="tooltip"></div>
+
+<script>
+// ── DATA ──
+const PLAYER_COLORS = {
+  Gradles:"#4A90D9", HT:"#E57373", Mary:"#81C784",
+  Christie:"#BA68C8", Lucy:"#FFB74D", Tenderbittle:"#4DB6AC"
+};
+const PLAYER_CHARS = {
+  Gradles:"Corras", HT:"Ash", Mary:"Billabong",
+  Christie:"Dahlia", Lucy:"Orla", Tenderbittle:"SavannahBelle"
+};
+
+const RAW = {"Gradles":{"sessions":46,"tw":87828,"tt":1970,"awpt":43.9,"ads":15.3,"aic":83.9,"tq":490,"ni":52,"rp":186,"bs":81,"aemo":2.78,"avc":0.783,"afr":3.68,"arch":"The Strategist","qc":81,"cp":[{"s":"S001","t":"What are you doing in my castle?","c":2},{"s":"S013","t":"Let's crackalack in.","c":1},{"s":"S020","t":"Literally.","c":3},{"s":"S023","t":"Womp womp.","c":2},{"s":"S027","t":"Suckers.","c":2},{"s":"S040","t":"Brotherhood without brothers","c":2},{"s":"S044","t":"bite your tongue. You're one step from being the solution.","c":1}],"ol":[{"s":"S001","t":"What are you doing in my castle?","x":"Confronting Morty in the castle"},{"s":"S002","t":"Let's watch a troll fight.","x":"After devising a plan to trick trolls"},{"s":"S003","t":"I'm fully trying to steal from this bot right now.","x":"While the beholder is talking, Corras plots theft."},{"s":"S004","t":"I've picked up a thingy.","x":"After looting shard from goblin"},{"s":"S005","t":"It's boring documents.","x":"Dismissing forged notes during Orla's evaluation"},{"s":"S006","t":"I'm just chilling, really.","x":"When trapped and unable to move in combat"},{"s":"S007","t":"I feel like there'll be a hard reset.","x":"Discussing time travel paradoxes"},{"s":"S008","t":"I am a copy of Corras made by Lilith's followers in their attempt to recreate Lilith's life and party.","x":"Explaining himself to his past self under pressure."},{"s":"S009","t":"We'll open our own ring everything's fine we'll take it the house is going to take a cut it's going to be great","x":"Discussing pit fighting business after being banned"},{"s":"S010","t":"I just... Tear's pretty strong, man.","x":"After casting Moonbeam near the cave"},{"s":"S011","t":"Naturally.","x":"Reacting to a clever plan"},{"s":"S012","t":"I don't really want to risk Fleshy's I do want to risk Fleshy's life","x":"Deciding whether to bring Fleshy to a dangerous meeting"},{"s":"S013","t":"Royal rat thunker, you say. I suppose that is a 15 profession for a half-orc.","x":"Mocking Billabong's accomplishments to the demon."},{"s":"S014","t":"It's a bird, it's a plane, like, that's what I'm saying.","x":"Discussing flying above the castle as a distraction"},{"s":"S015","t":"It's better for my sneakiness if I'm standing still for at least 10 seconds because then I'm undetectable.","x":"Planning the Spark swap ambush."}]},"HT":{"sessions":46,"tw":91546,"tt":1939,"awpt":47.1,"ads":16.0,"aic":79.8,"tq":604,"ni":48,"rp":188,"bs":73,"aemo":3.0,"avc":0.67,"afr":3.75,"arch":"The Strategist","qc":60,"cp":[{"s":"S012","t":"Oh god","c":12},{"s":"S044","t":"we've always been the bad guys i don't think there's any scenario where we have not","c":1}],"ol":[{"s":"S001","t":"Do you come here often?","x":"Trying to flirt with the Etten"},{"s":"S002","t":"I feel like I just bullied a troll.","x":"After aiding in troll distraction plan"},{"s":"S003","t":"I'm going to kill this thing is what I want to do.","x":"After being rescued from the gelatinous cube."},{"s":"S004","t":"I have an idea I have an idea which Meght be really dumb I don't know what this Meght be but maybe it Meght delay them a little bit.","x":"Proposing false trails for Lilith"},{"s":"S005","t":"Guys, I found the Airbnb host. He's still here. This is awkward.","x":"Upon seeing the archmage in the burial site"},{"s":"S006","t":"This is like not at all what you are supposed to do.","x":"When the archmage got too close in combat"},{"s":"S007","t":"I have a really horrifying idea but i don't think we can do it now it involves your skill set.","x":"Discussing feign death spell for Spark"},{"s":"S008","t":"I can dimension door with him out then obviously the moment they will come after us.","x":"Discussing rescue plans for Corras."},{"s":"S009","t":"I am losing my mind","x":"Reacting to chaotic squirrel and cooking scene"},{"s":"S010","t":"Keep your fires yourself, sir.","x":"After Counterspelling the fireball"},{"s":"S011","t":"I don't know if you realize what you gave us but like this is dope this is so good it's so powerful","x":"Discussing bag of holding abuse"},{"s":"S012","t":"I did meet my goal. In fact, I exceeded expectations, if you will.","x":"After triggering a world-ending explosion"},{"s":"S013","t":"You mortals are so presumptuous. You think that I stand here shackled by some lesser human beings will?","x":"Mimicking the demon's arrogance during negotiation."},{"s":"S014","t":"I'm going to look at, I'm going to look at a little bit and say, so how did you kill that person?","x":"Asking Lilith about a past murder casually"},{"s":"S015","t":"I'm a divination wizard. I should always know what's going on.","x":"Explaining why she cast Scrying during the crisis."}]},"Mary":{"sessions":42,"tw":41436,"tt":975,"awpt":41.2,"ads":8.0,"aic":74.9,"tq":217,"ni":17,"rp":89,"bs":16,"aemo":2.19,"avc":0.636,"afr":3.79,"arch":"The Protector","qc":52,"cp":[{"s":"S003","t":"I'm coming.","c":4},{"s":"S007","t":"thunk","c":3},{"s":"S013","t":"Banana pancakes.","c":3},{"s":"S016","t":"Hits, which do not lie","c":2},{"s":"S028","t":"Malchor","c":15}],"ol":[{"s":"S001","t":"I'll carry you.","x":"Offering to carry Corras during the royal procession"},{"s":"S003","t":"Buy a girl a drink first, come on.","x":"Responding to the beholder's dramatic introduction."},{"s":"S004","t":"I want to slam my axe down, like, right in the middle of his... head and like split him down the middle but like not all the way like just most of the way.","x":"Describing critical hit on goblin"},{"s":"S005","t":"Surprise!","x":"Yelling during Orla's mentor arrival"},{"s":"S006","t":"I'm sleek like a panther.","x":"When squeezing through a tight space"},{"s":"S007","t":"It will be a thunk-off, thunk-off, yep, thunk-off.","x":"Joking about fighting past selves"},{"s":"S008","t":"Tell me what you know, witch lady.","x":"Intimidating Madame Zilara during the fortune-telling scene."},{"s":"S009","t":"shut up and drink this","x":"Forcing Eoman to take a healing potion"},{"s":"S013","t":"Breakfast's not a joke.","x":"Defending pancake talk to the demon."},{"s":"S014","t":"I'm just going to go, oops, my bad, I didn't mean to do that.","x":"After accidentally hip-checking Eleazar off a cliff"},{"s":"S016","t":"I'm bigger than the dragon.","x":"After enlarging to large size"},{"s":"S020","t":"Drink holy water, pee on star bomb.","x":"After discovering the solution to a problem"},{"s":"S024","t":"Can't you see we don't want you anymore?","x":"To Gertrude the cyclops"},{"s":"S028","t":"I must. Malchor demands it.","x":"Writing Malchor on everything"},{"s":"S033","t":"Sometimes a girl's got to do some therapeutic thunking.","x":"Smashing zombie skulls"}]},"Christie":{"sessions":45,"tw":77504,"tt":1618,"awpt":46.3,"ads":13.7,"aic":85.0,"tq":426,"ni":55,"rp":157,"bs":66,"aemo":2.84,"avc":0.738,"afr":3.84,"arch":"The Protector","qc":104,"cp":[{"s":"S012","t":"I'm just a baby","c":3},{"s":"S036","t":"Fuck them kids","c":2},{"s":"S044","t":"We're not animals.","c":3},{"s":"S045","t":"We are not animals.","c":2}],"ol":[{"s":"S001","t":"We don't lie in this house, Morty, at least not to each other.","x":"Confronting Morty about lying"},{"s":"S002","t":"There's a friend in the dungeon. A new friend to adopt.","x":"Upon seeing the cave troll"},{"s":"S003","t":"You're coming on really strong right now, and you haven't even told us your name.","x":"Responding to the beholder's threatening monologue."},{"s":"S005","t":"I will lie about nearly anything to the point that I believe in my heart that is the truth.","x":"Confessing in the Hall of Whispers"},{"s":"S006","t":"I can just kiss them with my healing energy.","x":"When casting Mass Cure Wounds"},{"s":"S007","t":"I want to be a ghost story.","x":"Scaring children with Toll the Dead"},{"s":"S009","t":"I see you","x":"Sing-songy warning to hooded figure"},{"s":"S011","t":"We're only mean to Cops and racists in this group","x":"Explaining group morality to toll bandits"},{"s":"S012","t":"I literally killed a person the last time I tried to talk to them","x":"Explaining why Ave should handle NPC interactions"},{"s":"S014","t":"I killed a guy on this day. I killed a guy on this day.","x":"Casually mentioning past murders during a break"},{"s":"S018","t":"Sometimes you go home and your dad is dead.","x":"Commenting on Ave's departure arc"},{"s":"S019","t":"My children. Yes, this is the greatest moment of my life.","x":"Adopting baby frost giants"},{"s":"S025","t":"Bring people in, give them hot chocolate. It's nice until they lie.","x":"Describing her interrogation bureau"},{"s":"S030","t":"You're ugly and I hate you. I take it back if you want to be friends.","x":"Talking to the Ceaseless Maw"},{"s":"S032","t":"Good afternoon, sir. I am of Castle Corras, here to bestow King Corras's sweepstakes.","x":"Running a fake sweepstakes"}]},"Lucy":{"sessions":46,"tw":70517,"tt":1491,"awpt":46.5,"ads":12.6,"aic":85.5,"tq":385,"ni":48,"rp":150,"bs":46,"aemo":2.84,"avc":0.737,"afr":3.61,"arch":"The Heart","qc":66,"cp":[{"s":"S012","t":"Meow","c":5},{"s":"S013","t":"Hello, doggie.","c":2},{"s":"S037","t":"Hope you find your dad.","c":2},{"s":"S044","t":"Just give him some goats, it'll be fine.","c":1}],"ol":[{"s":"S001","t":"Stop, stop, stop.","x":"Yelling at the Etten in Giant to prevent violence"},{"s":"S002","t":"Guys, I think we have to go into the pit.","x":"After communing with the sentient light orb"},{"s":"S005","t":"I once forged a note from Lilith to my mentor but she's not my mentor anymore because she was terrible.","x":"Confessing in the Hall of Whispers"},{"s":"S007","t":"I'm just gonna squeakity squeak on in, but not like obnoxious squeaks.","x":"Planning rat stealth mission"},{"s":"S008","t":"How about we do it Hansel and Gretel style and I leave a trail of good berries.","x":"Suggesting a way to help the injured mercenary."},{"s":"S010","t":"this is for my uncle that you set on fire.","x":"When casting Wrath of Nature"},{"s":"S011","t":"My parents are flowers.","x":"Introducing herself to new companions"},{"s":"S013","t":"I will remember you forever, Mrs. Nibbles.","x":"Farewell to her squirrel companion."},{"s":"S022","t":"They have chosen to be here with us. Wear them prominently, wear them proudly.","x":"Recruiting volunteer spiders"},{"s":"S023","t":"Hey, buddy. You don't want to be here, right? I don't want to be here.","x":"Negotiating with a summoned demon toad"},{"s":"S026","t":"I'm going to take my smoke grenade out and throw it. Roll, Cody, roll.","x":"Saving Cody the demon toad"},{"s":"S027","t":"I'm glad we have evidence of all our choices. Pregnant woman number one.","x":"Recapping Soul Forge decisions"},{"s":"S037","t":"Being engulfed by vines is not the worst thing that's ever happened.","x":"Processing being swallowed by a shambling mound"},{"s":"S039","t":"It was meant to be. He was meant to be mine. I will take him everywhere.","x":"Adopting a demon goat"},{"s":"S043","t":"We're back and committing war crimes like it should be.","x":"End of Barovia arc"}]},"Tenderbittle":{"sessions":38,"tw":49730,"tt":1045,"awpt":46.4,"ads":10.7,"aic":77.9,"tq":244,"ni":33,"rp":96,"bs":19,"aemo":2.24,"avc":0.587,"afr":3.96,"arch":"The Wildcard","qc":49,"cp":[{"s":"S036","t":"Wizards everywhere!","c":5},{"s":"S037","t":"My loins are tingling.","c":3},{"s":"S041","t":"Six, seven.","c":2},{"s":"S044","t":"I was just helping","c":2}],"ol":[{"s":"S001","t":"I'm going to turn this into a casino.","x":"Planning to use a room in the castle"},{"s":"S003","t":"Why are you up under our house?","x":"Questioning the beholder about its presence."},{"s":"S005","t":"I also fucking hate riddles.","x":"Venting in the Hall of Whispers"},{"s":"S015","t":"We can clean up our own mess how about that","x":"Persuading the Temporal Sentinel."},{"s":"S016","t":"Hey, you overgrown turtle. How about you shoot some Spark over here?","x":"Taunting the dragon"},{"s":"S021","t":"I'm from the south, okay?","x":"After misplacing a spell in darkness"},{"s":"S023","t":"I will build a wall and I will make the Cyclops pay for it","x":"Discussing wall spells with party"},{"s":"S026","t":"I'm not frightened. I just don't like living.","x":"After being cocooned by living chains"},{"s":"S031","t":"Murderer! You killed my best friend! I'm not making you shoes ever again.","x":"After Billabong killed Ash under mind control"},{"s":"S032","t":"Why are you shushing me?","x":"When party tries to silence her invisible wizard warnings"},{"s":"S035","t":"INTO THE MINE.","x":"Arriving in Barovia"},{"s":"S036","t":"Wizards, wizards everywhere.","x":"Paranoia madness effect"},{"s":"S038","t":"I drip on all of you.","x":"After getting covered in goo"},{"s":"S039","t":"The only thing I've been cursed with is two left feet and some angry wizards.","x":"Sweet-talking into shelter"},{"s":"S044","t":"It's not my fault that your feeble old mind is weak and easily controlled.","x":"Confronting Lord Isteval"}]}};
+
+const GALLERY = [{"s":"S001","t":"Oh my god we're gonna have a full army, it's gonna be perfect because we're fighting against people who smush magical creatures.","f":5,"tp":"IC","cats":["most_unhinged","funniest"],"ctx":"After the party recruits the Etten instead of fighting it, Lilith immediately turns the moment into a vision for a righteous monster coalition.","p":"Christie"},{"s":"S001","t":"Check the deed, bro. Check the lineage. That shit is mine, dog.","f":5,"tp":"MIXED","cats":["funniest","most_in_character"],"ctx":"Corras is defending his claim to Castle Corras in the middle of a public argument about whether he is actually a king.","p":"Gradles"},{"s":"S005","t":"one time I ate my Meemaw's muffin and I blamed it on the dog.","f":5,"tp":"IC","cats":["funniest","most_in_character"],"ctx":"The party has entered the Hall of Whispers. Billabong reads the inscription, thinks for one beat, and offers the most harmless confession possible.","p":"Mary"},{"s":"S008","t":"I guess my question is does the universe implode or do we both faint?","f":5,"tp":"OOC","cats":["funniest","most_unhinged"],"ctx":"Future-Corras has just been banished back from the Feywild and is standing face-to-face with his own past self.","p":"Gradles"},{"s":"S009","t":"Nobody's ever drawn a picture of me before. Can I take it down and put it in my room?","f":5,"tp":"MIXED","cats":["funniest","most_in_character"],"ctx":"The pit fighting establishment posted a crude mocking portrait of Billabong. Her response is pure delight.","p":"Mary"},{"s":"S010","t":"Keep your fires yourself, sir.","f":5,"tp":"IC","cats":["most_badass","funniest"],"ctx":"Ash counterspells a massive fireball with a deadpan one-liner.","p":"HT"},{"s":"S010","t":"this is for my uncle that you set on fire.","f":5,"tp":"IC","cats":["most_badass","funniest"],"ctx":"Orla decimated twelve enemies with Wrath of Nature, announcing personal vengeance.","p":"Lucy"},{"s":"S012","t":"Guys, it's important that we don't learn any lessons at all throughout this campaign and never die.","f":5,"tp":"OOC","cats":["funniest","most_in_character"],"ctx":"Ash has just triggered a catastrophic chain explosion by casting Shatter on a wagon containing gunpowder barrels.","p":"Christie"},{"s":"S013","t":"Well, you see, I make the best banana pancakes, and I thunk rats.","f":5,"tp":"IC","cats":["funniest","most_in_character"],"ctx":"A towering glabrezu demon demands to know what a half-orc could possibly have accomplished. Corras, playing Billabong, delivers the answer.","p":"Gradles"},{"s":"S016","t":"I'm going to try to use my persuasion to persuade myself to not go into portals.","f":5,"tp":"IC","cats":["funniest","most_unhinged"],"ctx":"Navigating lethal time-portals, Corras announces his action for the turn.","p":"Gradles"},{"s":"S019","t":"My children. Yes, this is the greatest moment of my life. Your names.","f":5,"tp":"IC","cats":["funniest","most_in_character"],"ctx":"After detonating alchemist fire and killing a frost giant, they stumble upon two orphaned baby frost giants. Lilith instantly adopts them.","p":"Christie"},{"s":"S022","t":"They have chosen to be here with us. They've sacrificed much, left their families behind.","f":5,"tp":"IC","cats":["funniest","most_in_character"],"ctx":"Orla recruits nine volunteer spiders to disguise the party as Lolth followers.","p":"Lucy"},{"s":"S023","t":"I will build a wall and I will make the Cyclops pay for it.","f":5,"tp":"OOC","cats":["funniest","most_unhinged"],"ctx":"Debating wall of fire positioning during combat.","p":"Tenderbittle"},{"s":"S025","t":"Oh, I'm trying to own the Material Plane, for sure.","f":5,"tp":"OOC","cats":["most_unhinged","most_in_character"],"ctx":"The DM asks whether the BWB Federation is expansionist. Corras's answer is immediate and totalizing.","p":"Gradles"},{"s":"S026","t":"I'm not frightened. I just don't like living.","f":5,"tp":"OOC","cats":["funniest"],"ctx":"SavannahBelle has just been cocooned by living chains and watched Cody roll toward danger.","p":"Tenderbittle"},{"s":"S027","t":"If you like being dead so much, I'm going to kill you. I'm good with words.","f":5,"tp":"IC","cats":["most_badass","funniest"],"ctx":"Lilith marks a Revenant with her Vow of Enmity and announces her combat taunt.","p":"Christie"},{"s":"S028","t":"This message brought to you by Malchor.","f":5,"tp":"OOC","cats":["funniest","most_unhinged"],"ctx":"The Malchor curse requires Billabong to weave the fiend's name into everything she says.","p":"Mary"},{"s":"S029","t":"Am I stuck on infernal settings?","f":5,"tp":"OOC","cats":["funniest","most_unhinged"],"ctx":"The cursed coin forces Ash to speak Infernal words involuntarily.","p":"HT"},{"s":"S030","t":"You're ugly and I hate you. I take it back if you want to be friends, but for now I hate you.","f":5,"tp":"IC","cats":["funniest","most_badass","most_in_character"],"ctx":"Hoisted into the claw of the Ceaseless Maw, Lilith delivers her opening diplomatic salvo.","p":"Christie"},{"s":"S031","t":"Murderer! You killed my best friend! I'm not making you shoes ever again.","f":5,"tp":"IC","cats":["funniest","most_dramatic"],"ctx":"Billabong was mind-controlled and forced to kill Ash. SavannahBelle charges from grief to the most personal threat possible.","p":"Tenderbittle"},{"s":"S033","t":"Sometimes a girl's got to do some therapeutic thunking.","f":5,"tp":"IC","cats":["funniest","most_badass"],"ctx":"Freshly released from lich-domination, Billabong is mid-combat against a zombie.","p":"Mary"},{"s":"S035","t":"INTO THE MINE.","f":5,"tp":"OOC","cats":["most_badass","funniest"],"ctx":"Arriving in Barovia through a portal. All teleportation scrolls crumble to ash.","p":"Tenderbittle"},{"s":"S036","t":"Wizards, wizards everywhere.","f":5,"tp":"IC","cats":["funniest","most_in_character"],"ctx":"SavannahBelle's madness roll result: extreme paranoia. This becomes her instant catchphrase.","p":"Tenderbittle"},{"s":"S037","t":"Before you judge us, the smart one in our group died, and that's not our fault.","f":5,"tp":"IC","cats":["funniest","most_in_character"],"ctx":"Sarusanda slams her fist after the party burned through all five questions. Lilith offers context.","p":"Christie"},{"s":"S039","t":"It was meant to be. He was meant to be mine. I will take him everywhere with me. Forever.","f":5,"tp":"IC","cats":["most_unhinged","funniest"],"ctx":"The party retrieves a cursed demon goat. Orla adopts it instantly.","p":"Lucy"},{"s":"S040","t":"I bested you at your own game. It's mine now. I've earned this.","f":5,"tp":"IC","cats":["most_badass","most_in_character"],"ctx":"Corras stands before Madam Eva demanding to keep the Deck of Many Things he stole.","p":"Gradles"},{"s":"S041","t":"We used some goo to trap a hoe, right?","f":5,"tp":"IC","cats":["funniest","most_in_character"],"ctx":"Corras recaps subduing Madam Eva with complete nonchalance.","p":"Gradles"},{"s":"S043","t":"We're back and committing war crimes like it should be.","f":5,"tp":"OOC","cats":["funniest","most_unhinged","most_badass"],"ctx":"End of session where the group committed mass suggestion, drugged political rivals, and more.","p":"Lucy"},{"s":"S044","t":"It's not my fault that your feeble old mind is weak and easily controlled.","f":5,"tp":"IC","cats":["most_badass","most_unhinged"],"ctx":"SavannahBelle is confronting Lord Isteval before 30 paladins with drawn swords.","p":"Tenderbittle"},{"s":"S045","t":"I just get some of the SavannahBelle beef to grease themselves up and pull this thing.","f":5,"tp":"OOC","cats":["funniest","most_unhinged"],"ctx":"After causing thousands of peasants to fall with Reverse Gravity.","p":"Tenderbittle"}];
+
+// ── AXIS DEFINITIONS ──
+const AXES = [
+  { key: 'verbosity', label: 'Verbosity', unit: 'wpt' },
+  { key: 'spotlight', label: 'Spotlight', unit: '%' },
+  { key: 'inCharacter', label: 'In-Character', unit: '%' },
+  { key: 'questionAsker', label: 'Question Asker', unit: '' },
+  { key: 'npcConnector', label: 'NPC Connector', unit: '' },
+  { key: 'partyTalker', label: 'Party Talker', unit: '' },
+  { key: 'backstoryDepth', label: 'Backstory', unit: '' },
+  { key: 'emotionalRange', label: 'Emotional Range', unit: '' },
+  { key: 'quotability', label: 'Quotability', unit: '' },
+  { key: 'consistency', label: 'Consistency', unit: '' }
+];
+
+// ── NORMALIZE DATA ──
+const PLAYERS = Object.keys(RAW);
+
+// Min-max normalization with floor of 0.1 so everyone is visually distinguishable
+// Compute blended values: 4 axes use 50% raw + 50% rate to be fair to quieter players
+// The other 6 axes are already rates/percentages
+function getPlayerValues(pn) {
+  const d = RAW[pn];
+  return {
+    verbosity: d.awpt,                          // already a rate (words per turn)
+    spotlight: d.ads,                            // already a percentage
+    inCharacter: d.aic,                          // already a percentage
+    questionAsker: 0.5 * d.tq + 0.5 * (d.tq / d.tt) * 1000,  // blend: raw + per-turn rate (scaled)
+    npcConnector: 0.5 * d.ni + 0.5 * (d.ni / d.sessions) * 50, // blend: raw + per-session rate (scaled)
+    partyTalker: 0.5 * d.rp + 0.5 * (d.rp / d.sessions) * 50,  // blend: raw + per-session rate (scaled)
+    backstoryDepth: 0.5 * d.bs + 0.5 * (d.bs / d.tt) * 2000,   // blend: raw + per-turn rate (scaled)
+    emotionalRange: d.aemo,                      // already a score
+    quotability: d.afr,                          // already a rate
+    consistency: d.avc                           // already a rate
+  };
+}
+
+const BLENDED_KEYS = ['verbosity','spotlight','inCharacter','questionAsker',
+  'npcConnector','partyTalker','backstoryDepth','emotionalRange','quotability','consistency'];
+
+function getMinMax() {
+  const mins = {}, maxs = {};
+  BLENDED_KEYS.forEach(k => { mins[k] = Infinity; maxs[k] = -Infinity; });
+  PLAYERS.forEach(pn => {
+    const vals = getPlayerValues(pn);
+    BLENDED_KEYS.forEach(k => {
+      mins[k] = Math.min(mins[k], vals[k]);
+      maxs[k] = Math.max(maxs[k], vals[k]);
+    });
+  });
+  return { mins, maxs };
+}
+const { mins: MINS, maxs: MAXS } = getMinMax();
+const FLOOR = 0.1;
+
+function normalizePlayer(pn) {
+  const vals = getPlayerValues(pn);
+  const out = {};
+  BLENDED_KEYS.forEach(axis => {
+    const range = MAXS[axis] - MINS[axis];
+    if (range === 0) { out[axis] = 0.5; return; }
+    out[axis] = FLOOR + (1 - FLOOR) * (vals[axis] - MINS[axis]) / range;
+  });
+  return out;
+}
+
+// Explainability: show raw values + why for each axis
+function buildExplainHTML(pn, d, color) {
+  const norm = normalizePlayer(pn);
+  const explanations = [
+    {axis:"Verbosity", raw:`${d.awpt.toFixed(1)} words/turn`, val:norm.verbosity,
+     why:`Average ${d.awpt.toFixed(1)} words per turn across ${d.tt.toLocaleString()} total turns. ${d.awpt > 45 ? "Tends toward longer, more detailed responses." : d.awpt < 42 ? "More concise, action-oriented speaker." : "Middle of the road on turn length."}`},
+    {axis:"Spotlight", raw:`${d.ads.toFixed(1)}% of dialogue`, val:norm.spotlight,
+     why:`Commands ${d.ads.toFixed(1)}% of total session dialogue. ${d.ads > 14 ? "One of the most dominant voices at the table." : d.ads < 10 ? "Takes less space, but makes it count." : "Takes a fair share of the conversation."}`},
+    {axis:"In-Character", raw:`${d.aic.toFixed(1)}% IC`, val:norm.inCharacter,
+     why:`Stays in character ${d.aic.toFixed(1)}% of the time (vs ${(100-d.aic).toFixed(1)}% OOC). ${d.aic > 83 ? "Deeply committed to the character voice." : d.aic < 78 ? "More willing to break character for jokes or strategy." : "Good balance of IC and OOC."}`},
+    {axis:"Questions", raw:`${d.tq} (${(d.tq/d.tt*100).toFixed(1)}%/turn)`, val:norm.questionAsker,
+     why:`Asked ${d.tq} questions total, or ${(d.tq/d.tt*100).toFixed(1)}% of their ${d.tt} turns. Score blends raw count + per-turn rate. ${(d.tq/d.tt) > 0.28 ? "Relentless investigator — questions on almost every 3rd turn." : (d.tq/d.tt) < 0.22 ? "Prefers action over interrogation, but rate is fair for their talk time." : "Solid questioning rate relative to how much they speak."}`},
+    {axis:"NPC Connect", raw:`${d.ni} (${(d.ni/d.sessions).toFixed(1)}/session)`, val:norm.npcConnector,
+     why:`Initiated ${d.ni} NPC interactions across ${d.sessions} sessions (${(d.ni/d.sessions).toFixed(1)} per session). Score blends raw count + per-session rate. ${(d.ni/d.sessions) > 1.1 ? "The party's primary NPC handler — over 1 interaction per session." : (d.ni/d.sessions) < 0.5 ? "Lets others handle NPC diplomacy, but that's per-session rate not raw engagement." : "Engages NPCs at a reasonable rate."}`},
+    {axis:"Party Talk", raw:`${d.rp} (${(d.rp/d.sessions).toFixed(1)}/session)`, val:norm.partyTalker,
+     why:`${d.rp} PC-to-PC roleplay exchanges, or ${(d.rp/d.sessions).toFixed(1)} per session. Score blends raw count + per-session rate. ${(d.rp/d.sessions) > 3.5 ? "Constantly engaging with other party members in character." : (d.rp/d.sessions) < 2.5 ? "More focused on the world than party banter, adjusted for session count." : "Solid party communicator for their attendance."}`},
+    {axis:"Backstory", raw:`${d.bs} (1 per ${d.bs > 0 ? Math.round(d.tt/d.bs) : '∞'} turns)`, val:norm.backstoryDepth,
+     why:`Referenced backstory ${d.bs} times across ${d.tt} turns — once every ${d.bs > 0 ? Math.round(d.tt/d.bs) : '∞'} turns. Score blends raw count + per-turn rate. ${(d.bs/d.tt) > 0.035 ? "Weaves personal history in constantly, even adjusted for talk time." : (d.bs/d.tt) < 0.018 ? "Lives in the present — backstory is rare even proportionally." : "Drops backstory at a fair rate for how much they speak."}`},
+    {axis:"Emot. Range", raw:`${d.aemo.toFixed(2)} avg`, val:norm.emotionalRange,
+     why:`Emotional range score of ${d.aemo.toFixed(2)}/3.0. ${d.aemo > 2.7 ? "Wide emotional spectrum — laughs, cries, rages." : d.aemo < 2.3 ? "More emotionally steady — consistent energy." : "Moderate emotional variety."}`},
+    {axis:"Quotability", raw:`${d.afr.toFixed(2)} fire avg`, val:norm.quotability,
+     why:`Average fire rating of ${d.afr.toFixed(2)}/5.0 across ${d.qc} quoted moments. ${d.afr > 3.8 ? "Almost everything they say is gold." : d.afr < 3.65 ? "Quality over quantity on the one-liners." : "Consistently quotable."}`},
+    {axis:"Consistency", raw:`${(d.avc*100).toFixed(0)}%`, val:norm.consistency,
+     why:`Character voice consistency at ${(d.avc*100).toFixed(0)}%. ${d.avc > 0.73 ? "Rock-solid character voice — always recognizably them." : d.avc < 0.65 ? "More fluid character portrayal — adapts to the moment." : "Generally consistent with some flexibility."}`}
+  ];
+  return explanations.map(e => `
+    <div class="explain-row">
+      <span class="explain-axis">${e.axis}</span>
+      <div class="explain-bar-track"><div class="explain-bar-fill" style="width:${(e.val*100).toFixed(0)}%;background:${color};box-shadow:0 0 4px ${color}"></div></div>
+      <span class="explain-raw" style="color:${color}">${e.raw}</span>
+    </div>
+    <div class="explain-why">${e.why}</div>
+  `).join('');
+}
+
+// Fun unique titles per player
+const PLAYER_TITLES = {
+  Gradles: "The Rogue Who Became King",
+  HT: "The Wizard Who Asks Too Many Questions",
+  Mary: "The One Who Thunks",
+  Christie: "Paladin of Questionable Methods",
+  Lucy: "Adopter of All Creatures, Great and Cursed",
+  Tenderbittle: "Chaos Wrapped in Southern Charm"
+};
+
+function rawValue(pn, key) {
+  const d = RAW[pn];
+  const map = {
+    verbosity: d.awpt, spotlight: d.ads, inCharacter: d.aic,
+    questionAsker: d.tq, npcConnector: d.ni, partyTalker: d.rp,
+    backstoryDepth: d.bs, emotionalRange: d.aemo, quotability: d.afr,
+    consistency: d.avc
+  };
+  return map[key];
+}
+
+// ── RENDER STATS BAR ──
+function renderStatsBar() {
+  const bar = document.getElementById('statsBar');
+
+  // Most verbose
+  let maxVerbose = '', maxVerboseVal = 0;
+  let maxIC = '', maxICVal = 0;
+  let maxQuotable = '', maxQuotableVal = 0;
+  let maxQuestions = '', maxQuestionsVal = 0;
+
+  PLAYERS.forEach(pn => {
+    const d = RAW[pn];
+    if (d.awpt > maxVerboseVal) { maxVerboseVal = d.awpt; maxVerbose = pn; }
+    if (d.aic > maxICVal) { maxICVal = d.aic; maxIC = pn; }
+    if (d.afr > maxQuotableVal) { maxQuotableVal = d.afr; maxQuotable = pn; }
+    if (d.tq > maxQuestionsVal) { maxQuestionsVal = d.tq; maxQuestions = pn; }
+  });
+
+  const stats = [
+    { label: 'Most Verbose', value: maxVerboseVal.toFixed(1) + ' wpt', player: maxVerbose, color: PLAYER_COLORS[maxVerbose] },
+    { label: 'Most In-Character', value: maxICVal.toFixed(1) + '%', player: maxIC, color: PLAYER_COLORS[maxIC] },
+    { label: 'Most Quotable', value: maxQuotableVal.toFixed(2) + ' avg', player: maxQuotable, color: PLAYER_COLORS[maxQuotable] },
+    { label: 'Most Questions', value: maxQuestionsVal.toLocaleString(), player: maxQuestions, color: PLAYER_COLORS[maxQuestions] }
+  ];
+
+  bar.innerHTML = stats.map(s => `
+    <div class="stat-pill" style="--pill-color: ${s.color}">
+      <div style="position:absolute;top:0;left:0;right:0;height:2px;background:${s.color};box-shadow:0 0 10px ${s.color};"></div>
+      <div class="stat-label">${s.label}</div>
+      <div class="stat-value" style="color:${s.color};text-shadow:0 0 8px ${s.color}40;">${s.value}</div>
+      <div class="stat-player" style="color:${s.color};">${PLAYER_CHARS[s.player]} (${s.player})</div>
+    </div>
+  `).join('');
+}
+
+// ── DRAW RADAR CHART ──
+function drawRadar(container, playerNames, options = {}) {
+  const el = typeof container === 'string' ? document.getElementById(container) : container;
+  el.innerHTML = '';
+
+  const rect = el.getBoundingClientRect();
+  const size = Math.min(rect.width || 280, rect.height || 280);
+  const w = size, h = size;
+  const cx = w / 2, cy = h / 2;
+  const maxR = (Math.min(w, h) / 2) - 30;
+  const n = AXES.length;
+  const angleSlice = (2 * Math.PI) / n;
+
+  const svg = d3.select(el).append('svg')
+    .attr('width', '100%')
+    .attr('height', '100%')
+    .attr('viewBox', `0 0 ${w} ${h}`)
+    .attr('preserveAspectRatio', 'xMidYMid meet');
+
+  const defs = svg.append('defs');
+
+  // Glow filter per player
+  playerNames.forEach(pn => {
+    const filter = defs.append('filter')
+      .attr('id', `glow-${pn}`)
+      .attr('x', '-50%').attr('y', '-50%')
+      .attr('width', '200%').attr('height', '200%');
+    filter.append('feGaussianBlur')
+      .attr('in', 'SourceGraphic')
+      .attr('stdDeviation', '3')
+      .attr('result', 'blur');
+    filter.append('feMerge')
+      .selectAll('feMergeNode')
+      .data(['blur', 'SourceGraphic'])
+      .enter().append('feMergeNode')
+      .attr('in', d => d);
+  });
+
+  const g = svg.append('g').attr('transform', `translate(${cx},${cy})`);
+
+  // Grid rings
+  const rings = [0.2, 0.4, 0.6, 0.8, 1.0];
+  rings.forEach(r => {
+    const pts = [];
+    for (let i = 0; i < n; i++) {
+      const angle = angleSlice * i - Math.PI / 2;
+      pts.push([maxR * r * Math.cos(angle), maxR * r * Math.sin(angle)]);
+    }
+    g.append('polygon')
+      .attr('points', pts.map(p => p.join(',')).join(' '))
+      .attr('fill', 'none')
+      .attr('stroke', 'rgba(100,100,160,0.12)')
+      .attr('stroke-width', 0.5);
+  });
+
+  // Axis lines and labels
+  for (let i = 0; i < n; i++) {
+    const angle = angleSlice * i - Math.PI / 2;
+    const x2 = maxR * Math.cos(angle);
+    const y2 = maxR * Math.sin(angle);
+
+    g.append('line')
+      .attr('x1', 0).attr('y1', 0)
+      .attr('x2', x2).attr('y2', y2)
+      .attr('stroke', 'rgba(100,100,160,0.15)')
+      .attr('stroke-width', 0.5);
+
+    const labelR = maxR + 14;
+    const lx = labelR * Math.cos(angle);
+    const ly = labelR * Math.sin(angle);
+
+    g.append('text')
+      .attr('x', lx).attr('y', ly)
+      .attr('text-anchor', 'middle')
+      .attr('dominant-baseline', 'middle')
+      .attr('font-family', "'Barlow Condensed', sans-serif")
+      .attr('font-size', options.labelSize || '8px')
+      .attr('font-weight', 400)
+      .attr('letter-spacing', '0.5px')
+      .attr('fill', '#6a6a8a')
+      .text(AXES[i].label.toUpperCase());
+  }
+
+  // Draw each player's polygon
+  playerNames.forEach((pn, pi) => {
+    const norm = normalizePlayer(pn);
+    const color = PLAYER_COLORS[pn];
+    const vals = AXES.map(a => norm[a.key]);
+
+    const pts = vals.map((v, i) => {
+      const angle = angleSlice * i - Math.PI / 2;
+      return [maxR * v * Math.cos(angle), maxR * v * Math.sin(angle)];
+    });
+
+    // Filled polygon
+    const polygon = g.append('polygon')
+      .attr('points', pts.map(p => p.join(',')).join(' '))
+      .attr('fill', color)
+      .attr('fill-opacity', playerNames.length > 1 ? 0.12 : 0.15)
+      .attr('stroke', color)
+      .attr('stroke-width', playerNames.length > 1 ? 1.5 : 2)
+      .attr('stroke-opacity', playerNames.length > 1 ? 0.7 : 0.9)
+      .attr('filter', `url(#glow-${pn})`)
+      .style('--glow-color', color);
+
+    // Animate draw-in
+    if (options.animate !== false) {
+      const totalLen = polygon.node().getTotalLength ? 2000 : 0;
+      polygon
+        .attr('stroke-dasharray', '2000')
+        .attr('stroke-dashoffset', '2000')
+        .attr('fill-opacity', 0)
+        .transition()
+        .delay(pi * 200 + (options.baseDelay || 0))
+        .duration(1200)
+        .ease(d3.easeCubicOut)
+        .attr('stroke-dashoffset', 0)
+        .attr('fill-opacity', playerNames.length > 1 ? 0.12 : 0.15);
+    }
+
+    // Vertex dots with pulse
+    pts.forEach((pt, i) => {
+      const dot = g.append('circle')
+        .attr('cx', pt[0]).attr('cy', pt[1])
+        .attr('r', 0)
+        .attr('fill', color)
+        .attr('stroke', '#06060c')
+        .attr('stroke-width', 1)
+        .attr('opacity', 0);
+
+      if (options.animate !== false) {
+        dot.transition()
+          .delay(pi * 200 + i * 60 + (options.baseDelay || 0))
+          .duration(400)
+          .attr('r', 3)
+          .attr('opacity', 0.9);
+      } else {
+        dot.attr('r', 3).attr('opacity', 0.9);
+      }
+
+      // Pulse animation for vertex dots
+      if (playerNames.length <= 1) {
+        (function animateDot(dotEl, delay) {
+          function pulse() {
+            dotEl.transition()
+              .duration(1500)
+              .ease(d3.easeSinInOut)
+              .attr('r', 5)
+              .attr('opacity', 1)
+              .transition()
+              .duration(1500)
+              .ease(d3.easeSinInOut)
+              .attr('r', 3)
+              .attr('opacity', 0.8)
+              .on('end', pulse);
+          }
+          setTimeout(pulse, delay + 1500);
+        })(dot, i * 200);
+      }
+
+      // Tooltip on hover
+      dot.on('mouseover', function(event) {
+        const rv = rawValue(pn, AXES[i].key);
+        const unit = AXES[i].unit;
+        let display = typeof rv === 'number' ? (rv % 1 !== 0 ? rv.toFixed(2) : rv) : rv;
+        showTooltip(event, `${pn} / ${AXES[i].label}: ${display}${unit}`);
+        d3.select(this).transition().duration(200).attr('r', 6);
+      })
+      .on('mouseout', function() {
+        hideTooltip();
+        d3.select(this).transition().duration(200).attr('r', 3);
+      });
+    });
+  });
+}
+
+// ── TOOLTIP ──
+const tooltip = document.getElementById('tooltip');
+function showTooltip(event, text) {
+  tooltip.textContent = text;
+  tooltip.classList.add('visible');
+  tooltip.style.left = (event.pageX + 12) + 'px';
+  tooltip.style.top = (event.pageY - 20) + 'px';
+}
+function hideTooltip() {
+  tooltip.classList.remove('visible');
+}
+
+// ── RENDER FINGERPRINT GRID ──
+let quoteIntervals = [];
+
+function renderGrid() {
+  const grid = document.getElementById('fingerprintGrid');
+  grid.innerHTML = '';
+  quoteIntervals.forEach(clearInterval);
+  quoteIntervals = [];
+
+  PLAYERS.forEach((pn, idx) => {
+    const d = RAW[pn];
+    const color = PLAYER_COLORS[pn];
+
+    const card = document.createElement('div');
+    card.className = 'fingerprint-card';
+    card.dataset.player = pn;
+    card.style.setProperty('--accent', color);
+    card.innerHTML = `
+      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${color};box-shadow:0 0 12px ${color};border-radius:12px 12px 0 0;"></div>
+      <div class="card-header">
+        <div class="player-name" style="color:${color};text-shadow:0 0 12px ${color}40;">${pn}</div>
+        <div class="char-name">${PLAYER_CHARS[pn]}</div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#8888a8;font-style:italic;margin:2px 0 4px;letter-spacing:0.5px;">"${PLAYER_TITLES[pn]}"</div>
+        <span class="archetype-tag" style="color:${color};border-color:${color}40;background:${color}10;">${d.arch}</span>
+      </div>
+      <div class="radar-container" id="radar-${pn}"></div>
+      <div class="explain-toggle" onclick="this.parentElement.querySelector('.explain-panel').classList.toggle('open');this.classList.toggle('open');">
+        <span class="explain-arrow">&#9654;</span> Why these scores?
+      </div>
+      <div class="explain-panel" id="explain-${pn}">
+        ${buildExplainHTML(pn, d, color)}
+      </div>
+      <div class="card-stats">
+        <div class="card-stat">
+          <div class="cs-val" style="color:${color};text-shadow:0 0 6px ${color}30;">${d.tw.toLocaleString()}</div>
+          <div class="cs-label">Career Words</div>
+        </div>
+        <div class="card-stat">
+          <div class="cs-val" style="color:${color};text-shadow:0 0 6px ${color}30;">${d.tt.toLocaleString()}</div>
+          <div class="cs-label">Career Turns</div>
+        </div>
+        <div class="card-stat">
+          <div class="cs-val" style="color:${color};text-shadow:0 0 6px ${color}30;">${d.sessions}</div>
+          <div class="cs-label">Sessions</div>
+        </div>
+      </div>
+      <div class="card-quote" id="quote-${pn}">
+        <div class="quote-label">Catchphrase</div>
+        <span class="quote-text"></span>
+      </div>
+    `;
+
+    card.addEventListener('click', () => handleCardClick(pn));
+    grid.appendChild(card);
+
+    // Draw radar after DOM insert
+    requestAnimationFrame(() => {
+      drawRadar(`radar-${pn}`, [pn], { animate: true, baseDelay: idx * 150 });
+    });
+
+    // Rotate quotes
+    const allQuotes = [];
+    (d.cp || []).forEach(q => allQuotes.push({ label: 'Catchphrase', text: `"${q.t}"`, sub: `${q.s} (x${q.c})` }));
+    (d.ol || []).forEach(q => allQuotes.push({ label: 'Best One-Liner', text: `"${q.t}"`, sub: q.x }));
+
+    if (allQuotes.length > 0) {
+      let qi = 0;
+      const quoteEl = card.querySelector('.card-quote');
+
+      function showQuote() {
+        const q = allQuotes[qi % allQuotes.length];
+        quoteEl.style.opacity = 0;
+        setTimeout(() => {
+          quoteEl.innerHTML = `
+            <div class="quote-label">${q.label} &middot; ${q.sub}</div>
+            ${q.text}
+          `;
+          quoteEl.style.opacity = 1;
+        }, 300);
+        qi++;
+      }
+
+      showQuote();
+      const intId = setInterval(showQuote, 6000 + idx * 500);
+      quoteIntervals.push(intId);
+    }
+  });
+}
+
+// ── COMPARE ALL ──
+function renderCompareAll() {
+  const container = document.getElementById('compareChart');
+  container.innerHTML = '';
+
+  requestAnimationFrame(() => {
+    drawRadar('compareChart', PLAYERS, { animate: true, labelSize: '10px' });
+  });
+
+  const legend = document.getElementById('compareLegend');
+  legend.innerHTML = PLAYERS.map(pn => `
+    <div class="legend-item active" data-player="${pn}">
+      <div class="legend-swatch" style="background:${PLAYER_COLORS[pn]};box-shadow:0 0 6px ${PLAYER_COLORS[pn]};"></div>
+      <span style="color:${PLAYER_COLORS[pn]};">${pn} (${PLAYER_CHARS[pn]})</span>
+    </div>
+  `).join('');
+}
+
+// ── COMPARE TWO ──
+let selectedForCompare = [];
+
+function handleCardClick(pn) {
+  if (currentMode !== 'compare-two') return;
+
+  const idx = selectedForCompare.indexOf(pn);
+  if (idx >= 0) {
+    selectedForCompare.splice(idx, 1);
+  } else {
+    if (selectedForCompare.length >= 2) selectedForCompare.shift();
+    selectedForCompare.push(pn);
+  }
+
+  // Update selected state on cards
+  document.querySelectorAll('.fingerprint-card').forEach(c => {
+    c.classList.toggle('selected', selectedForCompare.includes(c.dataset.player));
+  });
+
+  renderCompareTwo();
+}
+
+function renderCompareTwo() {
+  const panel = document.getElementById('compareTwo');
+
+  if (selectedForCompare.length < 2) {
+    panel.classList.remove('visible');
+    return;
+  }
+
+  panel.classList.add('visible');
+
+  const [p1, p2] = selectedForCompare;
+  const c1 = PLAYER_COLORS[p1], c2 = PLAYER_COLORS[p2];
+
+  document.getElementById('leftName').innerHTML = `<span style="color:${c1}">${p1}</span> <span style="color:#7a7a9e;font-size:0.8rem;">(${PLAYER_CHARS[p1]})</span>`;
+  document.getElementById('rightName').innerHTML = `<span style="color:${c2}">${p2}</span> <span style="color:#7a7a9e;font-size:0.8rem;">(${PLAYER_CHARS[p2]})</span>`;
+
+  requestAnimationFrame(() => {
+    drawRadar('leftRadar', [p1], { animate: false });
+    drawRadar('rightRadar', [p2], { animate: false });
+  });
+
+  // Delta column
+  const deltaCol = document.getElementById('deltaCol');
+  const n1 = normalizePlayer(p1), n2 = normalizePlayer(p2);
+
+  deltaCol.innerHTML = AXES.map(a => {
+    const v1 = rawValue(p1, a.key);
+    const v2 = rawValue(p2, a.key);
+    const diff = v1 - v2;
+    const sign = diff > 0 ? '+' : '';
+    const cls = diff > 0.01 ? 'pos' : diff < -0.01 ? 'neg' : 'even';
+    const formatted = typeof v1 === 'number' && v1 % 1 !== 0 ? diff.toFixed(1) : Math.round(diff);
+    return `<div class="delta-row ${cls}" title="${a.label}">
+      <span style="font-size:0.55rem;color:#7a7a9e;margin-right:4px;">${a.label.substring(0,4).toUpperCase()}</span>
+      ${sign}${formatted}
+    </div>`;
+  }).join('');
+}
+
+// ── GALLERY ──
+function renderGallery() {
+  const scroll = document.getElementById('galleryScroll');
+  scroll.innerHTML = '';
+
+  GALLERY.forEach(q => {
+    const color = PLAYER_COLORS[q.p] || '#888';
+    const stars = '\u2605'.repeat(q.f) + '\u2606'.repeat(5 - q.f);
+
+    const card = document.createElement('div');
+    card.className = 'gallery-card';
+    card.innerHTML = `
+      <div style="position:absolute;top:0;left:0;right:0;height:2px;background:${color};box-shadow:0 0 8px ${color};border-radius:10px 10px 0 0;"></div>
+      <div class="gc-header">
+        <span class="gc-player" style="color:${color};">${q.p}</span>
+        <span class="gc-session">${q.s}</span>
+      </div>
+      <div class="gc-fire" style="color:${color};text-shadow:0 0 6px ${color}40;">${stars}</div>
+      <div class="gc-quote">"${q.t}"</div>
+      <div class="gc-cats">
+        ${q.cats.map(c => `<span class="gc-cat">${c.replace('most_','').replace('_',' ')}</span>`).join('')}
+      </div>
+      <div class="gc-context">${q.ctx}</div>
+    `;
+
+    card.addEventListener('click', () => card.classList.toggle('expanded'));
+    scroll.appendChild(card);
+  });
+}
+
+// ── MODE SWITCHING ──
+let currentMode = 'grid';
+
+function setMode(mode) {
+  currentMode = mode;
+
+  document.querySelectorAll('.mode-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === mode);
+  });
+
+  const compareAllEl = document.getElementById('compareAll');
+  const compareTwoEl = document.getElementById('compareTwo');
+  const gridEl = document.getElementById('fingerprintGrid');
+
+  compareAllEl.classList.remove('visible');
+  compareTwoEl.classList.remove('visible');
+
+  // Clear selected states
+  document.querySelectorAll('.fingerprint-card').forEach(c => c.classList.remove('selected'));
+  selectedForCompare = [];
+
+  switch (mode) {
+    case 'grid':
+      gridEl.style.display = 'grid';
+      break;
+    case 'compare-all':
+      gridEl.style.display = 'grid';
+      compareAllEl.classList.add('visible');
+      renderCompareAll();
+      break;
+    case 'compare-two':
+      gridEl.style.display = 'grid';
+      break;
+  }
+}
+
+// ── INIT ──
+renderStatsBar();
+renderGrid();
+renderGallery();
+</script>
+</body>
+</html>

@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QUOTE GALAXY - BWB Campaign</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@300;400;600&family=Barlow:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&family=Crimson+Text:ital,wght@0,400;1,400&family=Cinzel:wght@700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #06060c;
+    color: #e0e0e8;
+    font-family: 'Barlow', sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    position: relative;
+  }
+
+  /* Scanline overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+  }
+
+  /* Star field */
+  .starfield {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+  }
+
+  .star {
+    position: absolute;
+    border-radius: 50%;
+    background: #ffffff;
+  }
+
+  .star.twinkle {
+    animation: twinkle 3s ease-in-out infinite alternate;
+  }
+
+  @keyframes twinkle {
+    0% { opacity: 0.2; }
+    100% { opacity: 0.8; }
+  }
+
+  /* Title */
+  .page-title {
+    position: fixed;
+    top: 24px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    z-index: 100;
+    pointer-events: none;
+  }
+
+  .page-title h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 56px;
+    letter-spacing: 8px;
+    color: #ffd700;
+    text-shadow:
+      0 0 20px rgba(255, 215, 0, 0.5),
+      0 0 60px rgba(255, 215, 0, 0.2);
+    margin-bottom: 4px;
+  }
+
+  .page-title .subtitle {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 14px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #7a7a90;
+  }
+
+  /* Galaxy container */
+  .galaxy {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+  }
+
+  /* Central pulsing core */
+  .core {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #ffd700 0%, rgba(255, 215, 0, 0.4) 40%, transparent 70%);
+    animation: coreBreathe 4s ease-in-out infinite;
+    z-index: 20;
+  }
+
+  @keyframes coreBreathe {
+    0%, 100% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.8; }
+    50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+  }
+
+  /* Orbital rings (visible dashed circles) */
+  .orbit-ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    border: 1px dashed rgba(152, 152, 176, 0.12);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  /* Rotating track containers */
+  .orbit-track {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    border-radius: 50%;
+    z-index: 10;
+  }
+
+  @keyframes orbit-cw {
+    from { transform: translate(-50%, -50%) rotate(0deg); }
+    to { transform: translate(-50%, -50%) rotate(360deg); }
+  }
+
+  @keyframes orbit-ccw {
+    from { transform: translate(-50%, -50%) rotate(360deg); }
+    to { transform: translate(-50%, -50%) rotate(0deg); }
+  }
+
+  /* Quote dot */
+  .quote-dot {
+    position: absolute;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    z-index: 15;
+    opacity: 0.6;
+  }
+
+  .quote-dot:hover {
+    transform: scale(2.5) !important;
+    z-index: 50;
+    opacity: 1 !important;
+  }
+
+  /* Pause orbits on container hover */
+  .galaxy.paused .orbit-track {
+    animation-play-state: paused !important;
+  }
+
+  /* Tooltip */
+  .tooltip {
+    position: fixed;
+    z-index: 1000;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    max-width: 420px;
+    min-width: 280px;
+  }
+
+  .tooltip.active {
+    opacity: 1;
+  }
+
+  .tooltip-card {
+    background: linear-gradient(135deg, rgba(20, 20, 40, 0.97), rgba(10, 10, 25, 0.97));
+    border: 1px solid rgba(255, 215, 0, 0.2);
+    border-radius: 8px;
+    padding: 16px 20px;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 20px rgba(255,215,0,0.08);
+  }
+
+  .tooltip-quote {
+    font-family: 'Crimson Text', serif;
+    font-style: italic;
+    font-size: 16px;
+    line-height: 1.5;
+    color: #e8e0f0;
+    margin-bottom: 12px;
+    border-left: 3px solid var(--player-color, #ffd700);
+    padding-left: 12px;
+  }
+
+  .tooltip-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .tooltip-speaker {
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 1px;
+  }
+
+  .tooltip-session {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #9898b0;
+  }
+
+  .tooltip-fire {
+    font-size: 14px;
+    color: #ff6b35;
+    letter-spacing: 2px;
+  }
+
+  .tooltip-type {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-left: auto;
+  }
+
+  .tooltip-type.IC { background: rgba(76, 175, 80, 0.2); color: #81C784; border: 1px solid rgba(76, 175, 80, 0.3); }
+  .tooltip-type.OOC { background: rgba(255, 183, 77, 0.2); color: #FFB74D; border: 1px solid rgba(255, 183, 77, 0.3); }
+  .tooltip-type.MIXED { background: rgba(100, 100, 200, 0.2); color: #9898d0; border: 1px solid rgba(100, 100, 200, 0.3); }
+
+  .tooltip-cats {
+    margin-top: 8px;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .tooltip-cat {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 3px;
+    background: rgba(255, 215, 0, 0.1);
+    color: #c8b870;
+    border: 1px solid rgba(255, 215, 0, 0.15);
+  }
+
+  /* Stats panel */
+  .stats-panel {
+    position: fixed;
+    top: 90px;
+    left: 24px;
+    z-index: 100;
+    pointer-events: none;
+  }
+
+  .stats-panel .stat {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #6a6a80;
+    margin-bottom: 4px;
+  }
+
+  .stats-panel .stat-value {
+    color: #ffd700;
+    text-shadow: 0 0 6px rgba(255, 215, 0, 0.3);
+  }
+
+  /* Legend */
+  .legend {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+    pointer-events: none;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .legend-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  .legend-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px;
+    letter-spacing: 1px;
+    color: #7a7a90;
+    text-transform: uppercase;
+  }
+
+  .legend-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #5a5a70;
+  }
+</style>
+</head>
+<body>
+
+<div class="starfield" id="starfield"></div>
+
+<div class="page-title">
+  <h1>QUOTE GALAXY</h1>
+  <div class="subtitle">130 Iconic Quotes from 46 Sessions &mdash; BWB Campaign</div>
+</div>
+
+<div class="stats-panel" id="statsPanel">
+  <div class="stat">QUOTES: <span class="stat-value">130</span></div>
+  <div class="stat">MOST QUOTABLE: <span class="stat-value">Christie</span> <span style="color:#5a5a70">(35)</span></div>
+  <div class="stat">HIGHEST FIRE: <span class="stat-value">★★★★★</span></div>
+  <div class="stat">SESSIONS: <span class="stat-value">46</span></div>
+</div>
+
+<div class="galaxy" id="galaxy"></div>
+
+<div class="tooltip" id="tooltip">
+  <div class="tooltip-card">
+    <div class="tooltip-quote" id="tooltipQuote"></div>
+    <div class="tooltip-meta">
+      <span class="tooltip-speaker" id="tooltipSpeaker"></span>
+      <span class="tooltip-session" id="tooltipSession"></span>
+      <span class="tooltip-fire" id="tooltipFire"></span>
+      <span class="tooltip-type" id="tooltipType"></span>
+    </div>
+    <div class="tooltip-cats" id="tooltipCats"></div>
+  </div>
+</div>
+
+<div class="legend" id="legend"></div>
+
+<script>
+// ============================================================
+// DATA - 130 top quotes from BWB Campaign (real extracted data)
+// ============================================================
+const QUOTES = [{"sid":"S001","t":"Oh my god we're gonna have a full army, it's gonna be perfect because we're fighting against people who smush magical creatures. We will have all evil creatures behind us in an army of good and it will be beautiful.","s":"Dahlia","p":"Christie","c":"#BA68C8","fr":5,"is":98,"cats":["most_unhinged","funniest"],"qt":"IC"},{"sid":"S026","t":"I'm going to take my smoke grenade out of my inventory and just throw it at them and be like, roll, Cody, roll.","s":"Orla","p":"Lucy","c":"#FFB74D","fr":5,"is":98,"cats":["funniest","most_unhinged"],"qt":"OOC"},{"sid":"S032","t":"Good afternoon, sir. My name is Dahlia Aurelius, and I am of Castle Corras, here to bestow King Corras's sweepstakes for hard laborers upon thee. King Corras — no problem — no, no, no — this is a government-mandated storytime hour.","s":"Dahlia","p":"Christie","c":"#BA68C8","fr":5,"is":98,"cats":["funniest","most_in_character"],"qt":"IC"},{"sid":"S002","t":"I wish I could just show up to someone's house and they start paying me every month.","s":"Dahlia","p":"Christie","c":"#BA68C8","fr":5,"is":97,"cats":["funniest","honorable_mention"],"qt":"OOC"},{"sid":"S003","t":"Oh, what beautiful purple. Oh, what beautiful purple irises you have.","s":"Dahlia","p":"Christie","c":"#BA68C8","fr":5,"is":97,"cats":["funniest","most_in_character"],"qt":"IC"},{"sid":"S004","t":"She came through on tour already, bro. Like, you missed it. Catch her before Waterdeep, I guess. sucks the suck we'll give you the pre-sale code","s":"Corras","p":"Gradles","c":"#4A90D9","fr":5,"is":97,"cats":["funniest","most_in_character"],"qt":"IC"},{"sid":"S005","t":"one time I ate my Meemaw's muffin and I blamed it on the dog. And then I'm gonna take a step forward.","s":"Billabong","p":"Mary","c":"#81C784","fr":5,"is":97,"cats":["funniest","most_in_character"],"qt":"IC"},{"sid":"S007","t":"I only get to be a child for a few hours oh my god I gotta travel across country. Oh, okay, okay. Perfect. Perfect. I had so, such big plans that were so crushed when I saw the word hours. I want to do that so bad. I want to look exactly like I did the day I arrived under her. It's perfect.","s":"Dahlia","p":"Christie","c":"#BA68C8","fr":5,"is":97,"cats":["funniest","most_unhinged"],"qt":"OOC"},{"sid":"S008","t":"I guess my question is does the universe implode or do we both faint?","s":"Corras","p":"Gradles","c":"#4A90D9","fr":5,"is":97,"cats":["funniest","most_unhinged"],"qt":"OOC"},{"sid":"S009","t":"I'm going to knock some stuff over and be like, screw you guys. I'm out of here. I'm starting my own pit fighting business. And I'm going to leave with my head held high. and slam the door on my way out.","s":"Billabong","p":"Mary","c":"#81C784","fr":5,"is":97,"cats":["most_badass","funniest"],"qt":"IC"},{"sid":"S010","t":"this is for my uncle that you set on fire. The tent can change each time.","s":"Orla","p":"Lucy","c":"#FFB74D","fr":5,"is":97,"cats":["most_badass","funniest"],"qt":"IC"},{"sid":"S011","t":"This is not me. Stop me. Just so y'all know, this is not me. I don't even know.","s":"Ash","p":"HT","c":"#E57373","fr":5,"is":97,"cats":["most_dramatic","most_unhinged"],"qt":"MIXED"},{"sid":"S012","t":"Guys, it's important that we don't learn any lessons at all throughout this campaign and never die. As long as we don't die, we can keep making the same mistakes over and over again.","s":"Dahlia","p":"Christie","c":"#BA68C8","fr":5,"is":97,"cats":["funniest","most_in_character"],"qt":"OOC"},{"sid":"S013","t":"Well, you see, I make the best banana pancakes, and I thunk rats. I'm the village thunker. I'm the royal thunker. We have a royal smasher, but he's not as thunking and smashing.","s":"Corras","p":"Gradles","c":"#4A90D9","fr":5,"is":97,"cats":["funniest","most_in_character"],"qt":"IC"},{"sid":"S014","t":"Banana pancakes! Banana pancakes!","s":"Corras","p":"Gradles","c":"#4A90D9","fr":5,"is":97,"cats":["funniest","most_unhinged"],"qt":"IC"},{"sid":"S016","t":"I'm going to try to use my persuasion to persuade myself to not go into portals into dimensions that aren't of my choosing.","s":"Corras","p":"Gradles","c":"#4A90D9","fr":5,"is":97,"cats":["funniest","most_unhinged"],"qt":"IC"},{"sid":"S017","t":"I'm just taking some notes here... Lilith just wants to become a child again so now her whole cult the cult's whole mission will be trying to turn her into a child and getting the dwarf belt so that she could finally grow a beard as a child.","s":"Dahlia","p":"Christie","c":"#BA68C8","fr":5,"is":97,"cats":["funniest","most_unhinged"],"qt":"OOC"},{"sid":"S018","t":"Sometimes you go home and your dad is dead.","s":"Dahlia","p":"Christie","c":"#BA68C8","fr":5,"is":97,"cats":["most_dramatic","funniest"],"qt":"IC"},{"sid":"S019","t":"My children. Yes, this is the greatest moment of my life. Your names.","s":"Dahlia","p":"Christie","c":"#BA68C8","fr":5,"is":97,"cats":["funniest","most_in_character"],"qt":"IC"},{"sid":"S021","t":"It's totally safe. It will not kill you, I can promise you that, certainly.","s":"Ash","p":"HT","c":"#E57373","fr":5,"is":97,"cats":["funniest","most_unhinged"],"qt":"OOC"},{"sid":"S022","t":"They have chosen to be here with us. They've sacrificed much, left their families behind, their millions of children, so wear them prominently, wear them proudly, just know they've sacrificed a lot.","s":"Orla","p":"Lucy","c":"#FFB74D","fr":5,"is":97,"cats":["funniest","most_in_character"],"qt":"IC"},{"sid":"S023","t":"Hey, buddy. You don't want to be here, right? I don't want to be here. Maybe we could all get out of here together and then you could go your own way.","s":"Orla","p":"Lucy","c":"#FFB74D","fr":5,"is":97,"cats":["most_in_character","funniest"],"qt":"IC"},{"sid":"S023","t":"I will build a wall and I will make the Cyclops pay for it.","s":"SavannahBelle","p":"Tenderbittle","c":"#4DB6AC","fr":5,"is":97,"cats":["funniest","most_unhinged"],"qt":"OOC"},{"sid":"S024","t":"Can't you see we don't want you anymore?","s":"Billabong","p":"Mary","c":"#81C784","fr":5,"is":97,"cats":["most_unhinged","funniest"],"qt":"IC"},{"sid":"S025","t":"Bring people in, bring them to our nice basement, give them hot chocolate. It's nice until they lie. I have a whole thing where if they have to tell me their secrets it's an aura.","s":"Dahlia","p":"Christie","c":"#BA68C8","fr":5,"is":97,"cats":["funniest","most_unhinged"],"qt":"OOC"},{"sid":"S027","t":"I'm glad we have evidence of all of our choices. Oh, that's right, it was me, it was me, that's right, I forgot. I will name the first plants in my garden after them. Pregnant woman number one.","s":"Orla","p":"Lucy","c":"#FFB74D","fr":5,"is":97,"cats":["funniest","most_unhinged"],"qt":"OOC"},{"sid":"S028","t":"I must. Malchor demands it.","s":"Billabong","p":"Mary","c":"#81C784","fr":5,"is":97,"cats":["most_unhinged","funniest"],"qt":"IC"},{"sid":"S029","t":"So we should do this ritual. Not die to Ash. Not die to the Revenants. Get Zimbabottom. Sacrifice Zimbabottom. and then go and sacrifice our humility.","s":"Corras","p":"Gradles","c":"#4A90D9","fr":5,"is":97,"cats":["funniest","most_unhinged"],"qt":"IC"},{"sid":"S030","t":"You're ugly and I hate you. I take it back if you want to be friends, but for now I hate you.","s":"Dahlia","p":"Christie","c":"#BA68C8","fr":5,"is":97,"cats":["funniest","most_badass","most_in_character"],"qt":"IC"},{"sid":"S031","t":"Murderer! You killed my best friend! I'm not making you shoes ever again.","s":"SavannahBelle","p":"Tenderbittle","c":"#4DB6AC","fr":5,"is":97,"cats":["funniest","most_dramatic"],"qt":"IC"},{"sid":"S033","t":"It's a test. We got bamboozled and then we went straight to beat senselessly.","s":"Corras","p":"Gradles","c":"#4A90D9","fr":5,"is":97,"cats":["funniest","most_in_character"],"qt":"OOC"},{"sid":"S034","t":"I'm just gonna go rescue my boy. I hate your brother. He's evil. I don't know. I hate him though. His name is Sarek, Corras backwards. He abandoned you to death. He destroyed my dragon turtle hood with his bare hands. I hate him. Don't worry.","s":"Dahlia","p":"Christie","c":"#BA68C8","fr":5,"is":97,"cats":["funniest","most_in_character","most_dramatic"],"qt":"MIXED"},{"sid":"S035","t":"INTO THE MINE.","s":"SavannahBelle","p":"Tenderbittle","c":"#4DB6AC","fr":5,"is":97,"cats":["most_badass","funniest"],"qt":"OOC"},{"sid":"S036","t":"You guys, they're gonna kidnap me! You have to protect me! There's this dude with this weird hair and he was just — he wanted to make a toast and he said I can't leave and it was an illusion created by a wizard and I drank some blood and it was gross and it tasted like metal. I think it's terminal.","s":"SavannahBelle","p":"Tenderbittle","c":"#4DB6AC","fr":5,"is":97,"cats":["funniest","most_unhinged"],"qt":"IC"},{"sid":"S037","t":"Before you judge us, the smart one in our group died, and that's not our fault.","s":"Dahlia","p":"Christie","c":"#BA68C8","fr":5,"is":97,"cats":["funniest","most_in_character"],"qt":"IC"},{"sid":"S038","t":"I drip on all of you.","s":"SavannahBelle","p":"Tenderbittle","c":"#4DB6AC","fr":5,"is":97,"cats":["funniest","most_in_character"],"qt":"IC"},{"sid":"S039","t":"It was meant to be. He was meant to be mine. I will take him everywhere with me. Forever.","s":"Orla","p":"Lucy","c":"#FFB74D","fr":5,"is":97,"cats":["most_unhinged","funniest"],"qt":"IC"},{"sid":"S040","t":"I bested you at your own game, at the deck's own game. It's mine now. I've earned this.","s":"Corras","p":"Gradles","c":"#4A90D9","fr":5,"is":97,"cats":["most_badass","most_in_character"],"qt":"IC"},{"sid":"S041","t":"We used some goo to trap a hoe, right?","s":"Corras","p":"Gradles","c":"#4A90D9","fr":5,"is":97,"cats":["funniest","most_in_character"],"qt":"IC"},{"sid":"S042","t":"know your true form, hag.","s":"SavannahBelle","p":"Tenderbittle","c":"#4DB6AC","fr":5,"is":97,"cats":["most_badass","most_dramatic","most_in_character"],"qt":"IC"},{"sid":"S044","t":"It's not my fault that your feeble old mind is weak and easily controlled. I didn't see you this upset about the people starving and dying on your watch. But now you're upset because I asked you to do something and you listen?","s":"SavannahBelle","p":"Tenderbittle","c":"#4DB6AC","fr":5,"is":97,"cats":["most_badass","most_unhinged"],"qt":"IC"},{"sid":"S015","t":"My plan is to give him a little kiss on the nose and he'll say yes immediately. That's my plan.","s":"Dahlia","p":"Christie","c":"#BA68C8","fr":5,"is":96,"cats":["funniest","most_in_character"],"qt":"IC"},{"sid":"S019","t":"I am become a dome.","s":"Ash","p":"HT","c":"#E57373","fr":5,"is":96,"cats":["funniest","other"],"qt":"OOC"},{"sid":"S020","t":"Corras is like, oh no, I fucked around, I guess I'm finding out?","s":"Ash","p":"HT","c":"#E57373","fr":5,"is":96,"cats":["funniest","other"],"qt":"OOC"},{"sid":"S043","t":"My soul has already been completely destroyed Based on something that somebody Forced me to do a few months back My oath is Vengeance, baby It's fine","s":"Dahlia","p":"Christie","c":"#BA68C8","fr":5,"is":96,"cats":["most_dramatic","most_in_character","most_badass"],"qt":"IC"},{"sid":"S001","t":"Check the deed, bro. Check the lineage. That shit is mine, dog.","s":"Corras","p":"Gradles","c":"#4A90D9","fr":5,"is":95,"cats":["funniest","most_in_character"],"qt":"MIXED"},{"sid":"S003","t":"Why are you up under our house? Why are you up under our house?","s":"Meijinx","p":"Meijinx","c":"#FF8A65","fr":5,"is":95,"cats":["funniest","most_unhinged"],"qt":"IC"},{"sid":"S004","t":"Alright, yeah, we kill him.","s":"Ash","p":"HT","c":"#E57373","fr":5,"is":95,"cats":["funniest","most_unhinged"],"qt":"OOC"},{"sid":"S005","t":"Guys, I found the Airbnb host. He's still here. This is awkward.","s":"Ash","p":"HT","c":"#E57373","fr":5,"is":95,"cats":["funniest","most_unhinged"],"qt":"OOC"},{"sid":"S008","t":"I'm a little girl with very bony, pigeon-like wrists. I need to know whether I need to scream like she abused me.","s":"Dahlia","p":"Christie","c":"#BA68C8","fr":5,"is":95,"cats":["funniest","most_in_character"],"qt":"IC"},{"sid":"S009","t":"Nobody's ever drawn a picture of me before. Can I take it down and put it in my room? I love it. And she folds it up very carefully and puts it in her pocket.","s":"Billabong","p":"Mary","c":"#81C784","fr":5,"is":95,"cats":["funniest","most_in_character"],"qt":"MIXED"},{"sid":"S012","t":"I was actually trying to aim for the contraption that is a shield to be honest but I don't know if that's... yeah... oh boy this is gonna be yet another incident of Ash using shatter when she probably should not have and I already know that but she did it anyway.","s":"Ash","p":"HT","c":"#E57373","fr":5,"is":95,"cats":["funniest","most_unhinged"],"qt":"OOC"},{"sid":"S020","t":"Drink holy water, pee on star bomb.","s":"Billabong","p":"Mary","c":"#81C784","fr":5,"is":95,"cats":["funniest","most_unhinged"],"qt":"IC"},{"sid":"S021","t":"Can I ask any of these Arch-Mages if they can read it to me because I'm just an idiot king.","s":"Corras","p":"Gradles","c":"#4A90D9","fr":5,"is":95,"cats":["funniest","most_in_character"],"qt":"MIXED"},{"sid":"S023","t":"He triggered me with his wings. I kept thinking of celestials and so I had to kill him. I'm sorry, it's my oath.","s":"Dahlia","p":"Christie","c":"#BA68C8","fr":5,"is":95,"cats":["most_badass","most_in_character"],"qt":"MIXED"},{"sid":"S024","t":"Sometimes I feel bad when I kill the cute celestials I summon, and I pretend I don't feel bad about it.","s":"Dahlia","p":"Christie","c":"#BA68C8","fr":5,"is":95,"cats":["most_in_character","funniest"],"qt":"IC"},{"sid":"S025","t":"We are not the good guys in this equation.","s":"Ash","p":"HT","c":"#E57373","fr":5,"is":95,"cats":["funniest","most_in_character"],"qt":"OOC"},{"sid":"S026","t":"I'm not frightened. I just don't like living.","s":"SavannahBelle","p":"Tenderbittle","c":"#4DB6AC","fr":5,"is":95,"cats":["funniest","other"],"qt":"OOC"},{"sid":"S027","t":"If you like being dead so much, I'm going to kill you. That's what I'm going to say to him. I'm good with words.","s":"Dahlia","p":"Christie","c":"#BA68C8","fr":5,"is":95,"cats":["most_badass","funniest"],"qt":"IC"},{"sid":"S028","t":"This message brought to you by Malchor.","s":"Billabong","p":"Mary","c":"#81C784","fr":5,"is":95,"cats":["funniest","most_unhinged"],"qt":"OOC"},{"sid":"S029","t":"Am I stuck on infernal settings?","s":"Ash","p":"HT","c":"#E57373","fr":5,"is":95,"cats":["funniest","most_unhinged"],"qt":"OOC"},{"sid":"S031","t":"All I know is I stared into your eyes while you smashed her head in with a hammer. So yeah I really hated it.","s":"Dahlia","p":"Christie","c":"#BA68C8","fr":5,"is":95,"cats":["most_dramatic","funniest"],"qt":"IC"},{"sid":"S032","t":"Why are you shushing me?","s":"SavannahBelle","p":"Tenderbittle","c":"#4DB6AC","fr":5,"is":95,"cats":["funniest","most_in_character"],"qt":"IC"},{"sid":"S033","t":"Sometimes a girl's got to do some therapeutic thunking. I want to smash his skull in so hard that he falls down to his knees when I kill him.","s":"Billabong","p":"Mary","c":"#81C784","fr":5,"is":95,"cats":["funniest","most_badass"],"qt":"IC"},{"sid":"S036","t":"Wizards, wizards everywhere.","s":"SavannahBelle","p":"Tenderbittle","c":"#4DB6AC","fr":5,"is":95,"cats":["funniest","most_in_character"],"qt":"IC"},{"sid":"S037","t":"I haven't even met this Juan yet.","s":"SavannahBelle","p":"Tenderbittle","c":"#4DB6AC","fr":5,"is":95,"cats":["funniest","most_unhinged"],"qt":"OOC"},{"sid":"S038","t":"Someone needs to do a medicine check to see if those spinning bloodblades have Hep B on them.","s":"Orla","p":"Lucy","c":"#FFB74D","fr":5,"is":95,"cats":["funniest","most_unhinged"],"qt":"OOC"},{"sid":"S039","t":"The only thing I've been cursed with is two left feet and some angry wizards.","s":"SavannahBelle","p":"Tenderbittle","c":"#4DB6AC","fr":5,"is":95,"cats":["funniest","most_in_character"],"qt":"IC"},{"sid":"S040","t":"Maybe Strahd will help us defeat Vecna. We haven't even asked. Does Strahd have a brother? That's perfect. He's in. He's fated to be part of the crew.","s":"Dahlia","p":"Christie","c":"#BA68C8","fr":5,"is":95,"cats":["funniest","most_unhinged"],"qt":"OOC"},{"sid":"S041","t":"can i use my i think i had a loot or something... can i morph her into a spider and put her on a boat maybe","s":"SavannahBelle","p":"Tenderbittle","c":"#4DB6AC","fr":5,"is":95,"cats":["most_unhinged","funniest"],"qt":"MIXED"},{"sid":"S002","t":"There's a troll with beautiful hair, I will say. Long, beautiful green locks, and also very nice fingernails. Very long, well-shaped fingernails that is in some pool of water.","s":"Dahlia","p":"Christie","c":"#BA68C8","fr":5,"is":94,"cats":["funniest","most_in_character"],"qt":"IC"},{"sid":"S007","t":"I'm being a small tyrant in the castle. I'm being a small tyrant in the castle.","s":"Dahlia","p":"Christie","c":"#BA68C8","fr":5,"is":94,"cats":["funniest","most_in_character"],"qt":"IC"},{"sid":"S010","t":"Keep your fires yourself, sir.","s":"Ash","p":"HT","c":"#E57373","fr":5,"is":94,"cats":["most_badass","funniest"],"qt":"IC"},{"sid":"S014","t":"I'm going to pick up a rock and I'm going to cast light on it. And I'm going to reach out from behind this little barn. And I'm going to start like waving the rock back and forth as if it's a concert. Like it's lighters in the air, you know, at the concert.","s":"Dahlia","p":"Christie","c":"#BA68C8","fr":5,"is":94,"cats":["funniest","most_in_character"],"qt":"IC"},{"sid":"S016","t":"Also, the irony of sending back the one person who actually likes time travel to a certain disturbing degree is not lost on me.","s":"Ash","p":"HT","c":"#E57373","fr":5,"is":94,"cats":["funniest","most_in_character"],"qt":"OOC"},{"sid":"S020","t":"I picked something up, and this thing came down. A little clay thing. I might have instructions in my hand, but I apparently can't read anymore, and I hate it.","s":"Corras","p":"Gradles","c":"#4A90D9","fr":5,"is":94,"cats":["funniest","most_in_character"],"qt":"MIXED"},{"sid":"S029","t":"I acknowledge myself gifted with shadows, I pledge to aid the aid of my companions, I cast aside offered to the demons, no longer charity, no longer protection, only my infernal power remains. In this pact, I deny the light and ascend into darkness.","s":"Billabong","p":"Mary","c":"#81C784","fr":5,"is":94,"cats":["most_dramatic","most_badass"],"qt":"IC"},{"sid":"S037","t":"You know, honestly, gross for Orla being engulfed by a bunch of vines is not the worst thing that's ever happened... like is it great no but is it terrible she's kind of having a fun time kind of familiar you know... so I take 16 damage. Oh it already applied. Holy shit. Okay I take it back. I am actually not having a fun time.","s":"Orla","p":"Lucy","c":"#FFB74D","fr":5,"is":94,"cats":["funniest","most_in_character"],"qt":"OOC"},{"sid":"S043","t":"We're back and committing war crimes like it should be.","s":"Orla","p":"Lucy","c":"#FFB74D","fr":5,"is":94,"cats":["funniest","most_unhinged","most_badass"],"qt":"OOC"},{"sid":"S025","t":"Oh, I'm trying to own the Material Plane, for sure.","s":"Corras","p":"Gradles","c":"#4A90D9","fr":5,"is":93,"cats":["most_unhinged","most_in_character"],"qt":"OOC"},{"sid":"S030","t":"I'm a Dementor now, so I'm just gonna... It's awesome.","s":"Dahlia","p":"Christie","c":"#BA68C8","fr":5,"is":93,"cats":["funniest","most_unhinged"],"qt":"OOC"},{"sid":"S045","t":"I just get some of the SavannahBelle beef to grease themselves up and pull this thing.","s":"SavannahBelle","p":"Tenderbittle","c":"#4DB6AC","fr":5,"is":93,"cats":["funniest","most_unhinged"],"qt":"OOC"},{"sid":"S019","t":"Do you guys like gnomes, and or do you absolutely hate useless freaking elves who have super cool cloaks, so if we find him, we kill him immediately?","s":"Corras","p":"Gradles","c":"#4A90D9","fr":4,"is":94,"cats":["funniest","most_in_character"],"qt":"IC"},{"sid":"S003","t":"Buy a girl a drink first, come on.","s":"Billabong","p":"Mary","c":"#81C784","fr":4,"is":93,"cats":["funniest","most_badass"],"qt":"IC"},{"sid":"S011","t":"My parents are flowers.","s":"Orla","p":"Lucy","c":"#FFB74D","fr":4,"is":93,"cats":["funniest","most_in_character"],"qt":"IC"},{"sid":"S013","t":"None of us have newborns, so I don't know what we could possibly give you. You're asking for a blank cheque that you can cash in at any time.","s":"Ash","p":"HT","c":"#E57373","fr":4,"is":93,"cats":["funniest","most_dramatic"],"qt":"IC"},{"sid":"S015","t":"Plan B is Billabong runs in the front door and starts killing everyone.","s":"Dahlia","p":"Christie","c":"#BA68C8","fr":4,"is":93,"cats":["funniest","most_unhinged"],"qt":"OOC"},{"sid":"S017","t":"I just like the sound of King Corras. We're gonna go with King Corras.","s":"Corras","p":"Gradles","c":"#4A90D9","fr":4,"is":93,"cats":["most_in_character","funniest"],"qt":"IC"},{"sid":"S018","t":"I got 10 fingers and 10 toes, so I could wear 20 rings, right? There's no issue.","s":"Billabong","p":"Mary","c":"#81C784","fr":4,"is":93,"cats":["funniest","most_unhinged"],"qt":"OOC"},{"sid":"S022","t":"I'll just hold the spider up to my face and have it crawl right onto my face. Good, I'm happy, they're happy. So what do we need to do? Do we need to talk to Lolth herself and be like, hey, we need that piece of the rod that you're hiding?","s":"Corras","p":"Gradles","c":"#4A90D9","fr":4,"is":93,"cats":["funniest","most_unhinged"],"qt":"MIXED"},{"sid":"S027","t":"You want to wrestle? Let's wrestle.","s":"Billabong","p":"Mary","c":"#81C784","fr":4,"is":93,"cats":["funniest","most_badass"],"qt":"MIXED"},{"sid":"S031","t":"Am I over here? I just killed Ash, and she's all the way over here.","s":"Billabong","p":"Mary","c":"#81C784","fr":4,"is":93,"cats":["funniest","most_dramatic"],"qt":"OOC"},{"sid":"S035","t":"There is wizard shit everywhere we go. Always a damn wizard.","s":"Ash","p":"HT","c":"#E57373","fr":4,"is":93,"cats":["funniest","most_in_character"],"qt":"OOC"},{"sid":"S036","t":"And I will toast. I hate wizards.","s":"SavannahBelle","p":"Tenderbittle","c":"#4DB6AC","fr":4,"is":93,"cats":["most_badass","funniest"],"qt":"IC"},{"sid":"S038","t":"Can we kill the lady so she stops having contractions?","s":"Corras","p":"Gradles","c":"#4A90D9","fr":4,"is":93,"cats":["most_unhinged","funniest"],"qt":"IC"},{"sid":"S040","t":"I've been playing Dragons and Dungeons by myself. Why does the game have to end? I've killed 50 celestials. It's been marvelous.","s":"Dahlia","p":"Christie","c":"#BA68C8","fr":4,"is":93,"cats":["funniest","most_unhinged"],"qt":"OOC"},{"sid":"S001","t":"This is how feudalism starts, guys.","s":"Dahlia","p":"Christie","c":"#BA68C8","fr":4,"is":92,"cats":["funniest","most_in_character"],"qt":"IC"},{"sid":"S002","t":"you guys want to watch a troll fight we just gotta get one gold coin from one troll to the other troll","s":"Corras","p":"Gradles","c":"#4A90D9","fr":4,"is":92,"cats":["funniest","most_badass"],"qt":"IC"},{"sid":"S004","t":"I want to slam my axe down, like, right in the middle of his... head and like split him down the middle but like not all the way like just most of the way","s":"Billabong","p":"Mary","c":"#81C784","fr":4,"is":92,"cats":["most_badass","funniest"],"qt":"IC"},{"sid":"S008","t":"Tell me what you know, witch lady.","s":"Billabong","p":"Mary","c":"#81C784","fr":4,"is":92,"cats":["most_badass","funniest"],"qt":"IC"},{"sid":"S021","t":"I'm going to make every tavern owner tell me all of their darkest secrets.","s":"Dahlia","p":"Christie","c":"#BA68C8","fr":4,"is":92,"cats":["most_in_character","most_unhinged"],"qt":"IC"},{"sid":"S024","t":"You broke my arm like five minutes ago, girl.","s":"Dahlia","p":"Christie","c":"#BA68C8","fr":4,"is":92,"cats":["funniest","most_in_character"],"qt":"IC"},{"sid":"S026","t":"Hey guys, we got the artifacts and a booger tree. I don't know if you guys have seen that thing, it's gross. Let's go.","s":"Corras","p":"Gradles","c":"#4A90D9","fr":4,"is":92,"cats":["funniest","other"],"qt":"OOC"},{"sid":"S028","t":"Infinite steeds and infinite pies. What more could you need.","s":"Dahlia","p":"Christie","c":"#BA68C8","fr":4,"is":92,"cats":["funniest","most_in_character"],"qt":"IC"},{"sid":"S030","t":"Let's go subjugate some stuff. What a funny prank.","s":"Billabong","p":"Mary","c":"#81C784","fr":4,"is":92,"cats":["funniest","most_unhinged"],"qt":"OOC"},{"sid":"S032","t":"No, I'll get fired, you fool! Can I slap him? Can I? Who are you?","s":"Ash","p":"HT","c":"#E57373","fr":4,"is":92,"cats":["funniest","most_in_character"],"qt":"IC"},{"sid":"S033","t":"So, we went from befriend to bamboozle to beat senselessly.","s":"Dahlia","p":"Christie","c":"#BA68C8","fr":4,"is":92,"cats":["funniest","most_in_character"],"qt":"OOC"},{"sid":"S039","t":"I'm not done talking to this goat. I've got questions.","s":"SavannahBelle","p":"Tenderbittle","c":"#4DB6AC","fr":4,"is":92,"cats":["funniest","most_unhinged"],"qt":"IC"},{"sid":"S041","t":"I can't suck essence out of someone we just robbed.","s":"Orla","p":"Lucy","c":"#FFB74D","fr":4,"is":92,"cats":["funniest","most_in_character"],"qt":"IC"},{"sid":"S044","t":"We are not animals.","s":"Corras","p":"Gradles","c":"#4A90D9","fr":4,"is":92,"cats":["funniest","most_in_character"],"qt":"IC"},{"sid":"S005","t":"He put cameras in the apartment!","s":"Corras","p":"Gradles","c":"#4A90D9","fr":4,"is":91,"cats":["funniest","best_exchange"],"qt":"OOC"},{"sid":"S006","t":"There's a lot of people that don't like me in the Feywilds. This is deeply inconvenient.","s":"Ash","p":"HT","c":"#E57373","fr":4,"is":91,"cats":["funniest","most_in_character"],"qt":"MIXED"},{"sid":"S007","t":"You should start robbing people in the woods. You start crying as a baby in the woods and people come running for help and you just steal all their money.","s":"Corras","p":"Gradles","c":"#4A90D9","fr":4,"is":91,"cats":["funniest","most_unhinged"],"qt":"IC"},{"sid":"S009","t":"Seven days, seven minutes. Time is a weird soup.","s":"Meijinx","p":"Meijinx","c":"#FF8A65","fr":4,"is":91,"cats":["funniest","most_in_character"],"qt":"OOC"},{"sid":"S010","t":"I guess we did mean harm.","s":"Drenek","p":"Drenek","c":"#7986CB","fr":4,"is":91,"cats":["funniest","most_in_character"],"qt":"OOC"},{"sid":"S011","t":"They mostly just had uncontrollable diarrhea. Like, vomiting. Like, spots all over them. And one of them I gave a potion that made him tell his most embarrassing secrets and he couldn't stop so he went home. But yeah, that's pretty much it. I won. I think personally though that potion making showcases my abilities, so honestly somebody else should have thought of it first, and I'm better because I thought of it, so I'm just saying.","s":"Orla","p":"Lucy","c":"#FFB74D","fr":4,"is":91,"cats":["funniest","most_unhinged","most_in_character"],"qt":"IC"},{"sid":"S012","t":"She's meowing telepathically.","s":"Meijinx","p":"Meijinx","c":"#FF8A65","fr":4,"is":91,"cats":["funniest","most_unhinged"],"qt":"OOC"},{"sid":"S013","t":"I guess in a way the hellhound already belonged to me in my heart.","s":"Orla","p":"Lucy","c":"#FFB74D","fr":4,"is":91,"cats":["funniest","most_in_character"],"qt":"IC"},{"sid":"S014","t":"listen it's in character I put in my character description day one that she can't make decisions and that's fine","s":"Dahlia","p":"Christie","c":"#BA68C8","fr":4,"is":91,"cats":["funniest","most_in_character"],"qt":"OOC"},{"sid":"S015","t":"I believe in us. It could happen. We might burn down the castle. It'll be fine. It'll be cool.","s":"Ash","p":"HT","c":"#E57373","fr":4,"is":91,"cats":["funniest","other"],"qt":"OOC"},{"sid":"S016","t":"Hey, you overgrown turtle. How about you shoot some Spark over here?","s":"Meijinx","p":"Meijinx","c":"#FF8A65","fr":4,"is":91,"cats":["most_badass","funniest"],"qt":"IC"},{"sid":"S018","t":"I also want you all to know, before we go into this cave, that I did unprepare shatter on purpose. So we're safe. It's just a second level spell. I do love it, though.","s":"Ash","p":"HT","c":"#E57373","fr":4,"is":91,"cats":["funniest","most_in_character"],"qt":"OOC"},{"sid":"S035","t":"Sir, I've tried. I've tried to be nice, and here's the thing. You can't guarantee us anything and now you give us all this trouble — maybe not you specifically but your friends here — they've given us all this trouble for returning here late when like the universe is at stake but we have our own problems, you're now complaining about your own problems and how your mind space and you forgot to tell us about how we may or may not be able to come back from this place and you may or may not — the greatest wizard of the world — may or may not be going to bring us back to your own home?","s":"Corras","p":"Gradles","c":"#4A90D9","fr":4,"is":91,"cats":["most_in_character","funniest"],"qt":"IC"},{"sid":"S006","t":"do you have any allergies we're making cookies","s":"Dahlia","p":"Christie","c":"#BA68C8","fr":4,"is":90,"cats":["funniest","most_unhinged"],"qt":"OOC"},{"sid":"S017","t":"We didn't get run out of Triboar after we saved them. We just left of our own village.","s":"Ash","p":"HT","c":"#E57373","fr":4,"is":90,"cats":["funniest","other"],"qt":"OOC"},{"sid":"S022","t":"Can I grab Dahlia and Corras and pull them out of the cloud kill? I've got two arms. Corras is itty-bitty.","s":"Billabong","p":"Mary","c":"#81C784","fr":4,"is":90,"cats":["most_badass","funniest"],"qt":"IC"},{"sid":"S046","t":"So we kill her and recruit her mages and problem solved. She feels pretty stonewally but I'll listen to suggestions.","s":"Corras","p":"Gradles","c":"#4A90D9","fr":4,"is":89,"cats":["funniest","most_badass"],"qt":"OOC"},{"sid":"S043","t":"join us or die that's basically the castle Corras like slogan join us or die that's it","s":"Orla","p":"Lucy","c":"#FFB74D","fr":4,"is":88,"cats":["funniest","most_in_character"],"qt":"OOC"},{"sid":"S045","t":"In his last days, Neverember brought his people here for safety. He helped unite the factions, tried to create, you know, unite everyone under a common goal to solve this famine that has taken hold of the kingdom. And we will not let his death be in vain.","s":"SavannahBelle","p":"Tenderbittle","c":"#4DB6AC","fr":4,"is":88,"cats":["most_dramatic","most_in_character"],"qt":"IC"},{"sid":"S042","t":"Shrum, could you please watch your language? / I, hag Vampire, hag / No, you can use the word hag, but just not to denigrate people.","s":"Dahlia","p":"Christie","c":"#BA68C8","fr":4,"is":85,"cats":["funniest","best_exchange"],"qt":"OOC"}];
+
+// ============================================================
+// PLAYER COLORS & CONFIG
+// ============================================================
+const PLAYER_COLORS = {
+  Gradles: '#4A90D9', HT: '#E57373', Mary: '#81C784', Christie: '#BA68C8',
+  Lucy: '#FFB74D', Tenderbittle: '#4DB6AC', Meijinx: '#FF8A65', Drenek: '#7986CB'
+};
+
+const TIER_CONFIG = {
+  5: { radius: 0.14, speed: 90,  label: 'LEGENDARY' },
+  4: { radius: 0.26, speed: 140, label: 'EPIC' },
+  3: { radius: 0.38, speed: 200, label: 'MEMORABLE' },
+  2: { radius: 0.48, speed: 280, label: 'NOTABLE' },
+  1: { radius: 0.56, speed: 360, label: 'WORTHY' },
+};
+
+let activeFilter = null;
+
+// ============================================================
+// STAR FIELD
+// ============================================================
+function createStarfield() {
+  const sf = document.getElementById('starfield');
+  const count = 300;
+  for (let i = 0; i < count; i++) {
+    const star = document.createElement('div');
+    star.className = 'star' + (Math.random() > 0.7 ? ' twinkle' : '');
+    const size = Math.random() * 2 + 0.5;
+    star.style.width = size + 'px';
+    star.style.height = size + 'px';
+    star.style.left = Math.random() * 100 + '%';
+    star.style.top = Math.random() * 100 + '%';
+    star.style.opacity = Math.random() * 0.4 + 0.1;
+    if (star.classList.contains('twinkle')) {
+      star.style.animationDelay = (Math.random() * 5) + 's';
+    }
+    sf.appendChild(star);
+  }
+}
+
+// ============================================================
+// BUILD GALAXY
+// ============================================================
+function buildGalaxy() {
+  const galaxy = document.getElementById('galaxy');
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const minDim = Math.min(vw, vh);
+
+  const galaxySize = minDim * 0.9;
+  galaxy.style.width = galaxySize + 'px';
+  galaxy.style.height = galaxySize + 'px';
+
+  galaxy.innerHTML = '';
+
+  // Core
+  const core = document.createElement('div');
+  core.className = 'core';
+  galaxy.appendChild(core);
+
+  // Filter quotes
+  const visibleQuotes = activeFilter
+    ? QUOTES.filter(q => q.p === activeFilter)
+    : QUOTES;
+
+  // Group by fire_rating
+  const tiers = {};
+  visibleQuotes.forEach(q => {
+    if (!tiers[q.fr]) tiers[q.fr] = [];
+    tiers[q.fr].push(q);
+  });
+
+  // Create orbital rings and dots for each tier
+  for (const [tier, config] of Object.entries(TIER_CONFIG)) {
+    const tierQuotes = tiers[tier] || [];
+    const tierNum = parseInt(tier);
+
+    const ringRadius = config.radius * galaxySize;
+    const ringDiameter = ringRadius * 2;
+
+    // Visible ring
+    const ring = document.createElement('div');
+    ring.className = 'orbit-ring';
+    ring.style.width = ringDiameter + 'px';
+    ring.style.height = ringDiameter + 'px';
+    ring.style.marginLeft = (-ringRadius) + 'px';
+    ring.style.marginTop = (-ringRadius) + 'px';
+    galaxy.appendChild(ring);
+
+    if (tierQuotes.length === 0) continue;
+
+    // Create multiple orbit tracks to avoid clustering
+    const tracksPerTier = Math.max(1, Math.ceil(tierQuotes.length / 10));
+    const quotesPerTrack = Math.ceil(tierQuotes.length / tracksPerTier);
+
+    for (let trackIdx = 0; trackIdx < tracksPerTier; trackIdx++) {
+      const trackQuotes = tierQuotes.slice(trackIdx * quotesPerTrack, (trackIdx + 1) * quotesPerTrack);
+      if (trackQuotes.length === 0) continue;
+
+      const trackRadius = ringRadius + (trackIdx - tracksPerTier / 2) * 8;
+      const trackDiameter = trackRadius * 2;
+
+      const track = document.createElement('div');
+      track.className = 'orbit-track';
+      track.style.width = trackDiameter + 'px';
+      track.style.height = trackDiameter + 'px';
+      track.style.marginLeft = (-trackRadius) + 'px';
+      track.style.marginTop = (-trackRadius) + 'px';
+
+      // Alternate direction: even tiers clockwise, odd tiers counter-clockwise
+      const direction = tierNum % 2 === 0 ? 'orbit-cw' : 'orbit-ccw';
+      const speedVariation = config.speed + (trackIdx * 12);
+      track.style.animation = direction + ' ' + speedVariation + 's linear infinite';
+
+      // Place quote dots around the track
+      trackQuotes.forEach((q, i) => {
+        const angle = (i / trackQuotes.length) * 360 + (Math.random() * 15 - 7.5);
+        const rad = angle * Math.PI / 180;
+
+        // Dot size: 4px + impact_score/20 (range ~4-9px)
+        const dotSize = 4 + q.is / 20;
+
+        const dot = document.createElement('div');
+        dot.className = 'quote-dot';
+        dot.style.width = dotSize + 'px';
+        dot.style.height = dotSize + 'px';
+        dot.style.background = q.c;
+        dot.style.boxShadow = '0 0 ' + dotSize + 'px ' + q.c + '80, 0 0 ' + (dotSize * 2) + 'px ' + q.c + '40';
+
+        // Position on the circular track
+        const x = Math.cos(rad) * trackRadius;
+        const y = Math.sin(rad) * trackRadius;
+        dot.style.left = 'calc(50% + ' + x + 'px - ' + (dotSize/2) + 'px)';
+        dot.style.top = 'calc(50% + ' + y + 'px - ' + (dotSize/2) + 'px)';
+
+        // Hover events
+        dot.addEventListener('mouseenter', (e) => {
+          galaxy.classList.add('paused');
+          showTooltip(e, q);
+        });
+        dot.addEventListener('mouseleave', () => {
+          galaxy.classList.remove('paused');
+          hideTooltip();
+        });
+        dot.addEventListener('mousemove', (e) => {
+          positionTooltip(e);
+        });
+
+        track.appendChild(dot);
+      });
+
+      galaxy.appendChild(track);
+    }
+  }
+}
+
+// ============================================================
+// TOOLTIP
+// ============================================================
+const tooltip = document.getElementById('tooltip');
+const tooltipQuote = document.getElementById('tooltipQuote');
+const tooltipSpeaker = document.getElementById('tooltipSpeaker');
+const tooltipSession = document.getElementById('tooltipSession');
+const tooltipFire = document.getElementById('tooltipFire');
+const tooltipType = document.getElementById('tooltipType');
+const tooltipCats = document.getElementById('tooltipCats');
+
+function showTooltip(e, q) {
+  const displayText = q.t.length > 220 ? q.t.substring(0, 217) + '...' : q.t;
+  tooltipQuote.textContent = '\u201C' + displayText + '\u201D';
+  tooltipQuote.style.setProperty('--player-color', q.c);
+  tooltipSpeaker.textContent = q.s;
+  tooltipSpeaker.style.color = q.c;
+  tooltipSession.textContent = q.sid;
+
+  // Fire rating stars
+  tooltipFire.textContent = '\u2605'.repeat(q.fr);
+
+  tooltipType.textContent = q.qt;
+  tooltipType.className = 'tooltip-type ' + q.qt;
+
+  // Categories
+  tooltipCats.innerHTML = '';
+  (q.cats || []).forEach(cat => {
+    const tag = document.createElement('span');
+    tag.className = 'tooltip-cat';
+    tag.textContent = cat.replace(/_/g, ' ');
+    tooltipCats.appendChild(tag);
+  });
+
+  tooltip.classList.add('active');
+  positionTooltip(e);
+}
+
+function hideTooltip() {
+  tooltip.classList.remove('active');
+}
+
+function positionTooltip(e) {
+  const pad = 16;
+  let x = e.clientX + pad;
+  let y = e.clientY + pad;
+
+  const rect = tooltip.getBoundingClientRect();
+  if (x + rect.width > window.innerWidth - pad) {
+    x = e.clientX - rect.width - pad;
+  }
+  if (y + rect.height > window.innerHeight - pad) {
+    y = e.clientY - rect.height - pad;
+  }
+
+  tooltip.style.left = x + 'px';
+  tooltip.style.top = y + 'px';
+}
+
+// ============================================================
+// LEGEND
+// ============================================================
+function buildLegend() {
+  const legend = document.getElementById('legend');
+  const playerCounts = {};
+  QUOTES.forEach(q => { playerCounts[q.p] = (playerCounts[q.p] || 0) + 1; });
+
+  const sorted = Object.entries(PLAYER_COLORS).sort((a, b) => (playerCounts[b[0]] || 0) - (playerCounts[a[0]] || 0));
+  sorted.forEach(([player, color]) => {
+    const count = playerCounts[player] || 0;
+    if (count === 0) return;
+
+    const item = document.createElement('div');
+    item.className = 'legend-item';
+    item.style.cursor = 'pointer';
+    item.style.pointerEvents = 'auto';
+
+    const swatch = document.createElement('div');
+    swatch.className = 'legend-swatch';
+    swatch.style.background = color;
+    swatch.style.boxShadow = '0 0 6px ' + color + '80';
+
+    const label = document.createElement('span');
+    label.className = 'legend-label';
+    label.textContent = player;
+
+    const countEl = document.createElement('span');
+    countEl.className = 'legend-count';
+    countEl.textContent = '(' + count + ')';
+
+    item.appendChild(swatch);
+    item.appendChild(label);
+    item.appendChild(countEl);
+
+    item.addEventListener('click', () => {
+      if (activeFilter === player) {
+        activeFilter = null;
+        document.querySelectorAll('.legend-item').forEach(el => el.style.opacity = '1');
+      } else {
+        activeFilter = player;
+        document.querySelectorAll('.legend-item').forEach(el => el.style.opacity = '0.3');
+        item.style.opacity = '1';
+      }
+      buildGalaxy();
+    });
+
+    legend.appendChild(item);
+  });
+}
+
+// ============================================================
+// INIT
+// ============================================================
+createStarfield();
+buildGalaxy();
+buildLegend();
+
+window.addEventListener('resize', () => {
+  buildGalaxy();
+});
+</script>
+</body>
+</html>

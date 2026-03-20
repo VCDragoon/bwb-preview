@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DANGER TIMELINE — BWB Campaign</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600&family=Barlow:wght@400;500&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #06060c;
+    color: #e0e0e8;
+    font-family: 'Barlow', sans-serif;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  /* Scanline overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.08) 2px,
+      rgba(0, 0, 0, 0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  .page-header {
+    text-align: center;
+    padding: 48px 24px 12px;
+  }
+
+  .page-header h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 56px;
+    letter-spacing: 6px;
+    color: #ff4444;
+    text-shadow: 0 0 20px rgba(255, 68, 68, 0.6), 0 0 60px rgba(255, 68, 68, 0.2);
+    margin-bottom: 4px;
+  }
+
+  .page-header .subtitle {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 16px;
+    letter-spacing: 3px;
+    color: #9898b0;
+    text-transform: uppercase;
+  }
+
+  .stats-bar {
+    display: flex;
+    justify-content: center;
+    gap: 48px;
+    padding: 20px 24px 8px;
+    flex-wrap: wrap;
+  }
+
+  .stat-item {
+    text-align: center;
+  }
+
+  .stat-item .stat-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 28px;
+    font-weight: 700;
+    color: #ff6b6b;
+    text-shadow: 0 0 12px rgba(255, 107, 107, 0.4);
+  }
+
+  .stat-item .stat-value.amber { color: #ffb74d; text-shadow: 0 0 12px rgba(255, 183, 77, 0.4); }
+  .stat-item .stat-value.green { color: #81c784; text-shadow: 0 0 12px rgba(129, 199, 132, 0.4); }
+
+  .stat-item .stat-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #7a7a90;
+    margin-top: 2px;
+  }
+
+  .chart-container {
+    width: 100%;
+    max-width: 1400px;
+    margin: 24px auto;
+    padding: 0 24px;
+    position: relative;
+  }
+
+  svg { overflow: visible; }
+
+  .axis text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    fill: #7a7a90;
+  }
+
+  .axis line, .axis path {
+    stroke: #2a2a40;
+  }
+
+  .grid line {
+    stroke: #1a1a2e;
+    stroke-dasharray: 2,4;
+  }
+
+  .grid .domain { display: none; }
+
+  .tooltip {
+    position: absolute;
+    background: linear-gradient(135deg, #14142a 0%, #1e1e38 100%);
+    border: 1px solid #3a3a5a;
+    border-radius: 8px;
+    padding: 16px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    z-index: 100;
+    min-width: 280px;
+    max-width: 380px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 20px rgba(255, 68, 68, 0.1);
+  }
+
+  .tooltip.visible { opacity: 1; }
+
+  .tooltip .tt-session {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 2px;
+    color: #ff6b6b;
+    margin-bottom: 8px;
+  }
+
+  .tooltip .tt-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 4px 0;
+  }
+
+  .tooltip .tt-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #7a7a90;
+  }
+
+  .tooltip .tt-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .tooltip .tt-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #3a3a5a, transparent);
+    margin: 8px 0;
+  }
+
+  .tooltip .tt-moment {
+    font-family: 'Barlow', sans-serif;
+    font-size: 12px;
+    color: #b0b0c8;
+    line-height: 1.4;
+    margin-top: 4px;
+    padding-left: 12px;
+    border-left: 2px solid #ff444480;
+  }
+
+  .tooltip .tt-enc-header {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #9898b0;
+    margin-top: 8px;
+    margin-bottom: 4px;
+  }
+
+  .tooltip .tt-enc-item {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #c0c0d8;
+    margin: 3px 0;
+    padding-left: 8px;
+  }
+
+  .encounter-panel {
+    position: absolute;
+    background: linear-gradient(135deg, #14142a 0%, #1e1e38 100%);
+    border: 1px solid #3a3a5a;
+    border-radius: 8px;
+    padding: 20px;
+    z-index: 90;
+    min-width: 320px;
+    max-width: 420px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 20px rgba(255, 68, 68, 0.1);
+    display: none;
+  }
+
+  .encounter-panel.visible { display: block; }
+
+  .encounter-panel .ep-header {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    letter-spacing: 2px;
+    color: #ff6b6b;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .encounter-panel .ep-close {
+    cursor: pointer;
+    font-size: 18px;
+    color: #7a7a90;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: color 0.2s;
+  }
+
+  .encounter-panel .ep-close:hover { color: #ff6b6b; }
+
+  .encounter-panel .ep-encounter {
+    background: rgba(255, 68, 68, 0.05);
+    border: 1px solid rgba(255, 68, 68, 0.15);
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 8px;
+  }
+
+  .encounter-panel .ep-enc-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: #e0e0e8;
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .encounter-panel .ep-enc-tpk {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .encounter-panel .ep-enc-detail {
+    font-family: 'Barlow', sans-serif;
+    font-size: 12px;
+    color: #9898b0;
+    line-height: 1.4;
+    margin-top: 4px;
+  }
+
+  .encounter-panel .ep-enc-detail strong {
+    color: #b0b0c8;
+    font-weight: 500;
+  }
+
+  .legend {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    padding: 8px 24px 24px;
+    flex-wrap: wrap;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #7a7a90;
+  }
+
+  .legend-swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+  }
+
+  .classification-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    fill: #7a7a90;
+  }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>DANGER TIMELINE</h1>
+  <div class="subtitle">TPK Proximity Across 46 Sessions</div>
+</div>
+
+<div class="stats-bar" id="statsBar"></div>
+
+<div class="chart-container" id="chartContainer">
+  <svg id="chart"></svg>
+  <div class="tooltip" id="tooltip"></div>
+  <div class="encounter-panel" id="encounterPanel"></div>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-swatch" style="background:#81c784"></div>Safe (0-20%)</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#ffb74d"></div>Dangerous (20-60%)</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#ff6b6b"></div>Near-Lethal (60-90%)</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#ff2222"></div>TPK Zone (90%+)</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:rgba(255,68,68,0.12); border:1px solid rgba(255,68,68,0.3)"></div>Danger Zone (60%+)</div>
+</div>
+
+<script>
+// ============================================================================
+// REAL DATA from BWB Campaign combat extracts
+// ============================================================================
+const sessionData = [
+  {sid:"S001",num:1,tpk:0,classification:"None",encounterCount:0,hasCombat:false,encounters:[],ohShit:[]},
+  {sid:"S002",num:2,tpk:0,classification:"None",encounterCount:0,hasCombat:false,encounters:[],ohShit:[]},
+  {sid:"S003",num:3,tpk:35,classification:"Moderate",encounterCount:3,hasCombat:true,encounters:[
+    {id:"enc1",tpk:5,difficulty:"Moderate puzzle encounter with psychic damage threat",turning:"Orla's nat 20 wisdom save",downed:0,enemies:2},
+    {id:"enc2",tpk:0,difficulty:"Avoided combat through social encounter with powerful aberration",turning:"Ave's blade dance performance won beholder's favor",downed:0,enemies:0},
+    {id:"enc3",tpk:35,difficulty:"Life-threatening environmental hazard with friendly fire",turning:"Lilith's clutch Heal spell after Ash took 63 total damage",downed:0,enemies:1}
+  ],ohShit:["Ash falls into eldritch slime, instantly takes 35 acid damage","Orla's Sunbeam hits Ash for 28 more damage (friendly fire)","Beholder probes Ave's mind asking why life is worth saving"]},
+  {sid:"S004",num:4,tpk:85,classification:"Near-Lethal",encounterCount:1,hasCombat:true,encounters:[
+    {id:"enc1",tpk:85,difficulty:"Deadly encounter escalated from goblin skirmish to near-TPK when Fomorians were summoned",turning:"Curse Spitter summoning three Fomorians",downed:1,enemies:0}
+  ],ohShit:["Lilith goes down with 2 failed death saves in 2 rounds","Three Fomorians summoned mid-combat","Fomorian earthquake stomp damages entire party"]},
+  {sid:"S005",num:5,tpk:20,classification:"Dangerous",encounterCount:1,hasCombat:true,encounters:[
+    {id:"enc1",tpk:20,difficulty:"Multi-stage boss fight with escalating threats",turning:"Corras' massive aerial sneak attack chunked the Shadow Dragon",downed:0,enemies:1}
+  ],ohShit:["Skeletal Archmage appears mid-combat, infuriated at party","Bone Devil's coordinated multi-attack on Billabong and Ave","Session cliffhanger - Archmage smiling as party lines up"]},
+  {sid:"S006",num:6,tpk:35,classification:"Dangerous",encounterCount:1,hasCombat:true,encounters:[
+    {id:"enc1",tpk:35,difficulty:"Boss fight vs Archmage with Time Stop and 7th-level Fireball",turning:"Party survived through saves and healing after Time Stop",downed:0,enemies:0}
+  ],ohShit:["Archmage casts Time Stop (9th level)","Billabong fails save vs 6th-level Banishment","7th-level Fireball during Time Stop hits 3 PCs"]},
+  {sid:"S007",num:7,tpk:0,classification:"None",encounterCount:0,hasCombat:false,encounters:[],ohShit:[]},
+  {sid:"S008",num:8,tpk:0,classification:"None",encounterCount:0,hasCombat:false,encounters:[],ohShit:[]},
+  {sid:"S009",num:9,tpk:0,classification:"None",encounterCount:0,hasCombat:false,encounters:[],ohShit:[]},
+  {sid:"S010",num:10,tpk:15,classification:"Moderate",encounterCount:1,hasCombat:true,encounters:[
+    {id:"enc1",tpk:15,difficulty:"Initially overwhelming numbers (12+ enemies) but party's opening AOE turned it moderate",turning:"Orla's Wrath of Nature killed 8 enemies instantly",downed:0,enemies:10}
+  ],ohShit:["Sarlumon and Lilith tumbled down hill alerting entire camp","Orla taking 22 damage in one round dropping to critical HP","Eternal Flame Priest attempting 4th-level Fireball at clustered party"]},
+  {sid:"S011",num:11,tpk:0,classification:"None",encounterCount:0,hasCombat:false,encounters:[],ohShit:[]},
+  {sid:"S012",num:12,tpk:98,classification:"Near-Lethal",encounterCount:1,hasCombat:true,encounters:[
+    {id:"enc1",tpk:98,difficulty:"Moderate combat became lethal catastrophe when Ash's Shatter triggered explosive cargo",turning:"Ash casting Shatter on the explosive-laden wagon",downed:0,enemies:6}
+  ],ohShit:["Ash casts Shatter on wagon full of explosives","DM reveals explosion: 454d6+20d4 damage (~1657 damage)","Blast radius extends 300ft full damage, 1500ft total"]},
+  {sid:"S013",num:13,tpk:0,classification:"None",encounterCount:0,hasCombat:false,encounters:[],ohShit:[]},
+  {sid:"S014",num:14,tpk:15,classification:"Moderate",encounterCount:1,hasCombat:true,encounters:[
+    {id:"enc1",tpk:15,difficulty:"Moderate challenge requiring creative problem-solving, non-lethal approach",turning:"Ash casting Resilient Sphere to contain Darendel in hamster ball",downed:0,enemies:0}
+  ],ohShit:["Bedroll plan backfires and triggers Darendel's darkness phobia","Calm Emotions fails on nat 20 save despite DC 18","Ave takes 30 thunder damage from thunderous roar"]},
+  {sid:"S015",num:15,tpk:0,classification:"None",encounterCount:0,hasCombat:false,encounters:[],ohShit:[]},
+  {sid:"S016",num:16,tpk:0,classification:"None",encounterCount:0,hasCombat:true,encounters:[],ohShit:[]},
+  {sid:"S017",num:17,tpk:0,classification:"None",encounterCount:0,hasCombat:false,encounters:[],ohShit:[]},
+  {sid:"S018",num:18,tpk:0,classification:"None",encounterCount:0,hasCombat:false,encounters:[],ohShit:[]},
+  {sid:"S019",num:19,tpk:0,classification:"None",encounterCount:0,hasCombat:false,encounters:[],ohShit:[]},
+  {sid:"S020",num:20,tpk:100,classification:"Near-Lethal",encounterCount:2,hasCombat:true,encounters:[
+    {id:"enc1",tpk:0,difficulty:"Trivial - Ash shut it down with Banishment before combat began",turning:"Ash casting Banishment on turn 1",downed:0,enemies:0},
+    {id:"enc2",tpk:100,difficulty:"Catastrophic environmental hazard TPK",turning:"Corras grabbing the Summer Star orb while fleeing",downed:4,enemies:1}
+  ],ohShit:["Summer Star explodes dealing 118 radiant damage","Ash and Corras fall 50 feet while unconscious","Entire party dies and becomes ghosts"]},
+  {sid:"S021",num:21,tpk:10,classification:"Moderate",encounterCount:1,hasCombat:true,encounters:[
+    {id:"enc1",tpk:10,difficulty:"Strong action economy and control, but enemies have dangerous abilities",turning:"SavannahBelle's Evard's Black Tentacles restraining the Umber Hulk",downed:0,enemies:0}
+  ],ohShit:["Drow Mage's Cloudkill deals 19 damage to two party members","SavannahBelle trapped in cocoon at combat start","Umber Hulk preparing Confusing Gaze for entire party"]},
+  {sid:"S022",num:22,tpk:75,classification:"Brutal",encounterCount:1,hasCombat:true,encounters:[
+    {id:"enc1",tpk:75,difficulty:"Extremely dangerous ambush. Umber Hulk confusion incapacitated 5 of 6 party members",turning:"SavannahBelle passing confusion save and casting twinned Wall of Fire as only functional member",downed:1,enemies:3}
+  ],ohShit:["Nearly entire party fails confusion save, including Dahlia's nat 1 with +14 modifier","Cloud Kill cast on confused, immobilized party","Ash drops to 0 HP while party incapacitated"]},
+  {sid:"S023",num:23,tpk:10,classification:"Moderate",encounterCount:1,hasCombat:true,encounters:[
+    {id:"enc1",tpk:10,difficulty:"Moderate encounter made easier by environmental hazard and creative tactics",turning:"Billabong throwing the mage into the Wall of Fire, instantly killing him",downed:0,enemies:1}
+  ],ohShit:["Mage instantly incinerated in Wall of Fire","Orla swallowed by demon toad"]},
+  {sid:"S024",num:24,tpk:0,classification:"None",encounterCount:0,hasCombat:false,encounters:[],ohShit:[]},
+  {sid:"S025",num:25,tpk:0,classification:"None",encounterCount:0,hasCombat:false,encounters:[],ohShit:[]},
+  {sid:"S026",num:26,tpk:0,classification:"None",encounterCount:0,hasCombat:false,encounters:[],ohShit:[]},
+  {sid:"S027",num:27,tpk:35,classification:"Dangerous",encounterCount:1,hasCombat:true,encounters:[
+    {id:"enc1",tpk:35,difficulty:"Deadly encounter. Wraith Lord's Soul Pulse Aura dealt massive AoE necrotic and healed enemies",turning:"Ash's Banishment of the Wraith Lord removed the primary threat",downed:1,enemies:3}
+  ],ohShit:["Spark instantly killed by Soul Pulse Aura","Billabong's double nat 1 catastrophe opening combat","Soul Pulse Aura dealing 18 damage to 3 PCs and healing all Revenants"]},
+  {sid:"S028",num:28,tpk:0,classification:"None",encounterCount:0,hasCombat:false,encounters:[],ohShit:[]},
+  {sid:"S029",num:29,tpk:0,classification:"None",encounterCount:0,hasCombat:false,encounters:[],ohShit:[]},
+  {sid:"S030",num:30,tpk:0,classification:"None",encounterCount:0,hasCombat:true,encounters:[],ohShit:[]},
+  {sid:"S031",num:31,tpk:85,classification:"Near-Lethal",encounterCount:2,hasCombat:true,encounters:[
+    {id:"enc1",tpk:85,difficulty:"Near-lethal boss fight continuation; multiple downs, paralysis, acid hazard",turning:"Orla's Mass Cure Wounds at 1 HP stabilizing the party",downed:3,enemies:1},
+    {id:"enc2",tpk:5,difficulty:"Moderate encounter made trivial by Ezrella's Steel Wind Strike opening",turning:"Ezrella's Steel Wind Strike instantly killing one Vrock",downed:0,enemies:2}
+  ],ohShit:["Ash killed by mind-controlled Billabong","Orla at 0 HP grappled by Maw with multi-attack incoming","Billabong goes down in acid pool after summoning demons"]},
+  {sid:"S032",num:32,tpk:0,classification:"None",encounterCount:0,hasCombat:true,encounters:[],ohShit:[]},
+  {sid:"S033",num:33,tpk:0,classification:"None",encounterCount:0,hasCombat:true,encounters:[],ohShit:[]},
+  {sid:"S034",num:34,tpk:75,classification:"Near-Lethal",encounterCount:2,hasCombat:true,encounters:[
+    {id:"enc1",tpk:0,difficulty:"Minor threat resolved peacefully through roleplay",turning:"SavannahBelle's sincere emotional apology broke through Wally's defenses",downed:0,enemies:0},
+    {id:"enc2",tpk:75,difficulty:"Deadly high-level boss with extreme time pressure and tethered PC",turning:"Knight's nat 1 friendly fire killed Asnar at 6 HP, stopping ritual",downed:0,enemies:4}
+  ],ohShit:["Corras nat 1 accelerates ritual to complete this round","SavannahBelle reduced to 17 HP by knight focus fire","Asnar down to 6 HP but still alive"]},
+  {sid:"S035",num:35,tpk:0,classification:"None",encounterCount:0,hasCombat:false,encounters:[],ohShit:[]},
+  {sid:"S036",num:36,tpk:70,classification:"Brutal",encounterCount:2,hasCombat:true,encounters:[
+    {id:"enc1",tpk:25,difficulty:"Multi-stage encounter with invisible enemies and environmental hazards",turning:"Corras's critical hit for 85 psychic damage destroyed the wraith",downed:0,enemies:4},
+    {id:"enc2",tpk:70,difficulty:"Extremely dangerous boss fight; enemies transform and gain powers each time killed",turning:"Orla's evacuation of explosive ritual bag prevented potential wipe",downed:0,enemies:0}
+  ],ohShit:["Explosive ritual bag about to detonate - Orla flies it away clutch","Corras paralyzed with soul marked for absorption next turn","Ezrella cursed with vampiric corruption - 3d6 necrotic per turn"]},
+  {sid:"S037",num:37,tpk:40,classification:"Dangerous",encounterCount:1,hasCombat:true,encounters:[
+    {id:"enc1",tpk:40,difficulty:"Soul tattoo parasite mechanic threatening permanent character conversion",turning:"SavannahBelle used twinned Mind Sliver for precise damage, destroying tattoo",downed:0,enemies:0}
+  ],ohShit:["Corras infected with soul tattoo parasitic mechanic"]},
+  {sid:"S038",num:38,tpk:0,classification:"None",encounterCount:0,hasCombat:false,encounters:[],ohShit:[]},
+  {sid:"S039",num:39,tpk:0,classification:"Cakewalk",encounterCount:0,hasCombat:false,encounters:[],ohShit:["Massive tentacled water horror rising from the lake","Dire wolves closing in on party in village square"]},
+  {sid:"S040",num:40,tpk:5,classification:"Cakewalk",encounterCount:1,hasCombat:true,encounters:[
+    {id:"enc1",tpk:5,difficulty:"Long rest interrupted by zombie attack, resolved quickly",turning:"Corras used Rod of Rulership to charm 3 zombies",downed:0,enemies:0}
+  ],ohShit:["Long rest interrupted by zombie attack"]},
+  {sid:"S041",num:41,tpk:70,classification:"Brutal",encounterCount:2,hasCombat:true,encounters:[
+    {id:"enc1",tpk:25,difficulty:"Powerful divination wizard with legendary actions, portent, and time stop",turning:"Corras's Devious Strikes knockout preventing Madam Eva's escape",downed:1,enemies:0},
+    {id:"enc2",tpk:70,difficulty:"Extremely lethal boss encounter with environmental hazards and permanent character transformation",turning:"SavannahBelle drinking cursed blood, leading to vampire conversion",downed:1,enemies:3}
+  ],ohShit:["SavannahBelle converted to vampire spawn by Strahd","Ezrella mind-controlled to stab paralyzed SavannahBelle","Three PCs permanently cursed by Madam Eva's Curse Weaver"]},
+  {sid:"S042",num:42,tpk:45,classification:"Brutal",encounterCount:2,hasCombat:true,encounters:[
+    {id:"enc1",tpk:15,difficulty:"Challenging elite encounter with deadly support casters and high AC",turning:"Corras stunning Rahadin, then Dahlia counterspelling Greater Restoration",downed:0,enemies:3},
+    {id:"enc2",tpk:45,difficulty:"Epic multi-stage boss encounter with charmed PC fighting for villain",turning:"Dahlia destroying Heart of Sorrow at cost of half her HP",downed:1,enemies:1}
+  ],ohShit:["SavannahBelle turned into vampire spawn fighting for Strahd","Van Richten took Power Word Kill to save Zal, dropped to 0 HP","Dahlia took 62 damage (half max HP) to destroy Heart of Sorrow"]},
+  {sid:"S043",num:43,tpk:0,classification:"None",encounterCount:0,hasCombat:false,encounters:[],ohShit:[]},
+  {sid:"S044",num:44,tpk:0,classification:"None",encounterCount:0,hasCombat:false,encounters:[],ohShit:[]},
+  {sid:"S045",num:45,tpk:0,classification:"None",encounterCount:0,hasCombat:true,encounters:[],ohShit:[]},
+  {sid:"S046",num:46,tpk:0,classification:"None",encounterCount:0,hasCombat:false,encounters:[],ohShit:["Orla's critical Insight check failure on the Wild Hunt","One character must permanently leave the party to join the Wild Hunt"]}
+];
+
+// ============================================================================
+// Summary stats
+// ============================================================================
+const combatSessions = sessionData.filter(d => d.tpk > 0);
+const peakTPK = d3.max(sessionData, d => d.tpk);
+const peakSession = sessionData.find(d => d.tpk === peakTPK);
+const avgTPK = d3.mean(combatSessions, d => d.tpk) || 0;
+const nearLethalCount = sessionData.filter(d => d.tpk >= 60).length;
+const totalEncounters = d3.sum(sessionData, d => d.encounters.length);
+
+const statsBar = document.getElementById('statsBar');
+statsBar.innerHTML = `
+  <div class="stat-item"><div class="stat-value">${peakTPK}%</div><div class="stat-label">Peak TPK (${peakSession.sid})</div></div>
+  <div class="stat-item"><div class="stat-value amber">${avgTPK.toFixed(0)}%</div><div class="stat-label">Avg Danger (Combat Sessions)</div></div>
+  <div class="stat-item"><div class="stat-value">${nearLethalCount}</div><div class="stat-label">Near-Lethal Sessions</div></div>
+  <div class="stat-item"><div class="stat-value green">${totalEncounters}</div><div class="stat-label">Total Encounters</div></div>
+  <div class="stat-item"><div class="stat-value amber">${combatSessions.length}</div><div class="stat-label">Combat Sessions</div></div>
+`;
+
+// ============================================================================
+// Chart dimensions
+// ============================================================================
+const container = document.getElementById('chartContainer');
+const margin = { top: 40, right: 30, bottom: 60, left: 60 };
+const width = Math.min(container.clientWidth - 48, 1400) - margin.left - margin.right;
+const height = 420 - margin.top - margin.bottom;
+
+const svg = d3.select('#chart')
+  .attr('width', width + margin.left + margin.right)
+  .attr('height', height + margin.top + margin.bottom)
+  .append('g')
+  .attr('transform', `translate(${margin.left},${margin.top})`);
+
+// ============================================================================
+// Scales
+// ============================================================================
+const x = d3.scaleLinear()
+  .domain([1, 46])
+  .range([0, width]);
+
+const y = d3.scaleLinear()
+  .domain([0, 100])
+  .range([height, 0]);
+
+// ============================================================================
+// Gradient definitions
+// ============================================================================
+const defs = svg.append('defs');
+
+// Area fill gradient (vertical)
+const areaGrad = defs.append('linearGradient')
+  .attr('id', 'areaGrad')
+  .attr('x1', '0').attr('y1', '1')
+  .attr('x2', '0').attr('y2', '0');
+
+areaGrad.append('stop').attr('offset', '0%').attr('stop-color', '#81c784').attr('stop-opacity', 0.02);
+areaGrad.append('stop').attr('offset', '20%').attr('stop-color', '#81c784').attr('stop-opacity', 0.15);
+areaGrad.append('stop').attr('offset', '40%').attr('stop-color', '#ffb74d').attr('stop-opacity', 0.25);
+areaGrad.append('stop').attr('offset', '60%').attr('stop-color', '#ff6b6b').attr('stop-opacity', 0.35);
+areaGrad.append('stop').attr('offset', '80%').attr('stop-color', '#ff4444').attr('stop-opacity', 0.45);
+areaGrad.append('stop').attr('offset', '100%').attr('stop-color', '#ff2222').attr('stop-opacity', 0.55);
+
+// Line gradient (horizontal, based on TPK value)
+const lineGrad = defs.append('linearGradient')
+  .attr('id', 'lineGrad')
+  .attr('gradientUnits', 'userSpaceOnUse')
+  .attr('x1', x(1)).attr('y1', 0)
+  .attr('x2', x(46)).attr('y2', 0);
+
+sessionData.forEach((d, i) => {
+  const pct = (i / (sessionData.length - 1)) * 100;
+  let color;
+  if (d.tpk >= 90) color = '#ff2222';
+  else if (d.tpk >= 60) color = '#ff6b6b';
+  else if (d.tpk >= 20) color = '#ffb74d';
+  else color = '#81c784';
+  lineGrad.append('stop').attr('offset', `${pct}%`).attr('stop-color', color);
+});
+
+// Glow filter
+const glow = defs.append('filter').attr('id', 'glow');
+glow.append('feGaussianBlur').attr('stdDeviation', '3').attr('result', 'coloredBlur');
+const feMerge = glow.append('feMerge');
+feMerge.append('feMergeNode').attr('in', 'coloredBlur');
+feMerge.append('feMergeNode').attr('in', 'SourceGraphic');
+
+// Dot glow filter
+const dotGlow = defs.append('filter').attr('id', 'dotGlow');
+dotGlow.append('feGaussianBlur').attr('stdDeviation', '4').attr('result', 'coloredBlur');
+const feMerge2 = dotGlow.append('feMerge');
+feMerge2.append('feMergeNode').attr('in', 'coloredBlur');
+feMerge2.append('feMergeNode').attr('in', 'SourceGraphic');
+
+// ============================================================================
+// Grid & Axes
+// ============================================================================
+// Horizontal grid
+svg.append('g')
+  .attr('class', 'grid')
+  .call(d3.axisLeft(y)
+    .tickValues([0, 20, 40, 60, 80, 100])
+    .tickSize(-width)
+    .tickFormat('')
+  );
+
+// Danger zone band (60-100%)
+svg.append('rect')
+  .attr('x', 0)
+  .attr('y', y(100))
+  .attr('width', width)
+  .attr('height', y(60) - y(100))
+  .attr('fill', 'rgba(255, 68, 68, 0.06)')
+  .attr('stroke', 'rgba(255, 68, 68, 0.15)')
+  .attr('stroke-dasharray', '4,4');
+
+// Danger zone label
+svg.append('text')
+  .attr('x', width - 8)
+  .attr('y', y(95))
+  .attr('text-anchor', 'end')
+  .attr('class', 'classification-label')
+  .attr('fill', 'rgba(255, 68, 68, 0.4)')
+  .text('DANGER ZONE');
+
+// X Axis
+const xAxis = svg.append('g')
+  .attr('class', 'axis')
+  .attr('transform', `translate(0,${height})`)
+  .call(d3.axisBottom(x)
+    .tickValues(d3.range(1, 47))
+    .tickFormat(d => `S${String(d).padStart(3, '0')}`)
+  );
+
+xAxis.selectAll('text')
+  .attr('transform', 'rotate(-45)')
+  .attr('text-anchor', 'end')
+  .attr('dx', '-4px')
+  .attr('dy', '4px')
+  .style('font-size', '9px');
+
+// Y Axis
+svg.append('g')
+  .attr('class', 'axis')
+  .call(d3.axisLeft(y)
+    .tickValues([0, 20, 40, 60, 80, 100])
+    .tickFormat(d => `${d}%`)
+  );
+
+// Y Axis label
+svg.append('text')
+  .attr('transform', 'rotate(-90)')
+  .attr('x', -height / 2)
+  .attr('y', -45)
+  .attr('text-anchor', 'middle')
+  .attr('fill', '#7a7a90')
+  .style('font-family', 'Barlow Condensed')
+  .style('font-size', '12px')
+  .style('letter-spacing', '2px')
+  .text('TPK PROXIMITY');
+
+// ============================================================================
+// Area chart
+// ============================================================================
+const area = d3.area()
+  .x(d => x(d.num))
+  .y0(height)
+  .y1(d => y(d.tpk))
+  .curve(d3.curveMonotoneX);
+
+const line = d3.line()
+  .x(d => x(d.num))
+  .y(d => y(d.tpk))
+  .curve(d3.curveMonotoneX);
+
+// Area fill
+svg.append('path')
+  .datum(sessionData)
+  .attr('d', area)
+  .attr('fill', 'url(#areaGrad)');
+
+// Line
+svg.append('path')
+  .datum(sessionData)
+  .attr('d', line)
+  .attr('fill', 'none')
+  .attr('stroke', 'url(#lineGrad)')
+  .attr('stroke-width', 2.5)
+  .attr('filter', 'url(#glow)');
+
+// ============================================================================
+// Classification labels above peaks
+// ============================================================================
+const peakSessions = sessionData.filter(d => d.tpk >= 30);
+peakSessions.forEach(d => {
+  const label = d.classification.toUpperCase();
+  if (label === 'NONE' || label === 'CAKEWALK') return;
+  svg.append('text')
+    .attr('x', x(d.num))
+    .attr('y', y(d.tpk) - 18)
+    .attr('text-anchor', 'middle')
+    .attr('class', 'classification-label')
+    .attr('fill', d.tpk >= 60 ? 'rgba(255, 107, 107, 0.7)' : 'rgba(255, 183, 77, 0.7)')
+    .style('font-size', '9px')
+    .text(label);
+});
+
+// ============================================================================
+// Session dots
+// ============================================================================
+function getColor(tpk) {
+  if (tpk >= 90) return '#ff2222';
+  if (tpk >= 60) return '#ff6b6b';
+  if (tpk >= 20) return '#ffb74d';
+  if (tpk > 0) return '#81c784';
+  return '#3a3a5a';
+}
+
+svg.selectAll('.session-dot')
+  .data(sessionData)
+  .join('circle')
+  .attr('class', 'session-dot')
+  .attr('cx', d => x(d.num))
+  .attr('cy', d => y(d.tpk))
+  .attr('r', d => {
+    if (d.encounters.length === 0) return 3;
+    return 4 + d.encounters.length * 1.5;
+  })
+  .attr('fill', d => getColor(d.tpk))
+  .attr('stroke', d => d.tpk > 0 ? getColor(d.tpk) : 'none')
+  .attr('stroke-width', 1)
+  .attr('stroke-opacity', 0.5)
+  .attr('fill-opacity', d => d.tpk > 0 ? 0.85 : 0.3)
+  .attr('filter', d => d.tpk >= 60 ? 'url(#dotGlow)' : null)
+  .style('cursor', d => d.encounters.length > 0 ? 'pointer' : 'default');
+
+// ============================================================================
+// Encounter sub-dots (individual encounters within a session)
+// ============================================================================
+const encounterDots = [];
+sessionData.forEach(d => {
+  if (d.encounters.length > 1) {
+    d.encounters.forEach((enc, i) => {
+      encounterDots.push({
+        ...enc,
+        session: d,
+        sessionNum: d.num,
+        offset: (i - (d.encounters.length - 1) / 2) * 6
+      });
+    });
+  }
+});
+
+// ============================================================================
+// Tooltip
+// ============================================================================
+const tooltip = document.getElementById('tooltip');
+const encounterPanel = document.getElementById('encounterPanel');
+
+svg.selectAll('.session-dot')
+  .on('mouseenter', function(event, d) {
+    const [mx, my] = d3.pointer(event, container);
+
+    let html = `<div class="tt-session">${d.sid}</div>`;
+    html += `<div class="tt-row"><span class="tt-label">TPK Proximity</span><span class="tt-value" style="color:${getColor(d.tpk)}">${d.tpk}%</span></div>`;
+    html += `<div class="tt-row"><span class="tt-label">Classification</span><span class="tt-value" style="color:${getColor(d.tpk)}">${d.classification}</span></div>`;
+    html += `<div class="tt-row"><span class="tt-label">Encounters</span><span class="tt-value" style="color:#e0e0e8">${d.encounters.length || 'None'}</span></div>`;
+
+    if (d.ohShit.length > 0) {
+      html += `<div class="tt-divider"></div>`;
+      html += `<div class="tt-enc-header">Closest Calls</div>`;
+      d.ohShit.slice(0, 2).forEach(m => {
+        const text = typeof m === 'string' ? m : m.description;
+        html += `<div class="tt-moment">${text}</div>`;
+      });
+    }
+
+    if (d.encounters.length > 0) {
+      html += `<div class="tt-divider"></div>`;
+      html += `<div class="tt-enc-header">Encounters</div>`;
+      d.encounters.forEach(enc => {
+        const encColor = getColor(enc.tpk);
+        html += `<div class="tt-enc-item" style="color:${encColor}">${enc.id}: TPK ${enc.tpk}% &bull; ${enc.downed} downed &bull; ${enc.enemies} enemies</div>`;
+      });
+      html += `<div style="margin-top:6px; font-family:'Barlow Condensed'; font-size:10px; letter-spacing:1px; text-transform:uppercase; color:#7a7a90; text-align:center">Click for encounter details</div>`;
+    }
+
+    tooltip.innerHTML = html;
+    tooltip.classList.add('visible');
+
+    // Position tooltip
+    let left = mx + margin.left + 20;
+    let top = my + margin.top - 20;
+    if (left + 350 > container.clientWidth) left = mx + margin.left - 300;
+    if (top + 300 > container.clientHeight) top = my + margin.top - 200;
+    if (top < 0) top = 10;
+
+    tooltip.style.left = left + 'px';
+    tooltip.style.top = top + 'px';
+
+    d3.select(this)
+      .transition().duration(150)
+      .attr('r', d => {
+        const base = d.encounters.length === 0 ? 3 : 4 + d.encounters.length * 1.5;
+        return base + 3;
+      })
+      .attr('fill-opacity', 1);
+  })
+  .on('mouseleave', function(event, d) {
+    tooltip.classList.remove('visible');
+    d3.select(this)
+      .transition().duration(150)
+      .attr('r', d => d.encounters.length === 0 ? 3 : 4 + d.encounters.length * 1.5)
+      .attr('fill-opacity', d.tpk > 0 ? 0.85 : 0.3);
+  })
+  .on('click', function(event, d) {
+    if (d.encounters.length === 0) return;
+    event.stopPropagation();
+
+    const [mx, my] = d3.pointer(event, container);
+
+    let html = `<div class="ep-header"><span>${d.sid} ENCOUNTERS</span><span class="ep-close" onclick="document.getElementById('encounterPanel').classList.remove('visible')">&times;</span></div>`;
+
+    d.encounters.forEach((enc, i) => {
+      const encColor = getColor(enc.tpk);
+      html += `<div class="ep-encounter">`;
+      html += `<div class="ep-enc-title"><span>Encounter ${i + 1}</span><span class="ep-enc-tpk" style="color:${encColor}">TPK ${enc.tpk}%</span></div>`;
+      if (enc.difficulty) html += `<div class="ep-enc-detail"><strong>Assessment:</strong> ${enc.difficulty}</div>`;
+      if (enc.turning) html += `<div class="ep-enc-detail"><strong>Turning Point:</strong> ${enc.turning}</div>`;
+      html += `<div class="ep-enc-detail"><strong>Downed:</strong> ${enc.downed} &bull; <strong>Enemies Defeated:</strong> ${enc.enemies}</div>`;
+      html += `</div>`;
+    });
+
+    if (d.ohShit.length > 0) {
+      html += `<div style="margin-top:8px; font-family:'Barlow Condensed'; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:#9898b0; margin-bottom:4px">OH SH*T MOMENTS</div>`;
+      d.ohShit.forEach(m => {
+        const text = typeof m === 'string' ? m : m.description;
+        html += `<div style="font-family:'Barlow'; font-size:12px; color:#b0b0c8; line-height:1.4; margin:4px 0; padding-left:10px; border-left:2px solid #ff444480">${text}</div>`;
+      });
+    }
+
+    encounterPanel.innerHTML = html;
+    encounterPanel.classList.add('visible');
+
+    let left = mx + margin.left + 20;
+    let top = my + margin.top - 40;
+    if (left + 420 > container.clientWidth) left = mx + margin.left - 430;
+    if (top < 0) top = 10;
+
+    encounterPanel.style.left = left + 'px';
+    encounterPanel.style.top = top + 'px';
+  });
+
+// Close encounter panel on background click
+document.addEventListener('click', () => {
+  encounterPanel.classList.remove('visible');
+});
+
+// ============================================================================
+// Animated entrance
+// ============================================================================
+svg.selectAll('.session-dot')
+  .attr('opacity', 0)
+  .transition()
+  .duration(600)
+  .delay((d, i) => i * 40)
+  .attr('opacity', 1);
+
+// Animate area and line
+const pathLength = svg.select('path[fill="none"]').node().getTotalLength();
+svg.select('path[fill="none"]')
+  .attr('stroke-dasharray', pathLength)
+  .attr('stroke-dashoffset', pathLength)
+  .transition()
+  .duration(2000)
+  .ease(d3.easeCubicOut)
+  .attr('stroke-dashoffset', 0);
+
+svg.select('path[fill="url(#areaGrad)"]')
+  .attr('opacity', 0)
+  .transition()
+  .duration(1500)
+  .delay(500)
+  .attr('opacity', 1);
+</script>
+</body>
+</html>

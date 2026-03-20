@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BIGGEST MOMENTS | BWB Campaign Analytics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@300;400;600;700&family=Barlow:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow-x:hidden}
+body{background:#06060c;color:#c8c8e0;font-family:'Barlow',sans-serif}
+body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(255,255,255,0.015) 2px,rgba(255,255,255,0.015) 4px);pointer-events:none;z-index:9999}
+.main{max-width:1440px;margin:0 auto;padding:24px 20px 60px}
+.title-block{text-align:center;margin-bottom:6px}
+.title-block h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(36px,5vw,56px);letter-spacing:6px;background:linear-gradient(135deg,#fbbf24 0%,#f59e0b 40%,#ef4444 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 20px rgba(251,191,36,0.4))}
+.title-block .sub{font-family:'Barlow Condensed',sans-serif;font-size:15px;color:#6b6b8a;letter-spacing:3px;text-transform:uppercase}
+.stats-row{display:flex;flex-wrap:wrap;justify-content:center;gap:24px;margin:16px 0;padding:14px 20px;background:linear-gradient(135deg,#12121e,#1a1a2e);border:1px solid #2a2a40;border-radius:10px}
+.stat{text-align:center}
+.stat-val{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:500}
+.stat-lbl{font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#6b6b8a;letter-spacing:1.5px;text-transform:uppercase;margin-top:2px}
+.hero{display:grid;grid-template-columns:1fr 380px;gap:20px;margin-bottom:20px;align-items:start}
+@media(max-width:900px){.hero{grid-template-columns:1fr}}
+.constellation-wrap{position:relative;background:linear-gradient(135deg,#0a0a16,#0e0e1a);border:1px solid #2a2a40;border-radius:12px;overflow:hidden}
+.constellation-wrap::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#fbbf24,#ef4444,#fbbf24)}
+#constellation{width:100%;display:block}
+/* Star field bg */
+.star{position:absolute;border-radius:50%;background:#fff;opacity:0.08;pointer-events:none}
+/* Detail panel */
+.detail-panel{display:flex;flex-direction:column;gap:12px}
+.panel-card{background:linear-gradient(135deg,#12121e,#0e0e1a);border:1px solid #2a2a40;border-radius:10px;padding:16px 20px;position:relative;overflow:hidden}
+.panel-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.panel-card.gold::before{background:linear-gradient(90deg,#fbbf24,#f59e0b)}
+.panel-card.red::before{background:linear-gradient(90deg,#ef4444,#f87171)}
+.panel-card.purple::before{background:linear-gradient(90deg,#ad6bff,#818cf8)}
+.panel-card.teal::before{background:linear-gradient(90deg,#2dd4bf,#14b8a6)}
+.panel-label{font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#6b6b8a;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px}
+.moment-title{font-family:'Cinzel',serif;font-size:18px;font-weight:700;color:#fbbf24;text-shadow:0 0 12px rgba(251,191,36,0.3);margin-bottom:4px;line-height:1.3}
+.moment-session{font-family:'JetBrains Mono',monospace;font-size:11px;color:#6366f1;margin-bottom:8px}
+.moment-desc{font-size:13px;line-height:1.6;color:#9494bf}
+.moment-excerpt{font-size:12px;line-height:1.5;color:#7a7a9a;font-style:italic;border-left:2px solid #2a2a40;padding-left:12px;margin-top:6px}
+.moment-counter{font-size:12px;line-height:1.5;color:#9494bf}
+.counter-label{font-family:'Barlow Condensed',sans-serif;font-size:12px;color:#ef4444;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+/* Score bars */
+.score-row{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.score-row:last-child{margin-bottom:0}
+.score-name{font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#8888a8;width:90px;text-transform:uppercase;letter-spacing:0.5px;flex-shrink:0}
+.score-track{flex:1;height:6px;background:#1a1a2e;border-radius:3px;overflow:hidden}
+.score-fill{height:100%;border-radius:3px;transition:width 0.8s cubic-bezier(0.4,0,0.2,1)}
+.score-fill::after{content:'';position:absolute;inset:0;box-shadow:0 0 6px currentColor;opacity:0.5}
+.score-val{font-family:'JetBrains Mono',monospace;font-size:11px;width:20px;text-align:right;flex-shrink:0}
+/* Mentions */
+.mention-item{font-size:12px;color:#7a7a9a;padding:3px 0;border-bottom:1px solid #1a1a2e}
+.mention-item:last-child{border:none}
+/* Placeholder */
+.placeholder{text-align:center;color:#4a4a60;font-style:italic;font-size:13px;padding:20px}
+/* Tooltip */
+.tip{position:fixed;pointer-events:none;background:linear-gradient(135deg,#1a1a2e,#12121e);border:1px solid #3a3a55;border-radius:8px;padding:10px 14px;font-size:12px;color:#c8c8e0;z-index:10000;opacity:0;transition:opacity 0.15s;max-width:280px;box-shadow:0 8px 32px rgba(0,0,0,0.7)}
+.tip.show{opacity:1}
+.tip-title{font-family:'Cinzel',serif;font-size:13px;font-weight:600;color:#fbbf24;margin-bottom:2px}
+.tip-sid{font-family:'JetBrains Mono',monospace;font-size:10px;color:#6366f1}
+.tip-score{font-family:'JetBrains Mono',monospace;font-size:11px;margin-top:4px}
+/* Legend */
+.legend-row{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 20px;margin:12px 0}
+.leg-item{display:flex;align-items:center;gap:5px;font-family:'Barlow Condensed',sans-serif;font-size:12px;color:#8888a8;letter-spacing:0.5px;text-transform:uppercase}
+.leg-dot{width:10px;height:10px;border-radius:50%}
+/* Sort controls */
+.sort-row{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-bottom:16px}
+.sort-btn{font-family:'Barlow Condensed',sans-serif;font-size:12px;color:#6b6b8a;background:rgba(255,255,255,0.03);border:1px solid #2a2a40;border-radius:4px;padding:4px 12px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;transition:all 0.2s}
+.sort-btn:hover,.sort-btn.active{color:#fbbf24;border-color:#f59e0b;background:rgba(251,191,36,0.06)}
+</style>
+</head>
+<body>
+<div class="main">
+  <div class="title-block">
+    <h1>BIGGEST MOMENTS</h1>
+    <div class="sub">46 Campaign-Defining Moments That Changed Everything</div>
+  </div>
+  <div class="stats-row" id="stats-row"></div>
+  <div class="sort-row" id="sort-row"></div>
+  <div class="hero">
+    <div class="constellation-wrap" id="constellation-wrap">
+      <svg id="constellation"></svg>
+    </div>
+    <div class="detail-panel" id="detail-panel">
+      <div class="panel-card gold">
+        <div class="panel-label">Selected Moment</div>
+        <div class="placeholder">Click any orb to explore its story</div>
+      </div>
+    </div>
+  </div>
+  <div class="legend-row" id="legend"></div>
+</div>
+<div class="tip" id="tip"></div>
+
+<script>
+const MOMENTS_DATA = [{"sid":"S001","label":"Castle Corras and the Master of Whispers","title":"Ash's Communion at the Forbidden Door","desc":"Ash investigates a heavily warded door in the castle's basement, communing with the ancient entity Argentus to bypass the abjuration and necromantic magics. Though she uncovers a hidden inscription po","counter":"Had Ash failed her saves entirely, she could have suffered a lethal magical backlash; conversely, bypassing the door entirely might have unleashed whatever ancient danger is locked inside Castle Corras.","excerpt":"You're able to detect multiple layers of abjuration magic... underpinning that dark thread is a necromantic energy you feel it like a seeping oily resi","scores":{"nc":7,"ir":5,"ce":7,"ei":6,"im":6},"mentions":["The Master of Whispers' Briefing","Mortimer's Origami Gifts"]},{"sid":"S002","label":"Session 002","title":"The Loincloth Heist","desc":"To avoid fighting two massive trolls, Ave goes invisible, wades through the water, and successfully uses Sleight of Hand to steal a giant coin hidden in one troll's loincloth. He replaces it with a pi","counter":"If Ave had failed his Sleight of Hand or Stealth checks, the party would have been caught in a deadly ambush against two massive trolls while trapped in a sealed cavern.","excerpt":"she's feeling her way around she feels the rocks here this other troll has basically grabbed her grabbed a bag from over here...","scores":{"nc":6,"ir":4,"ce":5,"ei":8,"im":9},"mentions":["Spark is Consumed","Castle Checkbooks"]},{"sid":"S003","label":"Session 3","title":"Billabong's Celestial Ascent","desc":"Just as the trapped celestial light orb begins to fade and fall into the Eldritch ooze to sacrifice itself with its mate, Billabong reaches out and grabs it. Instead of dying, the orb's cosmic energy ","counter":"If Billabong hadn't grabbed the orb in its final moments, it would have fallen into the ooze and been completely annihilated. The tragedy of the two separated lights would have been final.","excerpt":"so it kind of melts into like a cascade of shimmering lights each kind of latching on to you... so your eyes kind of glow briefly the spectrum of colo","scores":{"nc":8,"ir":9,"ce":8,"ei":8,"im":7},"mentions":["Ave's Starlight Blade Dance","Ash's Disintegrating Ooze Dive","The Dying Mercenary's Warning"]},{"sid":"S004","label":"Session 4","title":"The Chronicler's Mark","desc":"Ash opens the ancient tome stolen by Argentus. The magic within the 'Chronicles of the Quill' binds itself to the party, permanently tattooing them with Sylvan script, rendering them immune to charm a","counter":"If Ash had not opened the book, the party would not have received the mysterious curse-like mark, retaining their shadows but lacking the powerful immunities and the impending consequences.","excerpt":"You discover that writing has been tattooed onto all of your bodies... you all know that no magic can charm you or put you to sleep anymore... However","scores":{"nc":9,"ir":10,"ce":8,"ei":7,"im":8},"mentions":["Lilith's Near Death","The Cultist Raven"]},{"sid":"S005","label":"Session 5","title":"Orla's Nat 20 Deception","desc":"When the magical Hall of Whispers demands a deep truth to pass, Orla attempts to pass a lie as her truth. She rolls a Natural 20 on Deception, somehow convincing the ancient magic that her lie IS the ","counter":"If Orla had failed the roll, the trap would have recognized the deceit, potentially punishing the party or forcing them to face harsher trials.","excerpt":"with a nat 20 on your deception check you have somehow against all odds and reason convinced the whispers in the hall of whispers that your lie is in ","scores":{"nc":6,"ir":4,"ce":5,"ei":8,"im":10},"mentions":["Corras's Plunging Sneak Attack","The Forged Apprenticeship Review"]},{"sid":"S006","label":"The Archmage's Trap","title":"Orla's Wasps Impale the Archmage","desc":"After a grueling fight where the Archmage used Time Stop, Cone of Cold, and Fireball to devastating effect, Orla's summoned Giant Wasp lands the final, brutal blow impaling the caster.","counter":"Had the Wasp missed, the Archmage would have had another turn to cast high-level area-of-effect spells against a desperately low party, likely resulting in character deaths.","excerpt":"Orla's wasp actually kills him... impales him dead... he actually dies an explosion of ice and water happens as he gets impaled.","scores":{"nc":6,"ir":8,"ce":7,"ei":8,"im":9},"mentions":["Surviving the Time Stop Fireball","The Voice in the Dark"]},{"sid":"S007","label":"Session 7","title":"Corras's Failed Eyelash Heist","desc":"After sneaking into the castle to steal rubies for a Simulacrum, Corras uses a Minor Illusion to lure Spark the Fey Dragon. He successfully rolls a sleight of hand to pluck an eyelash but accidentally hurts Spark.","counter":"If Corras had managed to get the eyelash without hurting Spark, they could have completed the time heist entirely undetected.","excerpt":"","scores":{"nc":5,"ir":4,"ce":5,"ei":5,"im":5},"mentions":["Lilith transformed by temporal dissonance","Orla sneaks in as a rat","Ave leaves a mysterious note"]},{"sid":"S008","label":"Session 8","title":"The Self-Fulfilling Lumin Ritual","desc":"After retrieving Spark's eyelash, the party realizes that the 'mysterious Lumin ritual circle' they had heard rumors about was actually THEM performing the Simulacrum spell in a time loop.","counter":"If they hadn't chosen the Lumin site, they might have altered the timeline by eliminating the rumors they originally heard.","excerpt":"Can we go to Lumin so it can conduct this shady ritual for 12 hours and we can stir up rumors...","scores":{"nc":6,"ir":5,"ce":6,"ei":5,"im":7},"mentions":["Past Corras rolling nat 20 Sleight of Hand","Corras rolling nat 1 Stealth and getting banished"]},{"sid":"S009","label":"Session 9","title":"Sid the Mimic Revealed","desc":"While sneaking up on a goblin merchant's stuck caravan, the DM drops a massive cliffhanger: the horse transforms into a mimic. The party realizes they've been travelling with a shapeshifting monster.","counter":"If stealth had succeeded, they might have noticed the mimic before it transformed.","excerpt":"Oops, as suddenly the horse transforms into a mimic... Is the horse's name Sid? Yeah, Sid is a mimic!","scores":{"nc":5,"ir":4,"ce":5,"ei":6,"im":7},"mentions":["Corras contacted by Master of Whispers in jail","Billabong banned from pit fighting"]},{"sid":"S010","label":"Session 10","title":"Orla Decimates the Camp","desc":"After critically failed stealth alerts the entire cultist camp, Orla unleashes Wrath of Nature on the massive horde of orcs, orogs, and magmen, killing dozens in a single devastating spell.","counter":"Without Wrath of Nature, the party would have been quickly overwhelmed by the sheer number of enemies.","excerpt":"you successfully hit 12 of them killing one two three four five six magmen and two orcs Wow","scores":{"nc":5,"ir":5,"ce":5,"ei":7,"im":6},"mentions":["Simultaneous Natural 1s on Stealth","Ash's critical Counterspell"]},{"sid":"S011","label":"Session 11","title":"Argentus Betrays the Party","desc":"While investigating a magically concealed pit trap, Argentus takes control of Ash's arm, uses Suggestion to charm Sarlumon, and forces him to throw Ash into the pit, awakening a hostile Earth Elemental.","counter":"If Sarlumon had resisted the Suggestion, the party could have avoided the encounter entirely.","excerpt":"Argentus uses Sarlumon and Lilith's weight... Argentus targets Sarlumon and casts suggestion... he is now charmed","scores":{"nc":6,"ir":5,"ce":5,"ei":6,"im":6},"mentions":["Orla nat 20 eagle perception","Ash convincing the Earth Elemental"]},{"sid":"S012","label":"Session 12","title":"Explosive Consequences","desc":"The group faces the explosive aftermath of their choices, dealing with cascading consequences from their earlier actions as everything comes to a dramatic head.","counter":"Different choices would have led to dramatically different outcomes for the party.","excerpt":"","scores":{"nc":5,"ir":5,"ce":5,"ei":5,"im":5},"mentions":[]},{"sid":"S013","label":"Session 13","title":"The Blood Pact with Malachar","desc":"Trapped in anti-magic cells with hours before their time-travel heist collapses, the party signs a blood pact with Malachar the Twisted, a Glabrezu demon, trading future favors for their freedom.","counter":"Without signing the pact, the group would have been stuck and the entire time-travel heist would have failed.","excerpt":"In this dismal cell you all find yourselves shackled... within me lies the power to grant what you all desire...","scores":{"nc":7,"ir":7,"ce":7,"ei":6,"im":5},"mentions":["Ash charming the Glabrezu","Prince Darindale devouring Ortelius"]},{"sid":"S014","label":"Session 14","title":"The Quaggoth Hamster Ball","desc":"After a scholar insults Prince Darindale, the massive Quaggoth enters blind rage. Ash traps him in Otiluke's Resilient Sphere, creating a hamster ball rolling toward a cliff that Billabong barely catches.","counter":"Without the sphere, the party would have been forced to fight and potentially kill their new ally.","excerpt":"So he's in a hamster ball... Darindale doesn't realize he's inside of this bubble...","scores":{"nc":5,"ir":4,"ce":5,"ei":7,"im":8},"mentions":["The party reunites","Fleshy casts Mass Healing Word","Corras dives off a cliff"]},{"sid":"S015","label":"Session 15","title":"The Spark Swap Heist","desc":"The party successfully pulls off an elaborate heist within Castle Corras, distracting their past selves and swapping out Ash's familiar Spark with a fake simulacrum.","counter":"Failure would have fractured the timeline, potentially erasing Spark permanently.","excerpt":"you just, yep, you did it, and you will have Spark with you.","scores":{"nc":7,"ir":7,"ce":6,"ei":6,"im":6},"mentions":["Lilith interrogating disguised Ave","Remorhaz in the toilet"]},{"sid":"S016","label":"Session 16","title":"Corras Uses the Fates Card","desc":"Facing the end of the universe, Corras activates his Fates card from the Deck of Many Things, unwinding the threads of fate and resetting reality to save the party.","counter":"Without the Fates card, the Time Warden would have completely reset the universe.","excerpt":"Corras enacts the fates card... the threads of fate unwind and undo and you all slowly fade to darkness...","scores":{"nc":9,"ir":9,"ce":9,"ei":7,"im":7},"mentions":["Ave polymorphs into T-Rex","Billabong grows to massive size","Ash falls into time rift"]},{"sid":"S017","label":"Session 17","title":"King Corras Declares War","desc":"Faced with a Celestial ultimatum demanding control over a key commerce road, King Corras rejects their demands entirely, plunging his newfound empire into war.","counter":"Appeasement would have avoided war but lost crucial territory and made Corras appear weak.","excerpt":"yeah like right like I can't be having that... so okay but we're committed to that call?","scores":{"nc":8,"ir":8,"ce":8,"ei":6,"im":5},"mentions":["Lilith Pledges to Myrkul","Ash Becomes Obsidian Sorceress","Billabong Dons the Helm"]},{"sid":"S018","label":"Session 18","title":"Dahlia Denies the Dragon","desc":"On a fragile frozen lake, Dahlia's summoned Axe Beak falls through the ice. When an ancient white dragon erupts to eat it, Dahlia casually dismisses her Find Steed spell, denying the dragon its meal.","counter":"Without the dismissal, the dragon would have noticed the party struggling across the thin ice.","excerpt":"suddenly out of the ice emerges this massive white dragon um that has an axe beak in its mouth...","scores":{"nc":5,"ir":5,"ce":5,"ei":7,"im":7},"mentions":["Billabong vs Foehammer","Orla triggers avalanche"]},{"sid":"S019","label":"S019","title":"The Keg of Alchemist's Fire","desc":"Trapped in a Tiny Hut by yetis and a frost giant, Billabong leaves a massive keg of Alchemist's Fire. Orla lights a makeshift fuse. A 60-100 foot fireball crater devastates everything.","counter":"Conventional fighting could have easily overwhelmed them in the blizzard.","excerpt":"so for 62 flasks it has a burn off range of 60 feet to 100 feet which just barely comes up so this massive crater explosion...","scores":{"nc":5,"ir":5,"ce":5,"ei":6,"im":7},"mentions":["Dahlia wins over orphaned Yeti tykes","Spark tries to kidnap baby yetis"]},{"sid":"S020","label":"Session 20","title":"The Summer Star TPK","desc":"Corras touches the glowing Summer Star artifact. It instantly detonates for 118 radiant damage, obliterating the cabin and instantly killing or downing every party member. A near-total party kill.","counter":"Not touching the orb would have avoided the near-TPK entirely.","excerpt":"It immediately explodes in a massive explosion... All of you take 118 radiant damage. Orla, you're at zero.","scores":{"nc":8,"ir":8,"ce":8,"ei":9,"im":7},"mentions":["Billabong peeing on the Summer Star","Corras activates hostile clay golem"]},{"sid":"S021","label":"Session 21","title":"Ending's Aftermath Wild Magic","desc":"Before venturing into the Underdark, Ash casts a shadow magic ritual called 'Ending's Aftermath'. The entire party participates, resulting in hilarious and wildly unpredictable magic surges.","counter":"Without the ritual, they would have walked into the Underdark without these memorable moments.","excerpt":"okay dahlia 89... you magically gain 40 pounds yes... your gluteus maximus is dragging sagging so low...","scores":{"nc":5,"ir":4,"ce":5,"ei":8,"im":7},"mentions":["Mordenkainen Distributes Boons","Drow Mage Ambush"]},{"sid":"S022","label":"Session 22","title":"The Living Spider Disguises","desc":"Needing spider paraphernalia to infiltrate a Lolth cult, Orla uses 'Speak with Small Beasts' to summon nine local spiders. The party wears living spiders as accessories and improvised holy symbols.","counter":"Without the disguises, they'd have blown their cover instantly in the heart of a Lolth cult.","excerpt":"Orla: 'hey, like, homies, roll up.' Nine spiders crawl out from the webs...","scores":{"nc":6,"ir":5,"ce":6,"ei":7,"im":8},"mentions":["SavannahBelle hits herself with Wall of Fire","Billabong and Orla fail stealth"]},{"sid":"S023","label":"Session 23","title":"Dahlia Unlocks the Currency of Secrets","desc":"Using her Aura of Secrets, Dahlia inadvertently forces a cyclops to reveal a dark truth about a murdered deep gnome. This grants the party their first 'Secret', unlocking the Vecna Currency mechanic.","counter":"Without the Aura of Secrets, they'd never have learned about Roxana's murder or unlocked this powerful mechanic.","excerpt":"secrets have power for Vecna and you can spend secrets like currency...","scores":{"nc":7,"ir":6,"ce":7,"ei":7,"im":6},"mentions":["Orla charms a giant toad","Dahlia decapitates the Nalfeshnee"]},{"sid":"S024","label":"S024","title":"Ash Tricks the Spider Dragon","desc":"Ash accidentally Dimension Doors directly underneath a massive Spider Dragon. Instead of fighting, she claims to be a loyal servant of Lolth and successfully lies her way past the beast.","counter":"Failure would have triggered an impossible boss fight.","excerpt":"Tell me insect, did you truly think I would not notice you? Speak quickly, my patience is thinner than...","scores":{"nc":6,"ir":6,"ce":6,"ei":7,"im":8},"mentions":["Dahlia adopts cyclops Gertrude","Orla befriends the Hezrou demon toad"]},{"sid":"S025","label":"Session 25","title":"Assigning the BWB Bastions","desc":"Players outline their roles within the newly formed BWB Federation, comically translating fantasy strongholds into modern bureaucratic departments (EPA, NSA, and Guantanamo).","counter":"Without formalized roles, the BWB Federation would lack clear leadership structures.","excerpt":"EPA? Yep. Corras is obviously admin um Ash's towers R&D and Orla's is uh...","scores":{"nc":5,"ir":5,"ce":5,"ei":6,"im":5},"mentions":["Celestials and Fiends retreated","Drakkar Knight Reaver usurped"]},{"sid":"S026","label":"Session 26","title":"Crash Landing at Castle Corras","desc":"Cornered by a massive army and a Spider Dragon, Ash activates a scroll of planar alignment. The party narrowly escapes the Underdark but crash-lands into their own castle from above.","counter":"Without the scroll, the entire party would have been crushed or slaughtered.","excerpt":"poof you all disappear and you feel the planes shifting... you all suddenly crash through the roof of Castle Corras...","scores":{"nc":6,"ir":6,"ce":6,"ei":7,"im":6},"mentions":["Ash meets the Spider Dragon","Greasing up Gertrude"]},{"sid":"S027","label":"Session 27","title":"Friendly Fireball","desc":"While Billabong is paralyzed and swarmed by Revenants, Orla uses her Wand of Fireballs in a desperate rescue attempt, accidentally catching Billabong in the blast and nearly killing her own ally.","counter":"Without catching Billabong, the near-death situation would have been avoided.","excerpt":"All right, so, Bill, you take 27 damage. Orla: I'm sorry, Billabong.","scores":{"nc":5,"ir":5,"ce":5,"ei":7,"im":6},"mentions":["Dahlia wears Revenant corpse armor","Ash Banishes the Wraith Lord"]},{"sid":"S028","label":"Session 28","title":"Feeding the Shadow Mastiffs","desc":"Faced with a pack of shadowy monstrosities, the party avoids combat by feeding them magical mincemeat pies. Diplomacy through pastry.","counter":"Attacking the mastiffs would have overwhelmed them.","excerpt":"do you guys want a Goodberry? Oh, I guess. Okay, I'll give them the pie.","scores":{"nc":5,"ir":4,"ce":5,"ei":6,"im":7},"mentions":["Ash banishes the wraith","Corras sneak attacks a revenant"]},{"sid":"S029","label":"Session 29","title":"Billabong Accepts the Pact of Avarice","desc":"At the Infernal Node, Billabong steps up to sacrifice her ability to aid others mechanically, accepting the Pact of Avarice to harness the node's dark power.","counter":"Without Billabong's sacrifice, someone else would have had to give up their support abilities.","excerpt":"I acknowledge myself gifted with shadows. I pledge to aid... I cast aside... only my infernal power remains.","scores":{"nc":7,"ir":8,"ce":7,"ei":7,"im":5},"mentions":["Ash possessed by Malchor","Billabong nat 20 curse break"]},{"sid":"S030","label":"Session 30","title":"Hold Monster and the Critical Sneak Attack","desc":"During the battle against the Ceaseless Maw, SavannahBelle paralyzes the behemoth with Hold Monster. Corras uses Misty Step to teleport to its eye and delivers a devastating sneak attack.","counter":"If Hold Monster had failed, the party would have been at the mercy of the behemoth's terrifying abilities.","excerpt":"I'm going to Misty Step right up to its eye... I'm going to sneak attack it in its face and since it's paralyzed it's an automatic crit...","scores":{"nc":6,"ir":6,"ce":6,"ei":8,"im":7},"mentions":["Shadow abilities discovered","Dahlia tries to suck a Rift Stalker's soul"]},{"sid":"S031","label":"Session 31","title":"The 'Harm or No Harm' Poll","desc":"When Billabong's summoned Vrocks use 'Stunning Screech' on the party, a massive debate breaks out at the table over whether stunning counts as 'harm'. The DM calls a live audience poll.","counter":"If stunning was ruled as harm, the Vrocks couldn't have used their screech, sparing the party.","excerpt":"But that's what I said, no harm at all. Ah, but it's not causing the harm...","scores":{"nc":5,"ir":5,"ce":5,"ei":7,"im":7},"mentions":["SavannahBelle carries Ash's corpse","Ash introduces Ezrella"]},{"sid":"S032","label":"Session 32","title":"The Mask Burns Away","desc":"SavannahBelle hits the enemy with Disintegrate. Instead of dying, the humanoid mask burns away to reveal a skull with burning red eyes and a pulsing red gem. They've been fighting a Lich.","counter":"Without the Disintegrate, they might not have realized their enemy's true nature.","excerpt":"81 damage whoo... he is still up and he's actually not... the mask is burning away...","scores":{"nc":7,"ir":6,"ce":7,"ei":8,"im":8},"mentions":["Dahlia advertises 'Half-Price Paladins'","Orla sneaks in as a rat"]},{"sid":"S033","label":"Session 33","title":"Corras's Surrender","desc":"Faced with friends burning to death in a forcecage, Corras agrees to don anti-magic manacles and surrender himself to Thay to save them.","counter":"Refusal would have meant Dahlia, Billabong, and SavannahBelle burning to death.","excerpt":"Use your bonus action to put on these manacles... seeing that it's pretty much the only option, I'll put on the manacles.","scores":{"nc":8,"ir":7,"ce":8,"ei":8,"im":5},"mentions":["Dahlia critical hit decapitation","Ezrella's memory modified"]},{"sid":"S034","label":"Session 34","title":"Corras Absorbs His Twin Sarek","desc":"After battle, Sarek tries to assassinate Corras. Corras rolls a natural 20 on his save, reverses the attack, and chooses to absorb his evil twin rather than simply destroying him.","counter":"A failed save might have meant Sarek killing Corras and replacing him with the evil twin.","excerpt":"you have a choice... you can either absorb him... he's going to die either way...","scores":{"nc":8,"ir":9,"ce":8,"ei":7,"im":7},"mentions":["SavannahBelle deals 1 unarmed damage to kill the Lich","Blood pact with Wally the Nothic"]},{"sid":"S035","label":"S035","title":"The BWB Enters Death House","desc":"Mordenkainen opens a portal dropping the party directly into Barovia's dreaded Death House, beginning the Curse of Strahd arc with an immediate descent into horror.","counter":"Without Mordenkainen's portal, the party might have returned to defend against the goblin army instead.","excerpt":"You step through the portal one by one and all the familiar sounds of Sigil disappear... you feel yourself ripped through space...","scores":{"nc":7,"ir":7,"ce":7,"ei":7,"im":5},"mentions":["Disrespecting Tasha","Mannequin phases into horrifying form"]},{"sid":"S036","label":"Session 36","title":"SavannahBelle's Bloody Toast","desc":"Pulled into a terrifying illusion, SavannahBelle finds herself at a dining table with Strahd von Zarovich. She is compelled to toast with a goblet of blood, cursing her with a crippling paranoia of wizards.","counter":"Refusing the toast might have avoided the wizard paranoia curse entirely.","excerpt":"You open your eyes and you see everything is dark around... you're standing at the end of an impossibly long wooden dining table...","scores":{"nc":6,"ir":7,"ce":6,"ei":7,"im":6},"mentions":["Regenerating Priests of Osibus","Meeting Sarusanda Al-Ester"]},{"sid":"S037","label":"Session 37","title":"Corras Resists the Master of the Realm","desc":"Corras interacts with an ominous black orb and succeeds on a massive DC 23 Wisdom save (rolling 25), resisting an ancient entity claiming to be the master of Barovia.","counter":"Failure would have meant falling under the control of Barovia's dark master.","excerpt":"Take it. Can you hear me? I will not harm you. I will give you what you want...","scores":{"nc":7,"ir":7,"ce":7,"ei":7,"im":7},"mentions":["Sarusanda's disintegration ritual","Shambling Mound engulfs Orla"]},{"sid":"S038","label":"S038","title":"Burning the Death House","desc":"After barely surviving the Death House, a furious SavannahBelle unleashes twin-spelled fireballs, attacking the cursed building itself. The house screams as it burns.","counter":"Not burning the house would have left it standing, mocking them.","excerpt":"just launched several twin spell fireballs right at the house... you kind of hear this otherworldly scream...","scores":{"nc":6,"ir":6,"ce":6,"ei":8,"im":6},"mentions":["SavannahBelle transforms into mucus worm","Orla escapes as Peregrine Falcon"]},{"sid":"S039","label":"Session 39","title":"Removing the Demon Goat's Curse","desc":"After rescuing a cursed goat, the party brings its dark brand to camp. The brand summons a massive tentacle horror from the river. The party must destroy the curse before it consumes everything.","counter":"Sacrificing the goat would have left them morally compromised but unharmed.","excerpt":"a horror monster kind of rises up out of the water... massive tentacles that are lashing towards the goat...","scores":{"nc":6,"ir":5,"ce":6,"ei":7,"im":6},"mentions":["Escaping Barovia Village","Botched Illusion on Watch"]},{"sid":"S040","label":"S040","title":"The Deck and the Demiplane","desc":"Corras attempts to steal Madam Eva's Deck of Many Things. Despite a natural 20, he triggers a trap that banishes him to a timeless latrine pit but manages to secretly palm the deck.","counter":"Without the nat 20, he might have been permanently trapped without the deck.","excerpt":"even though the deck of many things would have returned... you were able to palm it and hold it in your hand...","scores":{"nc":7,"ir":7,"ce":7,"ei":6,"im":8},"mentions":["SavannahBelle knocks over wine bottles","Corras charms attacking zombies"]},{"sid":"S041","label":"Session 41","title":"A Tragic Betrayal","desc":"During the battle with Strahd, Ezrella is charmed by a spectral crown. SavannahBelle is paralyzed after drinking from a cursed chalice. Strahd bites SavannahBelle, creating a new Vampire Spawn.","counter":"Not drinking from the chalice or resisting the crown would have changed everything.","excerpt":"Strahd walks over... bars out his fangs and bites your neck... he picks her up and lays her in the coffin...","scores":{"nc":8,"ir":8,"ce":8,"ei":9,"im":6},"mentions":["Orla drinks from mysterious goblet","Strahd speaks into minds"]},{"sid":"S042","label":"S042","title":"Shrum's Mirror Restored","desc":"In the chaos of battle, the shards of Shrum's broken mirror magically fuse. Shrum rolls a natural 20 to stabilize, causing lost memories to flood back. He uses them to shatter Ludmilla, Strahd's bride.","counter":"Failed stabilization would have left Ludmilla alive and Shrum without his true memories.","excerpt":"You remember that you once loved music and stories... you were captured by Strahd...","scores":{"nc":7,"ir":7,"ce":7,"ei":8,"im":7},"mentions":["Izzy executes Rahadin","Baba Lysaga gifts legendary staff"]},{"sid":"S043","label":"Session 43","title":"Draining Lord Neverember","desc":"After the Matron places Lord Neverember into a coma, the party chooses to murder him and drain his memories rather than wake him, extracting political secrets.","counter":"Waking Neverember would have maintained the Lord's Alliance but required dealing with his demands.","excerpt":"I'll Essence Strain all of them, siphon their... since they have no will, you'll glean the full contents...","scores":{"nc":8,"ir":9,"ce":8,"ei":6,"im":6},"mentions":["Isteval's furious departure","Morty reveals the Otyugh is dead"]},{"sid":"S044","label":"Session 44","title":"Dahlia Amputates the Master of Whispers' Leg","desc":"During interrogation, the Master of Whispers breaks his own fingers to escape bonds and pulls a glass dagger. Dahlia reacts by severing his leg to prevent a blood-rune escape spell.","counter":"Without the amputation, the Master would have completed his blood-rune spell and escaped.","excerpt":"he drops the glass dagger... looks up at you and smiles. So you cut off his... All right, so what do you use?","scores":{"nc":7,"ir":8,"ce":7,"ei":7,"im":7},"mentions":["SavannahBelle takes command of half the Lord's Alliance","Trial turns into chaotic yelling match"]},{"sid":"S045","label":"Session 45","title":"The Butcher's Skin Suit","desc":"While interrogating the captured Butcher, Dahlia strips his armor to discover he's not human at all. His skin is a patchwork of human flesh peeled over a mechanical body. He's a construct.","counter":"Without close inspection, they might never have realized his true mechanical nature.","excerpt":"It's pale It's hairless It's cold He is not a golem He is a construct Who has had human skin peeled over his mechanical body...","scores":{"nc":7,"ir":7,"ce":7,"ei":8,"im":8},"mentions":["The Secret Room Reveal","A Funeral Interruption"]},{"sid":"S046","label":"Session 46","title":"Caught by the Wild Hunt","desc":"The party fails their evasion skill challenge against Cernunnos's shadow hounds. One player character must permanently leave the campaign to join the Wild Hunt for eternity.","counter":"Successful evasion would have let them escape to the River of Stars, and Thorn's blood debt would have been paid differently.","excerpt":"Cernunnos has caught you. The chase, the hunt is over. One of your characters must now volunteer to join him in the wild hunt for the rest of eternity.","scores":{"nc":9,"ir":10,"ce":9,"ei":9,"im":7},"mentions":["King Corras hands over ruling authority","Wild Magic surge entering Feywild","Zibblebottoms' unhinged experiments"]}];
+
+// ═══════════════════════════════════════════
+// CONFIG & COMPUTED
+// ═══════════════════════════════════════════
+const SCORE_KEYS = [
+  {key:"nc",label:"Narrative",color:"#fbbf24"},
+  {key:"ir",label:"Irreversibility",color:"#ef4444"},
+  {key:"ce",label:"Cascade",color:"#ad6bff"},
+  {key:"ei",label:"Emotional",color:"#4DB6AC"},
+  {key:"im",label:"Improbability",color:"#818cf8"}
+];
+
+MOMENTS_DATA.forEach(m => {
+  const s = m.scores;
+  const vals = SCORE_KEYS.map(k => s[k.key]);
+  m.total = vals.reduce((a,b) => a+b, 0);
+  m.avg = m.total / 5;
+  // Find dominant dimension
+  let maxVal = 0, maxKey = 0;
+  vals.forEach((v,i) => { if (v > maxVal) { maxVal = v; maxKey = i; }});
+  m.dominant = SCORE_KEYS[maxKey];
+  m.maxScore = maxVal;
+});
+
+const sorted = [...MOMENTS_DATA].sort((a,b) => b.avg - a.avg);
+const topMoment = sorted[0];
+const avgScore = +(MOMENTS_DATA.reduce((s,m) => s+m.avg,0) / MOMENTS_DATA.length).toFixed(1);
+const maxImpact = sorted[0];
+const mostImprobable = [...MOMENTS_DATA].sort((a,b) => b.scores.im - a.scores.im)[0];
+
+// ═══════════════════════════════════════════
+// STATS
+// ═══════════════════════════════════════════
+const statsEl = document.getElementById("stats-row");
+[
+  {val:MOMENTS_DATA.length, lbl:"Campaign Moments", color:"#fbbf24"},
+  {val:topMoment.title, lbl:"Most Impactful", color:"#ef4444"},
+  {val:avgScore, lbl:"Avg Impact Score", color:"#ad6bff"},
+  {val:mostImprobable.title.split(" ").slice(0,4).join(" "), lbl:"Most Improbable", color:"#818cf8"}
+].forEach(s => {
+  const d = document.createElement("div");
+  d.className = "stat";
+  d.innerHTML = `<div class="stat-val" style="color:${s.color};text-shadow:0 0 12px ${s.color}40;font-size:${typeof s.val==='number'?'24px':'16px'}">${s.val}</div><div class="stat-lbl">${s.lbl}</div>`;
+  statsEl.appendChild(d);
+});
+
+// ═══════════════════════════════════════════
+// SORT CONTROLS
+// ═══════════════════════════════════════════
+let currentSort = "impact";
+const sortRow = document.getElementById("sort-row");
+[
+  {id:"impact",label:"By Impact"},
+  {id:"session",label:"By Session"},
+  {id:"narrative",label:"By Narrative"},
+  {id:"emotional",label:"By Emotional"},
+  {id:"improbable",label:"By Improbability"}
+].forEach(s => {
+  const btn = document.createElement("button");
+  btn.className = "sort-btn" + (s.id==="impact"?" active":"");
+  btn.textContent = s.label;
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".sort-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentSort = s.id;
+    reposition();
+  });
+  sortRow.appendChild(btn);
+});
+
+// ═══════════════════════════════════════════
+// LEGEND
+// ═══════════════════════════════════════════
+const legendEl = document.getElementById("legend");
+SCORE_KEYS.forEach(sk => {
+  const item = document.createElement("div");
+  item.className = "leg-item";
+  item.innerHTML = `<div class="leg-dot" style="background:${sk.color};box-shadow:0 0 6px ${sk.color}"></div>${sk.label}`;
+  legendEl.appendChild(item);
+});
+
+// ═══════════════════════════════════════════
+// CONSTELLATION (Force-packed circles)
+// ═══════════════════════════════════════════
+const wrap = document.getElementById("constellation-wrap");
+const W = wrap.clientWidth || 900;
+const H = Math.max(560, W * 0.65);
+const svgEl = d3.select("#constellation").attr("viewBox",`0 0 ${W} ${H}`);
+
+// Star field background
+const starGroup = svgEl.append("g");
+for (let i = 0; i < 120; i++) {
+  starGroup.append("circle")
+    .attr("cx", Math.random()*W).attr("cy", Math.random()*H)
+    .attr("r", Math.random()*1.2+0.3)
+    .attr("fill","#fff").attr("opacity", Math.random()*0.06+0.02);
+}
+
+// Glow filter
+const defs = svgEl.append("defs");
+const glow = defs.append("filter").attr("id","glow");
+glow.append("feGaussianBlur").attr("stdDeviation","4").attr("result","blur");
+const merge = glow.append("feMerge");
+merge.append("feMergeNode").attr("in","blur");
+merge.append("feMergeNode").attr("in","SourceGraphic");
+
+// Size scale
+const sizeScale = d3.scaleLinear().domain([3,10]).range([14,52]).clamp(true);
+
+const nodeGroup = svgEl.append("g");
+const tip = d3.select("#tip");
+let selectedMoment = null;
+
+// Create node data
+const nodes = MOMENTS_DATA.map((m,i) => ({
+  ...m, idx: i,
+  r: sizeScale(m.avg),
+  x: W/2 + (Math.random()-0.5)*200,
+  y: H/2 + (Math.random()-0.5)*200
+}));
+
+// Force simulation
+const sim = d3.forceSimulation(nodes)
+  .force("center", d3.forceCenter(W/2, H/2))
+  .force("charge", d3.forceManyBody().strength(-2))
+  .force("collide", d3.forceCollide(d => d.r + 3).strength(0.8))
+  .force("x", d3.forceX(W/2).strength(0.04))
+  .force("y", d3.forceY(H/2).strength(0.04))
+  .on("tick", ticked);
+
+// Draw nodes
+const nodeEls = nodeGroup.selectAll(".moment-node").data(nodes).enter()
+  .append("g").attr("class","moment-node").style("cursor","pointer");
+
+// Outer glow circle
+nodeEls.append("circle").attr("class","outer-glow")
+  .attr("r", d => d.r + 4)
+  .attr("fill","none")
+  .attr("stroke", d => d.dominant.color)
+  .attr("stroke-width", 1)
+  .attr("opacity", 0.15)
+  .attr("filter","url(#glow)");
+
+// Main circle with radial gradient
+nodes.forEach((n,i) => {
+  const grad = defs.append("radialGradient").attr("id","mg"+i);
+  grad.append("stop").attr("offset","0%").attr("stop-color",n.dominant.color).attr("stop-opacity","0.5");
+  grad.append("stop").attr("offset","70%").attr("stop-color",n.dominant.color).attr("stop-opacity","0.2");
+  grad.append("stop").attr("offset","100%").attr("stop-color",n.dominant.color).attr("stop-opacity","0.05");
+});
+
+nodeEls.append("circle").attr("class","main-circle")
+  .attr("r", d => d.r)
+  .attr("fill", (d,i) => "url(#mg"+i+")")
+  .attr("stroke", d => d.dominant.color)
+  .attr("stroke-width", d => d.avg >= 7 ? 2 : 1)
+  .attr("stroke-opacity", d => d.avg >= 7 ? 0.7 : 0.3);
+
+// Session label inside large circles
+nodeEls.filter(d => d.r > 25).append("text")
+  .attr("text-anchor","middle").attr("dy","0.35em")
+  .style("font-family","JetBrains Mono").style("font-size","9px")
+  .style("fill","#c8c8e0").style("opacity","0.6").style("pointer-events","none")
+  .text(d => d.sid.replace("S0","").replace("S",""));
+
+function ticked() {
+  nodeEls.attr("transform", d => `translate(${d.x},${d.y})`);
+}
+
+// Hover
+nodeEls.on("mouseenter", function(event,d) {
+  d3.select(this).select(".main-circle")
+    .transition().duration(200)
+    .attr("stroke-width",3).attr("stroke-opacity",1);
+  d3.select(this).select(".outer-glow")
+    .transition().duration(200).attr("opacity",0.4);
+  tip.classed("show",true).html(
+    `<div class="tip-title">${d.title}</div>`+
+    `<div class="tip-sid">${d.sid} — ${d.label}</div>`+
+    `<div class="tip-score" style="color:${d.dominant.color}">Impact: ${d.avg.toFixed(1)} | ${d.dominant.label}: ${d.maxScore}</div>`
+  );
+})
+.on("mousemove", function(event) {
+  const x = Math.min(event.clientX+16, window.innerWidth-300);
+  tip.style("left",x+"px").style("top",(event.clientY-20)+"px");
+})
+.on("mouseleave", function(event,d) {
+  if (selectedMoment !== d) {
+    d3.select(this).select(".main-circle")
+      .transition().duration(200)
+      .attr("stroke-width", d.avg>=7?2:1).attr("stroke-opacity", d.avg>=7?0.7:0.3);
+    d3.select(this).select(".outer-glow")
+      .transition().duration(200).attr("opacity",0.15);
+  }
+  tip.classed("show",false);
+});
+
+// Click
+nodeEls.on("click", function(event,d) {
+  // Reset previous selection
+  nodeEls.each(function(nd) {
+    if (nd !== d) {
+      d3.select(this).select(".main-circle").attr("stroke-width", nd.avg>=7?2:1).attr("stroke-opacity",nd.avg>=7?0.7:0.3);
+      d3.select(this).select(".outer-glow").attr("opacity",0.15);
+    }
+  });
+  // Highlight selected
+  d3.select(this).select(".main-circle").attr("stroke-width",3).attr("stroke-opacity",1);
+  d3.select(this).select(".outer-glow").attr("opacity",0.5);
+  selectedMoment = d;
+  showDetail(d);
+});
+
+// ═══════════════════════════════════════════
+// DETAIL PANEL
+// ═══════════════════════════════════════════
+function showDetail(m) {
+  const panel = document.getElementById("detail-panel");
+  let scoreHTML = SCORE_KEYS.map(sk => {
+    const val = m.scores[sk.key];
+    const pct = val * 10;
+    return `<div class="score-row">
+      <span class="score-name">${sk.label}</span>
+      <div class="score-track"><div class="score-fill" style="width:${pct}%;background:${sk.color};color:${sk.color}"></div></div>
+      <span class="score-val" style="color:${sk.color}">${val}</span>
+    </div>`;
+  }).join("");
+
+  let mentionsHTML = m.mentions.length > 0
+    ? m.mentions.map(t => `<div class="mention-item">${t}</div>`).join("")
+    : '<div class="mention-item" style="color:#3a3a50">None recorded</div>';
+
+  panel.innerHTML = `
+    <div class="panel-card gold">
+      <div class="panel-label">Session ${m.sid.replace("S","")}</div>
+      <div class="moment-title">${m.title}</div>
+      <div class="moment-session">${m.sid} — ${m.label}</div>
+      <div class="moment-desc">${m.desc}</div>
+      ${m.excerpt ? '<div class="moment-excerpt">"'+m.excerpt+'"</div>' : ''}
+    </div>
+    <div class="panel-card red">
+      <div class="panel-label">Impact Scores</div>
+      ${scoreHTML}
+    </div>
+    <div class="panel-card purple">
+      <div class="counter-label">What If...?</div>
+      <div class="moment-counter">${m.counter}</div>
+    </div>
+    <div class="panel-card teal">
+      <div class="panel-label">Honorable Mentions</div>
+      ${mentionsHTML}
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════════
+// SORT / REPOSITION
+// ═══════════════════════════════════════════
+function reposition() {
+  let sorted;
+  switch(currentSort) {
+    case "impact": sorted = [...nodes].sort((a,b) => b.avg - a.avg); break;
+    case "session": sorted = [...nodes].sort((a,b) => a.idx - b.idx); break;
+    case "narrative": sorted = [...nodes].sort((a,b) => b.scores.nc - a.scores.nc); break;
+    case "emotional": sorted = [...nodes].sort((a,b) => b.scores.ei - a.scores.ei); break;
+    case "improbable": sorted = [...nodes].sort((a,b) => b.scores.im - a.scores.im); break;
+    default: sorted = nodes;
+  }
+  // Arrange in a spiral pattern based on sort order
+  sorted.forEach((n,i) => {
+    const angle = i * 0.6;
+    const r = 40 + i * 6;
+    const tx = W/2 + r * Math.cos(angle);
+    const ty = H/2 + r * Math.sin(angle);
+    n.fx = tx;
+    n.fy = ty;
+  });
+  sim.alpha(0.6).restart();
+  setTimeout(() => {
+    nodes.forEach(n => { n.fx = null; n.fy = null; });
+    sim.alpha(0.3).restart();
+  }, 1200);
+}
+
+// ═══════════════════════════════════════════
+// ANIMATED ENTRANCE
+// ═══════════════════════════════════════════
+nodeEls.style("opacity",0);
+nodeEls.transition()
+  .delay((d,i) => i * 40)
+  .duration(600)
+  .style("opacity",1);
+
+// Select the top moment by default
+setTimeout(() => {
+  const topNode = nodes.reduce((a,b) => a.avg > b.avg ? a : b);
+  showDetail(topNode);
+  selectedMoment = topNode;
+}, 500);
+</script>
+</body>
+</html>

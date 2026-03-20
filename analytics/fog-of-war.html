@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FOG OF WAR &mdash; Sword Coast Exploration</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@300;400;600;700&family=Barlow:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+
+body{
+  background:#06060c;color:#c8c8e0;font-family:'Barlow',sans-serif;
+  min-height:100vh;position:relative;overflow-x:hidden;
+}
+body::after{
+  content:'';position:fixed;top:0;left:0;right:0;bottom:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.04) 2px,rgba(0,0,0,.04) 4px);
+  pointer-events:none;z-index:9999;
+}
+
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:#0a0a14}
+::-webkit-scrollbar-thumb{background:#2a2a40;border-radius:3px}
+
+/* ─── HEADER ─── */
+.header{
+  text-align:center;padding:20px 20px 14px;position:relative;z-index:10;
+}
+.header::after{
+  content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);
+  width:55%;height:1px;
+  background:linear-gradient(90deg,transparent,#4fc3f7,#00e5ff,#4fc3f7,transparent);
+  opacity:.5;
+}
+.title{
+  font-family:'Bebas Neue',sans-serif;font-size:68px;letter-spacing:16px;line-height:1;
+  background:linear-gradient(135deg,#d0d0e0,#ffffff,#a0a0c8);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  filter:drop-shadow(0 0 30px rgba(79,195,247,.4)) drop-shadow(0 0 60px rgba(0,229,255,.2));
+  margin-bottom:3px;
+}
+.subtitle{
+  font-family:'Barlow Condensed',sans-serif;font-weight:300;font-size:13px;
+  letter-spacing:6px;text-transform:uppercase;color:#5a7090;
+}
+
+/* ─── LAYOUT ─── */
+.main-layout{display:flex;height:calc(100vh - 108px)}
+
+.sidebar{
+  width:270px;min-width:270px;padding:14px 12px;
+  border-right:1px solid rgba(79,195,247,.12);overflow-y:auto;
+  display:flex;flex-direction:column;gap:10px;
+}
+
+.panel{
+  background:linear-gradient(135deg,#0a0a18,#0f0f28);
+  border:1px solid #1a1a38;border-radius:8px;padding:12px 14px;
+  position:relative;overflow:hidden;
+}
+.panel::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,#00b8d4,#4fc3f7);
+}
+.panel h3{
+  font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:3px;
+  color:#4fc3f7;margin-bottom:8px;text-transform:uppercase;
+}
+
+.stat-row{display:flex;justify-content:space-between;align-items:center;padding:2px 0}
+.stat-label{
+  font-family:'Barlow Condensed',sans-serif;font-weight:400;color:#5a7090;
+  text-transform:uppercase;letter-spacing:1px;font-size:11px;
+}
+.stat-value{
+  font-family:'JetBrains Mono',monospace;font-weight:500;color:#d8d8f0;font-size:13px;
+  text-shadow:0 0 6px rgba(79,195,247,.25);
+}
+.stat-value.hl{color:#00e5ff;text-shadow:0 0 10px rgba(0,229,255,.45)}
+
+/* discovery bar */
+.bar-wrap{
+  background:#0a0a18;border-radius:4px;height:18px;overflow:hidden;margin-top:5px;
+  border:1px solid #1a1a38;position:relative;
+}
+.bar-fill{
+  height:100%;border-radius:3px;transition:width .8s cubic-bezier(.4,0,.2,1);
+  background:linear-gradient(90deg,#004d6e,#00838f,#00e5ff);
+  box-shadow:0 0 14px rgba(0,229,255,.3);position:relative;
+}
+.bar-fill::after{
+  content:'';position:absolute;right:0;top:0;bottom:0;width:3px;
+  background:#fff;box-shadow:0 0 8px #00e5ff,0 0 16px #00e5ff;
+  border-radius:0 3px 3px 0;
+}
+.bar-pct{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:500;
+  color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);z-index:2;
+}
+
+/* location list */
+.loc-list{max-height:999px;overflow-y:auto;margin-top:4px;flex:1;min-height:0}
+.loc-item{
+  display:flex;align-items:center;gap:7px;padding:3px 5px;border-radius:4px;
+  cursor:pointer;transition:background .15s;font-size:12px;
+}
+.loc-item:hover{background:rgba(79,195,247,.08)}
+.loc-item.active{background:rgba(79,195,247,.14);border-left:2px solid #00e5ff}
+.loc-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.loc-nm{
+  font-family:'Barlow Condensed',sans-serif;font-weight:400;color:#c0c0d8;
+  flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.loc-ct{font-family:'JetBrains Mono',monospace;font-size:9px;color:#5a7090}
+.loc-item.undiscovered{opacity:.3}
+.loc-item.undiscovered .loc-nm{color:#3a3a58}
+
+/* ─── MAP ─── */
+.map-area{flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.map-container{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+.map-img{max-width:100%;max-height:100%;object-fit:contain;display:block}
+.fog-canvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
+.markers-svg{position:absolute;top:0;left:0;width:100%;height:100%}
+
+/* markers */
+.location-marker{cursor:pointer}
+.marker-glow{fill:url(#markerGlow);opacity:.5}
+.marker-core{fill:#00e5ff;stroke:#e0e0f0;stroke-width:1.2;transition:r .2s}
+.marker-core:hover{fill:#80deea;filter:drop-shadow(0 0 8px #00e5ff)}
+
+/* ─── TOOLTIP ─── */
+.tooltip{
+  position:fixed;pointer-events:none;z-index:200;
+  background:linear-gradient(135deg,#0c0c22ee,#18183aee);
+  border:1px solid rgba(79,195,247,.35);border-radius:8px;
+  padding:12px 14px;min-width:200px;max-width:300px;
+  backdrop-filter:blur(12px);
+  box-shadow:0 8px 30px rgba(0,0,0,.55),0 0 18px rgba(79,195,247,.12);
+  opacity:0;transition:opacity .15s;
+}
+.tooltip.vis{opacity:1}
+.tooltip h4{
+  font-family:'Cinzel',serif;font-size:15px;font-weight:600;color:#e0e0f0;
+  margin-bottom:7px;text-shadow:0 0 8px rgba(79,195,247,.35);
+  border-bottom:1px solid rgba(79,195,247,.18);padding-bottom:5px;
+}
+.tt-r{display:flex;justify-content:space-between;padding:2px 0}
+.tt-l{font-size:10px;color:#5a7090;text-transform:uppercase;letter-spacing:1px;font-family:'Barlow Condensed',sans-serif}
+.tt-v{font-family:'JetBrains Mono',monospace;font-size:11px;color:#00e5ff}
+.tt-s{margin-top:5px;font-size:10px;color:#7788a0;line-height:1.5;font-family:'JetBrains Mono',monospace}
+
+/* ─── DETAIL PANEL ─── */
+.detail{
+  position:fixed;right:-420px;top:0;bottom:0;width:400px;
+  background:linear-gradient(180deg,#0a0a18f5,#0d0d22f5);
+  border-left:1px solid rgba(79,195,247,.25);
+  z-index:500;transition:right .4s cubic-bezier(.4,0,.2,1);
+  overflow-y:auto;padding:20px;
+  box-shadow:-8px 0 40px rgba(0,0,0,.5);
+  backdrop-filter:blur(16px);
+}
+.detail.open{right:0}
+.detail-x{
+  position:absolute;top:10px;right:12px;background:none;border:none;
+  color:#5a7090;font-size:24px;cursor:pointer;line-height:1;transition:color .2s;
+}
+.detail-x:hover{color:#00e5ff}
+
+.detail h2{
+  font-family:'Cinzel',serif;font-size:22px;font-weight:600;color:#e0e0f0;
+  margin-bottom:3px;text-shadow:0 0 10px rgba(79,195,247,.35);
+}
+.detail .d-sub{
+  font-family:'Barlow Condensed',sans-serif;font-size:12px;color:#5a7090;
+  letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;
+}
+.d-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:14px}
+.d-stat{
+  background:#0a0a18;border:1px solid #1a1a38;border-radius:6px;padding:9px;text-align:center;
+}
+.d-stat .dv{
+  font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:500;color:#00e5ff;
+  text-shadow:0 0 8px rgba(0,229,255,.35);
+}
+.d-stat .dl{
+  font-family:'Barlow Condensed',sans-serif;font-size:10px;color:#5a7090;
+  text-transform:uppercase;letter-spacing:1px;margin-top:2px;
+}
+
+.scene-list h3{
+  font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:2px;
+  color:#4fc3f7;margin-bottom:6px;
+}
+.si{
+  background:linear-gradient(135deg,#0c0c1a,#11112a);
+  border:1px solid #1a1a38;border-radius:5px;padding:8px 10px;margin-bottom:5px;
+  border-left:3px solid #5a7090;
+}
+.si[data-t="Combat"]{border-left-color:#ff4444}
+.si[data-t="Exploration"]{border-left-color:#4caf50}
+.si[data-t="Social_Encounter"]{border-left-color:#ffc107}
+.si[data-t="Exposition"]{border-left-color:#9c27b0}
+.si[data-t="Puzzle"]{border-left-color:#ff9800}
+.si[data-t="Skill_Challenge"]{border-left-color:#2196f3}
+.si[data-t="Recap"]{border-left-color:#607d8b}
+.si[data-t="Character_Management"]{border-left-color:#00bcd4}
+.si[data-t="Meta"]{border-left-color:#9e9e9e}
+.si .si-hd{display:flex;justify-content:space-between;align-items:center}
+.si .si-s{font-family:'JetBrains Mono',monospace;font-size:10px;color:#00e5ff}
+.si .si-t{font-family:'Barlow Condensed',sans-serif;font-size:10px;color:#7788a0;text-transform:uppercase;letter-spacing:1px}
+.si .si-c{font-size:11px;color:#b8b8d0;margin-top:3px;line-height:1.3}
+
+/* ─── CONTROLS ─── */
+.controls{
+  padding:10px 18px 14px;
+  background:linear-gradient(180deg,transparent,#06060c 30%);
+  border-top:1px solid rgba(79,195,247,.08);
+  display:flex;align-items:center;gap:14px;position:relative;z-index:10;
+}
+.sess-lbl{
+  font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:4px;
+  color:#00e5ff;text-shadow:0 0 10px rgba(0,229,255,.35);min-width:160px;
+}
+.slider-wrap{flex:1;position:relative;padding:6px 0}
+.sslider{
+  -webkit-appearance:none;width:100%;height:5px;border-radius:3px;
+  background:linear-gradient(90deg,#1a1a38,#28284a);outline:none;cursor:pointer;
+}
+.sslider::-webkit-slider-thumb{
+  -webkit-appearance:none;width:18px;height:18px;border-radius:50%;
+  background:radial-gradient(circle at 40% 40%,#80deea,#00838f);
+  border:2px solid #00e5ff;cursor:pointer;
+  box-shadow:0 0 10px rgba(0,229,255,.5),0 0 22px rgba(0,229,255,.18);
+}
+.sslider::-moz-range-thumb{
+  width:18px;height:18px;border-radius:50%;
+  background:radial-gradient(circle at 40% 40%,#80deea,#00838f);
+  border:2px solid #00e5ff;cursor:pointer;
+  box-shadow:0 0 10px rgba(0,229,255,.5);
+}
+.ticks{display:flex;justify-content:space-between;padding:0 9px;margin-top:2px}
+.tk{font-family:'JetBrains Mono',monospace;font-size:7px;color:#2a2a48;width:18px;text-align:center}
+.tk.disc{color:#00b8d4;font-weight:600}
+
+.pb{display:flex;gap:5px;align-items:center}
+.btn{
+  background:linear-gradient(135deg,#18183a,#28284a);
+  border:1px solid #3a3a58;border-radius:5px;color:#c0c0d8;
+  padding:7px 12px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;
+  font-size:12px;letter-spacing:1px;text-transform:uppercase;transition:all .15s;
+}
+.btn:hover{border-color:#00e5ff;color:#00e5ff;box-shadow:0 0 10px rgba(0,229,255,.18)}
+.btn.on{border-color:#00e5ff;color:#00e5ff;background:rgba(0,229,255,.08)}
+.pbtn{
+  width:36px;height:36px;padding:0;display:flex;align-items:center;justify-content:center;
+  border-radius:50%;font-size:16px;
+}
+
+/* ─── FLASH ─── */
+.flash{
+  position:fixed;top:44%;left:50%;transform:translate(-50%,-50%);
+  font-family:'Bebas Neue',sans-serif;font-size:44px;letter-spacing:8px;
+  color:#00e5ff;text-shadow:0 0 28px #00e5ff,0 0 56px rgba(0,229,255,.45);
+  opacity:0;pointer-events:none;z-index:100;
+}
+.flash2{
+  position:fixed;top:54%;left:50%;transform:translate(-50%,-50%);
+  font-family:'Cinzel',serif;font-size:24px;font-weight:600;
+  color:#e0e0f0;text-shadow:0 0 18px rgba(79,195,247,.55);
+  opacity:0;pointer-events:none;z-index:100;
+}
+.flash.show,.flash2.show{animation:flashAnim 2.2s ease-out forwards}
+@keyframes flashAnim{
+  0%{opacity:0;transform:translate(-50%,-50%) scale(.5)}
+  12%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}
+  25%{transform:translate(-50%,-50%) scale(1)}
+  65%{opacity:1}
+  100%{opacity:0;transform:translate(-50%,-50%) scale(1) translateY(-25px)}
+}
+
+/* ─── PARTICLES ─── */
+.particles{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden;z-index:2}
+.particle{
+  position:absolute;width:2px;height:2px;background:#4fc3f7;
+  border-radius:50%;opacity:0;animation:pdrift 9s linear infinite;
+}
+@keyframes pdrift{
+  0%{opacity:0;transform:translateY(0) translateX(0)}
+  8%{opacity:.3}
+  92%{opacity:.3}
+  100%{opacity:0;transform:translateY(-70px) translateX(25px)}
+}
+
+/* ─── REGION LABELS ─── */
+.region-label{
+  font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:600;
+  letter-spacing:2px;text-transform:uppercase;fill:#3a5a70;
+  pointer-events:none;opacity:.7;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="title">FOG OF WAR</div>
+  <div class="subtitle">Sword Coast Exploration Chronicle &mdash; Sessions 1&ndash;46</div>
+</div>
+
+<div class="main-layout">
+  <div class="sidebar">
+    <div class="panel" id="dp">
+      <h3>Exploration Progress</h3>
+      <div class="stat-row">
+        <span class="stat-label">Locations Discovered</span>
+        <span class="stat-value hl" id="dcnt">0 / 0</span>
+      </div>
+      <div class="bar-wrap">
+        <div class="bar-fill" id="dbar" style="width:0%"></div>
+        <span class="bar-pct" id="dpct">0%</span>
+      </div>
+    </div>
+
+    <div class="panel" id="sp">
+      <h3>World Stats</h3>
+      <div class="stat-row"><span class="stat-label">Total Mappable</span><span class="stat-value" id="stTotal">0</span></div>
+      <div class="stat-row"><span class="stat-label">Reveal %</span><span class="stat-value" id="stReveal">0%</span></div>
+      <div class="stat-row"><span class="stat-label">Most Visited</span><span class="stat-value" id="stMost">&mdash;</span></div>
+      <div class="stat-row"><span class="stat-label">First Discovery</span><span class="stat-value" id="stFirst">&mdash;</span></div>
+      <div class="stat-row"><span class="stat-label">Latest Discovery</span><span class="stat-value" id="stLatest">&mdash;</span></div>
+      <div class="stat-row"><span class="stat-label">New This Session</span><span class="stat-value hl" id="stNew">0</span></div>
+    </div>
+
+    <div class="panel" style="flex:1;min-height:0;display:flex;flex-direction:column">
+      <h3>Discovered Locations</h3>
+      <div class="loc-list" id="locList"></div>
+    </div>
+  </div>
+
+  <div class="map-area" id="mapArea">
+    <div class="map-container" id="mapCont">
+      <img class="map-img" id="mapImg" src="../../ref_images/Sword Coast.png" alt="Sword Coast">
+      <canvas class="fog-canvas" id="fogC"></canvas>
+      <svg class="markers-svg" id="mSvg">
+        <defs>
+          <radialGradient id="markerGlow">
+            <stop offset="0%" stop-color="#00e5ff" stop-opacity=".35"/>
+            <stop offset="100%" stop-color="#00e5ff" stop-opacity="0"/>
+          </radialGradient>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="3" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+      </svg>
+    </div>
+    <div class="particles" id="parts"></div>
+  </div>
+</div>
+
+<div class="controls">
+  <div class="sess-lbl" id="sessLbl">PRE-CAMPAIGN</div>
+  <div class="slider-wrap">
+    <input type="range" class="sslider" id="slider" min="0" max="46" value="0" step="1">
+    <div class="ticks" id="ticks"></div>
+  </div>
+  <div class="pb">
+    <button class="btn pbtn" id="playBtn" title="Play / Pause (Space)">&#9654;</button>
+    <button class="btn" id="speedBtn">1&times;</button>
+    <button class="btn" id="resetBtn">Reset</button>
+  </div>
+</div>
+
+<div class="tooltip" id="tip"></div>
+<div class="detail" id="det"><button class="detail-x" id="detX">&times;</button><div id="detC"></div></div>
+<div class="flash" id="fl1">NEW DISCOVERY!</div>
+<div class="flash2" id="fl2"></div>
+
+<script>
+// ==================================================================
+// DATA — injected inline
+// ==================================================================
+const RAW = [{"name":"Amphail","first_session":27,"last_session":27,"session_count":1,"mention_count":1,"sessions":["S027"],"mentions":[{"s":"S030","n":2,"t":"Recap","c":""}]},{"name":"Baldur's Gate","first_session":2,"last_session":45,"session_count":8,"mention_count":10,"sessions":["S002","S003","S004","S008","S012","S017","S025","S045"],"mentions":[{"s":"S002","n":1,"t":"Meta","c":""},{"s":"S003","n":8,"t":"Exposition","c":""},{"s":"S004","n":8,"t":"Social_Encounter","c":""},{"s":"S005","n":7,"t":"Social_Encounter","c":""},{"s":"S009","n":2,"t":"Combat","c":""},{"s":"S013","n":4,"t":"Skill_Challenge","c":""},{"s":"S018","n":2,"t":"Meta","c":""},{"s":"S018","n":4,"t":"Exposition","c":"The Cosmic War Reshapes Faerun"},{"s":"S018","n":5,"t":"Character_Management","c":"Branching Fates: Round One Choices"},{"s":"S027","n":4,"t":"Character_Management","c":""},{"s":"S029","n":4,"t":"Meta","c":""},{"s":"S048","n":5,"t":"Character_Management","c":""}]},{"name":"Barovia","first_session":25,"last_session":46,"session_count":12,"mention_count":39,"sessions":["S025","S029","S035","S036","S037","S038","S039","S040","S041","S042","S043","S046"],"mentions":[{"s":"S027","n":5,"t":"Meta","c":"Future Arcs and the Road Ahead"},{"s":"S029","n":4,"t":"Meta","c":"The Soulforge and Roads Ahead"},{"s":"S032","n":6,"t":"Skill_Challenge","c":""},{"s":"S038","n":3,"t":"Social_Encounter","c":"Tense Reunion in Sigil's Sanctum"},{"s":"S038","n":4,"t":"Exposition","c":"Interrogating Mordenkainen's Deception"},{"s":"S038","n":5,"t":"Character_Management","c":"Gathering Scrolls and Stepping Through"},{"s":"S038","n":6,"t":"Social_Encounter","c":"The Children of Durst Manor"},{"s":"S038","n":7,"t":"Exploration","c":"Ransacking the Haunted Manor"},{"s":"S038","n":8,"t":"Meta","c":"Post-Session Barovia Speculation"},{"s":"S039","n":1,"t":"Recap","c":"Pre-Game Banter and Session Recap"},{"s":"S039","n":4,"t":"Social_Encounter","c":"The Inquisitor in the Dark"},{"s":"S040","n":1,"t":"Recap","c":"Catching Up in Barovia"},{"s":"S040","n":3,"t":"Social_Encounter","c":""},{"s":"S040","n":4,"t":"Exploration","c":"The Orb's Tempting Whisper"},{"s":"S040","n":7,"t":"Social_Encounter","c":"A Deal with Strahd von Zarovich"},{"s":"S041","n":3,"t":"Skill_Challenge","c":""},{"s":"S041","n":6,"t":"Exposition","c":"Strahd's Deal and the Ruined Village"},{"s":"S042","n":2,"t":"Meta","c":"Death House Retrospective and Recap"},{"s":"S042","n":3,"t":"Exposition","c":"Arrival at the Village of Barovia"},{"s":"S042","n":4,"t":"Skill_Challenge","c":"Dire Wolf Standoff and Sack Rescue"},{"s":"S042","n":5,"t":"Exploration","c":"Flight Over a Broken Village"},{"s":"S042","n":8,"t":"Exploration","c":""},{"s":"S043","n":1,"t":"Recap","c":"Recap of Barovian Misadventures"},{"s":"S043","n":1,"t":"Recap","c":"Recap of Barovian Misadventures"},{"s":"S043","n":2,"t":"Meta","c":"Character Introductions and Campaign Legends"},{"s":"S043","n":3,"t":"Combat","c":""},{"s":"S043","n":4,"t":"Exploration","c":""},{"s":"S043","n":5,"t":"Skill_Challenge","c":""},{"s":"S044","n":5,"t":"Social_Encounter","c":"Strahd's Warning and Broken Deal"},{"s":"S044","n":6,"t":"Exploration","c":"Planning and the Flight to Ravenloft"},{"s":"S045","n":3,"t":"Recap","c":"Foundry Setup and Session Recap"},{"s":"S045","n":4,"t":"Combat","c":"Rahadin's Last Stand"},{"s":"S045","n":5,"t":"Combat","c":"Descent Into the Heart of Sorrow"},{"s":"S045","n":6,"t":"Combat","c":""},{"s":"S046","n":2,"t":"Recap","c":"Fae Invasion Recap and World State"},{"s":"S046","n":3,"t":"Meta","c":""},{"s":"S046","n":7,"t":"Social_Encounter","c":""},{"s":"S046","n":8,"t":"Exploration","c":""},{"s":"S049","n":5,"t":"Social_Encounter","c":"The Matron's Bargain for Power"},{"s":"S049","n":6,"t":"Exposition","c":""}]},{"name":"Bastion","first_session":null,"last_session":40,"session_count":6,"mention_count":13,"sessions":["S029","S030","S031","S032","S035","S040"],"mentions":[{"s":"S029","n":2,"t":"Exposition","c":""},{"s":"S029","n":3,"t":"Character_Management","c":""},{"s":"S029","n":4,"t":"Meta","c":""},{"s":"S032","n":2,"t":"Recap","c":""},{"s":"S033","n":1,"t":"Ritual","c":"The Harbinger's Bastion of Statues"},{"s":"S033","n":2,"t":"Skill_Challenge","c":"Training on the Chained Rift Stalker"},{"s":"S033","n":3,"t":"Exploration","c":""},{"s":"S033","n":7,"t":"Combat","c":""},{"s":"S034","n":5,"t":"Social_Encounter","c":"Grieving Ash and Preserving the Body"},{"s":"S034","n":6,"t":"Exposition","c":"Ezrella's Warning of Dark Smugglers"},{"s":"S034","n":7,"t":"Combat","c":"Vrocks on the Front Lawn"},{"s":"S035","n":1,"t":"Recap","c":"Recap and Ezrella's Mission Briefing"},{"s":"S035","n":2,"t":"Character_Management","c":"Feast and Preparations at the Bastion"},{"s":"S038","n":1,"t":"Meta","c":"Pre-Game Planning and House Rules"},{"s":"S038","n":2,"t":"Character_Management","c":"Bastion Preparations and Crafting Orders"},{"s":"S043","n":6,"t":"Exploration","c":""}]},{"name":"Beholder Cave","first_session":3,"last_session":7,"session_count":2,"mention_count":3,"sessions":["S003","S007"],"mentions":[{"s":"S003","n":4,"t":"Social_Encounter","c":""},{"s":"S008","n":1,"t":"Meta","c":""},{"s":"S008","n":2,"t":"Exposition","c":"Planning the Spark Rescue Heist"}]},{"name":"Blood of the Vine Inn","first_session":39,"last_session":39,"session_count":1,"mention_count":1,"sessions":["S039"],"mentions":[{"s":"S042","n":5,"t":"Exploration","c":"Flight Over a Broken Village"}]},{"name":"Cabin on Stilts","first_session":18,"last_session":null,"session_count":3,"mention_count":10,"sessions":["S018","S019","S020"],"mentions":[{"s":"S019","n":6,"t":"Skill_Challenge","c":""},{"s":"S019","n":7,"t":"Meta","c":""},{"s":"S020","n":1,"t":"Recap","c":""},{"s":"S020","n":5,"t":"Skill_Challenge","c":""},{"s":"S020","n":6,"t":"Exploration","c":""},{"s":"S020","n":7,"t":"Exploration","c":"The Cabin on the Gorge"},{"s":"S021","n":1,"t":"Exploration","c":""},{"s":"S021","n":2,"t":"Skill_Challenge","c":""},{"s":"S021","n":3,"t":"Exploration","c":""},{"s":"S021","n":6,"t":"Puzzle","c":""},{"s":"S026","n":2,"t":"Character_Management","c":""},{"s":"S026","n":6,"t":"Exploration","c":""},{"s":"S026","n":8,"t":"Exploration","c":""}]},{"name":"Candlekeep","first_session":4,"last_session":18,"session_count":2,"mention_count":3,"sessions":["S004","S018"],"mentions":[{"s":"S004","n":7,"t":"Exposition","c":"The Chronicler's Mark"},{"s":"S004","n":8,"t":"Social_Encounter","c":""},{"s":"S005","n":6,"t":"Exposition","c":"A Finger and a Tome"},{"s":"S005","n":7,"t":"Social_Encounter","c":""},{"s":"S019","n":2,"t":"Exposition","c":""}]},{"name":"Castle Corras","first_session":1,"last_session":46,"session_count":30,"mention_count":118,"sessions":["S001","S002","S003","S004","S005","S007","S008","S009","S010","S012","S013","S014","S015","S016","S017","S020","S024","S025","S026","S027","S028","S030","S031","S034","S035","S040","S043","S044","S045","S046"],"mentions":[{"s":"S001","n":1,"t":"Meta","c":"Technical Troubles and Table Talk"},{"s":"S001","n":2,"t":"Social_Encounter","c":"The Caretaker Who Wouldn't Flush"},{"s":"S001","n":3,"t":"Exploration","c":"Origami Gifts and Haunted Real Estate"},{"s":"S001","n":4,"t":"Exposition","c":"Spymasters and Surrogate Mothers"},{"s":"S001","n":5,"t":"Character_Management","c":"Pillows, Palanquins, and Purple Pebbles"},{"s":"S001","n":6,"t":"Social_Encounter","c":""},{"s":"S001","n":7,"t":"Exploration","c":"Long Live the Royal Smasher"},{"s":"S002","n":1,"t":"Meta","c":"Castle Management Crash Course"},{"s":"S002","n":2,"t":"Recap","c":"Last Session Recap"},{"s":"S002","n":3,"t":"Character_Management","c":"The Brotherhood Balances Its Books"},{"s":"S002","n":4,"t":"Exposition","c":"What Lies Beneath Castle Corras"},{"s":"S002","n":5,"t":"Exploration","c":"Ancient Runes and the Lonely Light"},{"s":"S002","n":6,"t":"Skill_Challenge","c":"The Great Troll Coin Heist"},{"s":"S002","n":7,"t":"Meta","c":"Sealed In and Looking Ahead"},{"s":"S003","n":8,"t":"Exposition","c":"Castle Corras Reborn"},{"s":"S004","n":1,"t":"Social_Encounter","c":"Plotting Lilith's False Trail"},{"s":"S004","n":2,"t":"Meta","c":"Splash Page and Session Setup"},{"s":"S004","n":3,"t":"Recap","c":"Recap and the Goblin Horde Awaits"},{"s":"S004","n":4,"t":"Combat","c":"Blood and Steel at the Goblin Camp"},{"s":"S004","n":5,"t":"Exploration","c":"Whispers in the Aftermath"},{"s":"S004","n":6,"t":"Ritual","c":"The Seedling Song and the Shadow Tree"},{"s":"S004","n":7,"t":"Exposition","c":"The Chronicler's Mark"},{"s":"S004","n":8,"t":"Social_Encounter","c":"The Raven Who Lied"},{"s":"S004","n":9,"t":"Exploration","c":"Bones Beneath Lumin"},{"s":"S005","n":1,"t":"Exposition","c":"False Trails and Firework Schemes"},{"s":"S005","n":2,"t":"Meta","c":"Splash Page Admiration and Session Setup"},{"s":"S005","n":3,"t":"Combat","c":"Blood and Fangs at the Goblin Camp"},{"s":"S005","n":4,"t":"Exploration","c":"Sarlumon's Silver Harvest"},{"s":"S005","n":5,"t":"Ritual","c":"The Seedling Song and the Shadow Portal"},{"s":"S005","n":6,"t":"Exposition","c":"A Finger and a Tome"},{"s":"S005","n":7,"t":"Social_Encounter","c":"The Raven Who Lied"},{"s":"S005","n":8,"t":"Exploration","c":""},{"s":"S006","n":1,"t":"Recap","c":"Catching Up on Gloaming Court Revelations"},{"s":"S006","n":2,"t":"Social_Encounter","c":"The Cult of Lilith Descends"},{"s":"S006","n":3,"t":"Skill_Challenge","c":"The Great Druidic Review Caper"},{"s":"S006","n":4,"t":"Character_Management","c":"Plague Spreads Across the Realm"},{"s":"S008","n":2,"t":"Exposition","c":"Planning the Spark Rescue Heist"},{"s":"S008","n":3,"t":"Ritual","c":"Chronoport Into the Past"},{"s":"S008","n":4,"t":"Exploration","c":"Splitting Up at Castle Corras"},{"s":"S008","n":5,"t":"Skill_Challenge","c":"Infiltrating Their Own Castle"},{"s":"S008","n":6,"t":"Skill_Challenge","c":"The Eyelash Heist and Showdown"},{"s":"S008","n":7,"t":"Meta","c":"Session Wrap-Up and Debrief"},{"s":"S009","n":2,"t":"Combat","c":"Spark Ambushes Corras in the Castle"},{"s":"S009","n":3,"t":"Social_Encounter","c":"Billabong and Lilith Play Happy Family"},{"s":"S009","n":4,"t":"Social_Encounter","c":""},{"s":"S009","n":5,"t":"Social_Encounter","c":"Corras Returns and Spins His Greatest Lie"},{"s":"S009","n":6,"t":"Skill_Challenge","c":"The Great Heist Beneath Castle Corras"},{"s":"S009","n":8,"t":"Exposition","c":""},{"s":"S009","n":9,"t":"Meta","c":"Farewell and Final Coordinates"},{"s":"S010","n":1,"t":"Recap","c":"Picking Up Where We Left Off"},{"s":"S010","n":2,"t":"Character_Management","c":"Inventory Reckoning at Castle Corras"},{"s":"S010","n":5,"t":"Social_Encounter","c":"The Hooded Figure at the Ritual"},{"s":"S010","n":6,"t":"Exposition","c":"Whispers from the Latrine Bucket"},{"s":"S011","n":1,"t":"Meta","c":"Corras became duke of a castle somewhere in the far north region from Deck of Many Things"},{"s":"S013","n":4,"t":"Skill_Challenge","c":""},{"s":"S013","n":5,"t":"Social_Encounter","c":""},{"s":"S013","n":7,"t":"Exploration","c":""},{"s":"S013","n":8,"t":"Exposition","c":""},{"s":"S014","n":1,"t":"Off_Topic","c":""},{"s":"S014","n":4,"t":"Social_Encounter","c":""},{"s":"S014","n":6,"t":"Exploration","c":"Heist Planning at the Castle"},{"s":"S015","n":1,"t":"Off_Topic","c":"Catching Up Before the Heist"},{"s":"S015","n":2,"t":"Recap","c":"DM Recap and Spell Preparations"},{"s":"S015","n":3,"t":"Social_Encounter","c":"Planning the Great Spark Swap"},{"s":"S015","n":4,"t":"Social_Encounter","c":"A Scholar Stumbles From the Dark"},{"s":"S015","n":7,"t":"Social_Encounter","c":"Leaving the Scholar With a Quaggoth"},{"s":"S015","n":8,"t":"Exploration","c":"Infiltrating Castle Corras"},{"s":"S015","n":9,"t":"Meta","c":"Session Wrap and Cliffhanger"},{"s":"S016","n":2,"t":"Recap","c":"New Abilities and Session Recap"},{"s":"S016","n":3,"t":"Social_Encounter","c":"The Elaborate Spark Heist Plan"},{"s":"S016","n":4,"t":"Skill_Challenge","c":"Executing the Swap Inside Castle Corras"},{"s":"S016","n":5,"t":"Skill_Challenge","c":""},{"s":"S017","n":6,"t":"Social_Encounter","c":"Undoing Fate at the Edge of Oblivion"},{"s":"S017","n":7,"t":"Exposition","c":"A New Dawn in a Changed World"},{"s":"S018","n":1,"t":"Meta","c":"Greetings and Character Rebuild Discussion"},{"s":"S018","n":2,"t":"Meta","c":"Session Feedback and Pacing Review"},{"s":"S018","n":4,"t":"Exposition","c":"The Cosmic War Reshapes Faerun"},{"s":"S018","n":5,"t":"Character_Management","c":"Branching Fates: Round One Choices"},{"s":"S018","n":6,"t":"Character_Management","c":"Branching Fates: Empires and Alliances"},{"s":"S018","n":7,"t":"Exposition","c":"The Forge of Souls Beckons"},{"s":"S021","n":4,"t":"Combat","c":""},{"s":"S025","n":3,"t":"Social_Encounter","c":""},{"s":"S025","n":7,"t":"Skill_Challenge","c":"Escape from Web's Edge"},{"s":"S025","n":8,"t":"Exposition","c":"Lolth's Whisper at Castle Corras"},{"s":"S027","n":2,"t":"Exposition","c":"Reshaping the Post-War Political Landscape"},{"s":"S027","n":3,"t":"Exposition","c":"Forging the Federation's Government"},{"s":"S027","n":4,"t":"Character_Management","c":"Bastions and Roles Within the Federation"},{"s":"S028","n":3,"t":"Social_Encounter","c":""},{"s":"S028","n":8,"t":"Social_Encounter","c":"Crash Landing at Castle Corras"},{"s":"S029","n":2,"t":"Exposition","c":"Redrawing the Map of Power"},{"s":"S029","n":3,"t":"Character_Management","c":"Bastions and Bureaucracy of Evil"},{"s":"S029","n":4,"t":"Meta","c":""},{"s":"S030","n":2,"t":"Recap","c":"State of the World Briefing"},{"s":"S030","n":5,"t":"Combat","c":""},{"s":"S031","n":1,"t":"Meta","c":"Bastions, Foundry, and Battle Recap"},{"s":"S031","n":5,"t":"Exploration","c":"Curses and Constructs Beneath the Temple"},{"s":"S033","n":3,"t":"Exploration","c":"Tracking the Ceaseless Maw"},{"s":"S034","n":4,"t":"Exploration","c":"Stranded in the Mountains"},{"s":"S034","n":5,"t":"Social_Encounter","c":""},{"s":"S034","n":6,"t":"Exposition","c":""},{"s":"S037","n":8,"t":"Character_Management","c":""},{"s":"S038","n":2,"t":"Character_Management","c":""},{"s":"S038","n":8,"t":"Meta","c":""},{"s":"S043","n":2,"t":"Meta","c":""},{"s":"S043","n":5,"t":"Skill_Challenge","c":""},{"s":"S046","n":2,"t":"Recap","c":"Fae Invasion Recap and World State"},{"s":"S046","n":3,"t":"Meta","c":"Tier Four Rules and Character Setup"},{"s":"S046","n":4,"t":"Exposition","c":"The Siege Within the Walls"},{"s":"S046","n":5,"t":"Social_Encounter","c":"The Council Debate Over Rations"},{"s":"S046","n":6,"t":"Social_Encounter","c":"Mass Suggestion and the Matron's Ritual"},{"s":"S046","n":7,"t":"Social_Encounter","c":"Aftermath and the Cover-Up"},{"s":"S046","n":8,"t":"Exploration","c":"The Druid's Warning at the Dome"},{"s":"S047","n":1,"t":"Recap","c":"Pre-Game Banter and Session Recap"},{"s":"S047","n":4,"t":"Social_Encounter","c":"Waking the Master of Whispers"},{"s":"S047","n":6,"t":"Character_Management","c":"Gifts and a Gruesome Farewell"},{"s":"S047","n":7,"t":"Exploration","c":"Ash Hunts for Spark in the Feywild"},{"s":"S047","n":9,"t":"Character_Management","c":"BWB Plans a Counter-Offensive"},{"s":"S047","n":10,"t":"Social_Encounter","c":"Trial by Truth in the Courtyard"},{"s":"S048","n":2,"t":"Recap","c":"The Red Council Recap"},{"s":"S048","n":3,"t":"Social_Encounter","c":"Trial by Crowd in the Courtyard"},{"s":"S048","n":4,"t":"Combat","c":"Massacre in the Muddy Courtyard"},{"s":"S048","n":5,"t":"Character_Management","c":"Counting the Dead and Spoils"},{"s":"S048","n":6,"t":"Exploration","c":"The Butcher Unmasked as a Construct"},{"s":"S048","n":7,"t":"Exploration","c":"The Warehouse Trail Goes Cold"},{"s":"S048","n":8,"t":"Social_Encounter","c":"Funeral, Cliffhanger, and the Matron's Smile"},{"s":"S049","n":3,"t":"Social_Encounter","c":"Confrontation with the Matron"},{"s":"S049","n":5,"t":"Social_Encounter","c":"The Matron's Bargain for Power"},{"s":"S049","n":6,"t":"Exposition","c":"Zibblebottom's Revelations and Inventions"},{"s":"S049","n":7,"t":"Exploration","c":"Departure to the Feywild"}]},{"name":"Celestia","first_session":16,"last_session":null,"session_count":3,"mention_count":4,"sessions":["S016","S017","S025"],"mentions":[{"s":"S017","n":6,"t":"Social_Encounter","c":"Undoing Fate at the Edge of Oblivion"},{"s":"S018","n":4,"t":"Exposition","c":""},{"s":"S018","n":6,"t":"Character_Management","c":"Branching Fates: Empires and Alliances"},{"s":"S027","n":5,"t":"Meta","c":"Future Arcs and the Road Ahead"},{"s":"S029","n":4,"t":"Meta","c":""}]},{"name":"Chamber of Reflection","first_session":5,"last_session":5,"session_count":1,"mention_count":1,"sessions":["S005"],"mentions":[{"s":"S006","n":5,"t":"Puzzle","c":"Secrets in the Hall of Whispers"}]},{"name":"Citadel Adbar","first_session":25,"last_session":null,"session_count":1,"mention_count":2,"sessions":["S025"],"mentions":[{"s":"S027","n":2,"t":"Exposition","c":"Reshaping the Post-War Political Landscape"},{"s":"S027","n":4,"t":"Character_Management","c":"Bastions and Roles Within the Federation"},{"s":"S029","n":4,"t":"Meta","c":""}]},{"name":"Council Chamber","first_session":44,"last_session":44,"session_count":1,"mention_count":4,"sessions":["S044"],"mentions":[{"s":"S047","n":1,"t":"Recap","c":""},{"s":"S047","n":2,"t":"Social_Encounter","c":"Council Room Cleanup and Cover-Up"},{"s":"S047","n":4,"t":"Social_Encounter","c":"Waking the Master of Whispers"},{"s":"S047","n":6,"t":"Character_Management","c":""}]},{"name":"Court of Gloom","first_session":29,"last_session":29,"session_count":1,"mention_count":1,"sessions":["S029"],"mentions":[{"s":"S032","n":6,"t":"Skill_Challenge","c":"Exorcising Malchor and Deciphering the Contract"}]},{"name":"Daggerford","first_session":30,"last_session":30,"session_count":1,"mention_count":2,"sessions":["S030"],"mentions":[{"s":"S033","n":3,"t":"Exploration","c":"Tracking the Ceaseless Maw"},{"s":"S033","n":5,"t":"Exploration","c":"Descent Into the Daggerford Tomb"}]},{"name":"Death House","first_session":35,"last_session":40,"session_count":6,"mention_count":33,"sessions":["S035","S036","S037","S038","S039","S040"],"mentions":[{"s":"S038","n":3,"t":"Social_Encounter","c":"Tense Reunion in Sigil's Sanctum"},{"s":"S038","n":4,"t":"Exposition","c":"Interrogating Mordenkainen's Deception"},{"s":"S038","n":5,"t":"Character_Management","c":""},{"s":"S038","n":6,"t":"Social_Encounter","c":"The Children of Durst Manor"},{"s":"S038","n":7,"t":"Exploration","c":"Ransacking the Haunted Manor"},{"s":"S038","n":7,"t":"Exploration","c":"Ransacking the Haunted Manor"},{"s":"S038","n":8,"t":"Meta","c":"Post-Session Barovia Speculation"},{"s":"S039","n":1,"t":"Recap","c":"Pre-Game Banter and Session Recap"},{"s":"S039","n":2,"t":"Combat","c":"Attic Ambush by Invisible Stalkers"},{"s":"S039","n":3,"t":"Combat","c":"Spiderwebs and the Marilith Emerges"},{"s":"S039","n":4,"t":"Social_Encounter","c":"The Inquisitor in the Dark"},{"s":"S039","n":5,"t":"Exploration","c":"Descent Into the Bleeding Basement"},{"s":"S039","n":6,"t":"Combat","c":"The Priests Who Would Not Die"},{"s":"S040","n":1,"t":"Recap","c":"Catching Up in Barovia"},{"s":"S040","n":2,"t":"Combat","c":"Slaying the Priests of Osibis"},{"s":"S040","n":3,"t":"Social_Encounter","c":"Interrogating the Dead Cultist"},{"s":"S040","n":4,"t":"Exploration","c":"The Orb's Tempting Whisper"},{"s":"S040","n":5,"t":"Exploration","c":"Reliquary and the Shambling Mound"},{"s":"S040","n":6,"t":"Combat","c":"The Crimson Abbot Descends"},{"s":"S040","n":7,"t":"Social_Encounter","c":"A Deal with Strahd von Zarovich"},{"s":"S040","n":8,"t":"Skill_Challenge","c":"One Must Die, the House Demands"},{"s":"S041","n":2,"t":"Skill_Challenge","c":"Death House Skill Challenge Begins"},{"s":"S041","n":2,"t":"Skill_Challenge","c":"Death House Skill Challenge Begins"},{"s":"S041","n":3,"t":"Skill_Challenge","c":"Desperate Flight Through Death House"},{"s":"S041","n":5,"t":"Skill_Challenge","c":"Escape From the Accursed Manor"},{"s":"S041","n":6,"t":"Exposition","c":"Strahd's Deal and the Ruined Village"},{"s":"S042","n":1,"t":"Off_Topic","c":""},{"s":"S042","n":2,"t":"Meta","c":"Death House Retrospective and Recap"},{"s":"S042","n":4,"t":"Skill_Challenge","c":""},{"s":"S043","n":1,"t":"Recap","c":""},{"s":"S043","n":2,"t":"Meta","c":"Character Introductions and Campaign Legends"},{"s":"S043","n":4,"t":"Exploration","c":""},{"s":"S043","n":6,"t":"Exploration","c":""}]},{"name":"Dessarin Valley","first_session":null,"last_session":null,"session_count":0,"mention_count":0,"sessions":[],"mentions":[{"s":"S029","n":2,"t":"Exposition","c":"Redrawing the Map of Power"}]},{"name":"Everland","first_session":4,"last_session":32,"session_count":4,"mention_count":8,"sessions":["S004","S017","S031","S032"],"mentions":[{"s":"S004","n":1,"t":"Social_Encounter","c":"Plotting Lilith's False Trail"},{"s":"S004","n":7,"t":"Exposition","c":"The Chronicler's Mark"},{"s":"S004","n":8,"t":"Social_Encounter","c":"The Raven Who Lied"},{"s":"S005","n":1,"t":"Exposition","c":"False Trails and Firework Schemes"},{"s":"S005","n":6,"t":"Exposition","c":"A Finger and a Tome"},{"s":"S005","n":7,"t":"Social_Encounter","c":"The Raven Who Lied"},{"s":"S018","n":6,"t":"Character_Management","c":"Branching Fates: Empires and Alliances"},{"s":"S034","n":6,"t":"Exposition","c":"Ezrella's Warning of Dark Smugglers"},{"s":"S034","n":8,"t":"Meta","c":"Level Fourteen and Looking Ahead"},{"s":"S035","n":3,"t":"Social_Encounter","c":"Infiltrating Warehouse Seventeen"},{"s":"S035","n":5,"t":"Social_Encounter","c":"Dahlia Cons the Foreman"}]},{"name":"Everlund","first_session":2,"last_session":32,"session_count":6,"mention_count":11,"sessions":["S002","S004","S017","S025","S031","S032"],"mentions":[{"s":"S002","n":1,"t":"Meta","c":""},{"s":"S004","n":1,"t":"Social_Encounter","c":""},{"s":"S004","n":7,"t":"Exposition","c":""},{"s":"S004","n":8,"t":"Social_Encounter","c":""},{"s":"S005","n":1,"t":"Exposition","c":""},{"s":"S005","n":6,"t":"Exposition","c":""},{"s":"S005","n":7,"t":"Social_Encounter","c":""},{"s":"S018","n":6,"t":"Character_Management","c":""},{"s":"S027","n":2,"t":"Exposition","c":"Reshaping the Post-War Political Landscape"},{"s":"S027","n":4,"t":"Character_Management","c":""},{"s":"S029","n":2,"t":"Exposition","c":"Redrawing the Map of Power"},{"s":"S029","n":4,"t":"Meta","c":""},{"s":"S034","n":6,"t":"Exposition","c":""},{"s":"S034","n":7,"t":"Combat","c":""},{"s":"S034","n":8,"t":"Meta","c":""},{"s":"S035","n":3,"t":"Social_Encounter","c":""}]},{"name":"Feywild","first_session":1,"last_session":46,"session_count":19,"mention_count":35,"sessions":["S001","S002","S003","S004","S005","S006","S007","S008","S011","S012","S014","S017","S025","S027","S029","S043","S044","S045","S046"],"mentions":[{"s":"S001","n":4,"t":"Exposition","c":""},{"s":"S001","n":6,"t":"Social_Encounter","c":""},{"s":"S002","n":3,"t":"Character_Management","c":""},{"s":"S002","n":7,"t":"Meta","c":""},{"s":"S003","n":8,"t":"Exposition","c":""},{"s":"S004","n":5,"t":"Exploration","c":""},{"s":"S004","n":6,"t":"Ritual","c":"The Seedling Song and the Shadow Tree"},{"s":"S004","n":7,"t":"Exposition","c":""},{"s":"S005","n":5,"t":"Ritual","c":"The Seedling Song and the Shadow Portal"},{"s":"S005","n":6,"t":"Exposition","c":""},{"s":"S006","n":3,"t":"Skill_Challenge","c":""},{"s":"S007","n":2,"t":"Combat","c":""},{"s":"S008","n":4,"t":"Exploration","c":""},{"s":"S009","n":2,"t":"Combat","c":"Spark Ambushes Corras in the Castle"},{"s":"S009","n":5,"t":"Social_Encounter","c":""},{"s":"S012","n":3,"t":"Social_Encounter","c":"Introductions on the Road"},{"s":"S013","n":4,"t":"Skill_Challenge","c":""},{"s":"S015","n":3,"t":"Social_Encounter","c":""},{"s":"S018","n":5,"t":"Character_Management","c":"Branching Fates: Round One Choices"},{"s":"S018","n":6,"t":"Character_Management","c":""},{"s":"S027","n":4,"t":"Character_Management","c":""},{"s":"S027","n":5,"t":"Meta","c":"Future Arcs and the Road Ahead"},{"s":"S029","n":3,"t":"Character_Management","c":"Bastions and Bureaucracy of Evil"},{"s":"S029","n":4,"t":"Meta","c":"The Soulforge and Roads Ahead"},{"s":"S030","n":2,"t":"Recap","c":""},{"s":"S032","n":6,"t":"Skill_Challenge","c":"Exorcising Malchor and Deciphering the Contract"},{"s":"S032","n":7,"t":"Ritual","c":""},{"s":"S046","n":2,"t":"Recap","c":"Fae Invasion Recap and World State"},{"s":"S046","n":3,"t":"Meta","c":""},{"s":"S047","n":5,"t":"Social_Encounter","c":""},{"s":"S047","n":7,"t":"Exploration","c":"Ash Hunts for Spark in the Feywild"},{"s":"S047","n":10,"t":"Social_Encounter","c":"Trial by Truth in the Courtyard"},{"s":"S048","n":2,"t":"Recap","c":"The Red Council Recap"},{"s":"S048","n":8,"t":"Social_Encounter","c":""},{"s":"S049","n":3,"t":"Social_Encounter","c":"Confrontation with the Matron"},{"s":"S049","n":5,"t":"Social_Encounter","c":"The Matron's Bargain for Power"},{"s":"S049","n":6,"t":"Exposition","c":"Zibblebottom's Revelations and Inventions"},{"s":"S049","n":7,"t":"Exploration","c":"Departure to the Feywild"},{"s":"S049","n":8,"t":"Skill_Challenge","c":"The Wild Hunt of Cernunnos"}]},{"name":"Fiendish node","first_session":27,"last_session":27,"session_count":1,"mention_count":1,"sessions":["S027"],"mentions":[{"s":"S030","n":5,"t":"Combat","c":""}]},{"name":"Forge of Spells","first_session":7,"last_session":29,"session_count":8,"mention_count":15,"sessions":["S007","S012","S014","S018","S019","S020","S025","S029"],"mentions":[{"s":"S008","n":1,"t":"Meta","c":""},{"s":"S013","n":4,"t":"Skill_Challenge","c":""},{"s":"S013","n":5,"t":"Social_Encounter","c":"Herb Merchants Visit the Ritual Site"},{"s":"S013","n":7,"t":"Exploration","c":""},{"s":"S015","n":9,"t":"Meta","c":""},{"s":"S019","n":2,"t":"Exposition","c":"Dahlia Joins and Corras Briefs"},{"s":"S020","n":2,"t":"Exposition","c":""},{"s":"S020","n":6,"t":"Exploration","c":"Orphaned Yeti Tykes"},{"s":"S020","n":7,"t":"Exploration","c":""},{"s":"S021","n":4,"t":"Combat","c":""},{"s":"S021","n":5,"t":"Social_Encounter","c":"Ghosts in the Chasm"},{"s":"S026","n":2,"t":"Character_Management","c":""},{"s":"S026","n":7,"t":"Exploration","c":"Orphaned Yeti Tykes and Forge Clues"},{"s":"S026","n":8,"t":"Exploration","c":"The Cabin on Stilts Above the Abyss"},{"s":"S027","n":2,"t":"Exposition","c":"Reshaping the Post-War Political Landscape"},{"s":"S027","n":3,"t":"Exposition","c":"Forging the Federation's Government"},{"s":"S027","n":5,"t":"Meta","c":""},{"s":"S029","n":2,"t":"Exposition","c":"Redrawing the Map of Power"},{"s":"S029","n":4,"t":"Meta","c":"The Soulforge and Roads Ahead"},{"s":"S032","n":3,"t":"Exploration","c":""}]},{"name":"Fort Caliban","first_session":17,"last_session":27,"session_count":3,"mention_count":3,"sessions":["S017","S018","S027"],"mentions":[{"s":"S018","n":7,"t":"Exposition","c":"The Forge of Souls Beckons"},{"s":"S019","n":2,"t":"Exposition","c":"Dahlia Joins and Corras Briefs"},{"s":"S030","n":2,"t":"Recap","c":"State of the World Briefing"}]},{"name":"Gilded Quill","first_session":1,"last_session":17,"session_count":11,"mention_count":23,"sessions":["S001","S002","S004","S005","S006","S007","S008","S009","S012","S013","S017"],"mentions":[{"s":"S001","n":4,"t":"Exposition","c":"Spymasters and Surrogate Mothers"},{"s":"S002","n":1,"t":"Meta","c":"Castle Management Crash Course"},{"s":"S002","n":3,"t":"Character_Management","c":"The Brotherhood Balances Its Books"},{"s":"S002","n":4,"t":"Exposition","c":"What Lies Beneath Castle Corras"},{"s":"S004","n":7,"t":"Exposition","c":"The Chronicler's Mark"},{"s":"S004","n":9,"t":"Exploration","c":"Bones Beneath Lumin"},{"s":"S005","n":6,"t":"Exposition","c":"A Finger and a Tome"},{"s":"S005","n":8,"t":"Exploration","c":"Bones Beneath Lumin"},{"s":"S006","n":4,"t":"Character_Management","c":""},{"s":"S006","n":5,"t":"Puzzle","c":"Secrets in the Hall of Whispers"},{"s":"S007","n":2,"t":"Combat","c":"The Archmage's Desperate Last Stand"},{"s":"S007","n":2,"t":"Combat","c":"The Archmage's Desperate Last Stand"},{"s":"S007","n":4,"t":"Exploration","c":"The Taunting Voice From Beyond"},{"s":"S007","n":5,"t":"Puzzle","c":"Riddles, Loot, and a Dire Warning"},{"s":"S007","n":6,"t":"Skill_Challenge","c":"Escape From the Collapsing Crypt"},{"s":"S008","n":2,"t":"Exposition","c":"Planning the Spark Rescue Heist"},{"s":"S008","n":4,"t":"Exploration","c":"Splitting Up at Castle Corras"},{"s":"S009","n":7,"t":"Character_Management","c":""},{"s":"S009","n":8,"t":"Exposition","c":"An Injured Mercenary on the Road"},{"s":"S009","n":9,"t":"Meta","c":"Farewell and Final Coordinates"},{"s":"S010","n":5,"t":"Social_Encounter","c":""},{"s":"S013","n":4,"t":"Skill_Challenge","c":""},{"s":"S014","n":6,"t":"Exploration","c":"Heist Planning at the Castle"},{"s":"S018","n":5,"t":"Character_Management","c":""},{"s":"S018","n":6,"t":"Character_Management","c":"Branching Fates: Empires and Alliances"}]},{"name":"Grandfather Tree","first_session":17,"last_session":28,"session_count":3,"mention_count":3,"sessions":["S017","S025","S028"],"mentions":[{"s":"S018","n":5,"t":"Character_Management","c":"Branching Fates: Round One Choices"},{"s":"S027","n":4,"t":"Character_Management","c":"Bastions and Roles Within the Federation"},{"s":"S029","n":3,"t":"Character_Management","c":"Bastions and Bureaucracy of Evil"},{"s":"S031","n":1,"t":"Meta","c":"Bastions, Foundry, and Battle Recap"}]},{"name":"Hall of Whispers","first_session":5,"last_session":5,"session_count":1,"mention_count":2,"sessions":["S005"],"mentions":[{"s":"S006","n":5,"t":"Puzzle","c":"Secrets in the Hall of Whispers"},{"s":"S006","n":6,"t":"Combat","c":"Bone Devil Brawl in the Crypt"}]},{"name":"Havenbrook","first_session":1,"last_session":null,"session_count":10,"mention_count":20,"sessions":["S001","S002","S004","S005","S007","S008","S009","S012","S017","S025"],"mentions":[{"s":"S001","n":4,"t":"Exposition","c":"Spymasters and Surrogate Mothers"},{"s":"S002","n":1,"t":"Meta","c":"Castle Management Crash Course"},{"s":"S004","n":3,"t":"Recap","c":"Recap and the Goblin Horde Awaits"},{"s":"S004","n":4,"t":"Combat","c":"Blood and Steel at the Goblin Camp"},{"s":"S004","n":7,"t":"Exposition","c":"The Chronicler's Mark"},{"s":"S005","n":2,"t":"Meta","c":"Splash Page Admiration and Session Setup"},{"s":"S005","n":3,"t":"Combat","c":"Blood and Fangs at the Goblin Camp"},{"s":"S005","n":6,"t":"Exposition","c":"A Finger and a Tome"},{"s":"S006","n":2,"t":"Social_Encounter","c":"The Cult of Lilith Descends"},{"s":"S006","n":4,"t":"Character_Management","c":"Plague Spreads Across the Realm"},{"s":"S008","n":6,"t":"Skill_Challenge","c":""},{"s":"S009","n":4,"t":"Social_Encounter","c":"Madam Zilara's Tent of Dubious Fortunes"},{"s":"S009","n":6,"t":"Skill_Challenge","c":""},{"s":"S009","n":8,"t":"Exposition","c":"An Injured Mercenary on the Road"},{"s":"S009","n":9,"t":"Meta","c":"Farewell and Final Coordinates"},{"s":"S010","n":1,"t":"Recap","c":"Picking Up Where We Left Off"},{"s":"S010","n":3,"t":"Meta","c":"Return from Break"},{"s":"S010","n":4,"t":"Social_Encounter","c":"Potato Stew with a Dying Stranger"},{"s":"S010","n":7,"t":"Exploration","c":"Grimslick's Caravan and the Mimic Horse"},{"s":"S013","n":4,"t":"Skill_Challenge","c":"Catastrophic Explosion and Desperate Escape"},{"s":"S018","n":5,"t":"Character_Management","c":"Branching Fates: Round One Choices"},{"s":"S018","n":6,"t":"Character_Management","c":""},{"s":"S027","n":4,"t":"Character_Management","c":""},{"s":"S029","n":4,"t":"Meta","c":""}]},{"name":"Havenwood","first_session":8,"last_session":12,"session_count":2,"mention_count":2,"sessions":["S008","S012"],"mentions":[{"s":"S009","n":7,"t":"Character_Management","c":""},{"s":"S013","n":4,"t":"Skill_Challenge","c":"Catastrophic Explosion and Desperate Escape"}]},{"name":"Heartwood Tree","first_session":4,"last_session":null,"session_count":1,"mention_count":2,"sessions":["S004"],"mentions":[{"s":"S004","n":5,"t":"Exploration","c":""},{"s":"S004","n":6,"t":"Ritual","c":""},{"s":"S005","n":5,"t":"Ritual","c":""}]},{"name":"High Forest","first_session":1,"last_session":null,"session_count":9,"mention_count":14,"sessions":["S001","S002","S005","S007","S008","S013","S014","S017","S025"],"mentions":[{"s":"S001","n":4,"t":"Exposition","c":""},{"s":"S001","n":5,"t":"Character_Management","c":""},{"s":"S002","n":1,"t":"Meta","c":"Castle Management Crash Course"},{"s":"S002","n":3,"t":"Character_Management","c":""},{"s":"S006","n":4,"t":"Character_Management","c":""},{"s":"S008","n":6,"t":"Skill_Challenge","c":""},{"s":"S009","n":8,"t":"Exposition","c":""},{"s":"S014","n":4,"t":"Social_Encounter","c":"The Dungeons of Berdusk"},{"s":"S014","n":5,"t":"Social_Encounter","c":""},{"s":"S015","n":2,"t":"Recap","c":""},{"s":"S015","n":5,"t":"Combat","c":""},{"s":"S018","n":4,"t":"Exposition","c":"The Cosmic War Reshapes Faerun"},{"s":"S018","n":6,"t":"Character_Management","c":"Branching Fates: Empires and Alliances"},{"s":"S027","n":4,"t":"Character_Management","c":""},{"s":"S029","n":2,"t":"Exposition","c":"Redrawing the Map of Power"},{"s":"S029","n":3,"t":"Character_Management","c":"Bastions and Bureaucracy of Evil"}]},{"name":"Hilltop","first_session":2,"last_session":17,"session_count":2,"mention_count":2,"sessions":["S002","S017"],"mentions":[{"s":"S002","n":1,"t":"Meta","c":""},{"s":"S018","n":6,"t":"Character_Management","c":"Branching Fates: Empires and Alliances"}]},{"name":"Icewind Dale","first_session":null,"last_session":null,"session_count":0,"mention_count":0,"sessions":[],"mentions":[{"s":"S029","n":2,"t":"Exposition","c":"Redrawing the Map of Power"}]},{"name":"Infernal Node","first_session":29,"last_session":29,"session_count":1,"mention_count":3,"sessions":["S029"],"mentions":[{"s":"S032","n":3,"t":"Exploration","c":"Investigating the Cursed Coin and Dagger"},{"s":"S032","n":7,"t":"Ritual","c":"Completing the Infernal Node Ritual"},{"s":"S032","n":8,"t":"Meta","c":""}]},{"name":"Infernal Plain Temple","first_session":null,"last_session":null,"session_count":0,"mention_count":0,"sessions":[],"mentions":[]},{"name":"Jalanthar","first_session":2,"last_session":null,"session_count":4,"mention_count":5,"sessions":["S002","S008","S017","S025"],"mentions":[{"s":"S002","n":1,"t":"Meta","c":"Castle Management Crash Course"},{"s":"S002","n":4,"t":"Exposition","c":""},{"s":"S009","n":9,"t":"Meta","c":""},{"s":"S018","n":6,"t":"Character_Management","c":"Branching Fates: Empires and Alliances"},{"s":"S027","n":4,"t":"Character_Management","c":""},{"s":"S029","n":4,"t":"Meta","c":""}]},{"name":"Kingdom of Hysteria","first_session":16,"last_session":16,"session_count":1,"mention_count":2,"sessions":["S016"],"mentions":[{"s":"S017","n":4,"t":"Skill_Challenge","c":"Navigating the Temporal Vortexes"},{"s":"S017","n":5,"t":"Combat","c":"Storm and Sacrifice Across Two Fronts"}]},{"name":"Kingdom of Many Arrows","first_session":25,"last_session":35,"session_count":3,"mention_count":4,"sessions":["S025","S028","S035"],"mentions":[{"s":"S027","n":3,"t":"Exposition","c":"Forging the Federation's Government"},{"s":"S027","n":4,"t":"Character_Management","c":""},{"s":"S029","n":3,"t":"Character_Management","c":""},{"s":"S031","n":1,"t":"Meta","c":"Bastions, Foundry, and Battle Recap"},{"s":"S038","n":2,"t":"Character_Management","c":"Bastion Preparations and Crafting Orders"}]},{"name":"Loudwater","first_session":25,"last_session":null,"session_count":1,"mention_count":1,"sessions":["S025"],"mentions":[{"s":"S027","n":4,"t":"Character_Management","c":"Bastions and Roles Within the Federation"},{"s":"S029","n":4,"t":"Meta","c":""}]},{"name":"Lubenhaven","first_session":null,"last_session":null,"session_count":0,"mention_count":0,"sessions":[],"mentions":[]},{"name":"Lumin","first_session":1,"last_session":43,"session_count":12,"mention_count":46,"sessions":["S001","S002","S004","S005","S007","S008","S009","S012","S013","S017","S025","S043"],"mentions":[{"s":"S001","n":4,"t":"Exposition","c":"Spymasters and Surrogate Mothers"},{"s":"S001","n":5,"t":"Character_Management","c":"Pillows, Palanquins, and Purple Pebbles"},{"s":"S001","n":6,"t":"Social_Encounter","c":"The Etten Who Smashed and Apologized"},{"s":"S001","n":7,"t":"Exploration","c":"Long Live the Royal Smasher"},{"s":"S002","n":1,"t":"Meta","c":"Castle Management Crash Course"},{"s":"S002","n":2,"t":"Recap","c":"Last Session Recap"},{"s":"S002","n":3,"t":"Character_Management","c":"The Brotherhood Balances Its Books"},{"s":"S002","n":4,"t":"Exposition","c":"What Lies Beneath Castle Corras"},{"s":"S004","n":1,"t":"Social_Encounter","c":""},{"s":"S004","n":5,"t":"Exploration","c":"Whispers in the Aftermath"},{"s":"S004","n":7,"t":"Exposition","c":""},{"s":"S004","n":8,"t":"Social_Encounter","c":"The Raven Who Lied"},{"s":"S004","n":9,"t":"Exploration","c":"Bones Beneath Lumin"},{"s":"S005","n":1,"t":"Exposition","c":"False Trails and Firework Schemes"},{"s":"S005","n":4,"t":"Exploration","c":"Sarlumon's Silver Harvest"},{"s":"S005","n":5,"t":"Ritual","c":""},{"s":"S005","n":6,"t":"Exposition","c":"A Finger and a Tome"},{"s":"S005","n":7,"t":"Social_Encounter","c":"The Raven Who Lied"},{"s":"S005","n":8,"t":"Exploration","c":"Bones Beneath Lumin"},{"s":"S006","n":2,"t":"Social_Encounter","c":"The Cult of Lilith Descends"},{"s":"S006","n":4,"t":"Character_Management","c":"Plague Spreads Across the Realm"},{"s":"S006","n":5,"t":"Puzzle","c":"Secrets in the Hall of Whispers"},{"s":"S006","n":6,"t":"Combat","c":"Bone Devil Brawl in the Crypt"},{"s":"S008","n":4,"t":"Exploration","c":"Splitting Up at Castle Corras"},{"s":"S008","n":5,"t":"Skill_Challenge","c":""},{"s":"S008","n":6,"t":"Skill_Challenge","c":""},{"s":"S009","n":1,"t":"Meta","c":""},{"s":"S009","n":4,"t":"Social_Encounter","c":"Madam Zilara's Tent of Dubious Fortunes"},{"s":"S009","n":5,"t":"Social_Encounter","c":""},{"s":"S009","n":6,"t":"Skill_Challenge","c":""},{"s":"S009","n":7,"t":"Character_Management","c":"Simulacrum Ritual at the Lumin Circle"},{"s":"S009","n":8,"t":"Exposition","c":"An Injured Mercenary on the Road"},{"s":"S009","n":9,"t":"Meta","c":"Farewell and Final Coordinates"},{"s":"S010","n":1,"t":"Recap","c":"Picking Up Where We Left Off"},{"s":"S010","n":3,"t":"Meta","c":"Return from Break"},{"s":"S010","n":4,"t":"Social_Encounter","c":""},{"s":"S010","n":5,"t":"Social_Encounter","c":"The Hooded Figure at the Ritual"},{"s":"S013","n":2,"t":"Recap","c":"Recap and Preparing for Battle"},{"s":"S013","n":4,"t":"Skill_Challenge","c":""},{"s":"S013","n":5,"t":"Social_Encounter","c":"Herb Merchants Visit the Ritual Site"},{"s":"S013","n":6,"t":"Exposition","c":"Sending Messages Across the Realm"},{"s":"S013","n":7,"t":"Exploration","c":"Fleshy's Transformation and the Relic"},{"s":"S013","n":8,"t":"Exposition","c":"The Book's Curse Deepens"},{"s":"S013","n":8,"t":"Exposition","c":"The Book's Curse Deepens"},{"s":"S014","n":2,"t":"Recap","c":"Recap of Previous Catastrophic Session"},{"s":"S014","n":4,"t":"Social_Encounter","c":"The Dungeons of Berdusk"},{"s":"S014","n":5,"t":"Social_Encounter","c":"Reunion at the Ritual Site"},{"s":"S018","n":5,"t":"Character_Management","c":"Branching Fates: Round One Choices"},{"s":"S018","n":6,"t":"Character_Management","c":""},{"s":"S027","n":2,"t":"Exposition","c":"Reshaping the Post-War Political Landscape"},{"s":"S027","n":4,"t":"Character_Management","c":""},{"s":"S029","n":4,"t":"Meta","c":""},{"s":"S046","n":6,"t":"Social_Encounter","c":""}]},{"name":"Lurkwood","first_session":35,"last_session":35,"session_count":1,"mention_count":1,"sessions":["S035"],"mentions":[{"s":"S038","n":2,"t":"Character_Management","c":"Bastion Preparations and Crafting Orders"}]},{"name":"Luskan","first_session":17,"last_session":null,"session_count":2,"mention_count":2,"sessions":["S017","S025"],"mentions":[{"s":"S018","n":4,"t":"Exposition","c":"The Cosmic War Reshapes Faerun"},{"s":"S027","n":4,"t":"Character_Management","c":""},{"s":"S029","n":2,"t":"Exposition","c":"Redrawing the Map of Power"},{"s":"S029","n":4,"t":"Meta","c":""}]},{"name":"Luvenhead","first_session":4,"last_session":null,"session_count":1,"mention_count":1,"sessions":["S004"],"mentions":[{"s":"S004","n":1,"t":"Social_Encounter","c":"Plotting Lilith's False Trail"},{"s":"S005","n":1,"t":"Exposition","c":"False Trails and Firework Schemes"}]},{"name":"Malgaris","first_session":29,"last_session":29,"session_count":1,"mention_count":1,"sessions":["S029"],"mentions":[{"s":"S032","n":7,"t":"Ritual","c":"Completing the Infernal Node Ritual"}]},{"name":"Material Plane","first_session":1,"last_session":25,"session_count":6,"mention_count":7,"sessions":["S001","S007","S012","S017","S024","S025"],"mentions":[{"s":"S001","n":6,"t":"Social_Encounter","c":""},{"s":"S008","n":1,"t":"Meta","c":""},{"s":"S008","n":2,"t":"Exposition","c":""},{"s":"S013","n":4,"t":"Skill_Challenge","c":""},{"s":"S018","n":4,"t":"Exposition","c":""},{"s":"S025","n":8,"t":"Exposition","c":""},{"s":"S027","n":5,"t":"Meta","c":""}]},{"name":"Mirabar","first_session":4,"last_session":null,"session_count":3,"mention_count":4,"sessions":["S004","S017","S025"],"mentions":[{"s":"S004","n":8,"t":"Social_Encounter","c":""},{"s":"S005","n":7,"t":"Social_Encounter","c":""},{"s":"S018","n":4,"t":"Exposition","c":"The Cosmic War Reshapes Faerun"},{"s":"S027","n":2,"t":"Exposition","c":"Reshaping the Post-War Political Landscape"},{"s":"S027","n":4,"t":"Character_Management","c":""},{"s":"S029","n":2,"t":"Exposition","c":"Redrawing the Map of Power"},{"s":"S029","n":4,"t":"Meta","c":""}]},{"name":"Mirkwood","first_session":46,"last_session":46,"session_count":1,"mention_count":1,"sessions":["S046"],"mentions":[{"s":"S049","n":8,"t":"Skill_Challenge","c":"The Wild Hunt of Cernunnos"}]},{"name":"Mithral Hall","first_session":25,"last_session":28,"session_count":2,"mention_count":4,"sessions":["S025","S028"],"mentions":[{"s":"S027","n":2,"t":"Exposition","c":"Reshaping the Post-War Political Landscape"},{"s":"S027","n":3,"t":"Exposition","c":"Forging the Federation's Government"},{"s":"S027","n":4,"t":"Character_Management","c":"Bastions and Roles Within the Federation"},{"s":"S029","n":2,"t":"Exposition","c":"Redrawing the Map of Power"},{"s":"S029","n":4,"t":"Meta","c":""},{"s":"S031","n":1,"t":"Meta","c":"Bastions, Foundry, and Battle Recap"}]},{"name":"Moonlit Thicket","first_session":1,"last_session":17,"session_count":4,"mention_count":8,"sessions":["S001","S004","S005","S017"],"mentions":[{"s":"S001","n":4,"t":"Exposition","c":"Spymasters and Surrogate Mothers"},{"s":"S001","n":7,"t":"Exploration","c":""},{"s":"S004","n":5,"t":"Exploration","c":"Whispers in the Aftermath"},{"s":"S004","n":6,"t":"Ritual","c":"The Seedling Song and the Shadow Tree"},{"s":"S005","n":5,"t":"Ritual","c":"The Seedling Song and the Shadow Portal"},{"s":"S005","n":6,"t":"Exposition","c":""},{"s":"S006","n":3,"t":"Skill_Challenge","c":"The Great Druidic Review Caper"},{"s":"S006","n":4,"t":"Character_Management","c":"Plague Spreads Across the Realm"},{"s":"S018","n":5,"t":"Character_Management","c":"Branching Fates: Round One Choices"},{"s":"S018","n":6,"t":"Character_Management","c":"Branching Fates: Empires and Alliances"}]},{"name":"Nelrind and Vane","first_session":13,"last_session":44,"session_count":3,"mention_count":4,"sessions":["S013","S014","S044"],"mentions":[{"s":"S014","n":4,"t":"Social_Encounter","c":""},{"s":"S014","n":5,"t":"Social_Encounter","c":""},{"s":"S015","n":2,"t":"Recap","c":""},{"s":"S047","n":3,"t":"Exposition","c":"Orla Communes With the Dying Druid"}]},{"name":"Nether Mountains","first_session":4,"last_session":28,"session_count":5,"mention_count":5,"sessions":["S004","S011","S017","S025","S028"],"mentions":[{"s":"S004","n":4,"t":"Combat","c":""},{"s":"S005","n":4,"t":"Exploration","c":""},{"s":"S012","n":2,"t":"Recap","c":"Recap and Departure From Triboar"},{"s":"S018","n":4,"t":"Exposition","c":"The Cosmic War Reshapes Faerun"},{"s":"S027","n":4,"t":"Character_Management","c":""},{"s":"S029","n":3,"t":"Character_Management","c":"Bastions and Bureaucracy of Evil"},{"s":"S029","n":4,"t":"Meta","c":""},{"s":"S031","n":1,"t":"Meta","c":"Bastions, Foundry, and Battle Recap"}]},{"name":"Neverwinter","first_session":4,"last_session":46,"session_count":5,"mention_count":7,"sessions":["S004","S011","S017","S025","S046"],"mentions":[{"s":"S004","n":8,"t":"Social_Encounter","c":""},{"s":"S005","n":7,"t":"Social_Encounter","c":""},{"s":"S012","n":2,"t":"Recap","c":""},{"s":"S018","n":2,"t":"Meta","c":""},{"s":"S018","n":4,"t":"Exposition","c":"The Cosmic War Reshapes Faerun"},{"s":"S027","n":4,"t":"Character_Management","c":"Bastions and Roles Within the Federation"},{"s":"S029","n":4,"t":"Meta","c":""},{"s":"S049","n":6,"t":"Exposition","c":""},{"s":"S049","n":7,"t":"Exploration","c":""}]},{"name":"Osha Bastia","first_session":28,"last_session":28,"session_count":1,"mention_count":1,"sessions":["S028"],"mentions":[{"s":"S031","n":1,"t":"Meta","c":"Bastions, Foundry, and Battle Recap"}]},{"name":"Ravenloft","first_session":35,"last_session":42,"session_count":4,"mention_count":11,"sessions":["S035","S039","S041","S042"],"mentions":[{"s":"S038","n":3,"t":"Social_Encounter","c":""},{"s":"S038","n":8,"t":"Meta","c":""},{"s":"S042","n":5,"t":"Exploration","c":"Flight Over a Broken Village"},{"s":"S044","n":5,"t":"Social_Encounter","c":"Strahd's Warning and Broken Deal"},{"s":"S044","n":6,"t":"Exploration","c":"Planning and the Flight to Ravenloft"},{"s":"S044","n":7,"t":"Combat","c":"The Heart of Castle Ravenloft"},{"s":"S044","n":8,"t":"Meta","c":"Cliffhanger and Session Wrap-Up"},{"s":"S045","n":3,"t":"Recap","c":"Foundry Setup and Session Recap"},{"s":"S045","n":4,"t":"Combat","c":"Rahadin's Last Stand"},{"s":"S045","n":5,"t":"Combat","c":"Descent Into the Heart of Sorrow"},{"s":"S045","n":6,"t":"Combat","c":"The Final Battle Against Strahd"}]},{"name":"Refugee Camp","first_session":44,"last_session":44,"session_count":1,"mention_count":4,"sessions":["S044"],"mentions":[{"s":"S047","n":3,"t":"Exposition","c":"Orla Communes With the Dying Druid"},{"s":"S047","n":5,"t":"Social_Encounter","c":"Propaganda War in the Refugee Camp"},{"s":"S047","n":8,"t":"Exploration","c":"Rat Infiltration of the Warehouse"},{"s":"S047","n":9,"t":"Character_Management","c":""}]},{"name":"River Chionthar","first_session":2,"last_session":12,"session_count":2,"mention_count":2,"sessions":["S002","S012"],"mentions":[{"s":"S002","n":1,"t":"Meta","c":""},{"s":"S013","n":4,"t":"Skill_Challenge","c":""}]},{"name":"River of Stars","first_session":46,"last_session":46,"session_count":1,"mention_count":1,"sessions":["S046"],"mentions":[{"s":"S049","n":8,"t":"Skill_Challenge","c":"The Wild Hunt of Cernunnos"}]},{"name":"Sanctuary of Retribution","first_session":25,"last_session":28,"session_count":2,"mention_count":2,"sessions":["S025","S028"],"mentions":[{"s":"S027","n":4,"t":"Character_Management","c":"Bastions and Roles Within the Federation"},{"s":"S029","n":3,"t":"Character_Management","c":"Bastions and Bureaucracy of Evil"},{"s":"S031","n":1,"t":"Meta","c":"Bastions, Foundry, and Battle Recap"}]},{"name":"Seelie Court","first_session":25,"last_session":46,"session_count":2,"mention_count":3,"sessions":["S025","S046"],"mentions":[{"s":"S027","n":5,"t":"Meta","c":""},{"s":"S029","n":4,"t":"Meta","c":""},{"s":"S049","n":3,"t":"Social_Encounter","c":"Confrontation with the Matron"},{"s":"S049","n":8,"t":"Skill_Challenge","c":"The Wild Hunt of Cernunnos"}]},{"name":"Seven Heavens","first_session":17,"last_session":17,"session_count":1,"mention_count":1,"sessions":["S017"],"mentions":[{"s":"S018","n":4,"t":"Exposition","c":"The Cosmic War Reshapes Faerun"}]},{"name":"Sigil","first_session":5,"last_session":45,"session_count":12,"mention_count":16,"sessions":["S005","S006","S008","S017","S022","S027","S031","S033","S035","S036","S039","S045"],"mentions":[{"s":"S006","n":3,"t":"Skill_Challenge","c":""},{"s":"S007","n":7,"t":"Character_Management","c":"Buried Alive and Planning Escape"},{"s":"S009","n":7,"t":"Character_Management","c":""},{"s":"S018","n":4,"t":"Exposition","c":"The Cosmic War Reshapes Faerun"},{"s":"S023","n":2,"t":"Recap","c":"Recapping the Road to the Underdark"},{"s":"S030","n":2,"t":"Recap","c":""},{"s":"S034","n":6,"t":"Exposition","c":""},{"s":"S036","n":5,"t":"Combat","c":""},{"s":"S038","n":2,"t":"Character_Management","c":"Bastion Preparations and Crafting Orders"},{"s":"S038","n":3,"t":"Social_Encounter","c":"Tense Reunion in Sigil's Sanctum"},{"s":"S038","n":4,"t":"Exposition","c":"Interrogating Mordenkainen's Deception"},{"s":"S038","n":5,"t":"Character_Management","c":"Gathering Scrolls and Stepping Through"},{"s":"S038","n":6,"t":"Social_Encounter","c":""},{"s":"S039","n":1,"t":"Recap","c":"Pre-Game Banter and Session Recap"},{"s":"S042","n":5,"t":"Exploration","c":""},{"s":"S048","n":6,"t":"Exploration","c":"The Butcher Unmasked as a Construct"}]},{"name":"Silverymoon","first_session":4,"last_session":37,"session_count":6,"mention_count":6,"sessions":["S004","S017","S022","S025","S035","S037"],"mentions":[{"s":"S004","n":8,"t":"Social_Encounter","c":""},{"s":"S005","n":7,"t":"Social_Encounter","c":""},{"s":"S018","n":4,"t":"Exposition","c":"The Cosmic War Reshapes Faerun"},{"s":"S023","n":2,"t":"Recap","c":"Recapping the Road to the Underdark"},{"s":"S027","n":2,"t":"Exposition","c":"Reshaping the Post-War Political Landscape"},{"s":"S029","n":2,"t":"Exposition","c":"Redrawing the Map of Power"},{"s":"S038","n":2,"t":"Character_Management","c":"Bastion Preparations and Crafting Orders"},{"s":"S040","n":7,"t":"Social_Encounter","c":""}]},{"name":"Soul Cavern","first_session":28,"last_session":28,"session_count":1,"mention_count":3,"sessions":["S028"],"mentions":[{"s":"S031","n":1,"t":"Meta","c":""},{"s":"S031","n":3,"t":"Social_Encounter","c":""},{"s":"S031","n":5,"t":"Exploration","c":"Curses and Constructs Beneath the Temple"}]},{"name":"Summer Hills","first_session":11,"last_session":11,"session_count":1,"mention_count":4,"sessions":["S011"],"mentions":[{"s":"S012","n":2,"t":"Recap","c":"Recap and Departure From Triboar"},{"s":"S012","n":4,"t":"Social_Encounter","c":"Trevor's Toll Gate Hustle"},{"s":"S012","n":5,"t":"Character_Management","c":"Marching Order Through the Hills"},{"s":"S012","n":6,"t":"Skill_Challenge","c":"The Bridge Trap and the Earth Elemental"}]},{"name":"Sundabar","first_session":2,"last_session":null,"session_count":2,"mention_count":2,"sessions":["S002","S025"],"mentions":[{"s":"S002","n":1,"t":"Meta","c":"Castle Management Crash Course"},{"s":"S027","n":4,"t":"Character_Management","c":""},{"s":"S029","n":4,"t":"Meta","c":""}]},{"name":"Svalich Road","first_session":39,"last_session":39,"session_count":1,"mention_count":1,"sessions":["S039"],"mentions":[{"s":"S042","n":3,"t":"Exposition","c":"Arrival at the Village of Barovia"}]},{"name":"Sword Coast","first_session":2,"last_session":45,"session_count":3,"mention_count":3,"sessions":["S002","S043","S045"],"mentions":[{"s":"S002","n":1,"t":"Meta","c":""},{"s":"S046","n":2,"t":"Recap","c":"Fae Invasion Recap and World State"},{"s":"S048","n":5,"t":"Character_Management","c":""}]},{"name":"Sword Mountains","first_session":17,"last_session":17,"session_count":1,"mention_count":2,"sessions":["S017"],"mentions":[{"s":"S018","n":4,"t":"Exposition","c":"The Cosmic War Reshapes Faerun"},{"s":"S018","n":7,"t":"Exposition","c":"The Forge of Souls Beckons"}]},{"name":"The Abyss","first_session":13,"last_session":31,"session_count":7,"mention_count":10,"sessions":["S013","S017","S023","S026","S029","S030","S031"],"mentions":[{"s":"S014","n":4,"t":"Social_Encounter","c":"The Dungeons of Berdusk"},{"s":"S018","n":4,"t":"Exposition","c":""},{"s":"S024","n":6,"t":"Combat","c":""},{"s":"S028","n":6,"t":"Skill_Challenge","c":""},{"s":"S028","n":7,"t":"Skill_Challenge","c":""},{"s":"S032","n":6,"t":"Skill_Challenge","c":""},{"s":"S032","n":7,"t":"Ritual","c":""},{"s":"S033","n":3,"t":"Exploration","c":""},{"s":"S033","n":6,"t":"Combat","c":""},{"s":"S034","n":2,"t":"Combat","c":""}]},{"name":"The Butcher's Warehouse","first_session":32,"last_session":46,"session_count":5,"mention_count":20,"sessions":["S032","S033","S044","S045","S046"],"mentions":[{"s":"S035","n":3,"t":"Social_Encounter","c":"Infiltrating Warehouse Seventeen"},{"s":"S035","n":4,"t":"Exploration","c":"Searching the Enchanted Crates"},{"s":"S035","n":5,"t":"Social_Encounter","c":"Dahlia Cons the Foreman"},{"s":"S035","n":6,"t":"Combat","c":"Ambush of the Crimson Order"},{"s":"S035","n":7,"t":"Meta","c":"Cliffhanger and Strategic Deliberation"},{"s":"S036","n":1,"t":"Recap","c":"Catching Up Before the Storm"},{"s":"S036","n":3,"t":"Combat","c":"Warehouse Brawl Against the Lich"},{"s":"S036","n":5,"t":"Combat","c":"Diplomacy Unravels Into Betrayal"},{"s":"S036","n":6,"t":"Social_Encounter","c":"Corras Surrenders to Save His Friends"},{"s":"S047","n":8,"t":"Exploration","c":"Rat Infiltration of the Warehouse"},{"s":"S048","n":2,"t":"Recap","c":"The Red Council Recap"},{"s":"S048","n":3,"t":"Social_Encounter","c":"Trial by Crowd in the Courtyard"},{"s":"S048","n":4,"t":"Combat","c":"Massacre in the Muddy Courtyard"},{"s":"S048","n":5,"t":"Character_Management","c":"Counting the Dead and Spoils"},{"s":"S048","n":6,"t":"Exploration","c":"The Butcher Unmasked as a Construct"},{"s":"S048","n":7,"t":"Exploration","c":"The Warehouse Trail Goes Cold"},{"s":"S048","n":7,"t":"Exploration","c":"The Warehouse Trail Goes Cold"},{"s":"S049","n":2,"t":"Recap","c":"Session Quiz and Recap"},{"s":"S049","n":3,"t":"Social_Encounter","c":"Confrontation with the Matron"},{"s":"S049","n":6,"t":"Exposition","c":"Zibblebottom's Revelations and Inventions"}]},{"name":"The Cave","first_session":8,"last_session":14,"session_count":2,"mention_count":3,"sessions":["S008","S014"],"mentions":[{"s":"S009","n":7,"t":"Character_Management","c":""},{"s":"S009","n":8,"t":"Exposition","c":""},{"s":"S015","n":3,"t":"Social_Encounter","c":""}]},{"name":"The Dungeons of Berdusk","first_session":12,"last_session":17,"session_count":4,"mention_count":11,"sessions":["S012","S013","S014","S017"],"mentions":[{"s":"S013","n":4,"t":"Skill_Challenge","c":"Catastrophic Explosion and Desperate Escape"},{"s":"S013","n":6,"t":"Exposition","c":"Sending Messages Across the Realm"},{"s":"S013","n":8,"t":"Exposition","c":"The Book's Curse Deepens"},{"s":"S014","n":2,"t":"Recap","c":"Recap of Previous Catastrophic Session"},{"s":"S014","n":3,"t":"Character_Management","c":"Jail Cell Rests and Preparations"},{"s":"S014","n":4,"t":"Social_Encounter","c":"The Dungeons of Berdusk"},{"s":"S014","n":6,"t":"Exploration","c":""},{"s":"S015","n":1,"t":"Off_Topic","c":"Catching Up Before the Heist"},{"s":"S018","n":2,"t":"Meta","c":""},{"s":"S018","n":4,"t":"Exposition","c":"The Cosmic War Reshapes Faerun"},{"s":"S018","n":5,"t":"Character_Management","c":""}]},{"name":"The Forge","first_session":null,"last_session":null,"session_count":0,"mention_count":0,"sessions":[],"mentions":[]},{"name":"The Greenhouse","first_session":2,"last_session":16,"session_count":5,"mention_count":13,"sessions":["S002","S007","S014","S015","S016"],"mentions":[{"s":"S002","n":1,"t":"Meta","c":""},{"s":"S002","n":2,"t":"Recap","c":""},{"s":"S002","n":3,"t":"Character_Management","c":""},{"s":"S002","n":4,"t":"Exposition","c":""},{"s":"S008","n":3,"t":"Ritual","c":""},{"s":"S008","n":4,"t":"Exploration","c":""},{"s":"S008","n":5,"t":"Skill_Challenge","c":""},{"s":"S015","n":8,"t":"Exploration","c":""},{"s":"S016","n":2,"t":"Recap","c":""},{"s":"S016","n":4,"t":"Skill_Challenge","c":""},{"s":"S016","n":5,"t":"Skill_Challenge","c":"The Greenhouse Ambush and Familiar Swap"},{"s":"S017","n":2,"t":"Exposition","c":""},{"s":"S017","n":6,"t":"Social_Encounter","c":""}]},{"name":"The House of Man and Crocodile","first_session":null,"last_session":null,"session_count":0,"mention_count":0,"sessions":[],"mentions":[]},{"name":"The Nine Hells","first_session":10,"last_session":31,"session_count":5,"mention_count":5,"sessions":["S010","S013","S017","S026","S031"],"mentions":[{"s":"S011","n":5,"t":"Exposition","c":"DM explains the cultists are summoning from the Nine Hells, could accidentally summon a devil instead of a demon"},{"s":"S014","n":4,"t":"Social_Encounter","c":"The Dungeons of Berdusk"},{"s":"S018","n":4,"t":"Exposition","c":"The Cosmic War Reshapes Faerun"},{"s":"S028","n":2,"t":"Recap","c":""},{"s":"S034","n":2,"t":"Combat","c":""}]},{"name":"The Scar","first_session":null,"last_session":null,"session_count":0,"mention_count":0,"sessions":[],"mentions":[]},{"name":"The Shadowfell","first_session":6,"last_session":46,"session_count":11,"mention_count":12,"sessions":["S006","S007","S008","S012","S017","S025","S030","S036","S038","S043","S046"],"mentions":[{"s":"S007","n":7,"t":"Character_Management","c":""},{"s":"S008","n":2,"t":"Exposition","c":""},{"s":"S008","n":4,"t":"Exploration","c":""},{"s":"S009","n":6,"t":"Skill_Challenge","c":""},{"s":"S013","n":7,"t":"Exploration","c":"Fleshy's Transformation and the Relic"},{"s":"S018","n":5,"t":"Character_Management","c":"Branching Fates: Round One Choices"},{"s":"S027","n":5,"t":"Meta","c":"Future Arcs and the Road Ahead"},{"s":"S029","n":4,"t":"Meta","c":"The Soulforge and Roads Ahead"},{"s":"S033","n":1,"t":"Ritual","c":""},{"s":"S039","n":4,"t":"Social_Encounter","c":""},{"s":"S041","n":6,"t":"Exposition","c":"Strahd's Deal and the Ruined Village"},{"s":"S046","n":3,"t":"Meta","c":""},{"s":"S049","n":3,"t":"Social_Encounter","c":"Confrontation with the Matron"}]},{"name":"Triboar","first_session":1,"last_session":40,"session_count":15,"mention_count":22,"sessions":["S001","S002","S004","S010","S011","S012","S016","S017","S018","S025","S027","S028","S030","S034","S040"],"mentions":[{"s":"S001","n":6,"t":"Social_Encounter","c":""},{"s":"S002","n":1,"t":"Meta","c":""},{"s":"S004","n":6,"t":"Ritual","c":""},{"s":"S005","n":1,"t":"Exposition","c":""},{"s":"S005","n":5,"t":"Ritual","c":""},{"s":"S011","n":1,"t":"Meta","c":"Pre-Game Banter and Session Recap"},{"s":"S012","n":2,"t":"Recap","c":"Recap and Departure From Triboar"},{"s":"S012","n":3,"t":"Social_Encounter","c":"Introductions on the Road"},{"s":"S012","n":4,"t":"Social_Encounter","c":"Trevor's Toll Gate Hustle"},{"s":"S013","n":7,"t":"Exploration","c":""},{"s":"S017","n":5,"t":"Combat","c":""},{"s":"S017","n":6,"t":"Social_Encounter","c":"Undoing Fate at the Edge of Oblivion"},{"s":"S018","n":2,"t":"Meta","c":"Session Feedback and Pacing Review"},{"s":"S019","n":2,"t":"Exposition","c":"Dahlia Joins and Corras Briefs"},{"s":"S019","n":3,"t":"Social_Encounter","c":"Triboar Gate and Foehammer's Forge"},{"s":"S019","n":4,"t":"Exploration","c":"Marching Into the Storm Mountains"},{"s":"S027","n":2,"t":"Exposition","c":"Reshaping the Post-War Political Landscape"},{"s":"S027","n":4,"t":"Character_Management","c":"Bastions and Roles Within the Federation"},{"s":"S029","n":2,"t":"Exposition","c":"Redrawing the Map of Power"},{"s":"S029","n":3,"t":"Character_Management","c":""},{"s":"S030","n":2,"t":"Recap","c":"State of the World Briefing"},{"s":"S031","n":3,"t":"Social_Encounter","c":"Pies, Puppies, and Pack Dominance"},{"s":"S033","n":3,"t":"Exploration","c":""},{"s":"S037","n":2,"t":"Recap","c":"Recap of the Thayan Capture"},{"s":"S037","n":8,"t":"Character_Management","c":"Twin Formation and Spoils of War"},{"s":"S043","n":2,"t":"Meta","c":"Character Introductions and Campaign Legends"}]},{"name":"Tser Lake","first_session":39,"last_session":39,"session_count":1,"mention_count":2,"sessions":["S039"],"mentions":[{"s":"S042","n":5,"t":"Exploration","c":""},{"s":"S042","n":6,"t":"Social_Encounter","c":"Terror at the Tser Pool"}]},{"name":"Tser Pool Camp","first_session":39,"last_session":40,"session_count":2,"mention_count":10,"sessions":["S039","S040"],"mentions":[{"s":"S042","n":5,"t":"Exploration","c":""},{"s":"S042","n":6,"t":"Social_Encounter","c":"Terror at the Tser Pool"},{"s":"S042","n":7,"t":"Social_Encounter","c":"Bargaining for Shelter Under Wagons"},{"s":"S042","n":8,"t":"Exploration","c":"Zombies at the Door and a Legendary Rumor"},{"s":"S043","n":1,"t":"Recap","c":"Recap of Barovian Misadventures"},{"s":"S043","n":3,"t":"Combat","c":"Zombie Skirmish at Tser Pool"},{"s":"S043","n":4,"t":"Exploration","c":"Rest and the Heist Begins"},{"s":"S043","n":5,"t":"Skill_Challenge","c":"Pilfering Madame Eva's Treasures"},{"s":"S043","n":6,"t":"Exploration","c":"Second Heist and Eva's Reckoning"},{"s":"S043","n":7,"t":"Social_Encounter","c":"Madame Eva's Gambit for the Deck"}]},{"name":"Underdark","first_session":1,"last_session":43,"session_count":14,"mention_count":24,"sessions":["S001","S002","S004","S006","S007","S008","S014","S015","S021","S022","S023","S024","S026","S043"],"mentions":[{"s":"S001","n":1,"t":"Meta","c":""},{"s":"S002","n":3,"t":"Character_Management","c":""},{"s":"S004","n":5,"t":"Exploration","c":""},{"s":"S005","n":5,"t":"Ritual","c":""},{"s":"S007","n":7,"t":"Character_Management","c":"Buried Alive and Planning Escape"},{"s":"S008","n":2,"t":"Exposition","c":""},{"s":"S009","n":8,"t":"Exposition","c":""},{"s":"S015","n":5,"t":"Combat","c":""},{"s":"S016","n":3,"t":"Social_Encounter","c":""},{"s":"S022","n":2,"t":"Exposition","c":"Webb's Edge Briefing and Sanctum Preparations"},{"s":"S022","n":3,"t":"Exploration","c":"Into the Underdark's Webbed Tunnels"},{"s":"S022","n":4,"t":"Social_Encounter","c":"The Drow Mage's Test of Devotion"},{"s":"S022","n":5,"t":"Combat","c":"Umber Hulk Unleashed in the Dark"},{"s":"S023","n":2,"t":"Recap","c":"Recapping the Road to the Underdark"},{"s":"S023","n":3,"t":"Combat","c":"Flames and Poison in the Underdark"},{"s":"S023","n":4,"t":"Character_Management","c":"Healing Wounds and Searching the Dead"},{"s":"S023","n":5,"t":"Exploration","c":"Through Webs and Illusions to Web's Edge"},{"s":"S024","n":1,"t":"Recap","c":"Settling In and Session Recap"},{"s":"S024","n":5,"t":"Combat","c":""},{"s":"S025","n":6,"t":"Skill_Challenge","c":""},{"s":"S025","n":7,"t":"Skill_Challenge","c":""},{"s":"S028","n":1,"t":"Meta","c":""},{"s":"S028","n":4,"t":"Exploration","c":""},{"s":"S028","n":7,"t":"Skill_Challenge","c":""},{"s":"S046","n":3,"t":"Meta","c":""}]},{"name":"Vallaki","first_session":29,"last_session":40,"session_count":6,"mention_count":7,"sessions":["S029","S031","S035","S038","S039","S040"],"mentions":[{"s":"S032","n":6,"t":"Skill_Challenge","c":""},{"s":"S034","n":8,"t":"Meta","c":""},{"s":"S038","n":1,"t":"Meta","c":""},{"s":"S038","n":8,"t":"Meta","c":"Post-Session Barovia Speculation"},{"s":"S041","n":6,"t":"Exposition","c":"Strahd's Deal and the Ruined Village"},{"s":"S042","n":2,"t":"Meta","c":"Death House Retrospective and Recap"},{"s":"S043","n":1,"t":"Recap","c":""}]},{"name":"Waterdeep","first_session":1,"last_session":null,"session_count":8,"mention_count":11,"sessions":["S001","S002","S004","S007","S012","S017","S021","S025"],"mentions":[{"s":"S001","n":6,"t":"Social_Encounter","c":""},{"s":"S002","n":1,"t":"Meta","c":""},{"s":"S004","n":1,"t":"Social_Encounter","c":"Plotting Lilith's False Trail"},{"s":"S004","n":8,"t":"Social_Encounter","c":""},{"s":"S005","n":1,"t":"Exposition","c":"False Trails and Firework Schemes"},{"s":"S005","n":7,"t":"Social_Encounter","c":""},{"s":"S008","n":4,"t":"Exploration","c":""},{"s":"S013","n":4,"t":"Skill_Challenge","c":""},{"s":"S018","n":2,"t":"Meta","c":""},{"s":"S018","n":4,"t":"Exposition","c":"The Cosmic War Reshapes Faerun"},{"s":"S018","n":5,"t":"Character_Management","c":""},{"s":"S022","n":2,"t":"Exposition","c":""},{"s":"S027","n":4,"t":"Character_Management","c":"Bastions and Roles Within the Federation"},{"s":"S029","n":2,"t":"Exposition","c":"Redrawing the Map of Power"},{"s":"S029","n":4,"t":"Meta","c":""}]},{"name":"Wave Echo Cave","first_session":27,"last_session":29,"session_count":3,"mention_count":13,"sessions":["S027","S028","S029"],"mentions":[{"s":"S030","n":2,"t":"Recap","c":"State of the World Briefing"},{"s":"S030","n":4,"t":"Exploration","c":"Descent Into the Soul Forge"},{"s":"S030","n":5,"t":"Combat","c":"Battle of the Bridge Revenants"},{"s":"S031","n":1,"t":"Meta","c":"Bastions, Foundry, and Battle Recap"},{"s":"S031","n":2,"t":"Combat","c":"Revenants Fall and the Desperate Retreat"},{"s":"S031","n":3,"t":"Social_Encounter","c":"Pies, Puppies, and Pack Dominance"},{"s":"S031","n":5,"t":"Exploration","c":"Curses and Constructs Beneath the Temple"},{"s":"S032","n":2,"t":"Recap","c":"Session Recap and Curse Reminders"},{"s":"S032","n":3,"t":"Exploration","c":"Investigating the Cursed Coin and Dagger"},{"s":"S032","n":4,"t":"Combat","c":"Malchor Seizes Control of Ash"},{"s":"S032","n":6,"t":"Skill_Challenge","c":"Exorcising Malchor and Deciphering the Contract"},{"s":"S032","n":7,"t":"Ritual","c":"Completing the Infernal Node Ritual"},{"s":"S032","n":8,"t":"Meta","c":"Session Wrap-Up and Level Thirteen"}]},{"name":"Waybacko Cave","first_session":20,"last_session":20,"session_count":1,"mention_count":1,"sessions":["S020"],"mentions":[{"s":"S021","n":7,"t":"Exploration","c":"Descent Into Dwarven Tunnels"}]},{"name":"Web's Edge","first_session":21,"last_session":42,"session_count":7,"mention_count":26,"sessions":["S021","S022","S023","S024","S026","S035","S042"],"mentions":[{"s":"S022","n":2,"t":"Exposition","c":"Webb's Edge Briefing and Sanctum Preparations"},{"s":"S022","n":3,"t":"Exploration","c":"Into the Underdark's Webbed Tunnels"},{"s":"S022","n":4,"t":"Social_Encounter","c":"The Drow Mage's Test of Devotion"},{"s":"S023","n":2,"t":"Recap","c":"Recapping the Road to the Underdark"},{"s":"S023","n":4,"t":"Character_Management","c":""},{"s":"S023","n":5,"t":"Exploration","c":"Through Webs and Illusions to Web's Edge"},{"s":"S024","n":1,"t":"Recap","c":"Settling In and Session Recap"},{"s":"S024","n":2,"t":"Combat","c":"Dungeon Battle at the Prison Cells"},{"s":"S024","n":3,"t":"Combat","c":"Twin Fireballs Scorch the Prison"},{"s":"S024","n":5,"t":"Combat","c":"Pressing the Attack on the Nalfeshnee"},{"s":"S024","n":6,"t":"Combat","c":"Orla Befriends the Demon Toad"},{"s":"S024","n":7,"t":"Combat","c":"Dahlia Executes the Nalfeshnee"},{"s":"S025","n":2,"t":"Recap","c":"Recap of Last Session"},{"s":"S025","n":3,"t":"Social_Encounter","c":"Freeing Gertrude and Taming the Toad"},{"s":"S025","n":4,"t":"Exploration","c":"The Spider Dragon's Lair"},{"s":"S025","n":5,"t":"Skill_Challenge","c":"The Chase Through Web's Edge"},{"s":"S025","n":6,"t":"Skill_Challenge","c":"Corras Steals the Rod"},{"s":"S025","n":7,"t":"Skill_Challenge","c":"Escape from Web's Edge"},{"s":"S028","n":2,"t":"Recap","c":"Recap of the Web's Edge Siege"},{"s":"S028","n":3,"t":"Social_Encounter","c":"Sisters, Toads, and Sending Stones"},{"s":"S028","n":4,"t":"Exploration","c":"The Spider Dragon's Lair"},{"s":"S028","n":5,"t":"Skill_Challenge","c":"Gertrude's Squeeze and the Army Arrives"},{"s":"S028","n":6,"t":"Skill_Challenge","c":"The Chase Through Web's Edge"},{"s":"S028","n":7,"t":"Skill_Challenge","c":"Reunited Under a Collapsing Mountain"},{"s":"S038","n":3,"t":"Social_Encounter","c":""},{"s":"S045","n":2,"t":"Meta","c":""}]},{"name":"Whispering Weald","first_session":44,"last_session":44,"session_count":1,"mention_count":1,"sessions":["S044"],"mentions":[{"s":"S047","n":7,"t":"Exploration","c":"Ash Hunts for Spark in the Feywild"}]},{"name":"Wizard of Wines","first_session":null,"last_session":null,"session_count":0,"mention_count":0,"sessions":[],"mentions":[]},{"name":"Yartar","first_session":1,"last_session":30,"session_count":7,"mention_count":10,"sessions":["S001","S004","S007","S011","S025","S027","S030"],"mentions":[{"s":"S001","n":4,"t":"Exposition","c":"Spymasters and Surrogate Mothers"},{"s":"S001","n":5,"t":"Character_Management","c":""},{"s":"S004","n":1,"t":"Social_Encounter","c":"Plotting Lilith's False Trail"},{"s":"S004","n":8,"t":"Social_Encounter","c":"The Raven Who Lied"},{"s":"S005","n":1,"t":"Exposition","c":"False Trails and Firework Schemes"},{"s":"S005","n":7,"t":"Social_Encounter","c":"The Raven Who Lied"},{"s":"S008","n":4,"t":"Exploration","c":""},{"s":"S012","n":2,"t":"Recap","c":""},{"s":"S027","n":2,"t":"Exposition","c":"Reshaping the Post-War Political Landscape"},{"s":"S027","n":4,"t":"Character_Management","c":""},{"s":"S029","n":2,"t":"Exposition","c":"Redrawing the Map of Power"},{"s":"S029","n":3,"t":"Character_Management","c":""},{"s":"S030","n":2,"t":"Recap","c":"State of the World Briefing"},{"s":"S033","n":3,"t":"Exploration","c":"Tracking the Ceaseless Maw"}]},{"name":"Faerun","first_session":2,"last_session":43,"session_count":5,"mention_count":10,"sessions":["S002","S035","S040","S042","S043"],"mentions":[{"s":"S002","n":1,"t":"Meta","c":""},{"s":"S002","n":1,"t":"Meta","c":""},{"s":"S038","n":3,"t":"Social_Encounter","c":""},{"s":"S038","n":4,"t":"Exposition","c":""},{"s":"S038","n":4,"t":"Exposition","c":""},{"s":"S043","n":2,"t":"Meta","c":""},{"s":"S043","n":2,"t":"Meta","c":""},{"s":"S045","n":3,"t":"Recap","c":""},{"s":"S046","n":2,"t":"Recap","c":""},{"s":"S046","n":8,"t":"Exploration","c":""}]},{"name":"Gilded Quill Crypt","first_session":4,"last_session":6,"session_count":2,"mention_count":7,"sessions":["S004","S006"],"mentions":[{"s":"S004","n":9,"t":"Exploration","c":""},{"s":"S004","n":9,"t":"Exploration","c":""},{"s":"S004","n":9,"t":"Exploration","c":""},{"s":"S007","n":1,"t":"Meta","c":""},{"s":"S007","n":2,"t":"Combat","c":""},{"s":"S007","n":2,"t":"Combat","c":""},{"s":"S007","n":6,"t":"Skill_Challenge","c":""}]},{"name":"Storm Mountains","first_session":18,"last_session":18,"session_count":1,"mention_count":5,"sessions":["S018"],"mentions":[{"s":"S019","n":3,"t":"Social_Encounter","c":""},{"s":"S019","n":4,"t":"Exploration","c":""},{"s":"S019","n":4,"t":"Exploration","c":""},{"s":"S019","n":4,"t":"Exploration","c":""},{"s":"S019","n":5,"t":"Skill_Challenge","c":""}]},{"name":"Triboar Trail","first_session":11,"last_session":11,"session_count":1,"mention_count":4,"sessions":["S011"],"mentions":[{"s":"S012","n":2,"t":"Recap","c":""},{"s":"S012","n":2,"t":"Recap","c":""},{"s":"S012","n":4,"t":"Social_Encounter","c":""},{"s":"S012","n":4,"t":"Social_Encounter","c":""}]},{"name":"Ash's Bastion","first_session":31,"last_session":31,"session_count":1,"mention_count":4,"sessions":["S031"],"mentions":[{"s":"S034","n":5,"t":"Social_Encounter","c":""},{"s":"S034","n":5,"t":"Social_Encounter","c":""},{"s":"S034","n":6,"t":"Exposition","c":""},{"s":"S034","n":7,"t":"Combat","c":""}]},{"name":"Thayan Dungeon","first_session":34,"last_session":34,"session_count":1,"mention_count":4,"sessions":["S034"],"mentions":[{"s":"S037","n":3,"t":"Exploration","c":""},{"s":"S037","n":3,"t":"Exploration","c":""},{"s":"S037","n":5,"t":"Social_Encounter","c":""},{"s":"S037","n":7,"t":"Combat","c":""}]},{"name":"Gnarled Oak Tree","first_session":39,"last_session":39,"session_count":1,"mention_count":4,"sessions":["S039"],"mentions":[{"s":"S042","n":3,"t":"Exposition","c":""},{"s":"S042","n":3,"t":"Exposition","c":""},{"s":"S042","n":3,"t":"Exposition","c":""},{"s":"S042","n":4,"t":"Skill_Challenge","c":""}]},{"name":"The Abbey","first_session":1,"last_session":null,"session_count":2,"mention_count":2,"sessions":["S001","S004"],"mentions":[{"s":"S001","n":4,"t":"Exposition","c":""},{"s":"S004","n":8,"t":"Social_Encounter","c":""},{"s":"S005","n":7,"t":"Social_Encounter","c":""}]},{"name":"Caravansary","first_session":2,"last_session":2,"session_count":1,"mention_count":3,"sessions":["S002"],"mentions":[{"s":"S002","n":3,"t":"Character_Management","c":""},{"s":"S002","n":3,"t":"Character_Management","c":""},{"s":"S002","n":3,"t":"Character_Management","c":""}]},{"name":"Alchemy Lab","first_session":7,"last_session":7,"session_count":1,"mention_count":3,"sessions":["S007"],"mentions":[{"s":"S008","n":5,"t":"Skill_Challenge","c":""},{"s":"S008","n":5,"t":"Skill_Challenge","c":""},{"s":"S008","n":5,"t":"Skill_Challenge","c":""}]},{"name":"Dwarven Tunnels","first_session":20,"last_session":20,"session_count":1,"mention_count":3,"sessions":["S020"],"mentions":[{"s":"S021","n":7,"t":"Exploration","c":""},{"s":"S021","n":7,"t":"Exploration","c":""},{"s":"S021","n":7,"t":"Exploration","c":""}]},{"name":"Everland Docks","first_session":32,"last_session":32,"session_count":1,"mention_count":3,"sessions":["S032"],"mentions":[{"s":"S035","n":1,"t":"Recap","c":""},{"s":"S035","n":3,"t":"Social_Encounter","c":""},{"s":"S035","n":3,"t":"Social_Encounter","c":""}]},{"name":"Ash's Sanctum","first_session":45,"last_session":45,"session_count":1,"mention_count":3,"sessions":["S045"],"mentions":[{"s":"S048","n":6,"t":"Exploration","c":""},{"s":"S048","n":6,"t":"Exploration","c":""},{"s":"S048","n":7,"t":"Exploration","c":""}]},{"name":"Fey-Touched Tree","first_session":4,"last_session":4,"session_count":1,"mention_count":2,"sessions":["S004"],"mentions":[{"s":"S004","n":6,"t":"Ritual","c":""},{"s":"S004","n":6,"t":"Ritual","c":""}]},{"name":"Wellness Commune (Lilith's)","first_session":17,"last_session":17,"session_count":1,"mention_count":2,"sessions":["S017"],"mentions":[{"s":"S018","n":6,"t":"Character_Management","c":""},{"s":"S018","n":6,"t":"Character_Management","c":""}]},{"name":"Corras's Village","first_session":25,"last_session":25,"session_count":1,"mention_count":2,"sessions":["S025"],"mentions":[{"s":"S027","n":2,"t":"Exposition","c":""},{"s":"S027","n":5,"t":"Meta","c":""}]},{"name":"SavannahBelle's Village","first_session":25,"last_session":25,"session_count":1,"mention_count":2,"sessions":["S025"],"mentions":[{"s":"S027","n":4,"t":"Character_Management","c":""},{"s":"S027","n":5,"t":"Meta","c":""}]},{"name":"Thay","first_session":33,"last_session":33,"session_count":1,"mention_count":2,"sessions":["S033"],"mentions":[{"s":"S036","n":6,"t":"Social_Encounter","c":""},{"s":"S036","n":7,"t":"Exposition","c":""}]},{"name":"Village of Barovia","first_session":40,"last_session":40,"session_count":1,"mention_count":2,"sessions":["S040"],"mentions":[{"s":"S043","n":1,"t":"Recap","c":""},{"s":"S043","n":4,"t":"Exploration","c":""}]},{"name":"Glimmer and Glow","first_session":1,"last_session":1,"session_count":1,"mention_count":1,"sessions":["S001"],"mentions":[{"s":"S001","n":7,"t":"Exploration","c":""}]},{"name":"Crones and Cones","first_session":1,"last_session":1,"session_count":1,"mention_count":1,"sessions":["S001"],"mentions":[{"s":"S001","n":7,"t":"Exploration","c":""}]},{"name":"Root and Resin","first_session":1,"last_session":1,"session_count":1,"mention_count":1,"sessions":["S001"],"mentions":[{"s":"S001","n":7,"t":"Exploration","c":""}]},{"name":"Mistress Mercy","first_session":1,"last_session":1,"session_count":1,"mention_count":1,"sessions":["S001"],"mentions":[{"s":"S001","n":7,"t":"Exploration","c":""}]},{"name":"Hearth and Hammer","first_session":1,"last_session":1,"session_count":1,"mention_count":1,"sessions":["S001"],"mentions":[{"s":"S001","n":7,"t":"Exploration","c":""}]},{"name":"Belt in the Vine","first_session":1,"last_session":1,"session_count":1,"mention_count":1,"sessions":["S001"],"mentions":[{"s":"S001","n":7,"t":"Exploration","c":""}]},{"name":"Eltergard","first_session":2,"last_session":2,"session_count":1,"mention_count":1,"sessions":["S002"],"mentions":[{"s":"S002","n":1,"t":"Meta","c":""}]},{"name":"River Ralvin","first_session":2,"last_session":2,"session_count":1,"mention_count":1,"sessions":["S002"],"mentions":[{"s":"S002","n":1,"t":"Meta","c":""}]},{"name":"Stone Stand","first_session":2,"last_session":2,"session_count":1,"mention_count":1,"sessions":["S002"],"mentions":[{"s":"S002","n":1,"t":"Meta","c":""}]},{"name":"Zell Zarath","first_session":5,"last_session":5,"session_count":1,"mention_count":1,"sessions":["S005"],"mentions":[{"s":"S006","n":3,"t":"Skill_Challenge","c":""}]},{"name":"Castle Lumin","first_session":8,"last_session":8,"session_count":1,"mention_count":1,"sessions":["S008"],"mentions":[{"s":"S009","n":7,"t":"Character_Management","c":""}]},{"name":"Levinid","first_session":17,"last_session":17,"session_count":1,"mention_count":1,"sessions":["S017"],"mentions":[{"s":"S018","n":6,"t":"Character_Management","c":""}]},{"name":"Shrine of Lolth","first_session":23,"last_session":23,"session_count":1,"mention_count":1,"sessions":["S023"],"mentions":[{"s":"S024","n":2,"t":"Combat","c":""}]},{"name":"Sanctuary of Retribution \u2014 Surface Layer","first_session":25,"last_session":25,"session_count":1,"mention_count":1,"sessions":["S025"],"mentions":[{"s":"S027","n":4,"t":"Character_Management","c":""}]},{"name":"Avernus","first_session":26,"last_session":26,"session_count":1,"mention_count":1,"sessions":["S026"],"mentions":[{"s":"S028","n":2,"t":"Recap","c":""}]},{"name":"Fjell Gorge","first_session":28,"last_session":28,"session_count":1,"mention_count":1,"sessions":["S028"],"mentions":[{"s":"S031","n":5,"t":"Exploration","c":""}]},{"name":"Osha","first_session":35,"last_session":35,"session_count":1,"mention_count":1,"sessions":["S035"],"mentions":[{"s":"S038","n":2,"t":"Character_Management","c":""}]},{"name":"Argenvostholt","first_session":35,"last_session":35,"session_count":1,"mention_count":1,"sessions":["S035"],"mentions":[{"s":"S038","n":5,"t":"Character_Management","c":""}]},{"name":"Burgomaster's Mansion","first_session":35,"last_session":35,"session_count":1,"mention_count":1,"sessions":["S035"],"mentions":[{"s":"S038","n":8,"t":"Meta","c":""}]},{"name":"Mordenkainen's Mansion","first_session":36,"last_session":36,"session_count":1,"mention_count":1,"sessions":["S036"],"mentions":[{"s":"S039","n":7,"t":"Meta","c":""}]},{"name":"Ethereal Plane","first_session":42,"last_session":42,"session_count":1,"mention_count":1,"sessions":["S042"],"mentions":[{"s":"S045","n":5,"t":"Combat","c":""}]}];
+
+// ==================================================================
+// COORDINATE MAPPING
+// ==================================================================
+const COORDS = {
+  "Castle Corras":{x:62,y:38},"Luskan":{x:25,y:15},"Mirabar":{x:38,y:12},
+  "Neverwinter":{x:22,y:28},"Waterdeep":{x:28,y:72},"Silverymoon":{x:55,y:28},
+  "Sundabar":{x:65,y:22},"Everlund":{x:48,y:32},"Triboar":{x:40,y:45},
+  "High Forest":{x:55,y:55},"Sword Mountains":{x:30,y:55},"Star Mounts":{x:60,y:50},
+  "The Evermoors":{x:50,y:30},"Icewind Dale":{x:30,y:5},"Baldur's Gate":{x:25,y:85},
+  "Dessarin Valley":{x:38,y:50},"Berdusk":{x:35,y:68},"The Darkwood":{x:48,y:15},
+  "Mere of Dead Men":{x:22,y:60},
+  "Yartar":{x:42,y:38},"Jalanthar":{x:44,y:22},"Amphail":{x:26,y:65},
+  "Daggerford":{x:24,y:78},"Candlekeep":{x:20,y:88},"Loudwater":{x:50,y:48},
+  "Lurkwood":{x:30,y:18},"Nether Mountains":{x:52,y:16},"Mithral Hall":{x:42,y:18},
+  "Kingdom of Many Arrows":{x:48,y:20},"Citadel Adbar":{x:62,y:18},
+  "Grandfather Tree":{x:44,y:40},"Triboar Trail":{x:32,y:42},
+  "Summer Hills":{x:35,y:52},"Wave Echo Cave":{x:28,y:40},
+  "Fort Caliban":{x:36,y:35},"Hilltop":{x:46,y:36},
+  "River Chionthar":{x:30,y:80},"Sword Coast":{x:18,y:50},"Faerun":{x:45,y:60},
+  "Lumin":{x:8,y:20},"Havenbrook":{x:8,y:28},"Gilded Quill":{x:8,y:36},
+  "Moonlit Thicket":{x:8,y:44},"Feywild":{x:90,y:12},"Seelie Court":{x:93,y:16},
+  "Barovia":{x:90,y:28},"Death House":{x:87,y:32},"Ravenloft":{x:93,y:32},
+  "Vallaki":{x:87,y:24},"Tser Pool Camp":{x:90,y:36},"Tser Lake":{x:93,y:38},
+  "Village of Barovia":{x:87,y:40},"Blood of the Vine Inn":{x:93,y:42},
+  "Svalich Road":{x:87,y:36},"Gnarled Oak Tree":{x:90,y:44},
+  "Court of Gloom":{x:93,y:48},"Mordenkainen's Mansion":{x:87,y:48},
+  "Argenvostholt":{x:87,y:44},"Burgomaster's Mansion":{x:93,y:44},
+  "Underdark":{x:90,y:56},"Web's Edge":{x:87,y:60},
+  "Shrine of Lolth":{x:93,y:60},"The Shadowfell":{x:90,y:68},
+  "Malgaris":{x:93,y:72},"The Abyss":{x:90,y:78},"Avernus":{x:93,y:82},
+  "The Nine Hells":{x:90,y:84},"Sigil":{x:87,y:76},
+  "Celestia":{x:93,y:88},"Seven Heavens":{x:87,y:88},
+  "Material Plane":{x:90,y:92},"Ethereal Plane":{x:87,y:92},
+  "Forge of Spells":{x:30,y:38},"The Greenhouse":{x:60,y:42},
+  "The Dungeons of Berdusk":{x:37,y:72},"Beholder Cave":{x:58,y:48},
+  "The Cave":{x:56,y:52},"Cabin on Stilts":{x:34,y:30},
+  "Storm Mountains":{x:68,y:16},"Fjell Gorge":{x:66,y:20},
+  "Soul Cavern":{x:64,y:24},"Sanctuary of Retribution":{x:60,y:30},
+  "Infernal Node":{x:93,y:76},"Bastion":{x:8,y:52},
+  "Ash's Bastion":{x:8,y:56},"Ash's Sanctum":{x:8,y:60},
+  "Everland":{x:50,y:42},"Everland Docks":{x:52,y:44},
+  "The Butcher's Warehouse":{x:8,y:68},"Thay":{x:85,y:8},
+  "Thayan Dungeon":{x:83,y:12},"Osha Bastia":{x:64,y:14},"Osha":{x:66,y:12},
+  "Mirkwood":{x:50,y:58},"River of Stars":{x:52,y:62},
+  "Whispering Weald":{x:46,y:52},"Levinid":{x:8,y:80},
+};
+
+const ALIASES = {
+  "Gilded Quill Crypt":"Gilded Quill","Castle Lumin":"Lumin",
+  "Havenwood":"Havenbrook",
+  "Sanctuary of Retribution \u2013 Surface Layer":"Sanctuary of Retribution",
+  "Corras's Village":"Castle Corras","SavannahBelle's Village":"Castle Corras",
+  "Dwarven Tunnels":"Wave Echo Cave","Waybacko Cave":"Cabin on Stilts",
+  "Kingdom of Hysteria":"Feywild","Wellness Commune (Lilith's)":"Feywild",
+  "Hall of Whispers":"Sigil","Chamber of Reflection":"Sigil",
+  "Zell Zarath":"Underdark","Council Chamber":"Castle Corras",
+  "Refugee Camp":"Castle Corras","Alchemy Lab":"Forge of Spells",
+  "Fey-Touched Tree":"Feywild","Fiendish node":"The Abyss",
+};
+
+// ==================================================================
+// PROCESS LOCATIONS
+// ==================================================================
+const locs = [];
+RAW.forEach(r => {
+  if (r.first_session === null && r.mention_count === 0) return;
+  let c = COORDS[r.name];
+  if (!c) { const a = ALIASES[r.name]; if (a) c = COORDS[a]; }
+  if (!c) return;
+  locs.push({
+    name: r.name, x: c.x, y: c.y,
+    fs: r.first_session === null ? 99 : r.first_session,
+    ls: r.last_session, sc: r.session_count, mc: r.mention_count,
+    sessions: r.sessions || [], mentions: r.mentions || [],
+  });
+});
+locs.sort((a,b) => a.fs - b.fs || b.mc - a.mc);
+
+const discMap = {};
+locs.forEach(l => { if(l.fs<99){if(!discMap[l.fs])discMap[l.fs]=[];discMap[l.fs].push(l.name)} });
+const MAX_S = 46;
+const TOTAL = locs.filter(l=>l.fs<=MAX_S).length;
+
+// ==================================================================
+// STATE
+// ==================================================================
+let curS = 0, playing = false, speed = 1, playIv = null;
+let revealed = new Set(), selLoc = null;
+
+// ==================================================================
+// DOM
+// ==================================================================
+const mapImg = document.getElementById('mapImg');
+const fogC = document.getElementById('fogC');
+const ctx = fogC.getContext('2d');
+const mSvg = d3.select('#mSvg');
+const slider = document.getElementById('slider');
+const tip = document.getElementById('tip');
+const det = document.getElementById('det');
+const detC = document.getElementById('detC');
+
+// Particles
+(function(){
+  const c = document.getElementById('parts');
+  for(let i=0;i<35;i++){
+    const p=document.createElement('div');p.className='particle';
+    p.style.left=Math.random()*100+'%';p.style.top=Math.random()*100+'%';
+    p.style.animationDelay=Math.random()*9+'s';
+    p.style.animationDuration=(7+Math.random()*5)+'s';
+    const sz=1+Math.random()*2;p.style.width=sz+'px';p.style.height=sz+'px';
+    c.appendChild(p);
+  }
+})();
+
+// Ticks
+(function(){
+  const c=document.getElementById('ticks');
+  for(let i=0;i<=MAX_S;i++){
+    const t=document.createElement('span');
+    t.className='tk'+(discMap[i]?' disc':'');
+    t.textContent=i===0?'0':(i%5===0?i:'\u00b7');
+    c.appendChild(t);
+  }
+})();
+
+// ==================================================================
+// MAP GEOMETRY
+// ==================================================================
+let mR = {x:0,y:0,w:0,h:0};
+
+function updRect(){
+  const cont = document.getElementById('mapCont');
+  const cR = cont.getBoundingClientRect();
+  const iR = mapImg.getBoundingClientRect();
+  mR = {x:iR.left-cR.left, y:iR.top-cR.top, w:iR.width, h:iR.height};
+  fogC.width = cR.width; fogC.height = cR.height;
+  mSvg.attr('width',cR.width).attr('height',cR.height);
+}
+
+function l2p(l){ return {px:mR.x+(l.x/100)*mR.w, py:mR.y+(l.y/100)*mR.h} }
+
+// ==================================================================
+// FOG
+// ==================================================================
+function drawFog(){
+  const w=fogC.width, h=fogC.height;
+  ctx.clearRect(0,0,w,h);
+
+  // Dark overlay
+  ctx.fillStyle='rgba(6,6,12,0.93)';
+  ctx.fillRect(0,0,w,h);
+
+  // Subtle fog texture
+  ctx.save();
+  const time = Date.now() * 0.0001;
+  for(let i=0;i<150;i++){
+    const fx = (Math.sin(i*0.7+time)*0.5+0.5)*w;
+    const fy = (Math.cos(i*0.5+time*0.8)*0.5+0.5)*h;
+    const fr = 15+Math.sin(i*1.3)*20;
+    ctx.beginPath();ctx.arc(fx,fy,Math.abs(fr),0,Math.PI*2);
+    ctx.fillStyle=`rgba(15,15,35,${0.03+Math.sin(i)*0.02})`;ctx.fill();
+  }
+  ctx.restore();
+
+  // Cut holes
+  ctx.globalCompositeOperation='destination-out';
+  locs.forEach(l=>{
+    if(!revealed.has(l.name))return;
+    const{px,py}=l2p(l);
+    const sc=mR.w/800;
+    const r=Math.min(35+l.mc*1.8,130)*sc;
+    const g=ctx.createRadialGradient(px,py,0,px,py,r);
+    g.addColorStop(0,'rgba(0,0,0,1)');
+    g.addColorStop(0.45,'rgba(0,0,0,0.97)');
+    g.addColorStop(0.7,'rgba(0,0,0,0.7)');
+    g.addColorStop(0.88,'rgba(0,0,0,0.25)');
+    g.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.beginPath();ctx.arc(px,py,r,0,Math.PI*2);ctx.fillStyle=g;ctx.fill();
+  });
+  ctx.globalCompositeOperation='source-over';
+
+  // Edge glow
+  locs.forEach(l=>{
+    if(!revealed.has(l.name))return;
+    const{px,py}=l2p(l);
+    const sc=mR.w/800;
+    const r=Math.min(35+l.mc*1.8,130)*sc;
+    const g=ctx.createRadialGradient(px,py,r*0.55,px,py,r*1.15);
+    g.addColorStop(0,'rgba(0,229,255,0)');
+    g.addColorStop(0.5,'rgba(0,229,255,0.03)');
+    g.addColorStop(0.8,'rgba(79,195,247,0.06)');
+    g.addColorStop(1,'rgba(0,229,255,0)');
+    ctx.beginPath();ctx.arc(px,py,r*1.15,0,Math.PI*2);ctx.fillStyle=g;ctx.fill();
+  });
+}
+
+// ==================================================================
+// MARKERS
+// ==================================================================
+function drawMarkers(){
+  mSvg.selectAll('.location-marker').remove();
+  mSvg.selectAll('.region-label').remove();
+
+  const rev = locs.filter(l=>revealed.has(l.name));
+
+  // Region labels for extraplanar areas
+  const regions = [
+    {label:'FEYWILD / BAROVIA',x:90,y:8,show:rev.some(l=>l.x>=85&&l.y<50)},
+    {label:'UNDERDARK / PLANES',x:90,y:53,show:rev.some(l=>l.x>=85&&l.y>=50)},
+    {label:'CAMPAIGN REALMS',x:8,y:16,show:rev.some(l=>l.x<=12)},
+  ];
+  regions.forEach(rg=>{
+    if(!rg.show)return;
+    const px=mR.x+(rg.x/100)*mR.w, py=mR.y+(rg.y/100)*mR.h;
+    mSvg.append('text').attr('class','region-label')
+      .attr('x',px).attr('y',py).attr('text-anchor','middle').text(rg.label);
+  });
+
+  rev.forEach(l=>{
+    const{px,py}=l2p(l);
+    const r=Math.max(3,Math.min(2.5+l.mc*0.12,9));
+    const g=mSvg.append('g').attr('class','location-marker')
+      .attr('transform',`translate(${px},${py})`).style('cursor','pointer');
+
+    g.append('circle').attr('class','marker-glow').attr('r',r*3.5);
+    g.append('circle').attr('class','marker-core').attr('r',r);
+
+    // Tiny name label for important locations
+    if(l.mc >= 10){
+      g.append('text')
+        .attr('x',0).attr('y',-(r+5))
+        .attr('text-anchor','middle')
+        .attr('fill','#a0c0d8').attr('font-size','8px')
+        .attr('font-family',"'Barlow Condensed',sans-serif")
+        .attr('font-weight','400').attr('letter-spacing','1px')
+        .attr('opacity',.7)
+        .text(l.name.length>18?l.name.substring(0,16)+'...':l.name);
+    }
+
+    g.on('mouseenter',ev=>showTip(ev,l))
+     .on('mousemove',ev=>moveTip(ev))
+     .on('mouseleave',()=>hideTip())
+     .on('click',()=>openDet(l));
+  });
+}
+
+// ==================================================================
+// REVEAL ANIMATION
+// ==================================================================
+function animReveal(l){
+  const{px,py}=l2p(l);
+  [0,200].forEach((del,i)=>{
+    const ring=mSvg.append('circle')
+      .attr('cx',px).attr('cy',py).attr('r',0)
+      .attr('fill','none').attr('stroke',i?'#4fc3f7':'#00e5ff')
+      .attr('stroke-width',i?2:3).attr('opacity',i?.5:1);
+    ring.transition().delay(del).duration(1100).ease(d3.easeCubicOut)
+      .attr('r',i?55:75).attr('opacity',0).attr('stroke-width',0.5).remove();
+  });
+}
+
+// ==================================================================
+// TOOLTIP
+// ==================================================================
+function showTip(ev,l){
+  tip.innerHTML=`<h4>${l.name}</h4>
+    <div class="tt-r"><span class="tt-l">First Visited</span><span class="tt-v">Session ${l.fs}</span></div>
+    <div class="tt-r"><span class="tt-l">Total Mentions</span><span class="tt-v">${l.mc}</span></div>
+    <div class="tt-r"><span class="tt-l">Sessions Active</span><span class="tt-v">${l.sc}</span></div>
+    <div class="tt-s">Sessions: ${l.sessions.join(', ')}</div>`;
+  tip.classList.add('vis');moveTip(ev);
+}
+function moveTip(ev){
+  let x=ev.clientX+14,y=ev.clientY-8;
+  if(x+280>window.innerWidth)x=ev.clientX-240;
+  if(y+180>window.innerHeight)y=ev.clientY-180;
+  tip.style.left=x+'px';tip.style.top=y+'px';
+}
+function hideTip(){tip.classList.remove('vis')}
+
+// ==================================================================
+// DETAIL PANEL
+// ==================================================================
+const typeClr={Combat:'#ff4444',Exploration:'#4caf50',Social_Encounter:'#ffc107',
+  Exposition:'#9c27b0',Puzzle:'#ff9800',Skill_Challenge:'#2196f3',
+  Recap:'#607d8b',Character_Management:'#00bcd4',Meta:'#9e9e9e'};
+
+function openDet(l){
+  selLoc=l.name;
+  const byS={};
+  l.mentions.forEach(m=>{if(!byS[m.s])byS[m.s]=[];byS[m.s].push(m)});
+
+  let html='';
+  Object.keys(byS).sort().forEach(s=>{
+    html+=`<div style="margin-top:10px;margin-bottom:3px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#4fc3f7">${s}</div>`;
+    byS[s].forEach(m=>{
+      html+=`<div class="si" data-t="${m.t}">
+        <div class="si-hd"><span class="si-s">Scene ${m.n}</span><span class="si-t" style="color:${typeClr[m.t]||'#5a7090'}">${(m.t||'').replace(/_/g,' ')}</span></div>
+        ${m.c?`<div class="si-c">${m.c}</div>`:''}
+      </div>`;
+    });
+  });
+
+  let region='Sword Coast';
+  if(l.x>=85)region=l.y<50?'Extraplanar / Demiplane':'Extraplanar';
+  else if(l.x<=12)region='Campaign-Specific Realm';
+
+  detC.innerHTML=`<h2>${l.name}</h2><div class="d-sub">${region}</div>
+    <div class="d-grid">
+      <div class="d-stat"><div class="dv">${l.fs}</div><div class="dl">First Session</div></div>
+      <div class="d-stat"><div class="dv">${l.mc}</div><div class="dl">Total Mentions</div></div>
+      <div class="d-stat"><div class="dv">${l.sc}</div><div class="dl">Sessions Active</div></div>
+      <div class="d-stat"><div class="dv">${l.ls||'\u2014'}</div><div class="dl">Last Session</div></div>
+    </div>
+    <div class="scene-list"><h3>All Scenes at ${l.name}</h3>${html||'<div style="color:#5a7090;font-size:11px;padding:6px">No scene data</div>'}</div>`;
+  det.classList.add('open');
+  hlList(l.name);
+}
+
+document.getElementById('detX').onclick=()=>{det.classList.remove('open');selLoc=null};
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){det.classList.remove('open');selLoc=null}});
+
+// ==================================================================
+// LOCATION LIST
+// ==================================================================
+function updList(){
+  const el=document.getElementById('locList');el.innerHTML='';
+  const disc=locs.filter(l=>revealed.has(l.name)).sort((a,b)=>b.mc-a.mc);
+  const und=locs.filter(l=>!revealed.has(l.name)&&l.fs<=MAX_S).sort((a,b)=>a.fs-b.fs);
+  const sc=d3.scaleLinear().domain([1,120]).range([.3,1]).clamp(true);
+
+  [...disc,...und].forEach(l=>{
+    const isR=revealed.has(l.name);
+    const d=document.createElement('div');
+    d.className='loc-item'+(isR?'':' undiscovered')+(selLoc===l.name?' active':'');
+    const a=sc(l.mc);
+    d.innerHTML=`<div class="loc-dot" style="background:${isR?`rgba(0,229,255,${a})`:'#2a2a40'};${isR?`box-shadow:0 0 5px rgba(0,229,255,${a*.4})`:''};"></div>
+      <span class="loc-nm">${isR?l.name:'???'}</span>
+      <span class="loc-ct">${isR?l.mc:''}</span>`;
+    if(isR)d.onclick=()=>openDet(l);
+    el.appendChild(d);
+  });
+}
+
+function hlList(name){
+  document.querySelectorAll('.loc-item').forEach(e=>e.classList.remove('active'));
+  document.querySelectorAll('.loc-item').forEach(e=>{
+    if(e.querySelector('.loc-nm')?.textContent===name){
+      e.classList.add('active');
+      e.scrollIntoView({behavior:'smooth',block:'nearest'});
+    }
+  });
+}
+
+// ==================================================================
+// STATS
+// ==================================================================
+function updStats(){
+  const disc=locs.filter(l=>revealed.has(l.name));
+  const pct=TOTAL>0?Math.round(disc.length/TOTAL*100):0;
+  document.getElementById('dcnt').textContent=`${disc.length} / ${TOTAL}`;
+  document.getElementById('dbar').style.width=pct+'%';
+  document.getElementById('dpct').textContent=pct+'%';
+  document.getElementById('stTotal').textContent=TOTAL;
+  document.getElementById('stReveal').textContent=pct+'%';
+  if(disc.length>0){
+    const mv=disc.reduce((a,b)=>a.mc>b.mc?a:b);
+    document.getElementById('stMost').textContent=mv.name.length>16?mv.name.substring(0,14)+'..':mv.name;
+    const fd=disc.reduce((a,b)=>a.fs<b.fs?a:b);
+    document.getElementById('stFirst').textContent=`S${String(fd.fs).padStart(3,'0')}`;
+    const ld=disc.reduce((a,b)=>a.fs>b.fs?a:b);
+    document.getElementById('stLatest').textContent=`S${String(ld.fs).padStart(3,'0')}`;
+  }
+  document.getElementById('stNew').textContent=discMap[curS]?discMap[curS].length:0;
+}
+
+// ==================================================================
+// SESSION CONTROL
+// ==================================================================
+function setS(s, anim=true){
+  const prev=new Set(revealed);
+  curS=s;
+  revealed=new Set();
+  locs.forEach(l=>{if(l.fs<=s)revealed.add(l.name)});
+
+  const fresh=[];
+  revealed.forEach(n=>{if(!prev.has(n))fresh.push(n)});
+
+  document.getElementById('sessLbl').textContent=s===0?'PRE-CAMPAIGN':`SESSION ${s}`;
+  slider.value=s;
+
+  if(anim&&fresh.length>0){
+    fresh.forEach(n=>{const l=locs.find(x=>x.name===n);if(l)animReveal(l)});
+    showFlash(fresh);
+  }
+  drawFog();drawMarkers();updStats();updList();
+}
+
+function showFlash(names){
+  const f1=document.getElementById('fl1'),f2=document.getElementById('fl2');
+  f1.classList.remove('show');f2.classList.remove('show');
+  void f1.offsetWidth;
+  f1.classList.add('show');
+  f2.textContent=names.length<=3?names.join(' \u00b7 '):names.slice(0,3).join(' \u00b7 ')+` +${names.length-3} more`;
+  f2.classList.add('show');
+  setTimeout(()=>{f1.classList.remove('show');f2.classList.remove('show')},2400);
+}
+
+// ==================================================================
+// PLAYBACK
+// ==================================================================
+function togglePlay(){playing?stopP():startP()}
+
+function startP(){
+  if(curS>=MAX_S){curS=0;revealed=new Set()}
+  playing=true;
+  document.getElementById('playBtn').innerHTML='&#9646;&#9646;';
+  document.getElementById('playBtn').classList.add('on');
+  const iv={1:1200,2:600,4:300}[speed]||1200;
+  playIv=setInterval(()=>{
+    if(curS>=MAX_S){stopP();return}
+    setS(curS+1,true);
+  },iv);
+}
+
+function stopP(){
+  playing=false;
+  document.getElementById('playBtn').innerHTML='&#9654;';
+  document.getElementById('playBtn').classList.remove('on');
+  if(playIv){clearInterval(playIv);playIv=null}
+}
+
+function cycleSpd(){
+  const sp=[1,2,4],i=sp.indexOf(speed);
+  speed=sp[(i+1)%sp.length];
+  document.getElementById('speedBtn').textContent=speed+'\u00d7';
+  if(playing){stopP();startP()}
+}
+
+document.getElementById('playBtn').onclick=togglePlay;
+document.getElementById('speedBtn').onclick=cycleSpd;
+document.getElementById('resetBtn').onclick=()=>{stopP();revealed=new Set();setS(0,false)};
+slider.addEventListener('input',()=>{stopP();setS(+slider.value,false)});
+
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT')return;
+  if(e.key===' '){e.preventDefault();togglePlay()}
+  else if(e.key==='ArrowRight'&&!playing&&curS<MAX_S)setS(curS+1,true);
+  else if(e.key==='ArrowLeft'&&!playing&&curS>0)setS(curS-1,false);
+});
+
+// ==================================================================
+// ANIMATED FOG DRIFT
+// ==================================================================
+let fogFrame;
+function fogLoop(){
+  if(revealed.size>0)drawFog();
+  fogFrame=requestAnimationFrame(fogLoop);
+}
+
+// ==================================================================
+// INIT
+// ==================================================================
+function init(){
+  updRect();
+  setS(0,false);
+  fogLoop();
+}
+
+if(mapImg.complete)init();
+else mapImg.addEventListener('load',init);
+
+let rszT;
+window.addEventListener('resize',()=>{
+  clearTimeout(rszT);
+  rszT=setTimeout(()=>{updRect();drawFog();drawMarkers()},150);
+});
+</script>
+</body>
+</html>

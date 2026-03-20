@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BWB Campaign — Party Chemistry</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@300;400;600&family=Barlow:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #06060c;
+    color: #c8c8e0;
+    font-family: 'Barlow', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* Scanline overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.03) 2px,
+      rgba(0,0,0,0.03) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  .page-header {
+    text-align: center;
+    padding: 40px 20px 10px;
+    position: relative;
+  }
+
+  .page-header h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3.2rem;
+    letter-spacing: 6px;
+    color: #fff;
+    text-shadow: 0 0 30px rgba(186,104,200,0.5), 0 0 60px rgba(186,104,200,0.2);
+    margin-bottom: 4px;
+  }
+
+  .page-header .subtitle {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 1rem;
+    letter-spacing: 4px;
+    color: #9898b0;
+    text-transform: uppercase;
+  }
+
+  .page-header .accent-line {
+    width: 200px;
+    height: 2px;
+    margin: 16px auto 0;
+    background: linear-gradient(90deg, transparent, #BA68C8, transparent);
+    box-shadow: 0 0 12px rgba(186,104,200,0.4);
+  }
+
+  .chart-container {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 20px;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  .chord-wrapper {
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .legend-panel {
+    background: linear-gradient(135deg, #12121e 0%, #1a1a2e 100%);
+    border: 1px solid rgba(186,104,200,0.15);
+    border-radius: 8px;
+    padding: 20px;
+    width: 300px;
+    max-height: 700px;
+    overflow-y: auto;
+  }
+
+  .legend-panel h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.3rem;
+    letter-spacing: 3px;
+    color: #BA68C8;
+    margin-bottom: 16px;
+    text-shadow: 0 0 10px rgba(186,104,200,0.3);
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    cursor: pointer;
+    transition: background 0.2s;
+    padding-left: 6px;
+    border-radius: 4px;
+  }
+
+  .legend-item:hover {
+    background: rgba(255,255,255,0.04);
+  }
+
+  .legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .legend-name {
+    font-family: 'Cinzel', serif;
+    font-size: 0.85rem;
+    color: #e0e0f0;
+    flex: 1;
+  }
+
+  .legend-exchanges {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    color: #9898b0;
+  }
+
+  .stats-panel {
+    background: linear-gradient(135deg, #12121e 0%, #1a1a2e 100%);
+    border: 1px solid rgba(186,104,200,0.15);
+    border-radius: 8px;
+    padding: 20px;
+    width: 300px;
+  }
+
+  .stats-panel h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.3rem;
+    letter-spacing: 3px;
+    color: #BA68C8;
+    margin-bottom: 16px;
+    text-shadow: 0 0 10px rgba(186,104,200,0.3);
+  }
+
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+
+  .stat-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.8rem;
+    color: #9898b0;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .stat-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    color: #e0e0f0;
+    text-shadow: 0 0 6px rgba(255,255,255,0.1);
+  }
+
+  .tooltip {
+    position: fixed;
+    pointer-events: none;
+    background: linear-gradient(135deg, #1a1a2e 0%, #22223a 100%);
+    border: 1px solid rgba(186,104,200,0.3);
+    border-radius: 8px;
+    padding: 16px 20px;
+    max-width: 380px;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.15s;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 20px rgba(186,104,200,0.1);
+  }
+
+  .tooltip.visible { opacity: 1; }
+
+  .tooltip .tt-pair {
+    font-family: 'Cinzel', serif;
+    font-size: 1rem;
+    color: #fff;
+    margin-bottom: 10px;
+    text-shadow: 0 0 8px rgba(255,255,255,0.2);
+  }
+
+  .tooltip .tt-pair .ampersand {
+    color: #BA68C8;
+    margin: 0 4px;
+  }
+
+  .tooltip .tt-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+  }
+
+  .tooltip .tt-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.78rem;
+    color: #9898b0;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .tooltip .tt-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    color: #e0e0f0;
+  }
+
+  .tooltip .tt-moment {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(186,104,200,0.15);
+    font-family: 'Barlow', sans-serif;
+    font-size: 0.78rem;
+    color: #b0b0c8;
+    line-height: 1.4;
+    font-style: italic;
+  }
+
+  .tooltip .tt-moment-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.7rem;
+    color: #BA68C8;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+
+  /* Top pairs ranking */
+  .top-pairs {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(186,104,200,0.15);
+  }
+
+  .top-pairs h4 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.85rem;
+    letter-spacing: 2px;
+    color: #BA68C8;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .top-pair-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 0;
+  }
+
+  .top-pair-rank {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: #666;
+    width: 18px;
+  }
+
+  .top-pair-names {
+    font-family: 'Cinzel', serif;
+    font-size: 0.72rem;
+    color: #c8c8e0;
+    flex: 1;
+  }
+
+  .top-pair-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    color: #9898b0;
+  }
+
+  .top-pair-bar {
+    height: 3px;
+    border-radius: 2px;
+    margin-top: 2px;
+    opacity: 0.6;
+  }
+
+  svg text {
+    user-select: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>PARTY CHEMISTRY</h1>
+  <div class="subtitle">46 Sessions &middot; Character Exchange Network</div>
+  <div class="accent-line"></div>
+</div>
+
+<div class="chart-container">
+  <div class="legend-panel" id="legend-panel">
+    <h3>CHARACTERS</h3>
+    <div id="legend-items"></div>
+    <div class="top-pairs" id="top-pairs">
+      <h4>Top Pairings</h4>
+    </div>
+  </div>
+  <div class="chord-wrapper" id="chord-wrapper"></div>
+  <div class="stats-panel" id="stats-panel">
+    <h3>CAMPAIGN STATS</h3>
+    <div id="stats-rows"></div>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// ============================================================================
+// REAL DATA — aggregated from 46 sessions of BWB campaign chemistry extracts
+// ============================================================================
+
+const PLAYER_CHAR = {
+  Gradles: "Corras", HT: "Ash", Mary: "Billabong", Christie: "Dahlia",
+  Lucy: "Orla", Tenderbittle: "SavannahBelle", Meijinx: "Ave", Drenek: "Drenek"
+};
+
+const DATA = {"players": ["Christie", "Drenek", "Gradles", "HT", "Lucy", "Mary", "Meijinx", "Tenderbittle"], "colors": ["#BA68C8", "#7986CB", "#4A90D9", "#E57373", "#FFB74D", "#81C784", "#FF8A65", "#4DB6AC"], "matrix": [[0, 20, 616, 573, 414, 362, 118, 237], [20, 0, 22, 14, 12, 3, 0, 0], [616, 22, 0, 767, 462, 314, 97, 251], [573, 14, 767, 0, 497, 316, 103, 269], [414, 12, 462, 497, 0, 245, 63, 179], [362, 3, 314, 316, 245, 0, 67, 112], [118, 0, 97, 103, 63, 67, 0, 0], [237, 0, 251, 269, 179, 112, 0, 0]], "pairDetails": {"Gradles|HT": {"total": 767, "type": "The Brain Trust", "score": 7.4, "moment": "Collaborating on the royal entrance to Lumin, combining illusions and speeches for dramatic effect.", "sessionCount": 44}, "Gradles|Mary": {"total": 314, "type": "New Acquaintances", "score": 4.6, "moment": "Working together to create the makeshift throne and carrying Corras into town.", "sessionCount": 37}, "Christie|Gradles": {"total": 616, "type": "Loyal Companions", "score": 6.0, "moment": "Collaborating on the dramatic entrance to Lumin, with Dahlia as herald and Corras as king.", "sessionCount": 44}, "Gradles|Lucy": {"total": 462, "type": "New Acquaintances", "score": 5.6, "moment": "Orla helping with the greenhouse plans and supporting the group's efforts in Lumin.", "sessionCount": 44}, "HT|Mary": {"total": 316, "type": "Ships Passing", "score": 4.7, "moment": "Light-hearted exchanges during the town visit, keeping the mood playful.", "sessionCount": 37}, "Christie|HT": {"total": 573, "type": "The Brain Trust", "score": 6.3, "moment": "Collaborating on the catnip plan and discussing the Etten situation.", "sessionCount": 44}, "HT|Lucy": {"total": 497, "type": "New Acquaintances", "score": 5.9, "moment": "Working together to understand the Etten and the magical door.", "sessionCount": 44}, "Christie|Mary": {"total": 362, "type": "Ships Passing", "score": 5.5, "moment": "Collaborating on the royal entrance and entertaining the townsfolk together.", "sessionCount": 37}, "Lucy|Mary": {"total": 245, "type": "New Acquaintances", "score": 4.6, "moment": "Helping each other with the greenhouse supplies and town activities.", "sessionCount": 37}, "Christie|Lucy": {"total": 414, "type": "New Acquaintances", "score": 5.5, "moment": "Collaborating to calm the Etten and resolve the town conflict peacefully.", "sessionCount": 44}, "Gradles|Tenderbittle": {"total": 251, "type": "Ships Passing", "score": 5.0, "moment": "Working together on the Mold Earth plan to bypass the web, with SavannahBelle leading the idea.", "sessionCount": 27}, "Gradles|Meijinx": {"total": 97, "type": "Ships Passing", "score": 4.8, "moment": "Executing the troll coin switch together, successfully avoiding detection.", "sessionCount": 11}, "HT|Tenderbittle": {"total": 269, "type": "Ships Passing", "score": 5.4, "moment": "Banter about the insidious hum boon and its comedic implications in social situations.", "sessionCount": 27}, "HT|Meijinx": {"total": 103, "type": "Ships Passing", "score": 5.1, "moment": "Collaborating to distract the trolls and execute the coin switch.", "sessionCount": 11}, "Christie|Tenderbittle": {"total": 237, "type": "Ships Passing", "score": 5.0, "moment": "Collaborating on the panther's scouting and discussing how to handle the webs.", "sessionCount": 27}, "Christie|Meijinx": {"total": 118, "type": "New Acquaintances", "score": 5.5, "moment": "Joint humorous reactions to the beholder's threats and Meijinx's shadow performance.", "sessionCount": 11}, "Lucy|Tenderbittle": {"total": 179, "type": "New Acquaintances", "score": 4.7, "moment": "Orla charms the toad demon, and SavannahBelle finds it amusing, adding a light moment.", "sessionCount": 27}, "Lucy|Meijinx": {"total": 63, "type": "Ships Passing", "score": 4.2, "moment": "Shared admiration for each other's abilities during the beholder encounter.", "sessionCount": 11}, "Meijinx|Tenderbittle": {"total": 0, "type": "Ships Passing", "score": 3.0, "moment": "", "sessionCount": 1}, "Mary|Meijinx": {"total": 67, "type": "Ships Passing", "score": 4.3, "moment": "Shared reaction to Meijinx's dance performance, with Billabong expressing admiration.", "sessionCount": 10}, "Drenek|Gradles": {"total": 22, "type": "Battle Siblings", "score": 6.5, "moment": "Joking about the nat 1 stealth rolls and the ensuing combat chaos.", "sessionCount": 2}, "Drenek|HT": {"total": 14, "type": "New Acquaintances", "score": 4.2, "moment": "Bantering about the toll gate and discussing travel in OOC conversation.", "sessionCount": 2}, "Drenek|Mary": {"total": 3, "type": "Ships Passing", "score": 3.0, "moment": "Light banter during the toll gate scene.", "sessionCount": 2}, "Christie|Drenek": {"total": 20, "type": "Loyal Companions", "score": 6.0, "moment": "Dahlia and Drenek joke about the 'we mean no harm' statement after the combat chaos.", "sessionCount": 2}, "Drenek|Lucy": {"total": 12, "type": "New Acquaintances", "score": 4.2, "moment": "Discussing scouting and travel plans briefly.", "sessionCount": 2}, "Mary|Tenderbittle": {"total": 112, "type": "Ships Passing", "score": 4.2, "moment": "Banter about catfish and pet ownership during downtime.", "sessionCount": 20}}};
+
+// ============================================================================
+// Chord Diagram
+// ============================================================================
+
+const width = 700, height = 700;
+const outerRadius = Math.min(width, height) * 0.5 - 80;
+const innerRadius = outerRadius - 28;
+
+const svg = d3.select("#chord-wrapper")
+  .append("svg")
+    .attr("width", width)
+    .attr("height", height)
+    .attr("viewBox", [-width/2, -height/2, width, height]);
+
+// Defs for glow filter
+const defs = svg.append("defs");
+const glowFilter = defs.append("filter").attr("id", "glow");
+glowFilter.append("feGaussianBlur").attr("stdDeviation", "3").attr("result", "coloredBlur");
+const feMerge = glowFilter.append("feMerge");
+feMerge.append("feMergeNode").attr("in", "coloredBlur");
+feMerge.append("feMergeNode").attr("in", "SourceGraphic");
+
+const strongGlow = defs.append("filter").attr("id", "strongGlow");
+strongGlow.append("feGaussianBlur").attr("stdDeviation", "6").attr("result", "coloredBlur");
+const feMerge2 = strongGlow.append("feMerge");
+feMerge2.append("feMergeNode").attr("in", "coloredBlur");
+feMerge2.append("feMergeNode").attr("in", "SourceGraphic");
+
+// Chord layout
+const chord = d3.chord()
+  .padAngle(0.06)
+  .sortSubgroups(d3.descending)
+  .sortChords(d3.descending);
+
+const chords = chord(DATA.matrix);
+
+const arc = d3.arc()
+  .innerRadius(innerRadius)
+  .outerRadius(outerRadius);
+
+const ribbon = d3.ribbon()
+  .radius(innerRadius - 2);
+
+const colorScale = (i) => DATA.colors[i];
+
+// Helper: get pair detail
+function getPairDetail(i, j) {
+  const a = DATA.players[i];
+  const b = DATA.players[j];
+  const key1 = `${a}|${b}`;
+  const key2 = `${b}|${a}`;
+  return DATA.pairDetails[key1] || DATA.pairDetails[key2] || null;
+}
+
+// Draw outer arcs (character groups)
+const group = svg.append("g")
+  .selectAll("g")
+  .data(chords.groups)
+  .join("g");
+
+group.append("path")
+  .attr("class", "arc-path")
+  .attr("d", arc)
+  .attr("fill", d => colorScale(d.index))
+  .attr("stroke", d => d3.color(colorScale(d.index)).brighter(0.5))
+  .attr("stroke-width", 1)
+  .style("filter", "url(#glow)")
+  .style("cursor", "pointer")
+  .on("mouseover", (event, d) => highlightGroup(d.index))
+  .on("mouseout", resetHighlight);
+
+// Arc labels (character names)
+group.append("text")
+  .each(d => { d.angle = (d.startAngle + d.endAngle) / 2; })
+  .attr("dy", "0.35em")
+  .attr("transform", d => `
+    rotate(${(d.angle * 180 / Math.PI - 90)})
+    translate(${outerRadius + 14})
+    ${d.angle > Math.PI ? "rotate(180)" : ""}
+  `)
+  .attr("text-anchor", d => d.angle > Math.PI ? "end" : "start")
+  .attr("font-family", "'Cinzel', serif")
+  .attr("font-size", "13px")
+  .attr("font-weight", "600")
+  .attr("fill", d => colorScale(d.index))
+  .attr("filter", "url(#glow)")
+  .text(d => PLAYER_CHAR[DATA.players[d.index]] || DATA.players[d.index])
+  .style("cursor", "pointer")
+  .on("mouseover", (event, d) => highlightGroup(d.index))
+  .on("mouseout", resetHighlight);
+
+// Player label beneath character name
+group.append("text")
+  .each(d => { d.angle = (d.startAngle + d.endAngle) / 2; })
+  .attr("dy", "0.35em")
+  .attr("transform", d => `
+    rotate(${(d.angle * 180 / Math.PI - 90)})
+    translate(${outerRadius + 30})
+    ${d.angle > Math.PI ? "rotate(180)" : ""}
+  `)
+  .attr("text-anchor", d => d.angle > Math.PI ? "end" : "start")
+  .attr("font-family", "'Barlow Condensed', sans-serif")
+  .attr("font-size", "10px")
+  .attr("font-weight", "300")
+  .attr("fill", "#9898b0")
+  .text(d => DATA.players[d.index]);
+
+// Draw ribbons
+const ribbons = svg.append("g")
+  .attr("fill-opacity", 0.55)
+  .selectAll("path")
+  .data(chords)
+  .join("path")
+    .attr("class", "ribbon-path")
+    .attr("d", ribbon)
+    .attr("fill", d => colorScale(d.source.index))
+    .attr("stroke", d => d3.color(colorScale(d.source.index)).darker(0.3))
+    .attr("stroke-width", 0.5)
+    .style("cursor", "pointer")
+    .on("mouseover", (event, d) => {
+      highlightRibbon(d);
+      showTooltip(event, d);
+    })
+    .on("mousemove", (event) => moveTooltip(event))
+    .on("mouseout", () => {
+      resetHighlight();
+      hideTooltip();
+    });
+
+// Center text
+svg.append("text")
+  .attr("text-anchor", "middle")
+  .attr("dy", "-0.2em")
+  .attr("font-family", "'Bebas Neue', sans-serif")
+  .attr("font-size", "20px")
+  .attr("fill", "#9898b0")
+  .attr("letter-spacing", "3px")
+  .text("TOTAL");
+
+const totalExchanges = DATA.matrix.reduce((sum, row) => sum + row.reduce((s, v) => s + v, 0), 0) / 2;
+svg.append("text")
+  .attr("text-anchor", "middle")
+  .attr("dy", "1.4em")
+  .attr("font-family", "'JetBrains Mono', monospace")
+  .attr("font-size", "28px")
+  .attr("fill", "#fff")
+  .attr("filter", "url(#glow)")
+  .text(totalExchanges.toLocaleString());
+
+svg.append("text")
+  .attr("text-anchor", "middle")
+  .attr("dy", "3em")
+  .attr("font-family", "'Barlow Condensed', sans-serif")
+  .attr("font-size", "11px")
+  .attr("fill", "#666")
+  .attr("letter-spacing", "2px")
+  .text("EXCHANGES");
+
+// ============================================================================
+// Interactions
+// ============================================================================
+
+function highlightGroup(index) {
+  svg.selectAll(".ribbon-path")
+    .transition().duration(150)
+    .attr("fill-opacity", d =>
+      (d.source.index === index || d.target.index === index) ? 0.85 : 0.05
+    )
+    .style("filter", d =>
+      (d.source.index === index || d.target.index === index) ? "url(#glow)" : "none"
+    );
+
+  svg.selectAll(".arc-path")
+    .transition().duration(150)
+    .attr("opacity", d => d.index === index ? 1 : 0.3);
+}
+
+function highlightRibbon(chord) {
+  svg.selectAll(".ribbon-path")
+    .transition().duration(150)
+    .attr("fill-opacity", d =>
+      (d.source.index === chord.source.index && d.target.index === chord.target.index) ? 0.9 : 0.05
+    )
+    .style("filter", d =>
+      (d.source.index === chord.source.index && d.target.index === chord.target.index) ? "url(#strongGlow)" : "none"
+    );
+
+  svg.selectAll(".arc-path")
+    .transition().duration(150)
+    .attr("opacity", d =>
+      (d.index === chord.source.index || d.index === chord.target.index) ? 1 : 0.3
+    );
+}
+
+function resetHighlight() {
+  svg.selectAll(".ribbon-path")
+    .transition().duration(300)
+    .attr("fill-opacity", 0.55)
+    .style("filter", "none");
+
+  svg.selectAll(".arc-path")
+    .transition().duration(300)
+    .attr("opacity", 1);
+}
+
+// Tooltip
+const tooltip = document.getElementById("tooltip");
+
+function showTooltip(event, d) {
+  const detail = getPairDetail(d.source.index, d.target.index);
+  const charA = PLAYER_CHAR[DATA.players[d.source.index]] || DATA.players[d.source.index];
+  const charB = PLAYER_CHAR[DATA.players[d.target.index]] || DATA.players[d.target.index];
+  const total = DATA.matrix[d.source.index][d.target.index];
+
+  let html = `<div class="tt-pair">${charA} <span class="ampersand">&amp;</span> ${charB}</div>`;
+  html += `<div class="tt-row"><span class="tt-label">Total Exchanges</span><span class="tt-val">${total}</span></div>`;
+
+  if (detail) {
+    html += `<div class="tt-row"><span class="tt-label">Chemistry Type</span><span class="tt-val">${detail.type}</span></div>`;
+    html += `<div class="tt-row"><span class="tt-label">Avg Score</span><span class="tt-val">${detail.score}/10</span></div>`;
+    html += `<div class="tt-row"><span class="tt-label">Sessions Together</span><span class="tt-val">${detail.sessionCount}</span></div>`;
+    if (detail.moment) {
+      html += `<div class="tt-moment"><div class="tt-moment-label">Best Shared Moment</div>${detail.moment}</div>`;
+    }
+  }
+
+  tooltip.innerHTML = html;
+  tooltip.classList.add("visible");
+  moveTooltip(event);
+}
+
+function moveTooltip(event) {
+  const x = event.clientX + 16;
+  const y = event.clientY - 10;
+  const rect = tooltip.getBoundingClientRect();
+  const adjustedX = (x + rect.width > window.innerWidth) ? event.clientX - rect.width - 16 : x;
+  const adjustedY = (y + rect.height > window.innerHeight) ? window.innerHeight - rect.height - 10 : y;
+  tooltip.style.left = adjustedX + "px";
+  tooltip.style.top = adjustedY + "px";
+}
+
+function hideTooltip() {
+  tooltip.classList.remove("visible");
+}
+
+// ============================================================================
+// Legend
+// ============================================================================
+
+const legendContainer = document.getElementById("legend-items");
+DATA.players.forEach((player, i) => {
+  const totalForPlayer = DATA.matrix[i].reduce((a, b) => a + b, 0);
+  const charName = PLAYER_CHAR[player] || player;
+  const div = document.createElement("div");
+  div.className = "legend-item";
+  div.innerHTML = `
+    <div class="legend-dot" style="background:${DATA.colors[i]}; box-shadow: 0 0 6px ${DATA.colors[i]}40;"></div>
+    <span class="legend-name">${charName}</span>
+    <span class="legend-exchanges">${totalForPlayer.toLocaleString()}</span>
+  `;
+  div.addEventListener("mouseenter", () => highlightGroup(i));
+  div.addEventListener("mouseleave", resetHighlight);
+  legendContainer.appendChild(div);
+});
+
+// Top pairs
+const pairList = Object.entries(DATA.pairDetails)
+  .sort((a, b) => b[1].total - a[1].total)
+  .slice(0, 10);
+
+const topPairsDiv = document.getElementById("top-pairs");
+const maxPairTotal = pairList[0][1].total;
+
+pairList.forEach(([key, detail], i) => {
+  const [pa, pb] = key.split("|");
+  const charA = PLAYER_CHAR[pa] || pa;
+  const charB = PLAYER_CHAR[pb] || pb;
+  const colorA = DATA.colors[DATA.players.indexOf(pa)] || "#9898b0";
+  const pct = (detail.total / maxPairTotal) * 100;
+
+  const div = document.createElement("div");
+  div.style.marginBottom = "6px";
+  div.innerHTML = `
+    <div class="top-pair-item">
+      <span class="top-pair-rank">${i + 1}.</span>
+      <span class="top-pair-names">${charA} & ${charB}</span>
+      <span class="top-pair-count">${detail.total}</span>
+    </div>
+    <div class="top-pair-bar" style="width:${pct}%; background:${colorA};"></div>
+  `;
+  topPairsDiv.appendChild(div);
+});
+
+// ============================================================================
+// Stats panel
+// ============================================================================
+
+const statsContainer = document.getElementById("stats-rows");
+
+// Total exchanges
+addStat("Total Exchanges", totalExchanges.toLocaleString());
+
+// Most active character
+const playerTotals = DATA.players.map((p, i) => ({
+  name: PLAYER_CHAR[p] || p,
+  player: p,
+  total: DATA.matrix[i].reduce((a, b) => a + b, 0)
+})).sort((a, b) => b.total - a.total);
+
+addStat("Most Active", `${playerTotals[0].name} (${playerTotals[0].total})`);
+addStat("Least Active", `${playerTotals[playerTotals.length - 1].name} (${playerTotals[playerTotals.length - 1].total})`);
+
+// Strongest bond
+const sorted = Object.entries(DATA.pairDetails).sort((a, b) => b[1].total - a[1].total);
+const [topKey, topVal] = sorted[0];
+const [tp1, tp2] = topKey.split("|");
+addStat("Strongest Bond", `${PLAYER_CHAR[tp1] || tp1} & ${PLAYER_CHAR[tp2] || tp2}`);
+addStat("Bond Exchanges", topVal.total.toString());
+addStat("Bond Chemistry", topVal.type);
+
+// Highest chemistry score pair
+const scoreSorted = Object.entries(DATA.pairDetails).sort((a, b) => b[1].score - a[1].score);
+const [sKey, sVal] = scoreSorted[0];
+const [sp1, sp2] = sKey.split("|");
+addStat("Highest Score", `${PLAYER_CHAR[sp1] || sp1} & ${PLAYER_CHAR[sp2] || sp2} (${sVal.score})`);
+
+// Total unique pairs
+addStat("Unique Pairings", Object.keys(DATA.pairDetails).length.toString());
+
+// Avg exchanges per pair
+const avgExch = Math.round(totalExchanges / Object.keys(DATA.pairDetails).length);
+addStat("Avg per Pair", avgExch.toString());
+
+function addStat(label, value) {
+  const div = document.createElement("div");
+  div.className = "stat-row";
+  div.innerHTML = `
+    <span class="stat-label">${label}</span>
+    <span class="stat-value">${value}</span>
+  `;
+  statsContainer.appendChild(div);
+}
+</script>
+</body>
+</html>

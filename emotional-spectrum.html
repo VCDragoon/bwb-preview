@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EMOTIONAL SPECTRUM — BWB Campaign</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;500;600;700;800&family=Barlow:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg-deep: #06060c;
+      --bg-primary: #0a0a14;
+      --bg-card: #0f1020;
+      --bg-surface: #1a1a2e;
+      --bg-elevated: #22223a;
+      --border: #2a2a4a;
+      --text-primary: #eef0ff;
+      --text-secondary: #9494bf;
+      --text-muted: #8a8ab5;
+      --accent-blue: #00d4ff;
+      --accent-gold: #ffd700;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      font-family: 'Barlow', sans-serif;
+      line-height: 1.5;
+      overflow-x: hidden;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Scanline overlay */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        0deg, transparent, transparent 2px,
+        rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px
+      );
+    }
+
+    /* Ambient background glow */
+    .ambient-glow {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background:
+        radial-gradient(ellipse at 50% 40%, rgba(0,212,255,0.04) 0%, transparent 60%),
+        radial-gradient(ellipse at 20% 70%, rgba(255,68,68,0.03) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 70%, rgba(255,215,0,0.03) 0%, transparent 50%);
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 1400px;
+      padding: 40px 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    .header .broadcast-tag {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 4px;
+      color: var(--accent-blue);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .header .broadcast-tag .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent-blue);
+      box-shadow: 0 0 8px var(--accent-blue);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .header h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(48px, 7vw, 96px);
+      line-height: 0.9;
+      letter-spacing: 6px;
+      background: linear-gradient(180deg, #ffffff 0%, #aabbdd 60%, #667799 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+    }
+
+    .header .subtitle {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 600;
+      font-size: 18px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    /* Visualization container */
+    .viz-container {
+      position: relative;
+      width: 100%;
+      max-width: 1100px;
+      aspect-ratio: 1;
+    }
+
+    #spectrum-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    #spectrum-svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Tooltip */
+    .tooltip {
+      position: fixed;
+      pointer-events: none;
+      z-index: 1000;
+      background: rgba(15, 16, 32, 0.95);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px 18px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 20px rgba(0,212,255,0.1);
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      max-width: 300px;
+    }
+
+    .tooltip.visible { opacity: 1; }
+
+    .tooltip .tt-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px;
+      letter-spacing: 2px;
+      margin-bottom: 6px;
+    }
+
+    .tooltip .tt-row {
+      font-family: 'Barlow', sans-serif;
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    .tooltip .tt-row .val {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .tooltip .tt-row .accent {
+      color: var(--accent-gold);
+    }
+
+    .tooltip .tt-color-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+
+    .tooltip .tt-emotion-list {
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px solid var(--border);
+    }
+
+    .tooltip .tt-emotion-item {
+      font-family: 'Barlow', sans-serif;
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.8;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tooltip .tt-emotion-item .dominant-tag {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--accent-gold);
+      background: rgba(255,215,0,0.12);
+      padding: 1px 6px;
+      border-radius: 3px;
+    }
+
+    /* Legend */
+    .legend-panel {
+      width: 100%;
+      max-width: 1100px;
+      margin-top: 24px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 24px;
+      justify-content: center;
+    }
+
+    .legend-section {
+      background: linear-gradient(135deg, var(--bg-card) 0%, rgba(15,16,32,0.6) 100%);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px 24px;
+    }
+
+    .legend-section .legend-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--accent-blue);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .legend-section .legend-title::before {
+      content: '';
+      width: 14px;
+      height: 2px;
+      background: var(--accent-blue);
+    }
+
+    .emotion-legend {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px 20px;
+    }
+
+    .emotion-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'Barlow', sans-serif;
+      font-size: 12px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+
+    .emotion-legend-item:hover {
+      color: var(--text-primary);
+    }
+
+    .emotion-legend-item .swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+
+    .chemistry-legend {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .chemistry-gradient {
+      width: 160px;
+      height: 14px;
+      border-radius: 7px;
+      background: linear-gradient(90deg, #ff2222, #ff8844, #ffd700, #88ff44, #22ff88);
+      border: 1px solid var(--border);
+    }
+
+    .chemistry-labels {
+      display: flex;
+      justify-content: space-between;
+      width: 160px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .line-legend {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .line-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'Barlow', sans-serif;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .line-sample-thick {
+      width: 28px;
+      height: 3px;
+      background: var(--accent-gold);
+      border-radius: 2px;
+      box-shadow: 0 0 6px rgba(255,215,0,0.4);
+    }
+
+    .line-sample-thin {
+      width: 28px;
+      height: 1px;
+      background: var(--accent-gold);
+      opacity: 0.5;
+    }
+
+    /* Stats bar */
+    .stats-bar {
+      width: 100%;
+      max-width: 1100px;
+      display: flex;
+      justify-content: center;
+      gap: 48px;
+      margin-top: 20px;
+      padding: 16px 0;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .stat-item {
+      text-align: center;
+    }
+
+    .stat-item .stat-value {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 36px;
+      letter-spacing: 2px;
+      color: var(--accent-blue);
+      text-shadow: 0 0 12px rgba(0,212,255,0.3);
+    }
+
+    .stat-item .stat-label {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--text-muted);
+    }
+
+    @keyframes glowPulse {
+      0%, 100% { opacity: 0.7; }
+      50% { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="ambient-glow"></div>
+  <div class="container">
+    <div class="header">
+      <div class="broadcast-tag">
+        <span class="dot"></span>
+        CAMPAIGN ANALYTICS
+        <span class="dot"></span>
+      </div>
+      <h1>EMOTIONAL SPECTRUM</h1>
+      <div class="subtitle">The emotional arc of 46 sessions</div>
+    </div>
+
+    <div class="stats-bar" id="statsBar"></div>
+
+    <div class="viz-container" id="vizContainer">
+      <canvas id="spectrum-canvas"></canvas>
+      <svg id="spectrum-svg"></svg>
+    </div>
+
+    <div class="legend-panel">
+      <div class="legend-section">
+        <div class="legend-title">Emotions</div>
+        <div class="emotion-legend" id="emotionLegend"></div>
+      </div>
+      <div class="legend-section">
+        <div class="legend-title">Connection Weight</div>
+        <div class="line-legend">
+          <div class="line-legend-item">
+            <div class="line-sample-thick"></div>
+            <span>Dominant emotion</span>
+          </div>
+          <div class="line-legend-item">
+            <div class="line-sample-thin"></div>
+            <span>Secondary emotion</span>
+          </div>
+        </div>
+      </div>
+      <div class="legend-section">
+        <div class="legend-title">Party Chemistry Health</div>
+        <div>
+          <div class="chemistry-gradient"></div>
+          <div class="chemistry-labels">
+            <span>1</span>
+            <span>5</span>
+            <span>10</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tooltip" id="tooltip"></div>
+
+  <script>
+  (function() {
+    // ─── EMOTION PALETTE ────────────────────────────────────────────
+    const EMOTIONS = [
+      { name: 'Joy/Excitement',       color: '#FFD700' },
+      { name: 'Anticipation',         color: '#FFA500' },
+      { name: 'Triumph/Elation',      color: '#FF6347' },
+      { name: 'Amusement/Laughter',   color: '#FFE066' },
+      { name: 'Curiosity/Wonder',     color: '#87CEEB' },
+      { name: 'Tension/Anxiety',      color: '#DC143C' },
+      { name: 'Fear/Dread',           color: '#8B0000' },
+      { name: 'Frustration/Irritation', color: '#FF4500' },
+      { name: 'Sadness/Grief',        color: '#4682B4' },
+      { name: 'Determination/Resolve', color: '#32CD32' },
+      { name: 'Confusion/Surprise',   color: '#DDA0DD' },
+      { name: 'Neutral',              color: '#808080' },
+      { name: 'Suspense/Unease',      color: '#9370DB' },
+      { name: 'Satisfaction/Relief',  color: '#98FB98' },
+      { name: 'Anger/Rage',           color: '#B22222' },
+      { name: 'Compassion/Empathy',   color: '#FF69B4' }
+    ];
+
+    const emotionMap = new Map(EMOTIONS.map((e, i) => [e.name, i]));
+
+    // ─── REAL CAMPAIGN DATA ───────────────────────────────────────────
+    // Extracted from sentiment_dataset.json and chemistry_dataset.json for all 46 sessions
+    const sessions = [
+      { sid: "S001", index: 1, dominant: "Amusement/Laughter", secondary: ["Curiosity/Wonder", "Frustration/Irritation", "Triumph/Elation"], chemistryHealth: 7.0 },
+      { sid: "S002", index: 2, dominant: "Curiosity/Wonder", secondary: ["Anticipation", "Confusion/Surprise", "Determination/Resolve", "Fear/Dread", "Frustration/Irritation", "Suspense/Unease", "Triumph/Elation"], chemistryHealth: 6.5 },
+      { sid: "S003", index: 3, dominant: "Tension/Anxiety", secondary: ["Curiosity/Wonder", "Suspense/Unease"], chemistryHealth: 7.5 },
+      { sid: "S004", index: 4, dominant: "Tension/Anxiety", secondary: ["Amusement/Laughter", "Compassion/Empathy", "Confusion/Surprise", "Curiosity/Wonder", "Determination/Resolve", "Fear/Dread", "Joy/Excitement", "Neutral", "Satisfaction/Relief", "Suspense/Unease", "Triumph/Elation"], chemistryHealth: 7.5 },
+      { sid: "S005", index: 5, dominant: "Amusement/Laughter", secondary: ["Anticipation", "Confusion/Surprise", "Curiosity/Wonder", "Satisfaction/Relief", "Tension/Anxiety"], chemistryHealth: 7.0 },
+      { sid: "S006", index: 6, dominant: "Tension/Anxiety", secondary: ["Anticipation", "Confusion/Surprise", "Curiosity/Wonder", "Determination/Resolve", "Fear/Dread", "Frustration/Irritation", "Joy/Excitement", "Satisfaction/Relief", "Triumph/Elation"], chemistryHealth: 7.0 },
+      { sid: "S007", index: 7, dominant: "Joy/Excitement", secondary: ["Amusement/Laughter", "Curiosity/Wonder", "Frustration/Irritation", "Tension/Anxiety"], chemistryHealth: 7.0 },
+      { sid: "S008", index: 8, dominant: "Tension/Anxiety", secondary: ["Amusement/Laughter", "Curiosity/Wonder", "Determination/Resolve", "Fear/Dread", "Satisfaction/Relief", "Suspense/Unease"], chemistryHealth: 7.0 },
+      { sid: "S009", index: 9, dominant: "Tension/Anxiety", secondary: ["Amusement/Laughter", "Anger/Rage", "Confusion/Surprise", "Fear/Dread", "Frustration/Irritation", "Joy/Excitement", "Neutral", "Satisfaction/Relief"], chemistryHealth: 7.0 },
+      { sid: "S010", index: 10, dominant: "Tension/Anxiety", secondary: ["Amusement/Laughter", "Curiosity/Wonder"], chemistryHealth: 7.5 },
+      { sid: "S011", index: 11, dominant: "Tension/Anxiety", secondary: ["Amusement/Laughter", "Anticipation", "Curiosity/Wonder", "Determination/Resolve", "Fear/Dread", "Joy/Excitement", "Neutral", "Sadness/Grief", "Satisfaction/Relief"], chemistryHealth: 7.0 },
+      { sid: "S012", index: 12, dominant: "Tension/Anxiety", secondary: ["Amusement/Laughter", "Anticipation", "Confusion/Surprise", "Curiosity/Wonder", "Determination/Resolve", "Fear/Dread", "Frustration/Irritation", "Joy/Excitement", "Neutral", "Satisfaction/Relief", "Triumph/Elation"], chemistryHealth: 7.5 },
+      { sid: "S013", index: 13, dominant: "Suspense/Unease", secondary: ["Amusement/Laughter", "Anticipation", "Compassion/Empathy", "Curiosity/Wonder", "Determination/Resolve", "Fear/Dread", "Joy/Excitement", "Neutral", "Satisfaction/Relief", "Tension/Anxiety", "Triumph/Elation"], chemistryHealth: 6.5 },
+      { sid: "S014", index: 14, dominant: "Tension/Anxiety", secondary: ["Anticipation", "Joy/Excitement"], chemistryHealth: 7.0 },
+      { sid: "S015", index: 15, dominant: "Tension/Anxiety", secondary: ["Amusement/Laughter", "Anticipation", "Compassion/Empathy", "Confusion/Surprise", "Curiosity/Wonder", "Determination/Resolve", "Fear/Dread", "Frustration/Irritation", "Joy/Excitement", "Neutral", "Suspense/Unease"], chemistryHealth: 7.5 },
+      { sid: "S016", index: 16, dominant: "Tension/Anxiety", secondary: ["Confusion/Surprise", "Curiosity/Wonder", "Determination/Resolve", "Fear/Dread", "Frustration/Irritation", "Neutral", "Satisfaction/Relief", "Triumph/Elation"], chemistryHealth: 7.0 },
+      { sid: "S017", index: 17, dominant: "Curiosity/Wonder", secondary: ["Amusement/Laughter", "Anticipation", "Confusion/Surprise", "Determination/Resolve", "Joy/Excitement", "Neutral", "Satisfaction/Relief", "Tension/Anxiety", "Triumph/Elation"], chemistryHealth: 7.0 },
+      { sid: "S018", index: 18, dominant: "Tension/Anxiety", secondary: ["Amusement/Laughter", "Confusion/Surprise", "Curiosity/Wonder", "Determination/Resolve", "Frustration/Irritation", "Joy/Excitement", "Satisfaction/Relief"], chemistryHealth: 7.0 },
+      { sid: "S019", index: 19, dominant: "Tension/Anxiety", secondary: ["Anticipation", "Neutral"], chemistryHealth: 7.0 },
+      { sid: "S020", index: 20, dominant: "Curiosity/Wonder", secondary: ["Amusement/Laughter", "Anticipation", "Confusion/Surprise", "Determination/Resolve", "Fear/Dread", "Sadness/Grief", "Satisfaction/Relief", "Suspense/Unease", "Tension/Anxiety", "Triumph/Elation"], chemistryHealth: 6.5 },
+      { sid: "S021", index: 21, dominant: "Tension/Anxiety", secondary: ["Amusement/Laughter", "Anticipation", "Confusion/Surprise", "Curiosity/Wonder", "Determination/Resolve", "Fear/Dread", "Frustration/Irritation", "Joy/Excitement", "Satisfaction/Relief", "Suspense/Unease"], chemistryHealth: 7.0 },
+      { sid: "S022", index: 22, dominant: "Tension/Anxiety", secondary: ["Amusement/Laughter", "Curiosity/Wonder"], chemistryHealth: 7.0 },
+      { sid: "S023", index: 23, dominant: "Tension/Anxiety", secondary: ["Amusement/Laughter", "Curiosity/Wonder", "Determination/Resolve", "Fear/Dread", "Frustration/Irritation", "Joy/Excitement", "Satisfaction/Relief", "Suspense/Unease", "Triumph/Elation"], chemistryHealth: 7.5 },
+      { sid: "S024", index: 24, dominant: "Tension/Anxiety", secondary: ["Confusion/Surprise", "Curiosity/Wonder"], chemistryHealth: 7.0 },
+      { sid: "S025", index: 25, dominant: "Curiosity/Wonder", secondary: ["Amusement/Laughter", "Satisfaction/Relief", "Tension/Anxiety"], chemistryHealth: 7.0 },
+      { sid: "S026", index: 26, dominant: "Tension/Anxiety", secondary: ["Amusement/Laughter", "Anticipation", "Confusion/Surprise", "Curiosity/Wonder", "Determination/Resolve", "Fear/Dread", "Frustration/Irritation", "Neutral", "Satisfaction/Relief", "Suspense/Unease", "Triumph/Elation"], chemistryHealth: 7.0 },
+      { sid: "S027", index: 27, dominant: "Tension/Anxiety", secondary: ["Amusement/Laughter", "Anticipation", "Curiosity/Wonder", "Determination/Resolve", "Fear/Dread", "Frustration/Irritation", "Neutral", "Satisfaction/Relief", "Triumph/Elation"], chemistryHealth: 7.5 },
+      { sid: "S028", index: 28, dominant: "Tension/Anxiety", secondary: ["Amusement/Laughter", "Anticipation", "Confusion/Surprise", "Curiosity/Wonder", "Fear/Dread", "Frustration/Irritation", "Neutral", "Satisfaction/Relief", "Suspense/Unease", "Triumph/Elation"], chemistryHealth: 7.5 },
+      { sid: "S029", index: 29, dominant: "Tension/Anxiety", secondary: ["Joy/Excitement", "Neutral"], chemistryHealth: 7.0 },
+      { sid: "S030", index: 30, dominant: "Tension/Anxiety", secondary: ["Anticipation", "Confusion/Surprise", "Curiosity/Wonder", "Determination/Resolve", "Fear/Dread", "Frustration/Irritation", "Joy/Excitement", "Satisfaction/Relief", "Triumph/Elation"], chemistryHealth: 7.5 },
+      { sid: "S031", index: 31, dominant: "Tension/Anxiety", secondary: ["Anticipation", "Neutral", "Satisfaction/Relief", "Triumph/Elation"], chemistryHealth: 7.0 },
+      { sid: "S032", index: 32, dominant: "Fear/Dread", secondary: ["Amusement/Laughter", "Anticipation", "Curiosity/Wonder", "Determination/Resolve", "Frustration/Irritation", "Neutral", "Suspense/Unease", "Tension/Anxiety"], chemistryHealth: 6.5 },
+      { sid: "S033", index: 33, dominant: "Tension/Anxiety", secondary: ["Amusement/Laughter", "Anger/Rage", "Anticipation", "Curiosity/Wonder", "Determination/Resolve", "Fear/Dread", "Frustration/Irritation", "Neutral", "Sadness/Grief", "Satisfaction/Relief", "Suspense/Unease", "Triumph/Elation"], chemistryHealth: 7.0 },
+      { sid: "S034", index: 34, dominant: "Tension/Anxiety", secondary: ["Amusement/Laughter", "Curiosity/Wonder", "Determination/Resolve", "Fear/Dread", "Frustration/Irritation", "Joy/Excitement", "Triumph/Elation"], chemistryHealth: 6.5 },
+      { sid: "S035", index: 35, dominant: "Fear/Dread", secondary: ["Amusement/Laughter", "Anticipation", "Compassion/Empathy", "Curiosity/Wonder", "Determination/Resolve", "Frustration/Irritation", "Joy/Excitement", "Suspense/Unease", "Tension/Anxiety", "Triumph/Elation"], chemistryHealth: 7.5 },
+      { sid: "S036", index: 36, dominant: "Tension/Anxiety", secondary: ["Anticipation", "Determination/Resolve", "Fear/Dread", "Frustration/Irritation", "Neutral", "Satisfaction/Relief"], chemistryHealth: 7.0 },
+      { sid: "S037", index: 37, dominant: "Tension/Anxiety", secondary: ["Amusement/Laughter", "Anticipation", "Curiosity/Wonder", "Determination/Resolve", "Fear/Dread", "Frustration/Irritation", "Satisfaction/Relief", "Triumph/Elation"], chemistryHealth: 7.0 },
+      { sid: "S038", index: 38, dominant: "Tension/Anxiety", secondary: ["Amusement/Laughter", "Confusion/Surprise", "Curiosity/Wonder", "Determination/Resolve", "Fear/Dread", "Frustration/Irritation", "Joy/Excitement", "Neutral", "Satisfaction/Relief", "Triumph/Elation"], chemistryHealth: 7.5 },
+      { sid: "S039", index: 39, dominant: "Anticipation", secondary: ["Amusement/Laughter", "Joy/Excitement"], chemistryHealth: 7.0 },
+      { sid: "S040", index: 40, dominant: "Tension/Anxiety", secondary: ["Amusement/Laughter", "Anger/Rage", "Anticipation", "Confusion/Surprise", "Curiosity/Wonder", "Determination/Resolve", "Frustration/Irritation", "Joy/Excitement", "Neutral", "Satisfaction/Relief", "Suspense/Unease", "Triumph/Elation"], chemistryHealth: 7.0 },
+      { sid: "S041", index: 41, dominant: "Tension/Anxiety", secondary: ["Anger/Rage", "Anticipation", "Confusion/Surprise", "Curiosity/Wonder", "Determination/Resolve", "Fear/Dread", "Frustration/Irritation", "Joy/Excitement", "Neutral", "Sadness/Grief"], chemistryHealth: 6.5 },
+      { sid: "S042", index: 42, dominant: "Determination/Resolve", secondary: ["Amusement/Laughter", "Anticipation", "Compassion/Empathy", "Confusion/Surprise", "Curiosity/Wonder", "Fear/Dread", "Joy/Excitement", "Neutral", "Suspense/Unease", "Tension/Anxiety", "Triumph/Elation"], chemistryHealth: 7.0 },
+      { sid: "S043", index: 43, dominant: "Tension/Anxiety", secondary: ["Amusement/Laughter", "Curiosity/Wonder", "Fear/Dread", "Frustration/Irritation", "Joy/Excitement"], chemistryHealth: 7.0 },
+      { sid: "S044", index: 44, dominant: "Tension/Anxiety", secondary: ["Amusement/Laughter", "Anger/Rage", "Confusion/Surprise", "Curiosity/Wonder", "Determination/Resolve", "Fear/Dread", "Frustration/Irritation", "Neutral", "Satisfaction/Relief", "Suspense/Unease"], chemistryHealth: 7.0 },
+      { sid: "S045", index: 45, dominant: "Tension/Anxiety", secondary: ["Amusement/Laughter", "Curiosity/Wonder"], chemistryHealth: 7.0 },
+      { sid: "S046", index: 46, dominant: "Tension/Anxiety", secondary: ["Amusement/Laughter", "Fear/Dread"], chemistryHealth: 6.5 },
+    ];
+
+    // Add computed properties
+    sessions.forEach(s => {
+      s.allEmotions = [s.dominant, ...s.secondary];
+    });
+
+    // ─── COMPUTED STATS ──────────────────────────────────────────────
+    const emotionStats = EMOTIONS.map(e => {
+      const dominantCount = sessions.filter(s => s.dominant === e.name).length;
+      const presentCount = sessions.filter(s => s.allEmotions.includes(e.name)).length;
+      return { ...e, dominantCount, presentCount };
+    });
+
+    // Populate stats bar
+    const totalConnections = sessions.reduce((sum, s) => sum + s.allEmotions.length, 0);
+    const mostDominant = emotionStats.reduce((a, b) => a.dominantCount > b.dominantCount ? a : b);
+    const avgChemistry = (sessions.reduce((sum, s) => sum + s.chemistryHealth, 0) / sessions.length).toFixed(1);
+
+    document.getElementById('statsBar').innerHTML = `
+      <div class="stat-item">
+        <div class="stat-value">46</div>
+        <div class="stat-label">Sessions</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">16</div>
+        <div class="stat-label">Emotions Tracked</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">${totalConnections}</div>
+        <div class="stat-label">Total Connections</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" style="color: ${mostDominant.color}">${mostDominant.name.split('/')[0].toUpperCase()}</div>
+        <div class="stat-label">Most Dominant</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" style="color: var(--accent-green)">${avgChemistry}</div>
+        <div class="stat-label">Avg Chemistry</div>
+      </div>
+    `;
+
+    // Populate emotion legend
+    const legendEl = document.getElementById('emotionLegend');
+    emotionStats.forEach(e => {
+      const item = document.createElement('div');
+      item.className = 'emotion-legend-item';
+      item.innerHTML = `<div class="swatch" style="background:${e.color}; box-shadow: 0 0 6px ${e.color}55;"></div>${e.name}`;
+      item.addEventListener('mouseenter', () => highlightEmotion(e.name));
+      item.addEventListener('mouseleave', clearHighlight);
+      legendEl.appendChild(item);
+    });
+
+    // ─── LAYOUT GEOMETRY ─────────────────────────────────────────────
+    const container = document.getElementById('vizContainer');
+    const canvas = document.getElementById('spectrum-canvas');
+    const svg = d3.select('#spectrum-svg');
+    const tooltip = document.getElementById('tooltip');
+
+    // Responsive sizing
+    let W, H, cx, cy, dpr;
+    let innerRadius, outerRadius, sessionRadius, chemDotRadius;
+    let ctx;
+
+    function computeLayout() {
+      const rect = container.getBoundingClientRect();
+      W = rect.width;
+      H = rect.height;
+      dpr = window.devicePixelRatio || 1;
+
+      canvas.width = W * dpr;
+      canvas.height = H * dpr;
+      canvas.style.width = W + 'px';
+      canvas.style.height = H + 'px';
+      ctx = canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      svg.attr('width', W).attr('height', H);
+
+      cx = W / 2;
+      cy = H / 2;
+
+      const baseR = Math.min(W, H) / 2;
+      innerRadius = baseR * 0.22;
+      outerRadius = baseR * 0.72;
+      sessionRadius = baseR * 0.78;
+      chemDotRadius = baseR * 0.85;
+    }
+
+    // Angle helpers
+    const emotionAngle = (i) => (i / EMOTIONS.length) * Math.PI * 2 - Math.PI / 2;
+    const sessionAngle = (i) => (i / 46) * Math.PI * 2 - Math.PI / 2;
+
+    function posOnCircle(angle, radius) {
+      return [cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius];
+    }
+
+    // ─── CANVAS: CONNECTION LINES ────────────────────────────────────
+    let highlightState = null; // { type: 'emotion'|'session', value: string|number }
+
+    function drawConnections() {
+      ctx.clearRect(0, 0, W, H);
+
+      sessions.forEach((session, si) => {
+        const sAngle = sessionAngle(si);
+        const [sx, sy] = posOnCircle(sAngle, outerRadius);
+
+        session.allEmotions.forEach(emotionName => {
+          const ei = emotionMap.get(emotionName);
+          if (ei === undefined) return;
+
+          const eAngle = emotionAngle(ei);
+          const [ex, ey] = posOnCircle(eAngle, innerRadius);
+          const emotion = EMOTIONS[ei];
+          const isDominant = session.dominant === emotionName;
+
+          // Determine opacity based on highlight state
+          let opacity;
+          if (!highlightState) {
+            opacity = isDominant ? 0.45 : 0.08;
+          } else if (highlightState.type === 'emotion') {
+            if (emotionName === highlightState.value) {
+              opacity = isDominant ? 0.9 : 0.35;
+            } else {
+              opacity = 0.03;
+            }
+          } else if (highlightState.type === 'session') {
+            if (si === highlightState.value) {
+              opacity = isDominant ? 0.9 : 0.4;
+            } else {
+              opacity = 0.03;
+            }
+          }
+
+          const lineWidth = isDominant ? 3 : 1;
+
+          // Curved path through center-biased control point
+          const midAngle = (eAngle + sAngle) / 2;
+          // Offset the control point to create a nice curve
+          let angleDiff = sAngle - eAngle;
+          // Normalize angle difference
+          while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+          while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+
+          // Control point radius: closer to center for wider angles, farther for narrow
+          const cpRadius = innerRadius * 0.3 + (Math.abs(angleDiff) / Math.PI) * innerRadius * 0.4;
+          const cpAngle = eAngle + angleDiff * 0.5;
+          const [cpx, cpy] = posOnCircle(cpAngle, cpRadius);
+
+          ctx.beginPath();
+          ctx.moveTo(ex, ey);
+          ctx.quadraticCurveTo(cpx, cpy, sx, sy);
+          ctx.strokeStyle = hexToRgba(emotion.color, opacity);
+          ctx.lineWidth = lineWidth;
+          ctx.stroke();
+
+          // Glow for dominant connections when highlighted
+          if (isDominant && opacity > 0.5) {
+            ctx.beginPath();
+            ctx.moveTo(ex, ey);
+            ctx.quadraticCurveTo(cpx, cpy, sx, sy);
+            ctx.strokeStyle = hexToRgba(emotion.color, opacity * 0.3);
+            ctx.lineWidth = lineWidth + 4;
+            ctx.stroke();
+          }
+        });
+      });
+    }
+
+    function hexToRgba(hex, alpha) {
+      const r = parseInt(hex.slice(1,3), 16);
+      const g = parseInt(hex.slice(3,5), 16);
+      const b = parseInt(hex.slice(5,7), 16);
+      return `rgba(${r},${g},${b},${alpha})`;
+    }
+
+    // ─── SVG: STRUCTURAL ELEMENTS ────────────────────────────────────
+    function drawStructure() {
+      svg.selectAll('*').remove();
+
+      const g = svg.append('g');
+
+      // ── Inner ring (emotions) ──
+      const innerRingG = g.append('g').attr('class', 'inner-ring');
+
+      // Faint circle
+      innerRingG.append('circle')
+        .attr('cx', cx).attr('cy', cy).attr('r', innerRadius)
+        .attr('fill', 'none')
+        .attr('stroke', '#2a2a4a')
+        .attr('stroke-width', 1)
+        .attr('stroke-dasharray', '2,4');
+
+      // Emotion arcs
+      const emotionArc = d3.arc()
+        .innerRadius(innerRadius - 14)
+        .outerRadius(innerRadius + 2);
+
+      const emotionSlice = (2 * Math.PI) / EMOTIONS.length;
+      const arcPadding = 0.02;
+
+      EMOTIONS.forEach((emotion, i) => {
+        const startAngle = i * emotionSlice + arcPadding;
+        const endAngle = (i + 1) * emotionSlice - arcPadding;
+
+        // Arc segment
+        innerRingG.append('path')
+          .attr('d', emotionArc({ startAngle, endAngle }))
+          .attr('transform', `translate(${cx},${cy})`)
+          .attr('fill', emotion.color)
+          .attr('opacity', 0.6)
+          .style('filter', `drop-shadow(0 0 4px ${emotion.color}55)`);
+
+        // Emotion node dot
+        const angle = emotionAngle(i);
+        const [nx, ny] = posOnCircle(angle, innerRadius);
+
+        innerRingG.append('circle')
+          .attr('cx', nx).attr('cy', ny).attr('r', 6)
+          .attr('fill', emotion.color)
+          .attr('stroke', '#06060c')
+          .attr('stroke-width', 2)
+          .style('filter', `drop-shadow(0 0 6px ${emotion.color}88)`)
+          .attr('class', 'emotion-node')
+          .attr('data-emotion', emotion.name)
+          .style('cursor', 'pointer');
+
+        // Emotion label (radially oriented)
+        const labelRadius = innerRadius - 24;
+        const [lx, ly] = posOnCircle(angle, labelRadius);
+
+        // Compute rotation for radial text
+        let rotation = (angle * 180 / Math.PI) + 90;
+        // Flip text on bottom half so it reads correctly
+        const isBottom = angle > 0 && angle < Math.PI;
+        if (isBottom) rotation += 180;
+
+        innerRingG.append('text')
+          .attr('x', lx).attr('y', ly)
+          .attr('text-anchor', 'middle')
+          .attr('dominant-baseline', 'middle')
+          .attr('transform', `rotate(${rotation}, ${lx}, ${ly})`)
+          .attr('font-family', "'Barlow Condensed', sans-serif")
+          .attr('font-weight', 600)
+          .attr('font-size', Math.max(9, Math.min(12, W / 110)))
+          .attr('letter-spacing', '1px')
+          .attr('fill', emotion.color)
+          .attr('opacity', 0.85)
+          .text(emotion.name.split('/')[0].toUpperCase())
+          .attr('class', 'emotion-label')
+          .attr('data-emotion', emotion.name)
+          .style('cursor', 'pointer')
+          .style('text-shadow', `0 0 8px ${emotion.color}44`);
+      });
+
+      // ── Outer ring (sessions) ──
+      const outerRingG = g.append('g').attr('class', 'outer-ring');
+
+      // Faint outer circle
+      outerRingG.append('circle')
+        .attr('cx', cx).attr('cy', cy).attr('r', outerRadius)
+        .attr('fill', 'none')
+        .attr('stroke', '#1a1a2e')
+        .attr('stroke-width', 1);
+
+      outerRingG.append('circle')
+        .attr('cx', cx).attr('cy', cy).attr('r', sessionRadius)
+        .attr('fill', 'none')
+        .attr('stroke', '#1a1a2e')
+        .attr('stroke-width', 0.5)
+        .attr('stroke-dasharray', '1,6');
+
+      // Chemistry health color scale
+      const chemScale = d3.scaleLinear()
+        .domain([1, 4, 6, 8, 10])
+        .range(['#ff2222', '#ff6644', '#ffd700', '#88ff44', '#22ff88'])
+        .clamp(true);
+
+      sessions.forEach((session, i) => {
+        const angle = sessionAngle(i);
+        const [sx, sy] = posOnCircle(angle, outerRadius);
+
+        // Session dot
+        const sessionDotR = 5;
+        outerRingG.append('circle')
+          .attr('cx', sx).attr('cy', sy).attr('r', sessionDotR)
+          .attr('fill', '#0f1020')
+          .attr('stroke', '#4a4a6a')
+          .attr('stroke-width', 1.5)
+          .attr('class', 'session-node')
+          .attr('data-session', i)
+          .style('cursor', 'pointer');
+
+        // Session label
+        const [slx, sly] = posOnCircle(angle, sessionRadius + 4);
+        let sRotation = (angle * 180 / Math.PI) + 90;
+        const isBottom = angle > 0 && angle < Math.PI;
+        if (isBottom) sRotation += 180;
+
+        outerRingG.append('text')
+          .attr('x', slx).attr('y', sly)
+          .attr('text-anchor', 'middle')
+          .attr('dominant-baseline', 'middle')
+          .attr('transform', `rotate(${sRotation}, ${slx}, ${sly})`)
+          .attr('font-family', "'JetBrains Mono', monospace")
+          .attr('font-weight', 400)
+          .attr('font-size', Math.max(7, Math.min(10, W / 130)))
+          .attr('fill', '#6a6a8a')
+          .text(String(session.index).padStart(2, '0'))
+          .attr('class', 'session-label')
+          .attr('data-session', i)
+          .style('cursor', 'pointer');
+
+        // Chemistry health dot
+        const [cdx, cdy] = posOnCircle(angle, chemDotRadius);
+        const chemColor = chemScale(session.chemistryHealth);
+
+        outerRingG.append('circle')
+          .attr('cx', cdx).attr('cy', cdy).attr('r', 3.5)
+          .attr('fill', chemColor)
+          .attr('opacity', 0.8)
+          .style('filter', `drop-shadow(0 0 4px ${chemColor}66)`)
+          .attr('class', 'chem-dot')
+          .attr('data-session', i);
+      });
+
+      // ── Center label ──
+      g.append('text')
+        .attr('x', cx).attr('y', cy - 8)
+        .attr('text-anchor', 'middle')
+        .attr('dominant-baseline', 'middle')
+        .attr('font-family', "'Bebas Neue', sans-serif")
+        .attr('font-size', Math.max(14, Math.min(22, W / 60)))
+        .attr('letter-spacing', '3px')
+        .attr('fill', '#eef0ff')
+        .attr('opacity', 0.25)
+        .text('BWB');
+
+      g.append('text')
+        .attr('x', cx).attr('y', cy + 12)
+        .attr('text-anchor', 'middle')
+        .attr('dominant-baseline', 'middle')
+        .attr('font-family', "'Barlow Condensed', sans-serif")
+        .attr('font-weight', 600)
+        .attr('font-size', Math.max(8, Math.min(11, W / 110)))
+        .attr('letter-spacing', '2px')
+        .attr('fill', '#6a6a8a')
+        .attr('opacity', 0.3)
+        .text('CAMPAIGN');
+
+      // ── Hit areas for interaction ──
+      // Invisible larger hit circles for emotions
+      EMOTIONS.forEach((emotion, i) => {
+        const angle = emotionAngle(i);
+        const [nx, ny] = posOnCircle(angle, innerRadius);
+
+        g.append('circle')
+          .attr('cx', nx).attr('cy', ny).attr('r', 20)
+          .attr('fill', 'transparent')
+          .style('cursor', 'pointer')
+          .on('mouseenter', (event) => {
+            highlightEmotion(emotion.name);
+            showEmotionTooltip(event, emotion, i);
+          })
+          .on('mousemove', (event) => moveTooltip(event))
+          .on('mouseleave', () => {
+            clearHighlight();
+            hideTooltip();
+          });
+      });
+
+      // Invisible hit circles for sessions
+      sessions.forEach((session, i) => {
+        const angle = sessionAngle(i);
+        const [sx, sy] = posOnCircle(angle, outerRadius);
+
+        g.append('circle')
+          .attr('cx', sx).attr('cy', sy).attr('r', 16)
+          .attr('fill', 'transparent')
+          .style('cursor', 'pointer')
+          .on('mouseenter', (event) => {
+            highlightSession(i);
+            showSessionTooltip(event, session, i);
+          })
+          .on('mousemove', (event) => moveTooltip(event))
+          .on('mouseleave', () => {
+            clearHighlight();
+            hideTooltip();
+          });
+      });
+    }
+
+    // ─── HIGHLIGHT / INTERACTION ─────────────────────────────────────
+    function highlightEmotion(emotionName) {
+      highlightState = { type: 'emotion', value: emotionName };
+      drawConnections();
+      updateNodeHighlights();
+    }
+
+    function highlightSession(sessionIndex) {
+      highlightState = { type: 'session', value: sessionIndex };
+      drawConnections();
+      updateNodeHighlights();
+    }
+
+    function clearHighlight() {
+      highlightState = null;
+      drawConnections();
+      updateNodeHighlights();
+    }
+
+    function updateNodeHighlights() {
+      // Update emotion nodes
+      svg.selectAll('.emotion-node').each(function() {
+        const el = d3.select(this);
+        const name = el.attr('data-emotion');
+        let opacity = 1;
+
+        if (highlightState) {
+          if (highlightState.type === 'emotion') {
+            opacity = name === highlightState.value ? 1 : 0.15;
+          } else if (highlightState.type === 'session') {
+            const session = sessions[highlightState.value];
+            opacity = session.allEmotions.includes(name) ? 1 : 0.15;
+          }
+        }
+
+        el.transition().duration(200).attr('opacity', opacity);
+      });
+
+      // Update emotion labels
+      svg.selectAll('.emotion-label').each(function() {
+        const el = d3.select(this);
+        const name = el.attr('data-emotion');
+        let opacity = 0.85;
+
+        if (highlightState) {
+          if (highlightState.type === 'emotion') {
+            opacity = name === highlightState.value ? 1 : 0.1;
+          } else if (highlightState.type === 'session') {
+            const session = sessions[highlightState.value];
+            opacity = session.allEmotions.includes(name) ? 1 : 0.1;
+          }
+        }
+
+        el.transition().duration(200).attr('opacity', opacity);
+      });
+
+      // Update session nodes
+      svg.selectAll('.session-node').each(function() {
+        const el = d3.select(this);
+        const idx = +el.attr('data-session');
+        let opacity = 1;
+        let stroke = '#4a4a6a';
+
+        if (highlightState) {
+          if (highlightState.type === 'session') {
+            if (idx === highlightState.value) {
+              opacity = 1;
+              const session = sessions[idx];
+              const domColor = EMOTIONS[emotionMap.get(session.dominant)]?.color || '#fff';
+              stroke = domColor;
+              el.attr('fill', domColor + '33');
+            } else {
+              opacity = 0.15;
+            }
+          } else if (highlightState.type === 'emotion') {
+            const session = sessions[idx];
+            if (session.allEmotions.includes(highlightState.value)) {
+              opacity = 1;
+              const eColor = EMOTIONS[emotionMap.get(highlightState.value)]?.color || '#fff';
+              stroke = session.dominant === highlightState.value ? eColor : '#6a6a8a';
+              el.attr('fill', session.dominant === highlightState.value ? eColor + '33' : '#0f1020');
+            } else {
+              opacity = 0.1;
+            }
+          }
+        } else {
+          el.attr('fill', '#0f1020');
+        }
+
+        el.transition().duration(200)
+          .attr('opacity', opacity)
+          .attr('stroke', stroke);
+      });
+
+      // Update session labels
+      svg.selectAll('.session-label').each(function() {
+        const el = d3.select(this);
+        const idx = +el.attr('data-session');
+        let opacity = 1;
+        let fill = '#6a6a8a';
+
+        if (highlightState) {
+          if (highlightState.type === 'session') {
+            opacity = idx === highlightState.value ? 1 : 0.12;
+            fill = idx === highlightState.value ? '#eef0ff' : '#6a6a8a';
+          } else if (highlightState.type === 'emotion') {
+            const session = sessions[idx];
+            if (session.allEmotions.includes(highlightState.value)) {
+              opacity = 1;
+              fill = session.dominant === highlightState.value ? '#eef0ff' : '#9494bf';
+            } else {
+              opacity = 0.08;
+            }
+          }
+        }
+
+        el.transition().duration(200).attr('opacity', opacity).attr('fill', fill);
+      });
+
+      // Update chem dots
+      svg.selectAll('.chem-dot').each(function() {
+        const el = d3.select(this);
+        const idx = +el.attr('data-session');
+        let opacity = 0.8;
+
+        if (highlightState) {
+          if (highlightState.type === 'session') {
+            opacity = idx === highlightState.value ? 1 : 0.08;
+          } else if (highlightState.type === 'emotion') {
+            const session = sessions[idx];
+            opacity = session.allEmotions.includes(highlightState.value) ? 0.9 : 0.05;
+          }
+        }
+
+        el.transition().duration(200).attr('opacity', opacity);
+      });
+    }
+
+    // ─── TOOLTIPS ────────────────────────────────────────────────────
+    function showEmotionTooltip(event, emotion, idx) {
+      const stats = emotionStats[idx];
+      const dominantSessions = sessions
+        .filter(s => s.dominant === emotion.name)
+        .map(s => s.sid)
+        .join(', ');
+
+      tooltip.innerHTML = `
+        <div class="tt-title" style="color: ${emotion.color}">
+          <span class="tt-color-dot" style="background:${emotion.color}; box-shadow: 0 0 8px ${emotion.color}88;"></span>
+          ${emotion.name}
+        </div>
+        <div class="tt-row">Dominant in <span class="val">${stats.dominantCount}</span> session${stats.dominantCount !== 1 ? 's' : ''}</div>
+        <div class="tt-row">Present in <span class="val">${stats.presentCount}</span> of <span class="val">46</span> sessions</div>
+        <div class="tt-row" style="margin-top:4px;font-size:11px;color:#6a6a8a;">
+          ${stats.dominantCount > 0 ? `Dominant: <span class="accent">${dominantSessions}</span>` : '<span style="opacity:0.5">Never dominant</span>'}
+        </div>
+      `;
+      tooltip.classList.add('visible');
+      moveTooltip(event);
+    }
+
+    function showSessionTooltip(event, session, idx) {
+      const domEmotion = EMOTIONS[emotionMap.get(session.dominant)];
+
+      let emotionListHTML = '';
+      session.allEmotions.forEach(eName => {
+        const e = EMOTIONS[emotionMap.get(eName)];
+        if (!e) return;
+        const isDom = eName === session.dominant;
+        emotionListHTML += `
+          <div class="tt-emotion-item">
+            <span class="tt-color-dot" style="background:${e.color}; width:8px; height:8px;"></span>
+            <span>${e.name}</span>
+            ${isDom ? '<span class="dominant-tag">DOMINANT</span>' : ''}
+          </div>
+        `;
+      });
+
+      const chemScale = d3.scaleLinear()
+        .domain([1, 4, 6, 8, 10])
+        .range(['#ff2222', '#ff6644', '#ffd700', '#88ff44', '#22ff88'])
+        .clamp(true);
+
+      const chemColor = chemScale(session.chemistryHealth);
+
+      tooltip.innerHTML = `
+        <div class="tt-title" style="color: ${domEmotion.color}">
+          ${session.sid}
+        </div>
+        <div class="tt-row">
+          Chemistry Health: <span class="val" style="color:${chemColor}">${session.chemistryHealth}</span><span style="color:#6a6a8a">/10</span>
+        </div>
+        <div class="tt-emotion-list">
+          ${emotionListHTML}
+        </div>
+      `;
+      tooltip.classList.add('visible');
+      moveTooltip(event);
+    }
+
+    function moveTooltip(event) {
+      const pad = 16;
+      let x = event.clientX + pad;
+      let y = event.clientY + pad;
+
+      // Keep tooltip on screen
+      const ttRect = tooltip.getBoundingClientRect();
+      if (x + ttRect.width > window.innerWidth - pad) {
+        x = event.clientX - ttRect.width - pad;
+      }
+      if (y + ttRect.height > window.innerHeight - pad) {
+        y = event.clientY - ttRect.height - pad;
+      }
+
+      tooltip.style.left = x + 'px';
+      tooltip.style.top = y + 'px';
+    }
+
+    function hideTooltip() {
+      tooltip.classList.remove('visible');
+    }
+
+    // ─── RENDER ──────────────────────────────────────────────────────
+    function render() {
+      computeLayout();
+      drawConnections();
+      drawStructure();
+    }
+
+    render();
+
+    // Debounced resize
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(render, 150);
+    });
+
+  })();
+  </script>
+</body>
+</html>

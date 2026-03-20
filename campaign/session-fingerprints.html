@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BWB Campaign — Session Fingerprints</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@300;400;600&family=Barlow:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  :root {
+    --bg-deep: #06060c;
+    --bg-primary: #0a0a14;
+    --bg-card: #0f1020;
+    --bg-card-hover: #141530;
+    --bg-surface: #1a1a2e;
+    --bg-elevated: #22223a;
+    --border: #2a2a4a;
+    --border-glow: #3a3a6a;
+    --text-primary: #eef0ff;
+    --text-secondary: #9494bf;
+    --text-muted: #8a8ab5;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    font-family: 'Barlow', sans-serif;
+    min-height: 100vh;
+    position: relative;
+    line-height: 1.5;
+  }
+
+  /* Scanline overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.04) 2px,
+      rgba(0,0,0,0.04) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  #header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: linear-gradient(180deg, rgba(6,6,12,0.99) 0%, rgba(6,6,12,0.92) 80%, transparent 100%);
+    padding: 24px 40px 28px;
+    backdrop-filter: blur(12px);
+  }
+
+  #header h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 48px;
+    letter-spacing: 6px;
+    color: #00d4ff;
+    text-shadow: 0 0 30px rgba(0,212,255,0.5), 0 0 60px rgba(0,212,255,0.2);
+    margin-bottom: 4px;
+    line-height: 1;
+  }
+
+  #header .subtitle {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 14px;
+    letter-spacing: 3px;
+    color: #666;
+    text-transform: uppercase;
+  }
+
+  /* Axes legend */
+  #axes-legend {
+    display: flex;
+    gap: 16px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .legend-sep {
+    width: 1px;
+    height: 18px;
+    background: var(--border);
+    margin: 0 4px;
+  }
+  .legend-meaning {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #555;
+    letter-spacing: 1px;
+  }
+
+  /* Sort controls */
+  #sort-controls {
+    display: flex;
+    gap: 6px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  #sort-controls .sort-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #555;
+    margin-right: 4px;
+  }
+  .sort-btn {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 3px;
+    color: #777;
+    padding: 4px 12px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+  .sort-btn.active {
+    border-color: #00d4ff;
+    color: #00d4ff;
+    background: rgba(0,212,255,0.08);
+    box-shadow: 0 0 10px rgba(0,212,255,0.15);
+  }
+  .sort-btn:hover {
+    border-color: #00d4ff;
+    color: #00d4ff;
+  }
+
+  /* Grid */
+  #grid-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+    gap: 10px;
+    padding: 20px 40px 80px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  /* Floating tooltip */
+  #grid-tooltip {
+    position: fixed;
+    pointer-events: none;
+    display: none;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-glow);
+    border-radius: 10px;
+    padding: 14px 18px;
+    font-family: 'Barlow', sans-serif;
+    font-size: 13px;
+    color: var(--text-primary);
+    z-index: 9998;
+    max-width: 300px;
+    line-height: 1.5;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.7);
+  }
+
+  /* Detail overlay */
+  #overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 500;
+    background: rgba(4,4,10,0.92);
+    backdrop-filter: blur(16px);
+    display: none;
+    justify-content: center;
+    align-items: center;
+  }
+  #overlay.visible { display: flex; }
+
+  #detail-panel {
+    background: linear-gradient(145deg, rgba(22,22,40,0.98) 0%, rgba(10,10,18,0.99) 100%);
+    border: 1px solid rgba(0,212,255,0.25);
+    border-radius: 10px;
+    padding: 32px 40px;
+    max-width: 520px;
+    width: 90%;
+    position: relative;
+    box-shadow: 0 8px 60px rgba(0,0,0,0.6), 0 0 40px rgba(0,212,255,0.08);
+  }
+
+  #detail-close {
+    position: absolute;
+    top: 14px; right: 18px;
+    background: none;
+    border: none;
+    color: #555;
+    font-size: 22px;
+    cursor: pointer;
+    font-family: 'Barlow', sans-serif;
+    transition: color 0.2s;
+  }
+  #detail-close:hover { color: #00d4ff; }
+
+  #detail-sid {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #555;
+    letter-spacing: 2px;
+  }
+  #detail-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 3px;
+    color: #00d4ff;
+    text-shadow: 0 0 20px rgba(0,212,255,0.3);
+    margin-bottom: 4px;
+    line-height: 1.1;
+  }
+  #detail-date {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #888;
+    letter-spacing: 1px;
+    margin-bottom: 20px;
+  }
+  #detail-radar {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+  #detail-axes {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .axis-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .axis-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .axis-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px;
+    color: #888;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    width: 70px;
+  }
+  .axis-bar {
+    flex: 1;
+    height: 4px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .axis-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.6s ease;
+  }
+  .axis-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    width: 40px;
+    text-align: right;
+  }
+  #detail-quote {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+  }
+  #detail-quote-text {
+    font-style: italic;
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+  #detail-quote-speaker {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 6px;
+  }
+  #detail-stats {
+    margin-top: 12px;
+    display: flex;
+    gap: 12px;
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: 'Barlow Condensed', sans-serif;
+    letter-spacing: 1px;
+    flex-wrap: wrap;
+  }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>SESSION FINGERPRINTS</h1>
+  <div class="subtitle">46 sessions &middot; each card is the unique signature of that session &middot; hover to read</div>
+
+  <div id="axes-legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#00d4ff"></div>ENERGY</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ffd700"></div>FIRE</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ad6bff"></div>CHAOS</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ff4444"></div>DANGER</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#44ff88"></div>BALANCE</div>
+    <div class="legend-sep"></div>
+    <div class="legend-meaning">card color = dominant metric: danger&gt;0.45 red &middot; fire&gt;0.75 gold &middot; chaos&gt;0.55 purple &middot; balanced green &middot; default blue</div>
+  </div>
+
+  <div id="sort-controls">
+    <span class="sort-label">Sort by</span>
+    <button class="sort-btn active" data-sort="session">Session #</button>
+    <button class="sort-btn" data-sort="energy">Energy</button>
+    <button class="sort-btn" data-sort="fire">Fire</button>
+    <button class="sort-btn" data-sort="chaos">Chaos</button>
+    <button class="sort-btn" data-sort="danger">Danger</button>
+    <button class="sort-btn" data-sort="balance">Balance</button>
+  </div>
+</div>
+
+<div id="grid-container"></div>
+<div id="grid-tooltip"></div>
+
+<div id="overlay" onclick="if(event.target===this)closeOverlay()">
+  <div id="detail-panel">
+    <button id="detail-close" onclick="closeOverlay()">&times;</button>
+    <div id="detail-sid"></div>
+    <div id="detail-title"></div>
+    <div id="detail-date"></div>
+    <div id="detail-radar"></div>
+    <div id="detail-axes"></div>
+    <div id="detail-quote">
+      <div id="detail-quote-text"></div>
+      <div id="detail-quote-speaker"></div>
+    </div>
+    <div id="detail-stats"></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// SESSION DATA — Real data from 46 BWB Campaign sessions
+// ═══════════════════════════════════════════════════════════════════════════
+const SESSIONS = [
+  {session_id:"S001",date:"2023-10-04",label:"The Etten and the Royal Procession",metrics:{energy:0.59,fire:0.76,chaos:0.25,danger:0,balance:0.75},raw:{top_quote:"Oh my god we're gonna have a full army, it's gonna be perfect because we're fighting against people who smush magical creatures. We will have all evil creatures behind us in an army of good.",top_speaker:"Dahlia",total_words:33399,leeroy_count:4,has_combat:false,lethality_class:""}},
+  {session_id:"S002",date:"2023-10-11",label:"The Mines Beneath Castle Corras",metrics:{energy:0.6,fire:0.74,chaos:0.267,danger:0,balance:0.75},raw:{top_quote:"I wish I could just show up to someone's house and they start paying me every month.",top_speaker:"Dahlia",total_words:36061,leeroy_count:3,has_combat:false,lethality_class:""}},
+  {session_id:"S003",date:"2023-10-18",label:"The Beholder and the Solarum",metrics:{energy:0.74,fire:0.7,chaos:0.35,danger:0,balance:0.75},raw:{top_quote:"Oh, what beautiful purple. Oh, what beautiful purple irises you have.",top_speaker:"Dahlia",total_words:32000,leeroy_count:4,has_combat:true,lethality_class:""}},
+  {session_id:"S004",date:"2023-11-08",label:"Blood and Steel at the Goblin Camp",metrics:{energy:0.66,fire:0.68,chaos:0.3,danger:0.85,balance:0.82},raw:{top_quote:"She came through on tour already, bro. Like, you missed it. Catch her before Waterdeep, I guess.",top_speaker:"Corras",total_words:29272,leeroy_count:3,has_combat:true,lethality_class:"Near-Lethal"}},
+  {session_id:"S005",date:"2023-11-15",label:"The Hall of Whispers and the Bone Devil",metrics:{energy:0.68,fire:0.7,chaos:0.3,danger:0.2,balance:0.82},raw:{top_quote:"One time I ate my Meemaw's muffin and I blamed it on the dog. And then I'm gonna take a step forward.",top_speaker:"Billabong",total_words:32958,leeroy_count:5,has_combat:true,lethality_class:"Dangerous"}},
+  {session_id:"S006",date:"2023-11-22",label:"The Archmage's Crypt and the Buried Escape",metrics:{energy:0.69,fire:0.68,chaos:0.28,danger:0.35,balance:0},raw:{top_quote:"I'd say run. But where would be the fun in that? It's already been five and a half minutes.",top_speaker:"DM",total_words:30795,leeroy_count:5,has_combat:true,lethality_class:"dangerous"}},
+  {session_id:"S007",date:"2023-11-30",label:"The Spark Rescue Time Heist",metrics:{energy:0.66,fire:0.76,chaos:0.3,danger:0,balance:0.82},raw:{top_quote:"I only get to be a child for a few hours oh my god I gotta travel across country.",top_speaker:"Dahlia",total_words:38293,leeroy_count:3,has_combat:false,lethality_class:""}},
+  {session_id:"S008",date:"2023-12-06",label:"The Great Heist Beneath Castle Corras",metrics:{energy:0.64,fire:0.74,chaos:0.333,danger:0.2,balance:0.82},raw:{top_quote:"I guess my question is does the universe implode or do we both faint?",top_speaker:"Corras",total_words:40280,leeroy_count:3,has_combat:true,lethality_class:"Moderate"}},
+  {session_id:"S009",date:"2023-12-13",label:"Downtime, Death, and a Mimic Horse",metrics:{energy:0.57,fire:0.7,chaos:0.367,danger:0,balance:0.85},raw:{top_quote:"I'm going to knock some stuff over and be like, screw you guys. I'm out of here. I'm starting my own pit fighting business.",top_speaker:"Billabong",total_words:31024,leeroy_count:3,has_combat:false,lethality_class:""}},
+  {session_id:"S010",date:"2023-12-17",label:"Wrath of Nature at the Fire Cult Camp",metrics:{energy:0.65,fire:0.7,chaos:0.3,danger:0.15,balance:0.75},raw:{top_quote:"This is for my uncle that you set on fire. The tent can change each time.",top_speaker:"Orla",total_words:21846,leeroy_count:3,has_combat:true,lethality_class:"Moderate"}},
+  {session_id:"S011",date:"2023-12-18",label:"Trevor's Toll and the Bridge Trap",metrics:{energy:0.56,fire:0.64,chaos:0.333,danger:0,balance:0.75},raw:{top_quote:"This is not me. Stop me. Just so y'all know, this is not me. I don't even know.",top_speaker:"Ash",total_words:19942,leeroy_count:3,has_combat:false,lethality_class:""}},
+  {session_id:"S012",date:"2023-12-20",label:"The Catastrophic Wagon and the Book's Curse",metrics:{energy:0.68,fire:0.7,chaos:0.4,danger:0.95,balance:0.75},raw:{top_quote:"Guys, it's important that we don't learn any lessons at all throughout this campaign and never die.",top_speaker:"Dahlia",total_words:41732,leeroy_count:3,has_combat:true,lethality_class:"Near-Lethal"}},
+  {session_id:"S013",date:"2023-12-28",label:"The Demon's Bargain and the Reunion at Lumin",metrics:{energy:0.61,fire:0.66,chaos:0.4,danger:0,balance:0.75},raw:{top_quote:"Well, you see, I make the best banana pancakes, and I thunk rats. I'm the village thunker.",top_speaker:"Corras",total_words:30873,leeroy_count:4,has_combat:false,lethality_class:""}},
+  {session_id:"S014",date:"2024-01-03",label:"The Great Spark Swap: Scholars, Hamster Balls, and Infiltration",metrics:{energy:0.57,fire:0.72,chaos:0.3,danger:0.2,balance:0.75},raw:{top_quote:"Banana pancakes! Banana pancakes!",top_speaker:"Corras",total_words:40296,leeroy_count:4,has_combat:true,lethality_class:"Moderate"}},
+  {session_id:"S015",date:"2024-01-10",label:"The Temporal Sentinel and the Multiverse Fracture",metrics:{energy:0.64,fire:0.68,chaos:0.3,danger:0.95,balance:0.85},raw:{top_quote:"My plan is to give him a little kiss on the nose and he'll say yes immediately. That's my plan.",top_speaker:"Dahlia",total_words:30848,leeroy_count:3,has_combat:true,lethality_class:"Near-Lethal"}},
+  {session_id:"S016",date:"2024-01-17",label:"Desperate Defense and the Fates Card",metrics:{energy:0.69,fire:0.74,chaos:0.35,danger:0,balance:0.85},raw:{top_quote:"I'm going to try to use my persuasion to persuade myself to not go into portals into dimensions that aren't of my choosing.",top_speaker:"Corras",total_words:30534,leeroy_count:4,has_combat:true,lethality_class:""}},
+  {session_id:"S017",date:"2024-01-24",label:"Branching Fates and Empires Rise",metrics:{energy:0.61,fire:0.74,chaos:0.26,danger:0,balance:0.85},raw:{top_quote:"I'm just taking some notes here... Lilith just wants to become a child again so now her whole cult's mission will be trying to turn her into a child.",top_speaker:"Dahlia",total_words:33752,leeroy_count:5,has_combat:false,lethality_class:""}},
+  {session_id:"S018",date:"2024-02-05",label:"Into the Storm Mountains",metrics:{energy:0.64,fire:0.74,chaos:0.3,danger:0,balance:0.85},raw:{top_quote:"Sometimes you go home and your dad is dead.",top_speaker:"Dahlia",total_words:34725,leeroy_count:3,has_combat:false,lethality_class:""}},
+  {session_id:"S019",date:"2024-02-07",label:"Frost Giants and the Alchemist Fire Gambit",metrics:{energy:0.67,fire:0.76,chaos:0.35,danger:0.4,balance:0.75},raw:{top_quote:"My children. Yes, this is the greatest moment of my life. Your names.",top_speaker:"Dahlia",total_words:35154,leeroy_count:4,has_combat:true,lethality_class:"Dangerous"}},
+  {session_id:"S020",date:"2024-02-14",label:"Summer Star Detonation and Billabong's Vigil",metrics:{energy:0.74,fire:0.8,chaos:0.35,danger:0.95,balance:0.85},raw:{top_quote:"Corras is like, oh no, I fucked around, I guess I'm finding out?",top_speaker:"Ash",total_words:26621,leeroy_count:4,has_combat:true,lethality_class:"Near-Lethal"}},
+  {session_id:"S021",date:"2024-09-04",label:"Into the Underdark",metrics:{energy:0.64,fire:0.76,chaos:0.333,danger:0.3,balance:0.75},raw:{top_quote:"It's totally safe. It will not kill you, I can promise you that, certainly.",top_speaker:"Ash",total_words:13167,leeroy_count:3,has_combat:true,lethality_class:"Dangerous"}},
+  {session_id:"S022",date:"2024-10-01",label:"Wall of Fire and Web's Edge",metrics:{energy:0.58,fire:0.72,chaos:0.3,danger:0.3,balance:0.82},raw:{top_quote:"They have chosen to be here with us. They've sacrificed much, left their families behind, their millions of children, so wear them prominently, wear them proudly.",top_speaker:"Orla",total_words:12033,leeroy_count:3,has_combat:true,lethality_class:"Moderate"}},
+  {session_id:"S023",date:"2024-10-30",label:"The Nalfeshnee's Last Stand",metrics:{energy:0.7,fire:0.8,chaos:0.34,danger:0.1,balance:0.75},raw:{top_quote:"Hey, buddy. You don't want to be here, right? I don't want to be here. Maybe we could all get out of here together.",top_speaker:"Orla",total_words:35433,leeroy_count:5,has_combat:true,lethality_class:"Moderate"}},
+  {session_id:"S024",date:"2024-11-13",label:"Escape from Web's Edge",metrics:{energy:0.68,fire:0.78,chaos:0.28,danger:0,balance:0.85},raw:{top_quote:"Can't you see we don't want you anymore?",top_speaker:"Billabong",total_words:35203,leeroy_count:5,has_combat:false,lethality_class:""}},
+  {session_id:"S025",date:"2024-11-17",label:"Forging the Federation",metrics:{energy:0.56,fire:0.8,chaos:0,danger:0,balance:0.85},raw:{top_quote:"Bring people in, bring them to our nice basement, give them hot chocolate. It's nice until they lie.",top_speaker:"Dahlia",total_words:17608,leeroy_count:0,has_combat:false,lethality_class:""}},
+  {session_id:"S026",date:"2024-11-19",label:"Escape from Web's Edge",metrics:{energy:0.65,fire:0.76,chaos:0.32,danger:0,balance:0.85},raw:{top_quote:"I'm going to take my smoke grenade out of my inventory and just throw it at them and be like, roll, Cody, roll.",top_speaker:"Orla",total_words:35190,leeroy_count:5,has_combat:false,lethality_class:""}},
+  {session_id:"S027",date:"2024-11-27",label:"Battle of the Bridge Revenants",metrics:{energy:0.58,fire:0.74,chaos:0.4,danger:0.35,balance:0.85},raw:{top_quote:"I'm glad we have evidence of all of our choices. Oh, that's right, it was me. I will name the first plants in my garden after them.",top_speaker:"Orla",total_words:24646,leeroy_count:4,has_combat:true,lethality_class:"Dangerous"}},
+  {session_id:"S028",date:"2024-12-11",label:"Pies, Puppies, and Curses Below",metrics:{energy:0.58,fire:0.76,chaos:0.32,danger:0.6,balance:0.82},raw:{top_quote:"I must. Malchor demands it.",top_speaker:"Billabong",total_words:30505,leeroy_count:5,has_combat:true,lethality_class:"Dangerous"}},
+  {session_id:"S029",date:"2025-01-03",label:"Malchor's Possession and the Infernal Node",metrics:{energy:0.61,fire:0.8,chaos:0.3,danger:0.4,balance:0.85},raw:{top_quote:"So we should do this ritual. Not die to Ash. Not die to the Revenants. Get Zimbabottom. Sacrifice Zimbabottom.",top_speaker:"Corras",total_words:32137,leeroy_count:4,has_combat:true,lethality_class:"Dangerous"}},
+  {session_id:"S030",date:"2025-01-29",label:"Shadow Powers and the Ceaseless Maw",metrics:{energy:0.7,fire:0.78,chaos:0.3,danger:0,balance:0.85},raw:{top_quote:"You're ugly and I hate you. I take it back if you want to be friends, but for now I hate you.",top_speaker:"Dahlia",total_words:28904,leeroy_count:3,has_combat:true,lethality_class:""}},
+  {session_id:"S031",date:"2025-03-19",label:"The Maw Falls and Vrocks Return",metrics:{energy:0.65,fire:0.76,chaos:0.3,danger:0.85,balance:0.75},raw:{top_quote:"Murderer! You killed my best friend! I'm not making you shoes ever again.",top_speaker:"SavannahBelle",total_words:31085,leeroy_count:3,has_combat:true,lethality_class:"Near-Lethal"}},
+  {session_id:"S032",date:"2025-04-02",label:"Warehouse 17 and the Crimson Order",metrics:{energy:0.66,fire:0.76,chaos:0.3,danger:0,balance:0.75},raw:{top_quote:"Good afternoon, sir. My name is Dahlia Aurelius, and I am of Castle Corras, here to bestow King Corras's sweepstakes for hard laborers upon thee.",top_speaker:"Dahlia",total_words:33587,leeroy_count:4,has_combat:true,lethality_class:""}},
+  {session_id:"S033",date:"2025-04-16",label:"Corras Surrenders to the Lich",metrics:{energy:0.67,fire:0.78,chaos:0.3,danger:0,balance:0.75},raw:{top_quote:"It's a test. We got bamboozled and then we went straight to beat senselessly.",top_speaker:"Corras",total_words:28730,leeroy_count:4,has_combat:true,lethality_class:""}},
+  {session_id:"S034",date:"2025-05-15",label:"The Thayan Jailbreak and Twin Formation",metrics:{energy:0.69,fire:0.8,chaos:0.38,danger:0.75,balance:0.82},raw:{top_quote:"I'm just gonna go rescue my boy. I hate your brother. He's evil. I don't know. I hate him though.",top_speaker:"Dahlia",total_words:30567,leeroy_count:5,has_combat:true,lethality_class:"Near-Lethal"}},
+  {session_id:"S035",date:"2025-05-28",label:"Through the Portal to Barovia",metrics:{energy:0.59,fire:0.76,chaos:0.275,danger:0,balance:0.82},raw:{top_quote:"INTO THE MINE.",top_speaker:"SavannahBelle",total_words:35929,leeroy_count:4,has_combat:false,lethality_class:""}},
+  {session_id:"S036",date:"2025-06-11",label:"Death House Attic Assault",metrics:{energy:0.64,fire:0.78,chaos:0.35,danger:0.7,balance:0.75},raw:{top_quote:"You guys, they're gonna kidnap me! You have to protect me!",top_speaker:"SavannahBelle",total_words:26580,leeroy_count:4,has_combat:true,lethality_class:"Brutal"}},
+  {session_id:"S037",date:"2025-07-09",label:"The Crimson Abbot and Strahd's Bargain",metrics:{energy:0.71,fire:0.8,chaos:0.275,danger:0.4,balance:0.82},raw:{top_quote:"Before you judge us, the smart one in our group died, and that's not our fault.",top_speaker:"Dahlia",total_words:28275,leeroy_count:4,has_combat:true,lethality_class:"dangerous"}},
+  {session_id:"S038",date:"2025-08-13",label:"Escape from Death House",metrics:{energy:0.65,fire:0.78,chaos:0.3,danger:0,balance:0.82},raw:{top_quote:"I drip on all of you.",top_speaker:"SavannahBelle",total_words:23145,leeroy_count:4,has_combat:false,lethality_class:""}},
+  {session_id:"S039",date:"2025-08-27",label:"The Cursed Goat of Barovia",metrics:{energy:0.54,fire:0.76,chaos:0.3,danger:0,balance:0.82},raw:{top_quote:"It was meant to be. He was meant to be mine. I will take him everywhere with me. Forever.",top_speaker:"Orla",total_words:18378,leeroy_count:4,has_combat:false,lethality_class:""}},
+  {session_id:"S040",date:"2025-09-24",label:"Pilfering Madame Eva's Treasures",metrics:{energy:0.66,fire:0.78,chaos:0.4,danger:0,balance:0.75},raw:{top_quote:"I bested you at your own game, at the deck's own game. It's mine now. I've earned this.",top_speaker:"Corras",total_words:30517,leeroy_count:4,has_combat:true,lethality_class:"Cakewalk"}},
+  {session_id:"S041",date:"2025-10-22",label:"Showdown With Madam Eva",metrics:{energy:0.66,fire:0.78,chaos:0.32,danger:0.7,balance:0.75},raw:{top_quote:"We used some goo to trap a hoe, right?",top_speaker:"Corras",total_words:34355,leeroy_count:5,has_combat:true,lethality_class:"Brutal"}},
+  {session_id:"S042",date:"2025-11-22",label:"The Final Battle Against Strahd",metrics:{energy:0.72,fire:0.76,chaos:0.3,danger:0.45,balance:0.82},raw:{top_quote:"Know your true form, hag.",top_speaker:"SavannahBelle",total_words:30477,leeroy_count:4,has_combat:true,lethality_class:"Brutal"}},
+  {session_id:"S043",date:"2025-12-31",label:"The Red Council of Castle Corras",metrics:{energy:0.61,fire:0.78,chaos:0.333,danger:0,balance:0.75},raw:{top_quote:"My soul has already been completely destroyed based on something that somebody forced me to do a few months back. My oath is Vengeance, baby.",top_speaker:"Dahlia",total_words:29689,leeroy_count:3,has_combat:false,lethality_class:""}},
+  {session_id:"S044",date:"2026-01-14",label:"Propaganda Wars and the Master of Whispers",metrics:{energy:0.65,fire:0.8,chaos:0.35,danger:0,balance:0.75},raw:{top_quote:"It's not my fault that your feeble old mind is weak and easily controlled. I didn't see you this upset about the people starving and dying on your watch.",top_speaker:"SavannahBelle",total_words:35087,leeroy_count:4,has_combat:false,lethality_class:""}},
+  {session_id:"S045",date:"2026-01-22",label:"Massacre in the Courtyard",metrics:{energy:0.68,fire:0.76,chaos:0.35,danger:0,balance:0.85},raw:{top_quote:"Congratulations on the massive slaughter. I think this is probably the most people you've killed in a single session.",top_speaker:"DM",total_words:32573,leeroy_count:4,has_combat:true,lethality_class:""}},
+  {session_id:"S046",date:"2026-01-28",label:"Departure to the Feywild",metrics:{energy:0.6,fire:0.76,chaos:0.3,danger:0,balance:0.75},raw:{top_quote:"So he has an entire strategy but it seems the fae have intercepted and this guy is not a single, not a double, but a triple agent.",top_speaker:"DM",total_words:33717,leeroy_count:3,has_combat:false,lethality_class:""}}
+];
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FINGERPRINT ENGINE
+// ═══════════════════════════════════════════════════════════════════════════
+const FP_AXES   = ['energy', 'fire', 'chaos', 'danger', 'balance'];
+const FP_COLORS = { energy: '#00d4ff', fire: '#ffd700', chaos: '#ad6bff', danger: '#ff4444', balance: '#44ff88' };
+const FP_LABELS = { energy: 'ENERGY', fire: 'FIRE', chaos: 'CHAOS', danger: 'DANGER', balance: 'BALANCE' };
+
+function escHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function fpTheme(m) {
+  if (m.danger  > 0.45) return { fill: 'rgba(255,68,68,0.22)',   stroke: '#ff4444', shadow: 'rgba(255,68,68,0.4)'   };
+  if (m.fire    > 0.75) return { fill: 'rgba(255,215,0,0.18)',   stroke: '#ffd700', shadow: 'rgba(255,215,0,0.35)'  };
+  if (m.chaos   > 0.55) return { fill: 'rgba(173,107,255,0.2)',  stroke: '#ad6bff', shadow: 'rgba(173,107,255,0.35)' };
+  if (m.balance > 0.68 && m.energy > 0.55)
+                         return { fill: 'rgba(68,255,136,0.15)', stroke: '#44ff88', shadow: 'rgba(68,255,136,0.3)'  };
+  return                        { fill: 'rgba(0,212,255,0.14)',  stroke: '#00d4ff', shadow: 'rgba(0,212,255,0.25)' };
+}
+
+function fpRadarPath(metrics, cx, cy, r) {
+  return FP_AXES.map((ax, i) => {
+    const angle = (i / FP_AXES.length) * 2 * Math.PI - Math.PI / 2;
+    const v = metrics[ax] || 0;
+    return `${i === 0 ? 'M' : 'L'}${cx + v * r * Math.cos(angle)},${cy + v * r * Math.sin(angle)}`;
+  }).join('') + 'Z';
+}
+
+function fpRingPath(frac, cx, cy, r) {
+  return FP_AXES.map((_, i) => {
+    const angle = (i / FP_AXES.length) * 2 * Math.PI - Math.PI / 2;
+    return `${i === 0 ? 'M' : 'L'}${cx + frac * r * Math.cos(angle)},${cy + frac * r * Math.sin(angle)}`;
+  }).join('') + 'Z';
+}
+
+function moveTip(e) {
+  const tip = document.getElementById('grid-tooltip');
+  tip.style.left = Math.min(e.clientX + 16, window.innerWidth - 320) + 'px';
+  tip.style.top  = Math.max(10, e.clientY - 80) + 'px';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// RENDER GRID
+// ═══════════════════════════════════════════════════════════════════════════
+let currentSort = 'session';
+
+function renderGrid() {
+  const container = document.getElementById('grid-container');
+  const tip = document.getElementById('grid-tooltip');
+  container.innerHTML = '';
+
+  let sorted = [...SESSIONS];
+  if (currentSort === 'session') {
+    sorted.sort((a, b) => a.session_id.localeCompare(b.session_id));
+  } else {
+    sorted.sort((a, b) => (b.metrics[currentSort] || 0) - (a.metrics[currentSort] || 0));
+  }
+
+  const NS  = 'http://www.w3.org/2000/svg';
+  const CX  = 58, CY = 58, R = 42;
+
+  sorted.forEach((sess, sessIdx) => {
+    const { metrics, raw } = sess;
+    const theme = fpTheme(metrics);
+
+    // Card wrapper
+    const card = document.createElement('div');
+    card.dataset.fpIndex = sessIdx;
+    card.style.cssText = `background:linear-gradient(135deg, var(--bg-card) 0%, rgba(12,12,30,0.9) 100%);border:1px solid var(--border);border-radius:10px;padding:10px 8px 12px;cursor:pointer;transition:transform 0.25s cubic-bezier(0.4,0,0.2,1),border-color 0.25s,box-shadow 0.3s;position:relative;user-select:none;overflow:hidden`;
+
+    // SVG radar
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('width', '116'); svg.setAttribute('height', '116');
+    svg.style.display = 'block'; svg.style.margin = '0 auto';
+
+    // Background polygon rings
+    [0.25, 0.5, 0.75, 1.0].forEach(frac => {
+      const p = document.createElementNS(NS, 'path');
+      p.setAttribute('d', fpRingPath(frac, CX, CY, R));
+      p.setAttribute('fill', 'none');
+      p.setAttribute('stroke', frac === 1 ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.04)');
+      p.setAttribute('stroke-width', '0.8');
+      svg.appendChild(p);
+    });
+
+    // Axis spokes
+    FP_AXES.forEach((ax, i) => {
+      const angle = (i / FP_AXES.length) * 2 * Math.PI - Math.PI / 2;
+      const ln = document.createElementNS(NS, 'line');
+      ln.setAttribute('x1', CX); ln.setAttribute('y1', CY);
+      ln.setAttribute('x2', CX + R * Math.cos(angle));
+      ln.setAttribute('y2', CY + R * Math.sin(angle));
+      ln.setAttribute('stroke', FP_COLORS[ax]);
+      ln.setAttribute('stroke-width', '0.8');
+      ln.setAttribute('stroke-opacity', '0.4');
+      svg.appendChild(ln);
+    });
+
+    // Axis labels (tiny, at tip of each spoke)
+    FP_AXES.forEach((ax, i) => {
+      const angle = (i / FP_AXES.length) * 2 * Math.PI - Math.PI / 2;
+      const lx = CX + (R + 10) * Math.cos(angle);
+      const ly = CY + (R + 10) * Math.sin(angle);
+      const lbl = document.createElementNS(NS, 'text');
+      lbl.setAttribute('x', lx); lbl.setAttribute('y', ly);
+      lbl.setAttribute('text-anchor', 'middle');
+      lbl.setAttribute('dominant-baseline', 'middle');
+      lbl.setAttribute('fill', FP_COLORS[ax]);
+      lbl.setAttribute('font-size', '6');
+      lbl.setAttribute('font-family', "'Barlow Condensed',sans-serif");
+      lbl.setAttribute('fill-opacity', '0.7');
+      lbl.textContent = FP_LABELS[ax];
+      svg.appendChild(lbl);
+    });
+
+    // Dominant axis glow
+    const domAxis = FP_AXES.reduce((best, ax) => (metrics[ax] || 0) > (metrics[best] || 0) ? ax : best, FP_AXES[0]);
+    const domAngle = (FP_AXES.indexOf(domAxis) / FP_AXES.length) * 2 * Math.PI - Math.PI / 2;
+    const domV = metrics[domAxis] || 0;
+    if (domV > 0.3) {
+      const glow = document.createElementNS(NS, 'circle');
+      glow.setAttribute('cx', CX + domV * R * 0.7 * Math.cos(domAngle));
+      glow.setAttribute('cy', CY + domV * R * 0.7 * Math.sin(domAngle));
+      glow.setAttribute('r', '12');
+      glow.setAttribute('fill', FP_COLORS[domAxis]);
+      glow.setAttribute('opacity', '0.12');
+      svg.appendChild(glow);
+    }
+
+    // Data polygon — starts at center, animated to expand
+    const poly = document.createElementNS(NS, 'path');
+    const zeroMetrics = {energy:0, fire:0, chaos:0, danger:0, balance:0};
+    poly.setAttribute('d', fpRadarPath(zeroMetrics, CX, CY, R));
+    poly.setAttribute('fill', theme.fill);
+    poly.setAttribute('stroke', theme.stroke);
+    poly.setAttribute('stroke-width', '1.5');
+    poly.setAttribute('stroke-opacity', '0.85');
+    poly.dataset.targetPath = fpRadarPath(metrics, CX, CY, R);
+    svg.appendChild(poly);
+
+    // Dots at each axis peak — initially hidden at center
+    FP_AXES.forEach((ax, i) => {
+      const v = metrics[ax] || 0;
+      if (v < 0.05) return;
+      const angle = (i / FP_AXES.length) * 2 * Math.PI - Math.PI / 2;
+      const dot = document.createElementNS(NS, 'circle');
+      dot.setAttribute('cx', CX);
+      dot.setAttribute('cy', CY);
+      dot.setAttribute('r', '0');
+      dot.setAttribute('fill', FP_COLORS[ax]);
+      dot.dataset.targetCx = CX + v * R * Math.cos(angle);
+      dot.dataset.targetCy = CY + v * R * Math.sin(angle);
+      svg.appendChild(dot);
+    });
+
+    card.appendChild(svg);
+
+    // Session ID label
+    const idEl = document.createElement('div');
+    idEl.style.cssText = `text-align:center;font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:2px;color:${theme.stroke};line-height:1;margin-top:2px`;
+    idEl.textContent = sess.session_id;
+    card.appendChild(idEl);
+
+    // Date
+    const dateEl = document.createElement('div');
+    dateEl.style.cssText = `text-align:center;font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--text-muted);margin-top:3px;line-height:1`;
+    dateEl.textContent = sess.date ? sess.date.slice(0, 7) : '';
+    card.appendChild(dateEl);
+
+    // Dominant metric badge
+    const domBadge = document.createElement('div');
+    const domLabel = FP_LABELS[domAxis] || '';
+    domBadge.style.cssText = `text-align:center;margin-top:4px;font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:${FP_COLORS[domAxis]};opacity:0.6`;
+    domBadge.textContent = domV > 0.5 ? domLabel : '';
+    card.appendChild(domBadge);
+
+    // Hover — show tooltip
+    card.addEventListener('mouseenter', e => {
+      card.style.transform = 'scale(1.08) translateY(-4px)';
+      card.style.borderColor = theme.stroke;
+      card.style.boxShadow = `0 8px 32px ${theme.shadow}, 0 0 24px ${theme.shadow}`;
+
+      const metricRows = FP_AXES.map(ax => `
+        <div style="display:flex;align-items:center;gap:8px;margin:3px 0">
+          <span style="width:7px;height:7px;border-radius:50%;background:${FP_COLORS[ax]};flex-shrink:0;display:inline-block"></span>
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:12px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;width:60px">${FP_LABELS[ax]}</span>
+          <div style="flex:1;height:4px;background:var(--bg-surface);border-radius:2px;overflow:hidden">
+            <div style="width:${Math.round((metrics[ax]||0)*100)}%;height:100%;background:${FP_COLORS[ax]};border-radius:2px"></div>
+          </div>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:${FP_COLORS[ax]};width:32px;text-align:right">${Math.round((metrics[ax]||0)*100)}%</span>
+        </div>`).join('');
+
+      tip.innerHTML = `
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;color:${theme.stroke};line-height:1">${sess.session_id}</div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--text-muted);letter-spacing:1px;margin-bottom:10px">${sess.date || ''} &mdash; ${escHtml(sess.label || '')}</div>
+        ${metricRows}
+        ${raw.top_quote ? `
+          <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px">
+            <div style="font-style:italic;font-size:12px;color:var(--text-secondary);line-height:1.5">&ldquo;${escHtml(raw.top_quote)}&rdquo;</div>
+            <div style="font-size:10px;color:var(--text-muted);margin-top:4px">&mdash; ${escHtml(raw.top_speaker || '')}</div>
+          </div>` : ''}
+        <div style="margin-top:8px;display:flex;gap:10px;font-size:11px;color:var(--text-muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;flex-wrap:wrap">
+          <span>${(raw.total_words || 0).toLocaleString()} words</span>
+          <span>${raw.leeroy_count || 0} leeroy moments</span>
+          ${raw.has_combat ? `<span style="color:#ff4444">${raw.lethality_class || 'combat'}</span>` : '<span>no combat</span>'}
+        </div>`;
+      tip.style.display = 'block';
+      moveTip(e);
+    });
+    card.addEventListener('mousemove', moveTip);
+    card.addEventListener('mouseleave', () => {
+      card.style.transform = ''; card.style.borderColor = 'var(--border)'; card.style.boxShadow = 'none';
+      tip.style.display = 'none';
+    });
+
+    // Click — open overlay
+    card.addEventListener('click', () => openOverlay(sess));
+
+    container.appendChild(card);
+  });
+
+  // Animate radar polygons expanding from center on scroll
+  const fpObserver = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const card = entry.target;
+      const poly = card.querySelector('path[data-target-path]');
+      const dots = card.querySelectorAll('circle[data-target-cx]');
+      if (poly) {
+        const target = poly.dataset.targetPath;
+        d3.select(poly).transition().duration(700)
+          .delay(parseInt(card.dataset.fpIndex || 0) * 35)
+          .ease(d3.easeCubicOut)
+          .attr('d', target);
+      }
+      dots.forEach(dot => {
+        d3.select(dot).transition().duration(500)
+          .delay(parseInt(card.dataset.fpIndex || 0) * 35 + 400)
+          .ease(d3.easeBackOut.overshoot(2))
+          .attr('cx', dot.dataset.targetCx)
+          .attr('cy', dot.dataset.targetCy)
+          .attr('r', 2.5);
+      });
+      fpObserver.unobserve(card);
+    });
+  }, { threshold: 0.1 });
+  container.querySelectorAll('div[data-fp-index]').forEach(c => fpObserver.observe(c));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DETAIL OVERLAY
+// ═══════════════════════════════════════════════════════════════════════════
+function openOverlay(sess) {
+  const overlay = document.getElementById('overlay');
+  const { metrics, raw } = sess;
+  const theme = fpTheme(metrics);
+
+  document.getElementById('detail-sid').textContent = sess.session_id;
+  document.getElementById('detail-title').textContent = sess.label || sess.session_id;
+  document.getElementById('detail-title').style.color = theme.stroke;
+  document.getElementById('detail-title').style.textShadow = `0 0 20px ${theme.shadow}`;
+  document.getElementById('detail-date').textContent = sess.date || '';
+
+  // Draw large radar
+  const radarContainer = document.getElementById('detail-radar');
+  radarContainer.innerHTML = '';
+  const size = 240, cx = size/2, cy = size/2, r = size/2 - 36;
+  const NS = 'http://www.w3.org/2000/svg';
+
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('width', size); svg.setAttribute('height', size);
+
+  // Rings
+  [0.25, 0.5, 0.75, 1.0].forEach(frac => {
+    const p = document.createElementNS(NS, 'path');
+    p.setAttribute('d', fpRingPath(frac, cx, cy, r));
+    p.setAttribute('fill', 'none');
+    p.setAttribute('stroke', frac === 1 ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.05)');
+    p.setAttribute('stroke-width', '1');
+    svg.appendChild(p);
+  });
+
+  // Spokes
+  FP_AXES.forEach((ax, i) => {
+    const angle = (i / FP_AXES.length) * 2 * Math.PI - Math.PI / 2;
+    const ln = document.createElementNS(NS, 'line');
+    ln.setAttribute('x1', cx); ln.setAttribute('y1', cy);
+    ln.setAttribute('x2', cx + r * Math.cos(angle));
+    ln.setAttribute('y2', cy + r * Math.sin(angle));
+    ln.setAttribute('stroke', FP_COLORS[ax]);
+    ln.setAttribute('stroke-width', '1');
+    ln.setAttribute('stroke-opacity', '0.35');
+    svg.appendChild(ln);
+  });
+
+  // Labels
+  FP_AXES.forEach((ax, i) => {
+    const angle = (i / FP_AXES.length) * 2 * Math.PI - Math.PI / 2;
+    const lx = cx + (r + 20) * Math.cos(angle);
+    const ly = cy + (r + 20) * Math.sin(angle);
+    const lbl = document.createElementNS(NS, 'text');
+    lbl.setAttribute('x', lx); lbl.setAttribute('y', ly);
+    lbl.setAttribute('text-anchor', 'middle');
+    lbl.setAttribute('dominant-baseline', 'middle');
+    lbl.setAttribute('fill', FP_COLORS[ax]);
+    lbl.setAttribute('font-size', '11');
+    lbl.setAttribute('font-family', "'Barlow Condensed',sans-serif");
+    lbl.setAttribute('letter-spacing', '1');
+    lbl.textContent = FP_LABELS[ax];
+    svg.appendChild(lbl);
+  });
+
+  // Dominant glow
+  const domAxis = FP_AXES.reduce((best, ax) => (metrics[ax] || 0) > (metrics[best] || 0) ? ax : best, FP_AXES[0]);
+  const domAngle = (FP_AXES.indexOf(domAxis) / FP_AXES.length) * 2 * Math.PI - Math.PI / 2;
+  const domV = metrics[domAxis] || 0;
+  if (domV > 0.3) {
+    const glow = document.createElementNS(NS, 'circle');
+    glow.setAttribute('cx', cx + domV * r * 0.7 * Math.cos(domAngle));
+    glow.setAttribute('cy', cy + domV * r * 0.7 * Math.sin(domAngle));
+    glow.setAttribute('r', '20');
+    glow.setAttribute('fill', FP_COLORS[domAxis]);
+    glow.setAttribute('opacity', '0.15');
+    svg.appendChild(glow);
+  }
+
+  // Data polygon
+  const poly = document.createElementNS(NS, 'path');
+  poly.setAttribute('d', fpRadarPath(metrics, cx, cy, r));
+  poly.setAttribute('fill', theme.fill);
+  poly.setAttribute('stroke', theme.stroke);
+  poly.setAttribute('stroke-width', '2');
+  poly.setAttribute('stroke-opacity', '0.9');
+  svg.appendChild(poly);
+
+  // Dots
+  FP_AXES.forEach((ax, i) => {
+    const v = metrics[ax] || 0;
+    if (v < 0.05) return;
+    const angle = (i / FP_AXES.length) * 2 * Math.PI - Math.PI / 2;
+    const dot = document.createElementNS(NS, 'circle');
+    dot.setAttribute('cx', cx + v * r * Math.cos(angle));
+    dot.setAttribute('cy', cy + v * r * Math.sin(angle));
+    dot.setAttribute('r', '4');
+    dot.setAttribute('fill', FP_COLORS[ax]);
+    dot.setAttribute('stroke', '#06060c');
+    dot.setAttribute('stroke-width', '1.5');
+    svg.appendChild(dot);
+  });
+
+  radarContainer.appendChild(svg);
+
+  // Axis breakdown bars
+  const axesContainer = document.getElementById('detail-axes');
+  axesContainer.innerHTML = FP_AXES.map(ax => {
+    const v = metrics[ax] || 0;
+    const pct = Math.round(v * 100);
+    return `<div class="axis-row">
+      <div class="axis-dot" style="background:${FP_COLORS[ax]}"></div>
+      <div class="axis-label">${FP_LABELS[ax]}</div>
+      <div class="axis-bar"><div class="axis-bar-fill" style="width:${pct}%;background:${FP_COLORS[ax]}"></div></div>
+      <div class="axis-value" style="color:${FP_COLORS[ax]}">${pct}%</div>
+    </div>`;
+  }).join('');
+
+  // Quote
+  const quoteContainer = document.getElementById('detail-quote');
+  const quoteText = document.getElementById('detail-quote-text');
+  const quoteSpeaker = document.getElementById('detail-quote-speaker');
+  if (raw.top_quote) {
+    quoteContainer.style.display = '';
+    quoteText.textContent = '\u201C' + raw.top_quote + '\u201D';
+    quoteSpeaker.textContent = '\u2014 ' + (raw.top_speaker || '');
+  } else {
+    quoteContainer.style.display = 'none';
+  }
+
+  // Stats
+  document.getElementById('detail-stats').innerHTML = `
+    <span>${(raw.total_words || 0).toLocaleString()} words</span>
+    <span>${raw.leeroy_count || 0} leeroy moments</span>
+    ${raw.has_combat ? `<span style="color:#ff4444">${raw.lethality_class || 'combat'}</span>` : '<span>no combat</span>'}
+  `;
+
+  overlay.classList.add('visible');
+}
+
+function closeOverlay() {
+  document.getElementById('overlay').classList.remove('visible');
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeOverlay();
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SORT CONTROLS
+// ═══════════════════════════════════════════════════════════════════════════
+document.querySelectorAll('.sort-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentSort = btn.dataset.sort;
+    renderGrid();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════════════════
+renderGrid();
+</script>
+</body>
+</html>

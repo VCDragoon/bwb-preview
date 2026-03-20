@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARCHETYPE ALLUVIAL — BWB Campaign</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@300;400;600;700&family=Barlow:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3-sankey@0.12.3/dist/d3-sankey.min.js"></script>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:#06060c;color:#c8c8e0;
+    font-family:'Barlow',sans-serif;
+    min-height:100vh;overflow-x:hidden;
+    position:relative;
+  }
+  /* Scanline overlay */
+  body::after{
+    content:'';position:fixed;top:0;left:0;width:100%;height:100%;
+    pointer-events:none;z-index:9999;
+    background:repeating-linear-gradient(
+      0deg,
+      transparent,transparent 2px,
+      rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px
+    );
+  }
+  /* Title area */
+  .title-bar{
+    text-align:center;padding:40px 20px 10px;position:relative;
+  }
+  .title-bar h1{
+    font-family:'Bebas Neue',sans-serif;
+    font-size:clamp(48px,8vw,96px);
+    letter-spacing:8px;
+    background:linear-gradient(135deg,#fbbf24 0%,#f59e0b 40%,#ff8a65 100%);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+    background-clip:text;
+    filter:drop-shadow(0 0 30px rgba(251,191,36,0.4)) drop-shadow(0 0 60px rgba(251,191,36,0.15));
+    line-height:1;margin-bottom:4px;
+  }
+  .title-bar .subtitle{
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:16px;font-weight:300;
+    color:#8888aa;letter-spacing:6px;
+    text-transform:uppercase;
+  }
+  /* Diagram container */
+  .diagram-container{
+    width:100%;max-width:1600px;margin:0 auto;
+    padding:20px 30px;position:relative;
+  }
+  .diagram-container svg{
+    width:100%;height:auto;display:block;
+  }
+  /* Player filter buttons */
+  .filter-bar{
+    display:flex;flex-wrap:wrap;justify-content:center;gap:10px;
+    padding:15px 30px 20px;max-width:1200px;margin:0 auto;
+  }
+  .filter-btn{
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:14px;font-weight:600;letter-spacing:1px;
+    padding:8px 18px;
+    border:1px solid rgba(255,255,255,0.15);
+    border-radius:4px;cursor:pointer;
+    background:rgba(255,255,255,0.04);
+    color:#c8c8e0;
+    transition:all 0.3s ease;
+    text-transform:uppercase;
+    position:relative;overflow:hidden;
+  }
+  .filter-btn::before{
+    content:'';position:absolute;left:0;top:0;height:100%;width:3px;
+    transition:all 0.3s ease;
+  }
+  .filter-btn.active{
+    background:rgba(255,255,255,0.1);
+    border-color:rgba(255,255,255,0.3);
+  }
+  .filter-btn.inactive{
+    opacity:0.35;
+  }
+  .filter-btn:hover{
+    background:rgba(255,255,255,0.08);
+    border-color:rgba(255,255,255,0.25);
+  }
+  .filter-btn .dot{
+    display:inline-block;width:10px;height:10px;
+    border-radius:50%;margin-right:8px;vertical-align:middle;
+  }
+  .filter-btn .char-name{
+    font-family:'Cinzel',serif;font-size:11px;
+    color:#888;margin-left:4px;font-weight:400;
+  }
+  /* Stats panel */
+  .stats-panel{
+    max-width:1200px;margin:20px auto 40px;
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
+    gap:16px;padding:0 30px;
+  }
+  .stat-card{
+    background:linear-gradient(135deg,rgba(20,20,40,0.9),rgba(15,15,30,0.95));
+    border:1px solid rgba(255,255,255,0.06);
+    border-radius:6px;padding:20px 24px;
+    position:relative;overflow:hidden;
+  }
+  .stat-card::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:2px;
+    background:linear-gradient(90deg,#fbbf24,#ff8a65);
+  }
+  .stat-card .card-title{
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:12px;font-weight:600;
+    color:#8888aa;letter-spacing:2px;
+    text-transform:uppercase;margin-bottom:12px;
+  }
+  .stat-card .card-content{
+    font-family:'Barlow',sans-serif;
+    font-size:14px;line-height:1.8;
+  }
+  .stat-card .player-label{
+    font-family:'Cinzel',serif;font-weight:600;
+    font-size:15px;
+  }
+  .stat-card .archetype-label{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;padding:2px 8px;
+    border-radius:3px;display:inline-block;
+    margin:2px 0;
+  }
+  .stat-card .stat-value{
+    font-family:'JetBrains Mono',monospace;
+    font-size:20px;font-weight:500;
+  }
+  /* Detail panel */
+  .detail-panel{
+    position:fixed;top:80px;right:-420px;width:400px;
+    max-height:calc(100vh - 100px);overflow-y:auto;
+    background:linear-gradient(180deg,rgba(15,15,35,0.98),rgba(10,10,25,0.98));
+    border-left:1px solid rgba(251,191,36,0.15);
+    border-radius:4px 0 0 4px;
+    padding:30px 24px;
+    transition:right 0.4s cubic-bezier(0.4,0,0.2,1);
+    z-index:100;
+    backdrop-filter:blur(20px);
+    box-shadow:-10px 0 40px rgba(0,0,0,0.5);
+  }
+  .detail-panel.open{right:0}
+  .detail-panel .close-btn{
+    position:absolute;top:12px;right:16px;
+    font-size:22px;cursor:pointer;color:#8888aa;
+    background:none;border:none;
+    transition:color 0.2s;
+  }
+  .detail-panel .close-btn:hover{color:#fbbf24}
+  .detail-panel h3{
+    font-family:'Bebas Neue',sans-serif;
+    font-size:28px;letter-spacing:3px;
+    margin-bottom:4px;
+  }
+  .detail-panel .detail-char{
+    font-family:'Cinzel',serif;font-size:14px;
+    color:#aaa;margin-bottom:16px;
+  }
+  .detail-panel .journey{margin-top:16px}
+  .detail-panel .journey-step{
+    display:flex;align-items:center;gap:12px;
+    padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);
+  }
+  .detail-panel .journey-step .session-label{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;color:#8888aa;min-width:40px;
+  }
+  .detail-panel .journey-step .arch-badge{
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:13px;font-weight:600;
+    padding:3px 10px;border-radius:3px;
+    letter-spacing:0.5px;
+  }
+  .detail-panel .journey-step .change-marker{
+    font-size:10px;color:#fbbf24;margin-left:auto;
+  }
+  /* Tooltip */
+  .tooltip{
+    position:fixed;pointer-events:none;
+    background:rgba(10,10,25,0.95);
+    border:1px solid rgba(251,191,36,0.3);
+    border-radius:4px;padding:12px 16px;
+    font-family:'Barlow',sans-serif;font-size:13px;
+    box-shadow:0 8px 30px rgba(0,0,0,0.5);
+    backdrop-filter:blur(10px);
+    z-index:200;opacity:0;
+    transition:opacity 0.15s ease;
+    max-width:320px;
+  }
+  .tooltip.show{opacity:1}
+  .tooltip .tt-title{
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:15px;font-weight:600;
+    color:#fbbf24;margin-bottom:6px;
+    letter-spacing:1px;
+  }
+  .tooltip .tt-row{
+    display:flex;align-items:center;gap:8px;
+    padding:2px 0;
+  }
+  .tooltip .tt-dot{
+    width:8px;height:8px;border-radius:50%;flex-shrink:0;
+  }
+  .tooltip .tt-player{
+    font-family:'Cinzel',serif;font-size:12px;
+  }
+  /* Legend */
+  .legend-bar{
+    display:flex;flex-wrap:wrap;justify-content:center;gap:14px;
+    padding:10px 30px;max-width:1200px;margin:0 auto;
+  }
+  .legend-item{
+    display:flex;align-items:center;gap:6px;
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:13px;color:#aaa;letter-spacing:0.5px;
+  }
+  .legend-swatch{
+    width:14px;height:14px;border-radius:3px;
+  }
+  .section-label{
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:11px;font-weight:600;color:#666;
+    letter-spacing:3px;text-transform:uppercase;
+    text-align:center;margin:20px 0 8px;
+  }
+  /* Scrollbar */
+  ::-webkit-scrollbar{width:6px}
+  ::-webkit-scrollbar-track{background:rgba(0,0,0,0.2)}
+  ::-webkit-scrollbar-thumb{background:rgba(251,191,36,0.2);border-radius:3px}
+  ::-webkit-scrollbar-thumb:hover{background:rgba(251,191,36,0.4)}
+</style>
+</head>
+<body>
+
+<div class="title-bar">
+  <h1>ARCHETYPE ALLUVIAL</h1>
+  <div class="subtitle">Player Role Evolution Across 46 Sessions</div>
+</div>
+
+<div class="section-label">Archetype Legend</div>
+<div class="legend-bar" id="archetype-legend"></div>
+
+<div class="diagram-container" id="diagram"></div>
+
+<div class="section-label">Player Filter</div>
+<div class="filter-bar" id="filters"></div>
+
+<div class="stats-panel" id="stats"></div>
+
+<div class="detail-panel" id="detail-panel">
+  <button class="close-btn" onclick="closeDetail()">&times;</button>
+  <h3 id="detail-name"></h3>
+  <div class="detail-char" id="detail-char"></div>
+  <div id="detail-summary"></div>
+  <div class="journey" id="detail-journey"></div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// ── Raw Data ──
+const RAW_DATA = {"Gradles": [{"session": "S001", "character": "Corras", "archetype": "The Face"}, {"session": "S002", "character": "Corras", "archetype": "The Strategist"}, {"session": "S003", "character": "Corras", "archetype": "The Instigator"}, {"session": "S004", "character": "Corras", "archetype": "The Strategist"}, {"session": "S005", "character": "Corras", "archetype": "The Strategist"}, {"session": "S006", "character": "Corras", "archetype": "The Strategist"}, {"session": "S007", "character": "Corras", "archetype": "The Strategist"}, {"session": "S008", "character": "Corras", "archetype": "The Wildcard"}, {"session": "S009", "character": "Corras", "archetype": "The Strategist"}, {"session": "S010", "character": "Corras", "archetype": "The Strategist"}, {"session": "S011", "character": "Corras", "archetype": "The Face"}, {"session": "S012", "character": "Corras", "archetype": "The Strategist"}, {"session": "S013", "character": "Corras", "archetype": "The Comic Relief"}, {"session": "S014", "character": "Corras", "archetype": "The Strategist"}, {"session": "S015", "character": "Corras", "archetype": "The Strategist"}, {"session": "S016", "character": "Corras", "archetype": "The Strategist"}, {"session": "S017", "character": "Corras", "archetype": "The Strategist"}, {"session": "S018", "character": "Corras", "archetype": "The Strategist"}, {"session": "S019", "character": "Corras", "archetype": "The Strategist"}, {"session": "S020", "character": "Corras", "archetype": "The Instigator"}, {"session": "S021", "character": "Corras", "archetype": "The Strategist"}, {"session": "S022", "character": "Corras", "archetype": "The Strategist"}, {"session": "S023", "character": "Corras", "archetype": "The Instigator"}, {"session": "S024", "character": "Corras", "archetype": "The Strategist"}, {"session": "S025", "character": "Corras", "archetype": "The Strategist"}, {"session": "S026", "character": "Corras", "archetype": "The Strategist"}, {"session": "S027", "character": "Corras", "archetype": "The Strategist"}, {"session": "S028", "character": "Corras", "archetype": "The Strategist"}, {"session": "S029", "character": "Corras", "archetype": "The Strategist"}, {"session": "S030", "character": "Corras", "archetype": "The Strategist"}, {"session": "S031", "character": "Corras", "archetype": "The Strategist"}, {"session": "S032", "character": "Corras", "archetype": "The Strategist"}, {"session": "S033", "character": "Corras", "archetype": "The Strategist"}, {"session": "S034", "character": "Corras", "archetype": "The Wildcard"}, {"session": "S035", "character": "Corras", "archetype": "The Face"}, {"session": "S036", "character": "Corras", "archetype": "The Strategist"}, {"session": "S037", "character": "Corras", "archetype": "The Strategist"}, {"session": "S038", "character": "Corras", "archetype": "The Strategist"}, {"session": "S039", "character": "Corras", "archetype": "The Strategist"}, {"session": "S040", "character": "Corras", "archetype": "The Strategist"}, {"session": "S041", "character": "Corras", "archetype": "The Strategist"}, {"session": "S042", "character": "Corras", "archetype": "The Strategist"}, {"session": "S043", "character": "Corras", "archetype": "The Strategist"}, {"session": "S044", "character": "Corras", "archetype": "The Strategist"}, {"session": "S045", "character": "Corras", "archetype": "The Strategist"}, {"session": "S046", "character": "Corras", "archetype": "The Face"}], "HT": [{"session": "S001", "character": "Ash", "archetype": "The Strategist"}, {"session": "S002", "character": "Ash", "archetype": "The Chronicler"}, {"session": "S003", "character": "Ash", "archetype": "The Strategist"}, {"session": "S004", "character": "Ash", "archetype": "The Strategist"}, {"session": "S005", "character": "Ash", "archetype": "The Strategist"}, {"session": "S006", "character": "Ash", "archetype": "The Strategist"}, {"session": "S007", "character": "Ash", "archetype": "The Strategist"}, {"session": "S008", "character": "Ash", "archetype": "The Strategist"}, {"session": "S009", "character": "Ash", "archetype": "The Strategist"}, {"session": "S010", "character": "Ash", "archetype": "The Strategist"}, {"session": "S011", "character": "Ash", "archetype": "The Wildcard"}, {"session": "S012", "character": "Ash", "archetype": "The Wildcard"}, {"session": "S013", "character": "Ash", "archetype": "The Strategist"}, {"session": "S014", "character": "Ash", "archetype": "The Strategist"}, {"session": "S015", "character": "Ash", "archetype": "The Strategist"}, {"session": "S016", "character": "Ash", "archetype": "The Wildcard"}, {"session": "S017", "character": "Ash", "archetype": "The Chronicler"}, {"session": "S018", "character": "Ash", "archetype": "The Strategist"}, {"session": "S019", "character": "Ash", "archetype": "The Strategist"}, {"session": "S020", "character": "Ash", "archetype": "The Strategist"}, {"session": "S021", "character": "Ash", "archetype": "The Strategist"}, {"session": "S022", "character": "Ash", "archetype": "The Strategist"}, {"session": "S023", "character": "Ash", "archetype": "The Strategist"}, {"session": "S024", "character": "Ash", "archetype": "The Strategist"}, {"session": "S025", "character": "Ash", "archetype": "The Strategist"}, {"session": "S026", "character": "Ash", "archetype": "The Wildcard"}, {"session": "S027", "character": "Ash", "archetype": "The Strategist"}, {"session": "S028", "character": "Ash", "archetype": "The Strategist"}, {"session": "S029", "character": "Ash", "archetype": "The Wildcard"}, {"session": "S030", "character": "Ash", "archetype": "The Strategist"}, {"session": "S031", "character": "Ash", "archetype": "The Chronicler"}, {"session": "S032", "character": "Ash", "archetype": "The Strategist"}, {"session": "S033", "character": "Ash", "archetype": "The Face"}, {"session": "S034", "character": "Ash", "archetype": "The Strategist"}, {"session": "S035", "character": "Ash", "archetype": "The Strategist"}, {"session": "S036", "character": "Ash", "archetype": "The Chronicler"}, {"session": "S037", "character": "Ash", "archetype": "The Chronicler"}, {"session": "S038", "character": "Ash", "archetype": "The Strategist"}, {"session": "S039", "character": "Ash", "archetype": "The Strategist"}, {"session": "S040", "character": "Ash", "archetype": "The Strategist"}, {"session": "S041", "character": "Ash", "archetype": "The Strategist"}, {"session": "S042", "character": "Ash", "archetype": "The Strategist"}, {"session": "S043", "character": "Ash", "archetype": "The Strategist"}, {"session": "S044", "character": "Ash", "archetype": "The Strategist"}, {"session": "S045", "character": "Ash", "archetype": "The Strategist"}, {"session": "S046", "character": "Ash", "archetype": "The Strategist"}], "Mary": [{"session": "S001", "character": "Billabong", "archetype": "The Protector"}, {"session": "S003", "character": "Billabong", "archetype": "The Comic Relief"}, {"session": "S004", "character": "Billabong", "archetype": "The Protector"}, {"session": "S005", "character": "Billabong", "archetype": "The Protector"}, {"session": "S006", "character": "Billabong", "archetype": "The Protector"}, {"session": "S007", "character": "Billabong", "archetype": "The Protector"}, {"session": "S008", "character": "Billabong", "archetype": "The Comic Relief"}, {"session": "S009", "character": "Billabong", "archetype": "The Protector"}, {"session": "S010", "character": "Billabong", "archetype": "The Quiet Professional"}, {"session": "S011", "character": "Billabong", "archetype": "The Heart"}, {"session": "S013", "character": "Billabong", "archetype": "The Comic Relief"}, {"session": "S014", "character": "Billabong", "archetype": "The Protector"}, {"session": "S015", "character": "Billabong", "archetype": "The Protector"}, {"session": "S016", "character": "Billabong", "archetype": "The Protector"}, {"session": "S017", "character": "Billabong", "archetype": "The Comic Relief"}, {"session": "S018", "character": "Billabong", "archetype": "The Instigator"}, {"session": "S019", "character": "Billabong", "archetype": "The Protector"}, {"session": "S020", "character": "Billabong", "archetype": "The Comic Relief"}, {"session": "S021", "character": "Billabong", "archetype": "The Protector"}, {"session": "S022", "character": "Billabong", "archetype": "The Protector"}, {"session": "S023", "character": "Billabong", "archetype": "The Protector"}, {"session": "S024", "character": "Billabong", "archetype": "The Comic Relief"}, {"session": "S026", "character": "Billabong", "archetype": "The Protector"}, {"session": "S027", "character": "Billabong", "archetype": "The Protector"}, {"session": "S028", "character": "Billabong", "archetype": "The Wildcard"}, {"session": "S029", "character": "Billabong", "archetype": "The Protector"}, {"session": "S030", "character": "Billabong", "archetype": "The Instigator"}, {"session": "S031", "character": "Billabong", "archetype": "The Wildcard"}, {"session": "S032", "character": "Billabong", "archetype": "The Quiet Professional"}, {"session": "S033", "character": "Billabong", "archetype": "The Protector"}, {"session": "S035", "character": "Billabong", "archetype": "The Comic Relief"}, {"session": "S036", "character": "Billabong", "archetype": "The Quiet Professional"}, {"session": "S037", "character": "Billabong", "archetype": "The Lone Wolf"}, {"session": "S038", "character": "Billabong", "archetype": "The Quiet Professional"}, {"session": "S039", "character": "Billabong", "archetype": "The Quiet Professional"}, {"session": "S040", "character": "Billabong", "archetype": "The Quiet Professional"}, {"session": "S041", "character": "Billabong", "archetype": "The Instigator"}, {"session": "S042", "character": "Billabong", "archetype": "The Comic Relief"}, {"session": "S043", "character": "Billabong", "archetype": "The Wildcard"}, {"session": "S044", "character": "Billabong", "archetype": "The Quiet Professional"}, {"session": "S045", "character": "Billabong", "archetype": "The Quiet Professional"}, {"session": "S046", "character": "Billabong", "archetype": "The Quiet Professional"}], "Christie": [{"session": "S001", "character": "Dahlia", "archetype": "The Instigator"}, {"session": "S002", "character": "Dahlia", "archetype": "The Heart"}, {"session": "S003", "character": "Dahlia", "archetype": "The Heart"}, {"session": "S004", "character": "Lilith", "archetype": "The Heart"}, {"session": "S005", "character": "Dahlia", "archetype": "The Face"}, {"session": "S006", "character": "Dahlia", "archetype": "The Heart"}, {"session": "S007", "character": "Dahlia", "archetype": "The Face"}, {"session": "S008", "character": "Lilith", "archetype": "The Instigator"}, {"session": "S009", "character": "Dahlia", "archetype": "The Heart"}, {"session": "S010", "character": "Dahlia", "archetype": "The Protector"}, {"session": "S011", "character": "Dahlia", "archetype": "The Face"}, {"session": "S012", "character": "Dahlia", "archetype": "The Comic Relief"}, {"session": "S014", "character": "Dahlia", "archetype": "The Wildcard"}, {"session": "S015", "character": "Dahlia", "archetype": "The Heart"}, {"session": "S016", "character": "Dahlia", "archetype": "The Heart"}, {"session": "S017", "character": "Dahlia", "archetype": "The Face"}, {"session": "S018", "character": "Dahlia", "archetype": "The Heart"}, {"session": "S019", "character": "Dahlia", "archetype": "The Protector"}, {"session": "S020", "character": "Dahlia", "archetype": "The Protector"}, {"session": "S021", "character": "Dahlia", "archetype": "The Protector"}, {"session": "S022", "character": "Dahlia", "archetype": "The Heart"}, {"session": "S023", "character": "Dahlia", "archetype": "The Heart"}, {"session": "S024", "character": "Dahlia", "archetype": "The Face"}, {"session": "S025", "character": "Dahlia", "archetype": "The Protector"}, {"session": "S026", "character": "Dahlia", "archetype": "The Heart"}, {"session": "S027", "character": "Dahlia", "archetype": "The Face"}, {"session": "S028", "character": "Dahlia", "archetype": "The Heart"}, {"session": "S029", "character": "Dahlia", "archetype": "The Protector"}, {"session": "S030", "character": "Dahlia", "archetype": "The Protector"}, {"session": "S031", "character": "Dahlia", "archetype": "The Protector"}, {"session": "S032", "character": "Dahlia", "archetype": "The Face"}, {"session": "S033", "character": "Dahlia", "archetype": "The Instigator"}, {"session": "S034", "character": "Dahlia", "archetype": "The Protector"}, {"session": "S035", "character": "Dahlia", "archetype": "The Heart"}, {"session": "S036", "character": "Dahlia", "archetype": "The Protector"}, {"session": "S037", "character": "Dahlia", "archetype": "The Face"}, {"session": "S038", "character": "Dahlia", "archetype": "The Face"}, {"session": "S039", "character": "Dahlia", "archetype": "The Protector"}, {"session": "S040", "character": "Dahlia", "archetype": "The Heart"}, {"session": "S041", "character": "Dahlia", "archetype": "The Protector"}, {"session": "S042", "character": "Dahlia", "archetype": "The Protector"}, {"session": "S043", "character": "Dahlia", "archetype": "The Protector"}, {"session": "S044", "character": "Dahlia", "archetype": "The Protector"}, {"session": "S045", "character": "Dahlia", "archetype": "The Protector"}, {"session": "S046", "character": "Dahlia", "archetype": "The Protector"}], "Lucy": [{"session": "S001", "character": "Orla", "archetype": "The Heart"}, {"session": "S002", "character": "Orla", "archetype": "The Heart"}, {"session": "S003", "character": "Orla", "archetype": "The Protector"}, {"session": "S004", "character": "Orla", "archetype": "The Heart"}, {"session": "S005", "character": "Orla", "archetype": "The Heart"}, {"session": "S006", "character": "Orla", "archetype": "The Heart"}, {"session": "S007", "character": "Orla", "archetype": "The Wildcard"}, {"session": "S008", "character": "Orla", "archetype": "The Quiet Professional"}, {"session": "S009", "character": "Orla", "archetype": "The Heart"}, {"session": "S010", "character": "Orla", "archetype": "The Heart"}, {"session": "S011", "character": "Orla", "archetype": "The Wildcard"}, {"session": "S012", "character": "Orla", "archetype": "The Protector"}, {"session": "S013", "character": "Orla", "archetype": "The Heart"}, {"session": "S014", "character": "Orla", "archetype": "The Heart"}, {"session": "S015", "character": "Orla", "archetype": "The Protector"}, {"session": "S016", "character": "Orla", "archetype": "The Heart"}, {"session": "S017", "character": "Orla", "archetype": "The Protector"}, {"session": "S018", "character": "Orla", "archetype": "The Protector"}, {"session": "S019", "character": "Orla", "archetype": "The Heart"}, {"session": "S020", "character": "Orla", "archetype": "The Heart"}, {"session": "S021", "character": "Orla", "archetype": "The Quiet Professional"}, {"session": "S022", "character": "Orla", "archetype": "The Heart"}, {"session": "S023", "character": "Orla", "archetype": "The Heart"}, {"session": "S024", "character": "Orla", "archetype": "The Heart"}, {"session": "S025", "character": "Orla", "archetype": "The Heart"}, {"session": "S026", "character": "Orla", "archetype": "The Heart"}, {"session": "S027", "character": "Orla", "archetype": "The Heart"}, {"session": "S028", "character": "Orla", "archetype": "The Heart"}, {"session": "S029", "character": "Orla", "archetype": "The Heart"}, {"session": "S030", "character": "Orla", "archetype": "The Heart"}, {"session": "S031", "character": "Orla", "archetype": "The Heart"}, {"session": "S032", "character": "Orla", "archetype": "The Wildcard"}, {"session": "S033", "character": "Orla", "archetype": "The Quiet Professional"}, {"session": "S034", "character": "Orla", "archetype": "The Heart"}, {"session": "S035", "character": "Orla", "archetype": "The Heart"}, {"session": "S036", "character": "Orla", "archetype": "The Heart"}, {"session": "S037", "character": "Orla", "archetype": "The Heart"}, {"session": "S038", "character": "Orla", "archetype": "The Heart"}, {"session": "S039", "character": "Orla", "archetype": "The Heart"}, {"session": "S040", "character": "Orla", "archetype": "The Comic Relief"}, {"session": "S041", "character": "Orla", "archetype": "The Heart"}, {"session": "S042", "character": "Orla", "archetype": "The Heart"}, {"session": "S043", "character": "Orla", "archetype": "The Comic Relief"}, {"session": "S044", "character": "Orla", "archetype": "The Heart"}, {"session": "S045", "character": "Orla", "archetype": "The Wildcard"}, {"session": "S046", "character": "Orla", "archetype": "The Heart"}], "Tenderbittle": [{"session": "S001", "character": "SavannahBelle", "archetype": "The Comic Relief"}, {"session": "S002", "character": "SavannahBelle", "archetype": "The Strategist"}, {"session": "S003", "character": "SavannahBelle", "archetype": "The Quiet Professional"}, {"session": "S004", "character": "SavannahBelle", "archetype": "The Quiet Professional"}, {"session": "S005", "character": "SavannahBelle", "archetype": "The Wildcard"}, {"session": "S006", "character": "SavannahBelle", "archetype": "The Quiet Professional"}, {"session": "S007", "character": "SavannahBelle", "archetype": "The Chronicler"}, {"session": "S015", "character": "SavannahBelle", "archetype": "The Face"}, {"session": "S016", "character": "SavannahBelle", "archetype": "The Wildcard"}, {"session": "S017", "character": "SavannahBelle", "archetype": "The Quiet Professional"}, {"session": "S019", "character": "SavannahBelle", "archetype": "The Strategist"}, {"session": "S020", "character": "SavannahBelle", "archetype": "The Quiet Professional"}, {"session": "S021", "character": "SavannahBelle", "archetype": "The Wildcard"}, {"session": "S022", "character": "SavannahBelle", "archetype": "The Wildcard"}, {"session": "S023", "character": "SavannahBelle", "archetype": "The Wildcard"}, {"session": "S024", "character": "SavannahBelle", "archetype": "The Comic Relief"}, {"session": "S025", "character": "SavannahBelle", "archetype": "The Wildcard"}, {"session": "S026", "character": "SavannahBelle", "archetype": "The Comic Relief"}, {"session": "S027", "character": "SavannahBelle", "archetype": "The Wildcard"}, {"session": "S028", "character": "SavannahBelle", "archetype": "The Quiet Professional"}, {"session": "S029", "character": "SavannahBelle", "archetype": "The Instigator"}, {"session": "S030", "character": "SavannahBelle", "archetype": "The Comic Relief"}, {"session": "S031", "character": "SavannahBelle", "archetype": "The Instigator"}, {"session": "S032", "character": "SavannahBelle", "archetype": "The Wildcard"}, {"session": "S033", "character": "SavannahBelle", "archetype": "The Wildcard"}, {"session": "S034", "character": "SavannahBelle", "archetype": "The Wildcard"}, {"session": "S035", "character": "SavannahBelle", "archetype": "The Wildcard"}, {"session": "S036", "character": "SavannahBelle", "archetype": "The Wildcard"}, {"session": "S037", "character": "SavannahBelle", "archetype": "The Wildcard"}, {"session": "S038", "character": "SavannahBelle", "archetype": "The Wildcard"}, {"session": "S039", "character": "SavannahBelle", "archetype": "The Wildcard"}, {"session": "S040", "character": "SavannahBelle", "archetype": "The Wildcard"}, {"session": "S041", "character": "SavannahBelle", "archetype": "The Wildcard"}, {"session": "S042", "character": "SavannahBelle", "archetype": "The Wildcard"}, {"session": "S043", "character": "SavannahBelle", "archetype": "The Instigator"}, {"session": "S044", "character": "SavannahBelle", "archetype": "The Instigator"}, {"session": "S045", "character": "SavannahBelle", "archetype": "The Face"}, {"session": "S046", "character": "SavannahBelle", "archetype": "The Instigator"}], "Meijinx": [{"session": "S002", "character": "Ave", "archetype": "The Face"}, {"session": "S003", "character": "Ave", "archetype": "The Face"}, {"session": "S004", "character": "Ave", "archetype": "The Wildcard"}, {"session": "S005", "character": "Ave", "archetype": "The Quiet Professional"}, {"session": "S007", "character": "Ave", "archetype": "The Quiet Professional"}, {"session": "S008", "character": "Ave", "archetype": "The Comic Relief"}, {"session": "S009", "character": "Ave", "archetype": "The Chronicler"}, {"session": "S012", "character": "Ave", "archetype": "The Face"}, {"session": "S013", "character": "Ave", "archetype": "The Comic Relief"}, {"session": "S014", "character": "Ave", "archetype": "The Face"}, {"session": "S015", "character": "Ave", "archetype": "The Face"}, {"session": "S016", "character": "Ave", "archetype": "The Instigator"}, {"session": "S023", "character": "Ave", "archetype": "The Quiet Professional"}, {"session": "S029", "character": "Ave", "archetype": "The Comic Relief"}, {"session": "S031", "character": "Ezrella", "archetype": "The Face"}, {"session": "S034", "character": "Billabong", "archetype": "The Quiet Professional"}, {"session": "S037", "character": "Ave", "archetype": "The Face"}, {"session": "S039", "character": "Ave", "archetype": "The Quiet Professional"}, {"session": "S040", "character": "Ave", "archetype": "The Chronicler"}], "Drenek": [{"session": "S003", "character": "Drenek", "archetype": "The Quiet Professional"}, {"session": "S004", "character": "Drenek", "archetype": "The Quiet Professional"}, {"session": "S010", "character": "Drenek", "archetype": "The Instigator"}, {"session": "S011", "character": "Drenek", "archetype": "The Protector"}, {"session": "S015", "character": "Drenek", "archetype": "The Quiet Professional"}, {"session": "S016", "character": "Drenek", "archetype": "The Comic Relief"}, {"session": "S023", "character": "Drenek", "archetype": "The Quiet Professional"}, {"session": "S037", "character": "Drenek", "archetype": "The Protector"}, {"session": "S043", "character": "Drenek", "archetype": "The Quiet Professional"}]};
+
+const PLAYER_COLORS = {
+  Gradles:"#4A90D9", HT:"#E57373", Mary:"#81C784",
+  Christie:"#BA68C8", Lucy:"#FFB74D", Tenderbittle:"#4DB6AC",
+  Meijinx:"#FF8A65", Drenek:"#7986CB"
+};
+
+const PLAYER_CHARS = {
+  Gradles:"Corras", HT:"Ash", Mary:"Billabong",
+  Christie:"Dahlia", Lucy:"Orla", Tenderbittle:"SavannahBelle",
+  Meijinx:"Ave", Drenek:"Drenek"
+};
+
+const ARCHETYPE_COLORS = {
+  "The Strategist":"#4A90D9",
+  "The Wildcard":"#fbbf24",
+  "The Comic Relief":"#FF8A65",
+  "The Heart":"#f87171",
+  "The Protector":"#81C784",
+  "The Face":"#BA68C8",
+  "The Instigator":"#ef4444",
+  "The Chronicler":"#4DB6AC",
+  "The Quiet Professional":"#7986CB",
+  "The Lone Wolf":"#9494bf"
+};
+
+// Sampled sessions for columns
+const SAMPLE_SESSIONS = ["S001","S005","S010","S015","S020","S025","S030","S035","S040","S045"];
+const PLAYER_ORDER = ["Gradles","HT","Christie","Lucy","Mary","Tenderbittle","Meijinx","Drenek"];
+
+// ── State ──
+const playerVisible = {};
+PLAYER_ORDER.forEach(p => playerVisible[p] = true);
+let lockedPlayer = null;
+let hoveredPlayer = null;
+
+// ── Build Sankey Data ──
+function buildSankeyData() {
+  const activePlayers = PLAYER_ORDER.filter(p => playerVisible[p]);
+  const nodes = [];
+  const links = [];
+  const nodeMap = {};
+
+  // For each sample session, find what archetypes are present
+  SAMPLE_SESSIONS.forEach((sid, colIdx) => {
+    // Collect archetypes at this session for active players
+    const archCounts = {};
+    activePlayers.forEach(player => {
+      const entries = RAW_DATA[player] || [];
+      // Find closest session at or before this sample point
+      const sidNum = parseInt(sid.slice(1));
+      let best = null;
+      for (const e of entries) {
+        const eNum = parseInt(e.session.slice(1));
+        if (eNum <= sidNum) {
+          if (!best || eNum > parseInt(best.session.slice(1))) best = e;
+        }
+      }
+      // Also check exact match or nearest after if nothing before
+      if (!best) {
+        for (const e of entries) {
+          const eNum = parseInt(e.session.slice(1));
+          if (eNum >= sidNum) {
+            if (!best || eNum < parseInt(best.session.slice(1))) best = e;
+          }
+        }
+      }
+      if (best) {
+        const arch = best.archetype;
+        if (!archCounts[arch]) archCounts[arch] = [];
+        archCounts[arch].push(player);
+      }
+    });
+
+    // Create nodes for each archetype in this column
+    Object.keys(archCounts).forEach(arch => {
+      const nodeId = `${sid}|${arch}`;
+      nodeMap[nodeId] = nodes.length;
+      nodes.push({
+        id: nodeId,
+        name: arch,
+        session: sid,
+        colIdx,
+        players: archCounts[arch],
+        playerCount: archCounts[arch].length
+      });
+    });
+  });
+
+  // Create links: for each player, connect their archetype node in column i to column i+1
+  for (let i = 0; i < SAMPLE_SESSIONS.length - 1; i++) {
+    const sidA = SAMPLE_SESSIONS[i];
+    const sidB = SAMPLE_SESSIONS[i + 1];
+    const sidANum = parseInt(sidA.slice(1));
+    const sidBNum = parseInt(sidB.slice(1));
+
+    activePlayers.forEach(player => {
+      const entries = RAW_DATA[player] || [];
+
+      function findClosest(targetNum) {
+        let best = null;
+        for (const e of entries) {
+          const eNum = parseInt(e.session.slice(1));
+          if (eNum <= targetNum) {
+            if (!best || eNum > parseInt(best.session.slice(1))) best = e;
+          }
+        }
+        if (!best) {
+          for (const e of entries) {
+            const eNum = parseInt(e.session.slice(1));
+            if (eNum >= targetNum) {
+              if (!best || eNum < parseInt(best.session.slice(1))) best = e;
+            }
+          }
+        }
+        return best;
+      }
+
+      const entryA = findClosest(sidANum);
+      const entryB = findClosest(sidBNum);
+
+      if (entryA && entryB) {
+        const srcId = `${sidA}|${entryA.archetype}`;
+        const tgtId = `${sidB}|${entryB.archetype}`;
+        if (nodeMap[srcId] !== undefined && nodeMap[tgtId] !== undefined) {
+          links.push({
+            source: nodeMap[srcId],
+            target: nodeMap[tgtId],
+            value: 1,
+            player: player,
+            fromArch: entryA.archetype,
+            toArch: entryB.archetype,
+            fromSession: sidA,
+            toSession: sidB
+          });
+        }
+      }
+    });
+  }
+
+  return { nodes, links };
+}
+
+// ── Compute Stats ──
+function computeStats() {
+  const stats = {};
+  PLAYER_ORDER.forEach(player => {
+    const entries = RAW_DATA[player] || [];
+    const archetypes = entries.map(e => e.archetype);
+    const counts = {};
+    archetypes.forEach(a => counts[a] = (counts[a] || 0) + 1);
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    let changes = 0;
+    for (let i = 1; i < archetypes.length; i++) {
+      if (archetypes[i] !== archetypes[i - 1]) changes++;
+    }
+    stats[player] = {
+      topArchetype: sorted[0] ? sorted[0][0] : 'N/A',
+      topCount: sorted[0] ? sorted[0][1] : 0,
+      totalSessions: entries.length,
+      changes,
+      changeRate: entries.length > 1 ? (changes / (entries.length - 1) * 100).toFixed(0) : 0,
+      distribution: sorted
+    };
+  });
+
+  // Find most stable and most volatile
+  let mostStable = null, leastRate = Infinity;
+  let mostVolatile = null, highestRate = -1;
+  PLAYER_ORDER.forEach(p => {
+    const s = stats[p];
+    if (s.totalSessions >= 10) { // Only consider players with enough data
+      const rate = s.changes / (s.totalSessions - 1);
+      if (rate < leastRate) { leastRate = rate; mostStable = p; }
+      if (rate > highestRate) { highestRate = rate; mostVolatile = p; }
+    }
+  });
+  stats._mostStable = mostStable;
+  stats._mostVolatile = mostVolatile;
+  return stats;
+}
+
+// ── Render ──
+function render() {
+  const container = document.getElementById('diagram');
+  container.innerHTML = '';
+
+  const margin = { top: 30, right: 40, bottom: 40, left: 40 };
+  const width = Math.max(1200, container.clientWidth) - margin.left - margin.right;
+  const height = 600;
+
+  const svg = d3.select(container)
+    .append('svg')
+    .attr('viewBox', `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`)
+    .attr('preserveAspectRatio', 'xMidYMid meet');
+
+  // Defs for gradients and glow
+  const defs = svg.append('defs');
+
+  // Glow filter
+  const glow = defs.append('filter').attr('id', 'glow');
+  glow.append('feGaussianBlur').attr('stdDeviation', '3').attr('result', 'blur');
+  const merge = glow.append('feMerge');
+  merge.append('feMergeNode').attr('in', 'blur');
+  merge.append('feMergeNode').attr('in', 'SourceGraphic');
+
+  const g = svg.append('g')
+    .attr('transform', `translate(${margin.left},${margin.top})`);
+
+  const data = buildSankeyData();
+
+  if (data.nodes.length === 0) return;
+
+  // Build sankey
+  const sankey = d3.sankey()
+    .nodeWidth(20)
+    .nodePadding(14)
+    .nodeAlign(d3.sankeyLeft)
+    .extent([[0, 0], [width, height]]);
+
+  const { nodes, links } = sankey({
+    nodes: data.nodes.map(d => Object.assign({}, d)),
+    links: data.links.map(d => Object.assign({}, d))
+  });
+
+  // Session column labels
+  const sessionPositions = {};
+  nodes.forEach(n => {
+    if (!sessionPositions[n.session]) {
+      sessionPositions[n.session] = n.x0 + (n.x1 - n.x0) / 2;
+    }
+  });
+
+  Object.entries(sessionPositions).forEach(([sid, x]) => {
+    g.append('text')
+      .attr('x', x)
+      .attr('y', -10)
+      .attr('text-anchor', 'middle')
+      .attr('fill', '#8888aa')
+      .attr('font-family', "'JetBrains Mono', monospace")
+      .attr('font-size', '11px')
+      .attr('font-weight', '500')
+      .attr('letter-spacing', '1px')
+      .text(sid);
+
+    // Vertical guide line
+    g.append('line')
+      .attr('x1', x).attr('x2', x)
+      .attr('y1', 0).attr('y2', height)
+      .attr('stroke', 'rgba(255,255,255,0.03)')
+      .attr('stroke-width', 1);
+  });
+
+  // Draw links (flows)
+  const linkGroup = g.append('g').attr('class', 'links');
+
+  const linkPaths = linkGroup.selectAll('path')
+    .data(links)
+    .join('path')
+    .attr('d', d3.sankeyLinkHorizontal())
+    .attr('fill', 'none')
+    .attr('stroke', d => PLAYER_COLORS[d.player] || '#666')
+    .attr('stroke-opacity', 0)
+    .attr('stroke-width', d => Math.max(2, d.width))
+    .attr('data-player', d => d.player)
+    .style('mix-blend-mode', 'screen')
+    .style('cursor', 'pointer');
+
+  // Draw nodes
+  const nodeGroup = g.append('g').attr('class', 'nodes');
+
+  const nodeRects = nodeGroup.selectAll('g')
+    .data(nodes)
+    .join('g')
+    .attr('transform', d => `translate(${d.x0},${d.y0})`);
+
+  nodeRects.append('rect')
+    .attr('width', d => d.x1 - d.x0)
+    .attr('height', d => Math.max(4, d.y1 - d.y0))
+    .attr('fill', d => ARCHETYPE_COLORS[d.name] || '#666')
+    .attr('rx', 3)
+    .attr('opacity', 0.85)
+    .attr('filter', 'url(#glow)')
+    .style('cursor', 'pointer');
+
+  // Node labels (only for nodes tall enough)
+  nodeRects.each(function(d) {
+    const h = d.y1 - d.y0;
+    if (h > 22) {
+      const label = d.name.replace('The ', '');
+      d3.select(this).append('text')
+        .attr('x', (d.x1 - d.x0) / 2)
+        .attr('y', h / 2)
+        .attr('text-anchor', 'middle')
+        .attr('dominant-baseline', 'central')
+        .attr('fill', '#06060c')
+        .attr('font-family', "'Barlow Condensed', sans-serif")
+        .attr('font-size', Math.min(11, h - 4) + 'px')
+        .attr('font-weight', '600')
+        .attr('letter-spacing', '0.5px')
+        .text(label.length > 12 && h < 30 ? label.slice(0, 10) + '..' : label);
+    }
+  });
+
+  // ── Animated entrance: flows draw left to right ──
+  linkPaths
+    .attr('stroke-dasharray', function() {
+      return this.getTotalLength() + ' ' + this.getTotalLength();
+    })
+    .attr('stroke-dashoffset', function() {
+      return this.getTotalLength();
+    })
+    .transition()
+    .duration(1800)
+    .delay((d, i) => {
+      // Stagger by column (source x position)
+      const col = SAMPLE_SESSIONS.indexOf(d.fromSession);
+      return col * 150 + Math.random() * 100;
+    })
+    .ease(d3.easeCubicOut)
+    .attr('stroke-dashoffset', 0)
+    .attr('stroke-opacity', 0.4);
+
+  // Nodes fade in
+  nodeRects.attr('opacity', 0)
+    .transition()
+    .duration(600)
+    .delay((d, i) => d.colIdx * 150)
+    .ease(d3.easeCubicOut)
+    .attr('opacity', 1);
+
+  // ── Interactivity ──
+  const tooltip = d3.select('#tooltip');
+
+  function highlightPlayer(player) {
+    linkPaths
+      .attr('stroke-opacity', d => d.player === player ? 0.8 : 0.05)
+      .attr('stroke-width', d => d.player === player ? Math.max(4, d.width * 1.5) : Math.max(1, d.width * 0.5));
+
+    nodeRects.selectAll('rect')
+      .attr('opacity', function(d) {
+        return d.players && d.players.includes(player) ? 1 : 0.2;
+      });
+  }
+
+  function resetHighlight() {
+    if (lockedPlayer) {
+      highlightPlayer(lockedPlayer);
+      return;
+    }
+    linkPaths
+      .attr('stroke-opacity', 0.4)
+      .attr('stroke-width', d => Math.max(2, d.width));
+    nodeRects.selectAll('rect').attr('opacity', 0.85);
+  }
+
+  // Link hover
+  linkPaths
+    .on('mouseover', function(event, d) {
+      if (!lockedPlayer) {
+        hoveredPlayer = d.player;
+        highlightPlayer(d.player);
+      }
+      const chars = new Set(RAW_DATA[d.player].map(e => e.character));
+      tooltip.classed('show', true)
+        .html(`
+          <div class="tt-title">${d.player}</div>
+          <div style="font-family:'Cinzel',serif;font-size:12px;color:#aaa;margin-bottom:6px">${[...chars].join(' / ')}</div>
+          <div class="tt-row">
+            <span class="tt-dot" style="background:${ARCHETYPE_COLORS[d.fromArch]}"></span>
+            <span>${d.fromSession}: ${d.fromArch}</span>
+          </div>
+          <div style="color:#666;padding-left:16px;font-size:11px">&#8595;</div>
+          <div class="tt-row">
+            <span class="tt-dot" style="background:${ARCHETYPE_COLORS[d.toArch]}"></span>
+            <span>${d.toSession}: ${d.toArch}</span>
+          </div>
+          ${d.fromArch !== d.toArch
+            ? '<div style="color:#fbbf24;font-size:11px;margin-top:6px;font-family:JetBrains Mono,monospace">ARCHETYPE SHIFT</div>'
+            : '<div style="color:#81C784;font-size:11px;margin-top:6px;font-family:JetBrains Mono,monospace">STABLE</div>'}
+        `);
+    })
+    .on('mousemove', function(event) {
+      tooltip
+        .style('left', (event.clientX + 16) + 'px')
+        .style('top', (event.clientY - 10) + 'px');
+    })
+    .on('mouseout', function() {
+      if (!lockedPlayer) {
+        hoveredPlayer = null;
+        resetHighlight();
+      }
+      tooltip.classed('show', false);
+    })
+    .on('click', function(event, d) {
+      if (lockedPlayer === d.player) {
+        lockedPlayer = null;
+        resetHighlight();
+        closeDetail();
+      } else {
+        lockedPlayer = d.player;
+        highlightPlayer(d.player);
+        showDetail(d.player);
+      }
+    });
+
+  // Node hover
+  nodeRects
+    .on('mouseover', function(event, d) {
+      if (!lockedPlayer) {
+        nodeRects.selectAll('rect').attr('opacity', 0.2);
+        d3.select(this).select('rect').attr('opacity', 1);
+        // Highlight flows touching this node
+        linkPaths.attr('stroke-opacity', l => {
+          return d.players && d.players.includes(l.player) ? 0.7 : 0.04;
+        });
+      }
+      tooltip.classed('show', true)
+        .html(`
+          <div class="tt-title">${d.name}</div>
+          <div style="font-size:11px;color:#8888aa;margin-bottom:8px">${d.session} &mdash; ${d.playerCount} player${d.playerCount !== 1 ? 's' : ''}</div>
+          ${d.players.map(p => `
+            <div class="tt-row">
+              <span class="tt-dot" style="background:${PLAYER_COLORS[p]}"></span>
+              <span class="tt-player">${p}</span>
+              <span style="color:#666;font-size:11px;margin-left:auto">${PLAYER_CHARS[p] || ''}</span>
+            </div>
+          `).join('')}
+        `);
+    })
+    .on('mousemove', function(event) {
+      tooltip
+        .style('left', (event.clientX + 16) + 'px')
+        .style('top', (event.clientY - 10) + 'px');
+    })
+    .on('mouseout', function() {
+      if (!lockedPlayer) resetHighlight();
+      tooltip.classed('show', false);
+    });
+}
+
+// ── Detail Panel ──
+function showDetail(player) {
+  const panel = document.getElementById('detail-panel');
+  const entries = RAW_DATA[player] || [];
+  const chars = [...new Set(entries.map(e => e.character))];
+  const stats = computeStats()[player];
+
+  document.getElementById('detail-name').textContent = player;
+  document.getElementById('detail-name').style.color = PLAYER_COLORS[player];
+  document.getElementById('detail-char').textContent = chars.join(' / ');
+
+  document.getElementById('detail-summary').innerHTML = `
+    <div style="margin-bottom:16px">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#8888aa;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px">Primary Archetype</div>
+      <span class="archetype-label" style="background:${ARCHETYPE_COLORS[stats.topArchetype]}22;color:${ARCHETYPE_COLORS[stats.topArchetype]};border:1px solid ${ARCHETYPE_COLORS[stats.topArchetype]}44;font-size:14px">${stats.topArchetype}</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#aaa;margin-left:8px">${stats.topCount}/${stats.totalSessions} sessions</span>
+    </div>
+    <div style="display:flex;gap:20px;margin-bottom:16px">
+      <div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#8888aa;letter-spacing:2px;text-transform:uppercase">Changes</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:22px;color:${PLAYER_COLORS[player]}">${stats.changes}</div>
+      </div>
+      <div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#8888aa;letter-spacing:2px;text-transform:uppercase">Volatility</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:22px;color:${PLAYER_COLORS[player]}">${stats.changeRate}%</div>
+      </div>
+    </div>
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#8888aa;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px">Distribution</div>
+    ${stats.distribution.map(([arch, count]) => {
+      const pct = (count / stats.totalSessions * 100).toFixed(0);
+      return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <div style="width:12px;height:12px;border-radius:2px;background:${ARCHETYPE_COLORS[arch]};flex-shrink:0"></div>
+        <div style="flex:1;font-size:12px">${arch.replace('The ', '')}</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#aaa">${count}</div>
+        <div style="width:80px;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden">
+          <div style="width:${pct}%;height:100%;background:${ARCHETYPE_COLORS[arch]};border-radius:3px"></div>
+        </div>
+      </div>`;
+    }).join('')}
+  `;
+
+  // Journey timeline (show sampled sessions)
+  const journey = document.getElementById('detail-journey');
+  journey.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#8888aa;letter-spacing:2px;text-transform:uppercase;margin:16px 0 8px">Full Journey</div>';
+
+  let prev = null;
+  entries.forEach(e => {
+    const changed = prev && prev !== e.archetype;
+    journey.innerHTML += `
+      <div class="journey-step">
+        <span class="session-label">${e.session}</span>
+        <span class="arch-badge" style="background:${ARCHETYPE_COLORS[e.archetype]}22;color:${ARCHETYPE_COLORS[e.archetype]};border:1px solid ${ARCHETYPE_COLORS[e.archetype]}33">${e.archetype.replace('The ', '')}</span>
+        ${changed ? '<span class="change-marker">&#9670; SHIFT</span>' : ''}
+      </div>
+    `;
+    prev = e.archetype;
+  });
+
+  panel.classList.add('open');
+}
+
+function closeDetail() {
+  document.getElementById('detail-panel').classList.remove('open');
+  lockedPlayer = null;
+  // Reset all highlights
+  d3.selectAll('.links path')
+    .attr('stroke-opacity', 0.4)
+    .attr('stroke-width', d => Math.max(2, d.width));
+  d3.selectAll('.nodes g rect').attr('opacity', 0.85);
+}
+
+// ── Build Legend ──
+function buildLegend() {
+  const legendBar = document.getElementById('archetype-legend');
+  Object.entries(ARCHETYPE_COLORS).forEach(([arch, color]) => {
+    const item = document.createElement('div');
+    item.className = 'legend-item';
+    item.innerHTML = `<div class="legend-swatch" style="background:${color};box-shadow:0 0 8px ${color}44"></div>${arch}`;
+    legendBar.appendChild(item);
+  });
+}
+
+// ── Build Filters ──
+function buildFilters() {
+  const filterBar = document.getElementById('filters');
+  filterBar.innerHTML = '';
+  PLAYER_ORDER.forEach(player => {
+    const btn = document.createElement('button');
+    btn.className = 'filter-btn ' + (playerVisible[player] ? 'active' : 'inactive');
+    btn.innerHTML = `<span class="dot" style="background:${PLAYER_COLORS[player]};box-shadow:0 0 6px ${PLAYER_COLORS[player]}88"></span>${player}<span class="char-name">${PLAYER_CHARS[player] || ''}</span>`;
+    btn.style.cssText = playerVisible[player]
+      ? `border-color:${PLAYER_COLORS[player]}44`
+      : '';
+    btn.querySelector('.dot').style.boxShadow = playerVisible[player]
+      ? `0 0 8px ${PLAYER_COLORS[player]}88`
+      : 'none';
+    btn.onclick = () => {
+      playerVisible[player] = !playerVisible[player];
+      lockedPlayer = null;
+      closeDetail();
+      render();
+      buildFilters();
+      buildStats();
+    };
+    filterBar.appendChild(btn);
+  });
+}
+
+// ── Build Stats ──
+function buildStats() {
+  const statsPanel = document.getElementById('stats');
+  const stats = computeStats();
+
+  // Per-player top archetype
+  let topArchHtml = '';
+  PLAYER_ORDER.forEach(p => {
+    const s = stats[p];
+    topArchHtml += `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <span style="width:10px;height:10px;border-radius:50%;background:${PLAYER_COLORS[p]};flex-shrink:0;box-shadow:0 0 6px ${PLAYER_COLORS[p]}66"></span>
+        <span class="player-label" style="color:${PLAYER_COLORS[p]};min-width:90px">${p}</span>
+        <span class="archetype-label" style="background:${ARCHETYPE_COLORS[s.topArchetype]}22;color:${ARCHETYPE_COLORS[s.topArchetype]};border:1px solid ${ARCHETYPE_COLORS[s.topArchetype]}33">${s.topArchetype.replace('The ','')}</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#8888aa;margin-left:auto">${s.topCount}/${s.totalSessions}</span>
+      </div>
+    `;
+  });
+
+  const stable = stats._mostStable;
+  const volatile = stats._mostVolatile;
+
+  statsPanel.innerHTML = `
+    <div class="stat-card">
+      <div class="card-title">Most Common Archetype Per Player</div>
+      <div class="card-content">${topArchHtml}</div>
+    </div>
+    <div class="stat-card">
+      <div class="card-title">Most Stable Player</div>
+      <div class="card-content" style="text-align:center;padding:10px 0">
+        <div class="player-label" style="color:${PLAYER_COLORS[stable]};font-size:22px;text-shadow:0 0 15px ${PLAYER_COLORS[stable]}44">${stable}</div>
+        <div style="font-family:'Cinzel',serif;font-size:13px;color:#aaa;margin:4px 0">${PLAYER_CHARS[stable]}</div>
+        <div style="margin:12px 0">
+          <span class="archetype-label" style="background:${ARCHETYPE_COLORS[stats[stable].topArchetype]}22;color:${ARCHETYPE_COLORS[stats[stable].topArchetype]};border:1px solid ${ARCHETYPE_COLORS[stats[stable].topArchetype]}33;font-size:16px">${stats[stable].topArchetype}</span>
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#8888aa">
+          ${stats[stable].topCount}/${stats[stable].totalSessions} sessions &mdash; ${stats[stable].changes} changes &mdash; ${stats[stable].changeRate}% volatility
+        </div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="card-title">Most Volatile Player</div>
+      <div class="card-content" style="text-align:center;padding:10px 0">
+        <div class="player-label" style="color:${PLAYER_COLORS[volatile]};font-size:22px;text-shadow:0 0 15px ${PLAYER_COLORS[volatile]}44">${volatile}</div>
+        <div style="font-family:'Cinzel',serif;font-size:13px;color:#aaa;margin:4px 0">${PLAYER_CHARS[volatile]}</div>
+        <div style="margin:12px 0">
+          <span class="archetype-label" style="background:${ARCHETYPE_COLORS[stats[volatile].topArchetype]}22;color:${ARCHETYPE_COLORS[stats[volatile].topArchetype]};border:1px solid ${ARCHETYPE_COLORS[stats[volatile].topArchetype]}33;font-size:16px">${stats[volatile].topArchetype}</span>
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#8888aa">
+          ${stats[volatile].topCount}/${stats[volatile].totalSessions} sessions &mdash; ${stats[volatile].changes} changes &mdash; ${stats[volatile].changeRate}% volatility
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ── Init ──
+buildLegend();
+buildFilters();
+render();
+buildStats();
+
+// Resize
+window.addEventListener('resize', () => {
+  render();
+});
+</script>
+</body>
+</html>

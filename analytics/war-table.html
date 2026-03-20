@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>THE WAR TABLE</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@300;400;600;700&family=Barlow:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&family=Cinzel:wght@400;600;700&display=swap');
+
+  *{margin:0;padding:0;box-sizing:border-box}
+
+  body{
+    background:#06060c;color:#c8c8e0;font-family:'Barlow',sans-serif;
+    min-height:100vh;position:relative;overflow-x:hidden;
+  }
+
+  body::after{
+    content:'';position:fixed;top:0;left:0;right:0;bottom:0;
+    background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.06) 2px,rgba(0,0,0,.06) 4px);
+    pointer-events:none;z-index:9999;
+  }
+
+  .page-wrap{display:flex;flex-direction:column;min-height:100vh}
+
+  .header{
+    text-align:center;padding:28px 20px 12px;position:relative;
+  }
+  .header::after{
+    content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);
+    width:80%;height:1px;
+    background:linear-gradient(90deg,transparent,#ff4444,#ff8844,#ff4444,transparent);
+    opacity:.5;
+  }
+
+  .title{
+    font-family:'Bebas Neue',sans-serif;font-size:62px;letter-spacing:12px;line-height:1;
+    background:linear-gradient(135deg,#ff4444,#ff8844);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+    filter:drop-shadow(0 0 30px rgba(255,68,68,.4)) drop-shadow(0 0 60px rgba(255,136,68,.2));
+    margin-bottom:2px;
+  }
+  .subtitle{
+    font-family:'Barlow Condensed',sans-serif;font-weight:300;font-size:13px;
+    letter-spacing:6px;text-transform:uppercase;color:#8888aa;
+  }
+
+  .main-content{display:flex;flex:1;position:relative}
+
+  .sidebar{
+    width:300px;min-width:300px;padding:18px 14px;
+    border-right:1px solid #1a1a2e;overflow-y:auto;
+    max-height:calc(100vh - 100px);position:sticky;top:0;
+  }
+  .sidebar::-webkit-scrollbar{width:4px}
+  .sidebar::-webkit-scrollbar-track{background:#0a0a14}
+  .sidebar::-webkit-scrollbar-thumb{background:#2a2a40;border-radius:2px}
+
+  .viz-container{
+    flex:1;display:flex;align-items:center;justify-content:center;
+    position:relative;min-height:850px;
+  }
+
+  .stats-panel,.filter-section,.mysteries-panel{
+    background:linear-gradient(135deg,#0d0d1a,#15152a);
+    border:1px solid #2a2a40;border-radius:8px;padding:14px;margin-bottom:12px;
+  }
+  .stats-panel h3,.filter-section h3,.mysteries-panel h3{
+    font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:3px;
+    color:#ff6644;margin-bottom:8px;border-bottom:1px solid #2a2a40;padding-bottom:4px;
+  }
+
+  .stat-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:13px}
+  .stat-label{
+    font-family:'Barlow Condensed',sans-serif;font-weight:400;color:#8888aa;
+    text-transform:uppercase;letter-spacing:1px;font-size:11px;
+  }
+  .stat-value{
+    font-family:'JetBrains Mono',monospace;font-weight:500;color:#e0e0f0;font-size:15px;
+    text-shadow:0 0 8px rgba(255,102,68,.3);
+  }
+
+  .most-connected{margin-top:6px;padding-top:6px;border-top:1px solid #1a1a2e}
+  .most-connected .node-name{
+    font-family:'Cinzel',serif;color:#ffd700;font-size:13px;
+    text-shadow:0 0 10px rgba(255,215,0,.3);
+  }
+  .most-connected .edge-count{
+    font-family:'JetBrains Mono',monospace;color:#ff8844;font-size:11px;
+  }
+
+  .type-filters{display:flex;flex-direction:column;gap:3px}
+  .type-filter{
+    display:flex;align-items:center;gap:7px;padding:3px 5px;border-radius:4px;
+    cursor:pointer;transition:background .2s;font-size:12px;
+  }
+  .type-filter:hover{background:rgba(255,255,255,.05)}
+  .type-filter input[type="checkbox"]{
+    appearance:none;width:14px;height:14px;border:1px solid #444;
+    border-radius:3px;cursor:pointer;position:relative;flex-shrink:0;
+  }
+  .type-filter input[type="checkbox"]:checked{
+    background:var(--type-color);border-color:var(--type-color);
+    box-shadow:0 0 6px var(--type-color);
+  }
+  .type-filter input[type="checkbox"]:checked::after{
+    content:'\2713';position:absolute;top:-1px;left:2px;color:#fff;font-size:11px;font-weight:bold;
+  }
+  .type-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+  .type-name{
+    font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;
+    letter-spacing:1px;color:#c8c8e0;flex:1;
+  }
+  .type-count{font-family:'JetBrains Mono',monospace;color:#666;font-size:11px}
+
+  .slider-control{margin-bottom:12px}
+  .slider-control label{
+    font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;
+    letter-spacing:1px;color:#8888aa;font-size:11px;
+    display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;
+  }
+  .slider-control label span{font-family:'JetBrains Mono',monospace;color:#ff8844;font-size:12px}
+
+  input[type="range"]{
+    -webkit-appearance:none;width:100%;height:4px;background:#1a1a2e;
+    border-radius:2px;outline:none;
+  }
+  input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+    background:#ff6644;cursor:pointer;box-shadow:0 0 8px rgba(255,102,68,.5);
+  }
+
+  .mystery-item{
+    padding:5px 0;border-bottom:1px solid #111122;cursor:default;
+    transition:background .2s;
+  }
+  .mystery-item:hover{background:rgba(255,68,68,.05)}
+  .mystery-item:last-child{border-bottom:none}
+  .mystery-session{font-family:'JetBrains Mono',monospace;font-size:10px;color:#ff8844;margin-bottom:1px}
+  .mystery-text{
+    font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#c8c8e0;
+    letter-spacing:.3px;line-height:1.3;
+  }
+
+  .detail-panel{
+    position:fixed;right:-400px;top:0;width:380px;height:100vh;
+    background:linear-gradient(180deg,#0a0a18,#12122a);
+    border-left:1px solid #2a2a40;padding:24px 18px;z-index:1000;
+    transition:right .3s ease;overflow-y:auto;
+    box-shadow:-10px 0 40px rgba(0,0,0,.6);
+  }
+  .detail-panel.open{right:0}
+  .detail-panel .close-btn{
+    position:absolute;top:14px;right:14px;background:none;border:1px solid #444;
+    color:#888;width:28px;height:28px;border-radius:50%;cursor:pointer;
+    font-size:14px;display:flex;align-items:center;justify-content:center;
+    transition:all .2s;
+  }
+  .detail-panel .close-btn:hover{border-color:#ff4444;color:#ff4444;box-shadow:0 0 10px rgba(255,68,68,.3)}
+
+  .detail-node-name{font-family:'Cinzel',serif;font-size:20px;font-weight:600;margin-bottom:4px;padding-right:40px}
+  .detail-node-type{
+    font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;
+    letter-spacing:2px;font-size:12px;margin-bottom:10px;opacity:.7;
+  }
+  .detail-description{
+    font-size:13px;line-height:1.5;color:#9999bb;margin-bottom:14px;
+    padding-bottom:14px;border-bottom:1px solid #1a1a2e;
+  }
+  .detail-section-title{
+    font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:2px;
+    color:#ff6644;margin-bottom:6px;
+  }
+  .detail-sessions{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:14px}
+  .session-tag{
+    font-family:'JetBrains Mono',monospace;font-size:10px;padding:2px 6px;
+    background:rgba(255,136,68,.15);border:1px solid rgba(255,136,68,.3);
+    border-radius:3px;color:#ff8844;
+  }
+  .detail-connections{list-style:none}
+  .detail-connections li{padding:5px 0;border-bottom:1px solid #111122;font-size:12px}
+  .detail-connections .conn-target{font-family:'Cinzel',serif;color:#e0e0f0;font-size:12px}
+  .detail-connections .conn-rationale{color:#777799;font-size:11px;margin-top:2px;font-style:italic}
+
+  .tooltip{
+    position:fixed;pointer-events:none;background:rgba(10,10,24,.95);
+    border:1px solid #2a2a40;border-radius:6px;padding:10px 14px;font-size:12px;
+    max-width:320px;z-index:2000;display:none;box-shadow:0 4px 20px rgba(0,0,0,.6);
+  }
+  .tooltip .tt-label{font-family:'Cinzel',serif;font-size:14px;color:#e0e0f0;margin-bottom:3px}
+  .tooltip .tt-type{
+    font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;
+    letter-spacing:1px;font-size:10px;margin-bottom:5px;
+  }
+  .tooltip .tt-desc{color:#8888aa;line-height:1.4;font-size:11px}
+
+  .session-filter-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:2px}
+  .session-btn{
+    font-family:'JetBrains Mono',monospace;font-size:9px;padding:3px 2px;
+    background:rgba(255,255,255,.03);border:1px solid #1a1a2e;border-radius:3px;
+    color:#555;cursor:pointer;text-align:center;transition:all .2s;
+  }
+  .session-btn.active{background:rgba(255,136,68,.15);border-color:rgba(255,136,68,.4);color:#ff8844}
+  .session-btn:hover{border-color:#ff6644}
+
+  .session-controls{display:flex;gap:6px;margin-bottom:5px}
+  .session-ctrl-btn{
+    font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;
+    letter-spacing:1px;font-size:10px;padding:3px 8px;
+    background:rgba(255,102,68,.1);border:1px solid rgba(255,102,68,.3);
+    border-radius:3px;color:#ff6644;cursor:pointer;transition:all .2s;
+  }
+  .session-ctrl-btn:hover{background:rgba(255,102,68,.25)}
+
+  svg text{user-select:none}
+</style>
+</head>
+<body>
+<div class="page-wrap">
+  <div class="header">
+    <div class="title">THE WAR TABLE</div>
+    <div class="subtitle">Campaign-Wide Conspiracy Web &mdash; Hierarchical Edge Bundling</div>
+  </div>
+  <div class="main-content">
+    <div class="sidebar">
+      <div class="stats-panel">
+        <h3>INTELLIGENCE BRIEFING</h3>
+        <div class="stat-row"><span class="stat-label">Total Nodes</span><span class="stat-value" id="statNodes">--</span></div>
+        <div class="stat-row"><span class="stat-label">Total Connections</span><span class="stat-value" id="statEdges">--</span></div>
+        <div class="stat-row"><span class="stat-label">Sessions Analyzed</span><span class="stat-value" id="statSessions">--</span></div>
+        <div class="stat-row"><span class="stat-label">Central Mysteries</span><span class="stat-value" id="statMysteries">--</span></div>
+        <div class="most-connected">
+          <div class="stat-label" style="margin-bottom:3px">Most Connected Node</div>
+          <div class="node-name" id="mostConnected">--</div>
+          <div class="edge-count" id="mostConnectedCount"></div>
+        </div>
+        <div class="most-connected">
+          <div class="stat-label" style="margin-bottom:3px">Most Mysterious Session</div>
+          <div class="node-name" id="mostMysterious">--</div>
+        </div>
+      </div>
+
+      <div class="filter-section">
+        <h3>BUNDLE CONTROLS</h3>
+        <div class="slider-control">
+          <label>Tension <span id="tensionVal">0.85</span></label>
+          <input type="range" id="tensionSlider" min="0" max="100" value="85">
+        </div>
+        <div class="slider-control">
+          <label>Min Session Count <span id="minSessionVal">1</span></label>
+          <input type="range" id="minSessionSlider" min="1" max="6" value="1">
+        </div>
+      </div>
+
+      <div class="filter-section">
+        <h3>TYPE GROUPS</h3>
+        <div class="type-filters" id="typeFilters"></div>
+      </div>
+
+      <div class="filter-section">
+        <h3>SESSION FILTER</h3>
+        <div class="session-controls">
+          <button class="session-ctrl-btn" onclick="selectAllSessions()">All</button>
+          <button class="session-ctrl-btn" onclick="clearAllSessions()">None</button>
+        </div>
+        <div class="session-filter-grid" id="sessionFilters"></div>
+      </div>
+
+      <div class="mysteries-panel">
+        <h3>CENTRAL MYSTERIES</h3>
+        <div id="mysteriesList"></div>
+      </div>
+    </div>
+
+    <div class="viz-container">
+      <svg id="bundleChart"></svg>
+    </div>
+  </div>
+</div>
+
+<div class="detail-panel" id="detailPanel">
+  <button class="close-btn" onclick="closeDetailPanel()">&times;</button>
+  <div id="detailContent"></div>
+</div>
+<div class="tooltip" id="tooltip"></div>
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script>
+const RAW_DATA = {"nodes":[{"label":"Central Mystery","type":"Theory","description":"The overarching unanswered question of each session","sessions":["S002","S003","S004","S005","S006","S007","S010","S011","S012","S013","S015","S016","S017","S018","S020","S022","S024","S026","S027","S028","S029","S032","S034","S035","S036","S038","S039","S040","S041","S042","S044","S046"],"session_count":32},{"label":"Corras","type":"Character","description":"Adventurer focused on base building and strategic operations.","sessions":["S001","S021","S023","S025","S033","S037"],"session_count":6},{"label":"Dahlia","type":"Character","description":"Party member questioning the competitive vs collaborative nature of their endeavor.","sessions":["S001","S021","S023","S025","S033","S037"],"session_count":6},{"label":"Billabong","type":"Character","description":"Polite member of the party.","sessions":["S001","S021","S023","S025","S033"],"session_count":5},{"label":"SavannahBelle","type":"Character","description":"Summoned Wall of Fire, Twin Fireballed the demon","sessions":["S021","S023","S025","S033","S037"],"session_count":5},{"label":"Ash","type":"Character","description":"Party member navigating the complex layout of the new base.","sessions":["S001","S021","S023","S025"],"session_count":4},{"label":"Orla","type":"Character","description":"Commanded giant centipedes","sessions":["S023","S025","S033","S037"],"session_count":4},{"label":"Asnar the Crimson","type":"Suspect","description":"Wizard found inside Warehouse 17 using Antipathy magic.","sessions":["S032","S033"],"session_count":2},{"label":"Master of Whispers","type":"Suspect","description":"Mysterious intel gatherer.","sessions":["S001","S012"],"session_count":2},{"label":"Mordenkainen","type":"Suspect","description":"He sent the party to Barovia. Known drunk and liar.","sessions":["S035","S037"],"session_count":2},{"label":"Past Selves","type":"Suspect","description":"The biggest threat to the mission. If they see us, the timeline collapses.","sessions":["S007","S014"],"session_count":2},{"label":"Red Wizards of Thay","type":"Suspect","description":"Allied with Drakkar to help run the Forge of Spells.","sessions":["S025","S032"],"session_count":2},{"label":"Strahd von Zarovich","type":"Suspect","description":"An illusion of a pale man with a widow's peak offered SavannahBelle 'eternal hospitality' and laughed when she drank ...","sessions":["S036","S037"],"session_count":2},{"label":"The Matron","type":"Suspect","description":"Being framed by the party for the mass murder in the council chamber.","sessions":["S043","S046"],"session_count":2},{"label":"Actual Curse","type":"Evidence","description":"The DM confirmed that Strahd is, in fact, literally cursed.","sessions":["S040"],"session_count":1},{"label":"Alton Whisperwind","type":"NPC","description":"Master of Whispers, working closely with Ash.","sessions":["S025"],"session_count":1},{"label":"Archmage is a Robot?","type":"Theory","description":"Ash noticed that the Archmage's facial expressions didn't match their emotions and their movements were 'too perfect'...","sessions":["S006"],"session_count":1},{"label":"Ash's Murder","type":"Evidence","description":"Billabong was mind-controlled by the Maw and smashed Ash's head in. Ash died.","sessions":["S031"],"session_count":1},{"label":"BWB Federation","type":"Faction","description":"The empire led by Corras and the party.","sessions":["S025"],"session_count":1},{"label":"Baba Lysaga's Hut","type":"Evidence","description":"Baba Lysaga appeared in a walking hut, calling Strahd her 'beautiful boy' and offering Lydia the Sunsword to humble him.","sessions":["S042"],"session_count":1},{"label":"Baldur's Gate Exodus","type":"Evidence","description":"20% of Baldur's Gate fled, and 17,000 refugees arrived at Corras's castle. What happened to Baldur's Gate to cause th...","sessions":["S017"],"session_count":1},{"label":"Barricaded Door","type":"Evidence","description":"Two massive stone doors, barred from the inside with rubble and broken hinges. What were they keeping out... or locki...","sessions":["S028"],"session_count":1},{"label":"Cannot be Resurrected","type":"Theory","description":"Because the soul is trapped in the orb, Revivify and Gentle Repose might be completely useless!","sessions":["S031"],"session_count":1},{"label":"Castle Corras","type":"Location","description":"The infiltration target where past selves reside.","sessions":["S014"],"session_count":1},{"label":"Containment Runes","type":"Evidence","description":"Runes on the wall similar to those used to contain a Spectator, but for something much larger and more powerful.","sessions":["S002"],"session_count":1},{"label":"Contraband Magic","type":"Theory","description":"The items might be contraband from a broken universe, threatening to implode at any moment.","sessions":["S026"],"session_count":1},{"label":"Corras is the Chosen One","type":"Theory","description":"SavannahBelle theorizes they are keeping Corras alive to crown him king of some dimension or make him an underworld m...","sessions":["S034"],"session_count":1},{"label":"Courtyard Riot (9,000 strong)","type":"Event","description":"","sessions":["S045"],"session_count":1},{"label":"Crimson Abbot","type":"NPC","description":"Legendary foe from the Cult of Osibis, wields blood magic and holds a piece of the Rod.","sessions":["S037"],"session_count":1},{"label":"Cult of Eternal Flame","type":"Theory","description":"The party is already tracking the Cult of Eternal Flame who are rumored to be summoning a Balor (Lilith). They are th...","sessions":["S011"],"session_count":1},{"label":"Cult of Osibis","type":"Faction","description":"Evil cult that has infiltrated Barovia to claim the power of the Rod.","sessions":["S037"],"session_count":1},{"label":"Cult of the Dark Embrace","type":"Faction","description":"Led by the shadow speaker, aggressively recruiting and infiltrating BWB.","sessions":["S025"],"session_count":1},{"label":"Cyril Maldron","type":"Suspect","description":"The partner left behind, obsessed with finding the Forge. Likely still in the nearby abandoned cabin on stilts.","sessions":["S019"],"session_count":1},{"label":"Cyril's Ghost","type":"Suspect","description":"An inconvenient ghost who was dead with them. Left ominous notes and handwriting. Why was he there?","sessions":["S020"],"session_count":1},{"label":"Death House","type":"Location","description":"Revealed to be a gargantuan mimic that demands a blood sacrifice to escape.","sessions":["S037"],"session_count":1},{"label":"Defiled Altar of Dumathoin","type":"Evidence","description":"Dwarven runes scratched over with infernal script using gnomish tools. The statue's eyes glow an ominous green.","sessions":["S028"],"session_count":1},{"label":"Demon Summoning","type":"Theory","description":"Lilith's religion check reveals they are trying to summon a Balor, a town-destroying demon of immense power.","sessions":["S010"],"session_count":1},{"label":"Digging Out","type":"Debunked","description":"Using Mold Earth to escape the cave sphere. Debunked because the spell sphere goes down 10 feet into the bedrock.","sessions":["S007"],"session_count":1},{"label":"Drakkar","type":"NPC","description":"Leader of the splintered Coven faction running the Lord's Alliance.","sessions":["S025"],"session_count":1},{"label":"Drakkar's Magical Ambitions","type":"Theory","description":"Drakkar hates magic, but he sent Red Wizards of Thay to Wave Echo Cave. He must be trying to activate the other nodes...","sessions":["S027"],"session_count":1},{"label":"Dream Pastries","type":"Evidence","description":"Locals love them, but Ezrella with +10 Insight knows they are super sketchy.","sessions":["S035"],"session_count":1},{"label":"Drooling on the Cyclops","type":"Theory","description":"If Gertrude the cyclops drools all over herself, or if they use Hezrou drool, they might be able to lubricate her eno...","sessions":["S024"],"session_count":1},{"label":"Eleazar the Scholar","type":"NPC","description":"A scholar who exposed Darindale's true nature and was subsequently booed away.","sessions":["S014"],"session_count":1},{"label":"Erase the Celestial Slime Cube","type":"Theory","description":"If they use the card to say the celestial slime cube never appeared in the cave, Spark could never merge with it and ...","sessions":["S016"],"session_count":1},{"label":"Everlund Cult","type":"Suspect","description":"There is a strange, possibly Thayan cult operating in Everlund. Could they be behind the soul-stealing orbs?","sessions":["S031"],"session_count":1},{"label":"Ezrella","type":"Character","description":"Wizard whose memory was modified by Asnar to believe he saved her. Attempted to persuade the party to use 'The Four Bs'.","sessions":["S033"],"session_count":1},{"label":"Fake Spark","type":"Entity","description":"A simulacrum created to replace the real Spark.","sessions":["S014"],"session_count":1},{"label":"False Trails to Yartar","type":"Theory","description":"The party is intentionally spreading false rumors that Lilith is heading to Yartar to throw off pursuers.","sessions":["S004"],"session_count":1},{"label":"Famine Plot / Heartbeat Rock","type":"Event","description":"","sessions":["S045"],"session_count":1},{"label":"Feywild Passport","type":"Theory","description":"Perhaps Past Corras can simply 'stay' in the Feywild indefinitely and choose not to return, thus saving the timeline.","sessions":["S008"],"session_count":1},{"label":"Fleeing Wildlife","type":"Evidence","description":"Orla communicated with a robin who reported that an 'evil fire' is tainting the land miles away, causing animals to f...","sessions":["S011"],"session_count":1},{"label":"Fleshy","type":"NPC","description":"A transforming grave robber/wizard who recently healed the party.","sessions":["S014"],"session_count":1},{"label":"Fleshy's Erasure","type":"Theory","description":"Ash theorized Fleshy doesn't exist in this storyline. Confirmed by the DM. The timeline shift wiped Fleshy from exist...","sessions":["S017"],"session_count":1},{"label":"Fleshy's Transformation","type":"Evidence","description":"Fleshy (the Red Wizard) was previously a Bovanacell because he made the Fiendish Pact. Since the timeline changed, th...","sessions":["S027"],"session_count":1},{"label":"Floating Mood Orb","type":"Evidence","description":"A floating light with no wick that emanates a profound sense of loneliness and yearning for something lost in the void.","sessions":["S002"],"session_count":1},{"label":"Fort Caliban Prison Break","type":"Debunked","description":"Debunked. There is no Fort Caliban in this timeline. The players were worried about being in jail again, but the jail...","sessions":["S017"],"session_count":1},{"label":"Frozen Spark","type":"Evidence","description":"Spark was successfully recovered and is frozen in time inside a magical circle.","sessions":["S015"],"session_count":1},{"label":"Gertrude","type":"NPC","description":"Cyclops ally","sessions":["S023"],"session_count":1},{"label":"Gilded Quill Zombies","type":"Evidence","description":"The zombies rising from the bones were all wearing Gilded Quill memorabilia and tokens, indicating a connection to th...","sessions":["S006"],"session_count":1},{"label":"Gloaming Court (Fey)","type":"Faction","description":"Invaded the Sword Coast, currently held at bay by the Obsidian Dome.","sessions":["S043"],"session_count":1},{"label":"Glowing Blue Eyes","type":"Evidence","description":"Multiple pairs of soft glowing blue eyes watching the party from the blizzard as they set up their Leomund's Tiny Hut.","sessions":["S018"],"session_count":1},{"label":"Grimsnick's Cart Explosion","type":"Evidence","description":"Ash cast shatter on Grimsnick's cart, triggering a massive payload that required a 1200+ ft safety distance.","sessions":["S012"],"session_count":1},{"label":"Hezrou Demon","type":"Suspect","description":"It has Orla in its mouth and sending stones, waiting for the rest of the party to bring it snacks before it leaves.","sessions":["S024"],"session_count":1},{"label":"Illusion","type":"Debunked","description":"Initially thought the light Meght be a simple illusion or trap, but prestidigitation failed to snuff it out.","sessions":["S002"],"session_count":1},{"label":"Immediate Universe Implosion","type":"Debunked","description":"When Corras and Past Corras finally saw each other, the universe did NOT implode. They merely had to roll saving thro...","sessions":["S008"],"session_count":1},{"label":"Invisible Acid Jelly","type":"Evidence","description":"Ash jumped into a pit and was eaten waist-down by a glass-like goop.","sessions":["S003"],"session_count":1},{"label":"Invisible Barrier","type":"Evidence","description":"The archmage cast a powerful, impenetrable barrier that even blocked physical movement and extended into the ethereal...","sessions":["S006"],"session_count":1},{"label":"It's all a trap!","type":"Theory","description":"The crying baby, the locked kids, and the dead guy are all distractions to keep them from the basement.","sessions":["S035"],"session_count":1},{"label":"Just a Dock Worker","type":"Debunked","description":"Corras claims he is targeted just for his union sweepstakes. This is obviously false.","sessions":["S034"],"session_count":1},{"label":"Kelemvor's Involvement","type":"Theory","description":"Kelemvor sent four revenants to help seal the rift, suggesting this threatens the natural order of death and time.","sessions":["S015"],"session_count":1},{"label":"Lady of Dread Omens","type":"Entity","description":"Author of the creepy book that cursed the party (no reflections, no aging).","sessions":["S014"],"session_count":1},{"label":"Lieutenant Vane (The Butcher)","type":"NPC","description":"","sessions":["S045"],"session_count":1},{"label":"Lilith's Scam Ascension","type":"Theory","description":"Lilith is no longer just a scammer; she is a cult leader searching for the Fountain of Youth. Is this a side effect o...","sessions":["S017"],"session_count":1},{"label":"Lord Isteval","type":"NPC","description":"","sessions":["S045"],"session_count":1},{"label":"Lord Neverember","type":"NPC","description":"","sessions":["S045"],"session_count":1},{"label":"Lord Neverember & Paladins","type":"NPC","description":"Killed by the party after committing treason against Corras.","sessions":["S043"],"session_count":1},{"label":"Lord Neverember's Intent","type":"Suspect","description":"Did Neverember bring the object to fight the Gloaming Court, or was he intentionally causing the blight?","sessions":["S044"],"session_count":1},{"label":"Lord's Alliance","type":"Faction","description":"Taken over outright by Drakkar and the splinter coven.","sessions":["S025"],"session_count":1},{"label":"Ludmilla's True Form","type":"Evidence","description":"When forced to look into the mirror, Ludmilla saw her rotting essence and shattered into a million pieces, dying inst...","sessions":["S042"],"session_count":1},{"label":"Lumin Crypt Trap","type":"Evidence","description":"The Gilded Quill dig site in Lumin collapsed intentionally, trapping the party with skittering bone monsters.","sessions":["S004"],"session_count":1},{"label":"Madam Eva's Artifact","type":"Evidence","description":"Corras overheard that Madam Eva holds the Holy Symbol of Ravenkind in her hut, which protects against vampires and St...","sessions":["S039"],"session_count":1},{"label":"Madam Zilara","type":"Suspect","description":"A supposed fortune teller outside the castle who claims to know the future. Lilith believes she is a 95% fraud but is...","sessions":["S008"],"session_count":1},{"label":"Malchor's Prison","type":"Theory","description":"The coin is a prison for an ancient entity. When nearly banished, Malchor retreated back inside to hide from Ash's 'P...","sessions":["S029"],"session_count":1},{"label":"Malchor, Bringer of Sorrow","type":"Theory","description":"A fiendish parchment found in the ash curses whoever touches it to write and speak of 'Malchor'. Is Malchor the one w...","sessions":["S028"],"session_count":1},{"label":"Mindless Minion Kingdom","type":"Theory","description":"Corras and SavannahBelle fear they will return from the Feywild after 1,000 years to find the Matron has turned Castl...","sessions":["S046"],"session_count":1},{"label":"Missing Bodies","type":"Suspect","description":"Six dwarven bedrolls covered in blood stains and claw marks, but absolutely no corpses. Did the 'dogs' eat them? Did ...","sessions":["S028"],"session_count":1},{"label":"Mold Earth Reshaping","type":"Debunked","description":"The party tried to use Mold Earth and Stone Shape to widen the doorway for Gertrude, but the magical wards of Web's E...","sessions":["S024"],"session_count":1},{"label":"Mordenkainen's Madness","type":"Evidence","description":"Strahd claimed Mordenkainen tried to lead an uprising a year ago, failed miserably, and went mad, now wandering Barov...","sessions":["S038"],"session_count":1},{"label":"Morty the Demon","type":"Suspect","description":"A Glabrezu in the Dungeons of Berdusk. He teleported the party away and knew about Ash's dark past and their need for...","sessions":["S013"],"session_count":1},{"label":"Mother Volna","type":"Suspect","description":"Accused of spreading propaganda and disinformation against Lilith.","sessions":["S004"],"session_count":1},{"label":"Nalfeshnee","type":"Entity","description":"Demon that crashed into a wall","sessions":["S023"],"session_count":1},{"label":"Netherese Shadowvar Relic","type":"Evidence","description":"Corras possesses a pocket-sized Shadowvar artifact, described by Fleshy as a corrupted battery capable of floating or...","sessions":["S012"],"session_count":1},{"label":"Never go to Triboar?","type":"Debunked","description":"If they undo the event of drawing the Fates card, they lose all progress since level 6.","sessions":["S016"],"session_count":1},{"label":"Padlocked Orphan Door","type":"Evidence","description":"A locked door with children laughing behind it. The party deliberately ignored it.","sessions":["S035"],"session_count":1},{"label":"Peaceful Druid Contradiction","type":"Theory","description":"Orla identified the symbol as belonging to a peaceful druid circle. Why would peaceful druids orchestrate a bloody wo...","sessions":["S039"],"session_count":1},{"label":"Popovsky","type":"Suspect","description":"The hag who initially claimed Shrum and forced him into servitude before the brides got involved.","sessions":["S042"],"session_count":1},{"label":"Powerful Dark Being","type":"Entity","description":"","sessions":["S021"],"session_count":1},{"label":"Prince Darindale","type":"NPC","description":"A cursed Quaggoth who claims to be a Sylvan prince from Nelrind and Vane.","sessions":["S014"],"session_count":1},{"label":"Psychological Curse","type":"Theory","description":"The party originally believed Strahd's 'curse' was purely psychological or metaphorical.","sessions":["S040"],"session_count":1},{"label":"Queen of Air and Darkness","type":"NPC","description":"Feywild queen actively hostile to Ash and the party.","sessions":["S025"],"session_count":1},{"label":"Queen of the Gloaming Court","type":"Suspect","description":"An intelligent, gleaming black crystal entity who kicked out the princess.","sessions":["S005"],"session_count":1},{"label":"Queen of the Gloaming Court's Hair","type":"Evidence","description":"The Matron demands this specific item as payment for upholding the protective dome while the party is in the Feywild.","sessions":["S046"],"session_count":1},{"label":"Radiant Purification","type":"Theory","description":"The radiant damage from Ezrella's rapier wasn't meant to kill, but to 'purify' the unholy blood inside SavannahBelle.","sessions":["S041"],"session_count":1},{"label":"Radoth's Vision","type":"Evidence","description":"Archdruid Radoth is physically filtering the corruption of the land and showed Orla a vision of Lord Neverember movin...","sessions":["S044"],"session_count":1},{"label":"Ray Doth","type":"NPC","description":"Druid of the Emerald Enclave warning about the poison.","sessions":["S043"],"session_count":1},{"label":"Remove Curse","type":"Debunked","description":"Players attempted to use Remove Curse, but realized it's useless against the Curse of Strahd.","sessions":["S040"],"session_count":1},{"label":"Reversing the Gate","type":"Theory","description":"The gate is already open and expanding. The party could step on the platforms to reverse the flow of energy and shrin...","sessions":["S010"],"session_count":1},{"label":"Rift Stalker","type":"Entity","description":"A chained, blind creature starved of life essence, used as a training dummy to extract shadow essence.","sessions":["S030"],"session_count":1},{"label":"Rod of Seven Parts","type":"Item","description":"Legendary artifact sought by multiple factions to rewrite reality's laws.","sessions":["S037"],"session_count":1},{"label":"Sarusanda","type":"NPC","description":"Inquisitor of the Sword, assisting the party against the Cult of Osibis.","sessions":["S037"],"session_count":1},{"label":"SavannahBelle's 'Mistake'","type":"Suspect","description":"Did SavannahBelle cast Wall of Fire on herself on purpose to destroy evidence?!","sessions":["S022"],"session_count":1},{"label":"Save the Beholder?","type":"Debunked","description":"Undoing the Beholder's existence wouldn't solve the ooze problem, as they were separate issues.","sessions":["S016"],"session_count":1},{"label":"Scholar Alizar","type":"Suspect","description":"Triggered the magical ritual in the bathroom. Currently missing, though a distinct smell remains.","sessions":["S015"],"session_count":1},{"label":"Shadow Essence","type":"Magic","description":"Resource drained from otherworldly creatures to fuel the new abilities.","sessions":["S030"],"session_count":1},{"label":"Shrine of Lolth","type":"Location","description":"Underground hideout","sessions":["S023"],"session_count":1},{"label":"Sister Elowen's Telepathy","type":"Suspect","description":"Sister Elowen randomly cast Sending during the fight to ask about cookie allergies. Is she watching them? Is she conn...","sessions":["S006"],"session_count":1},{"label":"Snare can lift Ash out","type":"Debunked","description":"The snare would likely be dissolved by the acid before pulling her out.","sessions":["S003"],"session_count":1},{"label":"Soulforge (Forge of Spells)","type":"Location","description":"A node of immense power sought by Drakkar and the Lord's Alliance.","sessions":["S025"],"session_count":1},{"label":"Spark","type":"Entity","description":"Ash's familiar, currently with Past Ash in the castle.","sessions":["S014"],"session_count":1},{"label":"Spark's Eyelash","type":"Evidence","description":"Needed for the 12-hour Simulacrum ritual to save Spark from his doom in the cave.","sessions":["S007"],"session_count":1},{"label":"Staff of Kazon","type":"Item","description":"Powerful staff given to the party by Strahd as a show of good faith.","sessions":["S037"],"session_count":1},{"label":"Star Bombs and Holy Water","type":"Debunked","description":"A cryptic message ('drink holy pee star') led Billabong to believe they needed to pee on star bombs. Debunked, but pe...","sessions":["S020"],"session_count":1},{"label":"Strahd is a 'chill guy'","type":"Theory","description":"The party believes Strahd is misunderstood and just wants a fair deal. He didn't act like a homicidal maniac and was ...","sessions":["S038"],"session_count":1},{"label":"Strahd wants to leave his realm","type":"Theory","description":"The party thinks that by completing the Rod of Vecna for Strahd, he can use it to escape his curse and leave Barovia ...","sessions":["S038"],"session_count":1},{"label":"Tattoos of Osibus","type":"Evidence","description":"The cultists tap their tattoos to regenerate and gain boons of undeath when killed. It stops their health regeneratio...","sessions":["S036"],"session_count":1},{"label":"Temporal Disturbance","type":"Theory","description":"Scaring children and casting spells raises our 'temporal disturbance' score, risking future consequences.","sessions":["S007"],"session_count":1},{"label":"The 'FreIreena' Bowl Cut","type":"Theory","description":"The party convinced Ireena that a terrible bowl cut was the height of fashion, and now believe she proliferated it to...","sessions":["S038"],"session_count":1},{"label":"The Archfey Potion Theory","type":"Theory","description":"Ash believes the Matron will use the Archfey's hair to brew an insanely powerful potion or weapon to take over the ma...","sessions":["S046"],"session_count":1},{"label":"The Archmage Cave","type":"Evidence","description":"The timeline reset to the point around the archmage burial site fight. The cave still exists but is now mostly cleare...","sessions":["S017"],"session_count":1},{"label":"The BWB","type":"Character","description":"","sessions":["S045"],"session_count":1},{"label":"The Banished Wraith","type":"Suspect","description":"A Wraith captain commanded revenants outside the temple. Were the dwarves hiding from the Wraith?","sessions":["S028"],"session_count":1},{"label":"The Banishment Glyph","type":"Evidence","description":"A hidden glyph of warding specifically designed to trigger upon spellcasting and banish the caster was placed in the ...","sessions":["S006"],"session_count":1},{"label":"The Banishment Spell","type":"Evidence","description":"Ash cast Banishment on Past Corras to send him to the Feywild to prevent them from seeing each other. She had exactly...","sessions":["S008"],"session_count":1},{"label":"The Barrels","type":"Debunked","description":"The party thought about moving the scorch-marked barrels to blow up the cave entrance, but Ash discovered they are to...","sessions":["S010"],"session_count":1},{"label":"The Base","type":"Location","description":"A collaborative compound with specialized rooms and holding cells.","sessions":["S001"],"session_count":1},{"label":"The Binding Brand","type":"Evidence","description":"The brand on the goat tethers its life force to the town tree. It has a druidic origin.","sessions":["S039"],"session_count":1},{"label":"The Black Crystal","type":"Evidence","description":"Corras found a crystal with 'a weird energy' and a consciousness trapped inside.","sessions":["S005"],"session_count":1},{"label":"The Black Rider","type":"Evidence","description":"A silhouette of a stiff, dark rider was seen on the back of the white dragon as it flew toward the mountain peak.","sessions":["S018"],"session_count":1},{"label":"The Bloody Sack","type":"Evidence","description":"A sack filled with animal intestines and fat used to attract wolves to the square.","sessions":["S039"],"session_count":1},{"label":"The Book of Time","type":"Theory","description":"Reading the book at the Gilded Quill might unravel time and space or trap them as babies like Lilith.","sessions":["S013"],"session_count":1},{"label":"The Brain in the Jar","type":"Evidence","description":"Orla woke up in a cell next to a pulsing violet brain in a jar. Whose brain is it? Is it controlling the guards?","sessions":["S034"],"session_count":1},{"label":"The Brides' Vanity","type":"Theory","description":"The brides banished Shrum not just out of cruelty, but because his mirror reflection knew the secret to destroying th...","sessions":["S042"],"session_count":1},{"label":"The Broken Hood","type":"Evidence","description":"Dahlia's Hood of the Dragon Turtle hasn't worked for months.","sessions":["S026"],"session_count":1},{"label":"The Butcher","type":"Suspect","description":"The figure seen in the vision accepting the crates. Later stepped into a Zone of Truth and denied knowing about a sto...","sessions":["S044"],"session_count":1},{"label":"The Butcher's Confession","type":"Debunked","description":"The Butcher successfully denied under Lord Isteval's Zone of Truth that he had a lead box with a stone in it. Did he ...","sessions":["S044"],"session_count":1},{"label":"The Butterfly Effect","type":"Theory","description":"If we prevent ourselves from going back in time, we'll cease to exist.","sessions":["S007"],"session_count":1},{"label":"The Cave Ritual","type":"Evidence","description":"Cultists and an Eternal Flame Priest were guarding the entrance to a cave where a massive ritual is underway with fir...","sessions":["S010"],"session_count":1},{"label":"The Cloud Kill","type":"Evidence","description":"The Drow Mage cast Cloud Kill right before dying. A dead man's contingency?","sessions":["S022"],"session_count":1},{"label":"The Coven","type":"Suspect","description":"Still exists, still hiding, but never built Fort Caliban in this timeline. Why did the timeline change erase the fort?","sessions":["S017"],"session_count":1},{"label":"The Crown of Control","type":"Evidence","description":"Ezrella put on a crown and began moving in a slow, 'drugged-out' state before attacking.","sessions":["S041"],"session_count":1},{"label":"The Cursed Dagger & Altar","type":"Evidence","description":"An ancient weapon sharing the same non-Dwarvish design as the hidden altar, inscribed with a warning about using the ...","sessions":["S029"],"session_count":1},{"label":"The DM","type":"NPC","description":"","sessions":["S021"],"session_count":1},{"label":"The Deal for Freedom","type":"Evidence","description":"Strahd offered to let them leave Barovia if they find the other piece of the Rod of Vecna and give it to him, along w...","sessions":["S038"],"session_count":1},{"label":"The Deal with the Glabrezu","type":"Evidence","description":"In the original timeline, they made a desperate deal with a demon. Undoing the timeline also wipes out their memories...","sessions":["S016"],"session_count":1},{"label":"The Death House is Sentient","type":"Evidence","description":"The house reconstructs itself to lure players in and eat them like a mimic.","sessions":["S035"],"session_count":1},{"label":"The Dwarvish Blood Trail","type":"Evidence","description":"After the cabin collapsed, a trapdoor led to a familiar dwarven cave system with a fresh trail of blood.","sessions":["S020"],"session_count":1},{"label":"The Dying Lands","type":"Evidence","description":"Everything is dying and cursed in the material plane.","sessions":["S005"],"session_count":1},{"label":"The Exiled Princess Portal","type":"Theory","description":"The princess had 'main character syndrome', was exiled to the material plane, and is now somehow a portal.","sessions":["S005"],"session_count":1},{"label":"The Fake Eyelash Potion","type":"Theory","description":"We can ask for an eyelash under the guise of an alchemical experiment.","sessions":["S007"],"session_count":1},{"label":"The Fake Rickety Bridge","type":"Evidence","description":"A bridge in the Somber Hills was disguised with rotting wood and frayed ropes, designed to draw attention away from t...","sessions":["S011"],"session_count":1},{"label":"The Famine Cause","type":"Theory","description":"The BWB theorizes this object is the source of the famine affecting the refugees.","sessions":["S044"],"session_count":1},{"label":"The Fates Card","type":"Evidence","description":"Corras has the Fates card from the Deck of Many Things. It can undo one event or effect, but not force a decision.","sessions":["S016"],"session_count":1},{"label":"The Fleshy Red Wizard","type":"Evidence","description":"A Red Wizard is involved in the capture. Corras claims the Red Wizards killed his family in the past.","sessions":["S034"],"session_count":1},{"label":"The Forge of Spells","type":"Evidence","description":"The ultimate goal of Cyril and Zibblebottom's expedition. The party senses magical traps and auras nearby.","sessions":["S019"],"session_count":1},{"label":"The Future Service","type":"Theory","description":"Morty is going to cash in his favor at the worst possible moment to claim their souls or ruin their heist to replace ...","sessions":["S013"],"session_count":1},{"label":"The Ghost in the Client","type":"Suspect","description":"Billabong's voice was distorted and haunted by a 'ghost in the client', suggesting extraplanar interference.","sessions":["S026"],"session_count":1},{"label":"The Giant Spectator","type":"Suspect","description":"Whatever was trapped in the runes is no longer contained, but Meght be related to the abyss.","sessions":["S002"],"session_count":1},{"label":"The Goat Kid","type":"Evidence","description":"Found unharmed inside the sack, but marked with a strange brand.","sessions":["S039"],"session_count":1},{"label":"The Golden Chalice","type":"Evidence","description":"SavannahBelle drank Strahd's unholy blood from a golden chalice and was paralyzed by Sanguine Mist.","sessions":["S041"],"session_count":1},{"label":"The Goopy Tree Monster","type":"Evidence","description":"A slimy, snot-tree looking creature that speaks with multiple harmonious voices is leading the army down the hallway....","sessions":["S024"],"session_count":1},{"label":"The Harbinger","type":"Entity","description":"Powerful being who whisked the party to the soul forge.","sessions":["S030"],"session_count":1},{"label":"The Heartbeat Stone","type":"Evidence","description":"Orla witnessed the object and claims it looked like a rock but had a heartbeat.","sessions":["S044"],"session_count":1},{"label":"The Illusion-Cloaked Pit Trap","type":"Evidence","description":"A 20-foot deep pit trap dug down to the stone, hidden by an illusion, placed precisely where someone avoiding the 'ri...","sessions":["S011"],"session_count":1},{"label":"The Kelemvor Cult","type":"Theory","description":"Are they truly devout disciples or assassins waiting for a chance to strike?","sessions":["S004"],"session_count":1},{"label":"The Laughing Orb","type":"Evidence","description":"SavannahBelle saw a black obsidian orb intercept Ash's soul, accompanied by a hideous laugh.","sessions":["S031"],"session_count":1},{"label":"The Lead Box & Pulsing Stone","type":"Evidence","description":"Fleshy retrieved the lead box with the terraforming pulsing stone from the Butcher's warehouse and brought it directl...","sessions":["S046"],"session_count":1},{"label":"The Living House","type":"Evidence","description":"The house itself speaks and offered to trade an artifact if the party left a companion behind of 'eternal consequence'.","sessions":["S036"],"session_count":1},{"label":"The Loot was a Trap","type":"Theory","description":"The cursed items (like the Executioner's Hand) and the crown were planted to divide the party.","sessions":["S041"],"session_count":1},{"label":"The Magic Amulet","type":"Evidence","description":"Allows spell swapping without a long rest. Previously belonged to Lady Eldritch, the prior tenant of Castle Corras.","sessions":["S013"],"session_count":1},{"label":"The Maw","type":"Entity","description":"An impossibly large monstrosity with pincers, acidic bile, and a giant eye.","sessions":["S030"],"session_count":1},{"label":"The Missing Robe","type":"Evidence","description":"Orla's Robe of Useful Items mysteriously vanished from her belongings.","sessions":["S026"],"session_count":1},{"label":"The Mysterious Third","type":"Theory","description":"Zibblebottom suggested that 'three is better than two'. Who is the third person they were trying to recruit or who ab...","sessions":["S019"],"session_count":1},{"label":"The Otyugh (Trash Eater)","type":"Entity","description":"Overfed beast causing a massive sewage backup in the castle.","sessions":["S043"],"session_count":1},{"label":"The Pact of Avarice","type":"Evidence","description":"Billabong completed a ritual in a pocket dimension, sacrificing the ability to aid allies in exchange for the power t...","sessions":["S029"],"session_count":1},{"label":"The Party","type":"Character","description":"Time-traveling adventurers (Corras, Ave, Ash, Billabong, Orla, Lilith) trying to swap a familiar.","sessions":["S014"],"session_count":1},{"label":"The Party (Corras, Dahlia, Ash, Orla, SavannahBelle)","type":"Entity","description":"The rulers of Castle Corras, recently returned from Barovia.","sessions":["S043"],"session_count":1},{"label":"The Plague Was Destroyed","type":"Theory","description":"Ash theorizes that vaporizing the forest with the explosion Meght have accidentally eradicated the local plague.","sessions":["S012"],"session_count":1},{"label":"The Portals are Glitched","type":"Theory","description":"Moving around the castle breaks the portals and floods Billabong's boat.","sessions":["S003"],"session_count":1},{"label":"The Pregnant Women Sacrifice","type":"Debunked","description":"The party thought sacrificing three pregnant women was required to close the Feywild portal. Argentus actually meant ...","sessions":["S027"],"session_count":1},{"label":"The Raven Woman","type":"Evidence","description":"A raven that turned into a human woman. Claims her people seek Lilith as a prophet.","sessions":["S004"],"session_count":1},{"label":"The Remorhaz","type":"Evidence","description":"An ice monstrosity that burst from the rift. Why an ice monster from a timeline rift in a toilet?","sessions":["S015"],"session_count":1},{"label":"The Restored Mirror","type":"Evidence","description":"Shrum's mirror shards combined, unlocking repressed memories of his past as a court bard trapped by Popovsky and the ...","sessions":["S042"],"session_count":1},{"label":"The Rift","type":"Evidence","description":"A swirling yellow and black vortex where infinite timelines vie for dominance. Emitting a low resonant cacophony of w...","sessions":["S015"],"session_count":1},{"label":"The Ring of Regeneration","type":"Evidence","description":"A ring found in the furnace by a gnome minion. When attached to the orb and attuned, it summoned Lathander.","sessions":["S020"],"session_count":1},{"label":"The Rod of Seven Parts Piece","type":"Evidence","description":"Ash used a spell to locate it. It is exactly 225 feet north of her current position in the rope trick, directly past ...","sessions":["S024"],"session_count":1},{"label":"The Second Strahd","type":"Evidence","description":"A second Strahd stepped out of the coffin where SavannahBelle misty-stepped.","sessions":["S041"],"session_count":1},{"label":"The Sentient Coin","type":"Evidence","description":"A foreign Dwarvish coin containing the entity 'Malchor' ('Bound Sorrow Bringer'), which briefly possessed Ash and tri...","sessions":["S029"],"session_count":1},{"label":"The Six Statues","type":"Item","description":"Ancient statues granting shadow powers: Soulbinder, Warden, Conductor, Shadow Stalker, Bio-Alchemist, and Subjugator.","sessions":["S030"],"session_count":1},{"label":"The Slowing Void","type":"Evidence","description":"Objects dropped into the pit slow down like they are caught in a web or fog, and magical connections (like familiars)...","sessions":["S002"],"session_count":1},{"label":"The Soul Forge","type":"Location","description":"An ancient, strange place containing lava, chains, and mysterious statues.","sessions":["S030"],"session_count":1},{"label":"The Spectator","type":"Suspect","description":"The hungry eye-monster guarding the Soul Forge beneath Triboar. The party plans to feed it.","sessions":["S018"],"session_count":1},{"label":"The Stilted Cabin","type":"Evidence","description":"A creepy black cabin perched on stilts overhanging a massive gorge, radiating familiar arcane energies.","sessions":["S018"],"session_count":1},{"label":"The Summer Star Gizmo","type":"Evidence","description":"A strange magical globe found in the center of a charred room. Emanated transmutation magic and caused the whole part...","sessions":["S020"],"session_count":1},{"label":"The Surrendered Orogs","type":"Evidence","description":"The orogs confirm the cult is summoning the 'Balrog' or Balor from the Nine Hells.","sessions":["S010"],"session_count":1},{"label":"The Umber Hulk's Gaze","type":"Evidence","description":"It was causing Aberrant Confusion. Was it mind-controlled by the Drow, or a willing partner?","sessions":["S022"],"session_count":1},{"label":"The White Dragon","type":"Evidence","description":"A gargantuan white dragon living beneath the frozen lake, eating massive trout and summoned axe beaks.","sessions":["S018"],"session_count":1},{"label":"The Wraith Lord's Warning","type":"Evidence","description":"The Wraith Lord revealed that to activate the 'Fiends node', one must willingly offer up their ability to provide aid...","sessions":["S027"],"session_count":1},{"label":"Triboar","type":"Suspect","description":"Triboar hates the entire party, but specifically has beef with Corras from a 'different timeline'.","sessions":["S034"],"session_count":1},{"label":"Twisted Skull Emblem","type":"Evidence","description":"Found on a false panel of seized Zabriel and Sons crate.","sessions":["S032"],"session_count":1},{"label":"Underdark Syndicate","type":"Theory","description":"The Drow Mage was an assassin sent by a larger Underdark syndicate to stop our investigation.","sessions":["S022"],"session_count":1},{"label":"Underground Poison","type":"Event","description":"Black corruption spreading beneath the refugee camps, killing crops.","sessions":["S043"],"session_count":1},{"label":"Undo Spark's Death?","type":"Theory","description":"If they undo the death directly, he might just die another way or immediately jump back into the hole, causing a time...","sessions":["S016"],"session_count":1},{"label":"Universe Implosion Theory","type":"Theory","description":"If Corras and Past Corras meet and see each other, the universe will literally implode and cause a TPK.","sessions":["S008"],"session_count":1},{"label":"Valerius (Master of Whispers)","type":"NPC","description":"","sessions":["S045"],"session_count":1},{"label":"Valtor's 'Security'","type":"Suspect","description":"Valtor claimed he secured the teleportation circle, yet the party immediately fell into a pit of Revenants and a Wrai...","sessions":["S027"],"session_count":1},{"label":"Vampire in Lilith's Basement","type":"Evidence","description":"A vampire was captured and stored next to baking flour and wine.","sessions":["S003"],"session_count":1},{"label":"Wall is Tied to Sarcophagus Candles","type":"Debunked","description":"Corras tried to blow out the magical candles to drop the wall, but they wouldn't go out, and it didn't seem to affect...","sessions":["S006"],"session_count":1},{"label":"Warehouse","type":"Location","description":"A crate-filled building serving as the battleground against Asnar.","sessions":["S033"],"session_count":1},{"label":"We can just fireball the house","type":"Debunked","description":"If they fireball the house from the inside, they will die.","sessions":["S035"],"session_count":1},{"label":"Wizard Grudge","type":"Theory","description":"Strahd hates wizards, possibly because they are the ones who cursed him.","sessions":["S040"],"session_count":1},{"label":"Wizards are Everywhere","type":"Theory","description":"SavannahBelle drank from a goblet of blood offered by an illusion and developed extreme paranoia, believing wizards a...","sessions":["S036"],"session_count":1},{"label":"Zabriel and Sons","type":"Evidence","description":"Fake company name used for enchanted shipments.","sessions":["S032"],"session_count":1},{"label":"Zibblebottom's Letter","type":"Evidence","description":"A letter found in a Yeti nest complaining about the cold, a doomed project to find the forge, and leaving Cyril.","sessions":["S019"],"session_count":1}],"edges":[{"source":"Archmage is a Robot?","target":"Central Mystery","weight":1,"sessions":["S006"],"rationales":["S006: The Archmage Meght not be human, or Meght be under some sort of mind control or illusion."]},{"source":"Ash","target":"The Base","weight":1,"sessions":["S001"],"rationales":["S001: Explores"]},{"source":"Ash","target":"Shrine of Lolth","weight":1,"sessions":["S023"],"rationales":["S023: Deceived cultist"]},{"source":"Ash","target":"Alton Whisperwind","weight":1,"sessions":["S025"],"rationales":["S025: Partners with in intelligence"]},{"source":"Ash","target":"Queen of Air and Darkness","weight":1,"sessions":["S025"],"rationales":["S025: Targeted by"]},{"source":"Ash's Murder","target":"The Laughing Orb","weight":1,"sessions":["S031"],"rationales":["S031: Ash's death triggered the orb's appearance to steal her soul."]},{"source":"Asnar the Crimson","target":"Red Wizards of Thay","weight":1,"sessions":["S032"],"rationales":["S032: Asnar appears to be an agent of the Red Wizards of Thay."]},{"source":"Asnar the Crimson","target":"Ezrella","weight":1,"sessions":["S033"],"rationales":["S033: Modified memory"]},{"source":"Asnar the Crimson","target":"SavannahBelle","weight":1,"sessions":["S033"],"rationales":["S033: Attacked with sand vortex"]},{"source":"Baba Lysaga's Hut","target":"Central Mystery","weight":1,"sessions":["S042"],"rationales":["S042: Baba Lysaga's arrival proves there are older, darker forces managing Strahd and his court's power dynamics."]},{"source":"Baldur's Gate Exodus","target":"Central Mystery","weight":1,"sessions":["S017"],"rationales":["S017: A massive geopolitical shift caused by the timeline altering events in Baldur's Gate."]},{"source":"Barricaded Door","target":"The Banished Wraith","weight":1,"sessions":["S028"],"rationales":["S028: The barricade was built to stop the Wraith and its revenants from entering."]},{"source":"Billabong","target":"Shrine of Lolth","weight":1,"sessions":["S023"],"rationales":["S023: Killed cultists"]},{"source":"Billabong","target":"Asnar the Crimson","weight":1,"sessions":["S033"],"rationales":["S033: Destroyed minions"]},{"source":"Castle Corras","target":"Past Selves","weight":1,"sessions":["S014"],"rationales":["S014: occupied by"]},{"source":"Containment Runes","target":"The Giant Spectator","weight":1,"sessions":["S002"],"rationales":["S002: The runes were specifically designed to contain the Giant Spectator."]},{"source":"Corras","target":"The Base","weight":1,"sessions":["S001"],"rationales":["S001: Plans construction of"]},{"source":"Corras","target":"Gertrude","weight":1,"sessions":["S023"],"rationales":["S023: Freed"]},{"source":"Corras","target":"BWB Federation","weight":1,"sessions":["S025"],"rationales":["S025: Rules"]},{"source":"Corras","target":"Asnar the Crimson","weight":1,"sessions":["S033"],"rationales":["S033: Negotiated / Fought"]},{"source":"Corras is the Chosen One","target":"Central Mystery","weight":1,"sessions":["S034"],"rationales":["S034: Explains why he wasn't immediately killed like the screaming prisoners."]},{"source":"Crimson Abbot","target":"Corras","weight":1,"sessions":["S037"],"rationales":["S037: Attacks"]},{"source":"Cult of Eternal Flame","target":"Central Mystery","weight":1,"sessions":["S011"],"rationales":["S011: The Cult of Eternal Flame's fiery activities are likely what enraged the Earth Elemental about the defilement of the sacred earth nodes."]},{"source":"Cult of Osibis","target":"Rod of Seven Parts","weight":1,"sessions":["S037"],"rationales":["S037: Seeks"]},{"source":"Cult of the Dark Embrace","target":"BWB Federation","weight":1,"sessions":["S025"],"rationales":["S025: Infiltrating"]},{"source":"Cyril Maldron","target":"The Forge of Spells","weight":1,"sessions":["S019"],"rationales":["S019: Cyril is the one obsessed with finding the Forge of Spells."]},{"source":"Cyril's Ghost","target":"Central Mystery","weight":1,"sessions":["S020"],"rationales":["S020: Cyril was investigating or using the orb before his death."]},{"source":"Dahlia","target":"Corras","weight":1,"sessions":["S001"],"rationales":["S001: Discusses strategy with"]},{"source":"Dahlia","target":"BWB Federation","weight":1,"sessions":["S025"],"rationales":["S025: Provides 'interrogation' services for"]},{"source":"Death House","target":"Orla","weight":1,"sessions":["S037"],"rationales":["S037: Traps"]},{"source":"Defiled Altar of Dumathoin","target":"Malchor, Bringer of Sorrow","weight":1,"sessions":["S028"],"rationales":["S028: The infernal defacement on the altar likely came from the followers of Malchor."]},{"source":"Demon Summoning","target":"Central Mystery","weight":1,"sessions":["S010"],"rationales":["S010: The Balor is the specific creature they are trying to pull through the gate."]},{"source":"Digging Out","target":"Central Mystery","weight":1,"sessions":["S007"],"rationales":["S007: The failure of this plan led to the necessity of time travel in the first place."]},{"source":"Drakkar","target":"Lord's Alliance","weight":1,"sessions":["S025"],"rationales":["S025: Controls outright"]},{"source":"Drakkar","target":"Soulforge (Forge of Spells)","weight":1,"sessions":["S025"],"rationales":["S025: Seeking mages to control"]},{"source":"Drakkar","target":"Red Wizards of Thay","weight":1,"sessions":["S025"],"rationales":["S025: Allied with for arcane support"]},{"source":"Drakkar's Magical Ambitions","target":"Central Mystery","weight":1,"sessions":["S027"],"rationales":["S027: The Red Wizards are the only ones capable of understanding and surviving the node rituals."]},{"source":"Dream Pastries","target":"Mordenkainen","weight":1,"sessions":["S035"],"rationales":["S035: Everything in Barovia is trying to kill or trick them."]},{"source":"Drooling on the Cyclops","target":"Central Mystery","weight":1,"sessions":["S024"],"rationales":["S024: If they can't get Gertrude unstuck, they can't flee from the army coming their way."]},{"source":"Eleazar the Scholar","target":"Prince Darindale","weight":1,"sessions":["S014"],"rationales":["S014: insulted and triggered rage"]},{"source":"Erase the Celestial Slime Cube","target":"Undo Spark's Death?","weight":1,"sessions":["S016"],"rationales":["S016: The safest, most precise retcon: erasing the object that killed Spark, preserving the timeline's main events while saving his life."]},{"source":"Ezrella","target":"Dahlia","weight":1,"sessions":["S033"],"rationales":["S033: Tried to persuade (The Four Bs)"]},{"source":"False Trails to Yartar","target":"Central Mystery","weight":1,"sessions":["S004"],"rationales":["S004: Sending Xalvador to create false trails is the party's way to misdirect the very cultists tracking Lilith."]},{"source":"Feywild Passport","target":"The Banishment Spell","weight":1,"sessions":["S008"],"rationales":["S008: Players debated if the Banishment spell rules allow the target to just stay away if the minute expires or if they are forced back."]},{"source":"Fleeing Wildlife","target":"Cult of Eternal Flame","weight":1,"sessions":["S011"],"rationales":["S011: The 'evil fire' scaring the birds matches the Cult of Eternal Flame's MO and their goal to summon a Balor."]},{"source":"Fleshy's Erasure","target":"The Archmage Cave","weight":1,"sessions":["S017"],"rationales":["S017: Fleshy's absence is a direct result of the changes in the cave's history."]},{"source":"Fleshy's Transformation","target":"The Wraith Lord's Warning","weight":1,"sessions":["S027"],"rationales":["S027: Fleshy is living proof of the Wraith Lord's warning regarding the Fiendish Pact."]},{"source":"Floating Mood Orb","target":"The Slowing Void","weight":1,"sessions":["S002"],"rationales":["S002: The light is sad because it lost something to the void."]},{"source":"Gilded Quill Zombies","target":"Central Mystery","weight":1,"sessions":["S006"],"rationales":["S006: The zombies are tied to the Gilded Quill, suggesting the Archmage is as well."]},{"source":"Gloaming Court (Fey)","target":"The Party (Corras, Dahlia, Ash, Orla, SavannahBelle)","weight":1,"sessions":["S043"],"rationales":["S043: Hunting Ash and besieging the castle"]},{"source":"Glowing Blue Eyes","target":"The Stilted Cabin","weight":1,"sessions":["S018"],"rationales":["S018: The wolves/creatures with blue eyes are guarding or watching the approach to the arcane cabin."]},{"source":"Grimsnick's Cart Explosion","target":"The Plague Was Destroyed","weight":1,"sessions":["S012"],"rationales":["S012: If the forest is completely eradicated by the explosion, the plague can't spread from there."]},{"source":"Grimsnick's Cart Explosion","target":"Central Mystery","weight":1,"sessions":["S012"],"rationales":["S012: The blast was so huge it Meght draw the attention of the Master of Whispers or be mistaken for the relic's power."]},{"source":"Immediate Universe Implosion","target":"Universe Implosion Theory","weight":1,"sessions":["S008"],"rationales":["S008: The DM rolled a 50/50 chance for universe implosion vs fainting, and it landed on fainting. Theory debunked by pure luck."]},{"source":"Invisible Acid Jelly","target":"Snare can lift Ash out","weight":1,"sessions":["S003"],"rationales":["S003: Attempting to solve the acid pit problem with a mundane rope snare."]},{"source":"Invisible Barrier","target":"Central Mystery","weight":1,"sessions":["S006"],"rationales":["S006: The barrier was used by the Archmage to divide the party and protect himself."]},{"source":"Kelemvor's Involvement","target":"The Rift","weight":1,"sessions":["S015"],"rationales":["S015: Revenants are stationed at the four corners of the rift attempting to seal it."]},{"source":"Lady of Dread Omens","target":"The Party","weight":1,"sessions":["S014"],"rationales":["S014: cursed"]},{"source":"Lieutenant Vane (The Butcher)","target":"Famine Plot / Heartbeat Rock","weight":1,"sessions":["S045"],"rationales":["S045: Allegedly connected to"]},{"source":"Lilith's Scam Ascension","target":"Central Mystery","weight":1,"sessions":["S017"],"rationales":["S017: Character motivations warped by the new reality."]},{"source":"Lord Isteval","target":"Courtyard Riot (9,000 strong)","weight":1,"sessions":["S045"],"rationales":["S045: Incited"]},{"source":"Lord Neverember's Intent","target":"Radoth's Vision","weight":1,"sessions":["S044"],"rationales":["S044: Neverember ordered the crates moved, but his true motives remain unknown since the BWB murdered him."]},{"source":"Lord's Alliance","target":"BWB Federation","weight":1,"sessions":["S025"],"rationales":["S025: At war with"]},{"source":"Ludmilla's True Form","target":"The Brides' Vanity","weight":1,"sessions":["S042"],"rationales":["S042: Ludmilla's death proves that the mirror breaks the illusion of their vanity, killing them."]},{"source":"Lumin Crypt Trap","target":"Central Mystery","weight":1,"sessions":["S004"],"rationales":["S004: The Gilded Quill's missing archaeologists and the trap might be connected to the religious fanatics or Niles Bargnot's revenge."]},{"source":"Madam Eva's Artifact","target":"Central Mystery","weight":1,"sessions":["S039"],"rationales":["S039: Unclear, but the artifact Meght be needed to sever the dark magic at the tree."]},{"source":"Malchor, Bringer of Sorrow","target":"Central Mystery","weight":1,"sessions":["S028"],"rationales":["S028: Malchor's curse corrupted the inhabitants, turning the temple into a fiendish slaughterhouse."]},{"source":"Master of Whispers","target":"Corras","weight":1,"sessions":["S001"],"rationales":["S001: Provides intel to"]},{"source":"Mindless Minion Kingdom","target":"Central Mystery","weight":1,"sessions":["S046"],"rationales":["S046: The players suspect she will use her new authority as Regent to enslave the populace."]},{"source":"Missing Bodies","target":"Central Mystery","weight":1,"sessions":["S028"],"rationales":["S028: If there are bloody beds but no bodies, did they escape behind the barricade?"]},{"source":"Mold Earth Reshaping","target":"Drooling on the Cyclops","weight":1,"sessions":["S024"],"rationales":["S024: Because magic failed, physical lubrication (drool) is the only remaining option to free the cyclops."]},{"source":"Mordenkainen","target":"Central Mystery","weight":1,"sessions":["S035"],"rationales":["S035: He's the one who gave them the lead that got them stuck in Barovia."]},{"source":"Mordenkainen","target":"Strahd von Zarovich","weight":1,"sessions":["S037"],"rationales":["S037: Defeated By"]},{"source":"Mordenkainen's Madness","target":"Strahd is a 'chill guy'","weight":1,"sessions":["S038"],"rationales":["S038: Strahd wants the party to kill Mordenkainen, and his apparent honesty about it makes them trust him more."]},{"source":"Morty the Demon","target":"Central Mystery","weight":1,"sessions":["S013"],"rationales":["S013: Morty is the architect of the deal."]},{"source":"Netherese Shadowvar Relic","target":"Master of Whispers","weight":1,"sessions":["S012"],"rationales":["S012: The Master of Whispers wants the relic to harness its destructive or floating city capabilities."]},{"source":"Never go to Triboar?","target":"The Fates Card","weight":1,"sessions":["S016"],"rationales":["S016: Corras feared this use of the Fates card would reset the entire campaign."]},{"source":"Orla","target":"Asnar the Crimson","weight":1,"sessions":["S033"],"rationales":["S033: Confused"]},{"source":"Padlocked Orphan Door","target":"It's all a trap!","weight":1,"sessions":["S035"],"rationales":["S035: Why would kids just be laughing in a locked room in a murder house? It's bait."]},{"source":"Past Selves","target":"The Butterfly Effect","weight":1,"sessions":["S007"],"rationales":["S007: Being caught by our past selves will trigger the Butterfly Effect."]},{"source":"Popovsky","target":"The Restored Mirror","weight":1,"sessions":["S042"],"rationales":["S042: Popovsky was the original orchestrator of Shrum's capture before the brides took him."]},{"source":"Powerful Dark Being","target":"Dahlia","weight":1,"sessions":["S021"],"rationales":["S021: Source of power"]},{"source":"Powerful Dark Being","target":"Ash","weight":1,"sessions":["S021"],"rationales":["S021: Source of power"]},{"source":"Powerful Dark Being","target":"Billabong","weight":1,"sessions":["S021"],"rationales":["S021: Source of power"]},{"source":"Powerful Dark Being","target":"SavannahBelle","weight":1,"sessions":["S021"],"rationales":["S021: Source of power"]},{"source":"Powerful Dark Being","target":"Corras","weight":1,"sessions":["S021"],"rationales":["S021: Source of power"]},{"source":"Psychological Curse","target":"Actual Curse","weight":1,"sessions":["S040"],"rationales":["S040: The psychological theory was debunked by literal evidence."]},{"source":"Queen of the Gloaming Court","target":"The Exiled Princess Portal","weight":1,"sessions":["S005"],"rationales":["S005: The Queen is the one who exiled the princess to the material plane."]},{"source":"Queen of the Gloaming Court's Hair","target":"The Archfey Potion Theory","weight":1,"sessions":["S046"],"rationales":["S046: The hair is the key ingredient needed for whatever dark magic she is plotting."]},{"source":"Radoth's Vision","target":"Central Mystery","weight":1,"sessions":["S044"],"rationales":["S044: The vision directly links Lord Neverember and the Butcher to the hidden object."]},{"source":"Ray Doth","target":"Underground Poison","weight":1,"sessions":["S043"],"rationales":["S043: Investigating and holding back"]},{"source":"Remove Curse","target":"Actual Curse","weight":1,"sessions":["S040"],"rationales":["S040: The failure of standard magic proves the severity of the literal curse."]},{"source":"Reversing the Gate","target":"Central Mystery","weight":1,"sessions":["S010"],"rationales":["S010: Reversing the gate is the only known way to stop the summoning."]},{"source":"Rift Stalker","target":"Shadow Essence","weight":1,"sessions":["S030"],"rationales":["S030: Source of"]},{"source":"Sarusanda","target":"Cult of Osibis","weight":1,"sessions":["S037"],"rationales":["S037: Fights"]},{"source":"SavannahBelle","target":"Nalfeshnee","weight":1,"sessions":["S023"],"rationales":["S023: Burned with Fireballs"]},{"source":"SavannahBelle","target":"BWB Federation","weight":1,"sessions":["S025"],"rationales":["S025: Provides specialized divine prisons for"]},{"source":"SavannahBelle's 'Mistake'","target":"Underdark Syndicate","weight":1,"sessions":["S022"],"rationales":["S022: Friendly fire might not have been friendly..."]},{"source":"Save the Beholder?","target":"Erase the Celestial Slime Cube","weight":1,"sessions":["S016"],"rationales":["S016: Players eliminated irrelevant events to focus on the exact catalyst."]},{"source":"Scholar Alizar","target":"Central Mystery","weight":1,"sessions":["S015"],"rationales":["S015: Alizar is the direct cause of the rift."]},{"source":"Sister Elowen's Telepathy","target":"Central Mystery","weight":1,"sessions":["S006"],"rationales":["S006: The timing of Elowen's messages is highly suspicious."]},{"source":"Spark's Eyelash","target":"Central Mystery","weight":1,"sessions":["S007"],"rationales":["S007: Getting the eyelash is the key to the entire time travel operation."]},{"source":"Strahd is a 'chill guy'","target":"Central Mystery","weight":1,"sessions":["S038"],"rationales":["S038: Their belief in Strahd's sincerity is central to their decision to help him get the Rod."]},{"source":"Strahd von Zarovich","target":"SavannahBelle","weight":1,"sessions":["S037"],"rationales":["S037: Charmed"]},{"source":"Strahd von Zarovich","target":"Rod of Seven Parts","weight":1,"sessions":["S037"],"rationales":["S037: Desires"]},{"source":"Strahd von Zarovich","target":"Staff of Kazon","weight":1,"sessions":["S037"],"rationales":["S037: Gifts"]},{"source":"Strahd wants to leave his realm","target":"The Deal for Freedom","weight":1,"sessions":["S038"],"rationales":["S038: If he gets the pieces, he escapes his curse, which would also fulfill the party's goal of making him leave."]},{"source":"Tattoos of Osibus","target":"Central Mystery","weight":1,"sessions":["S036"],"rationales":["S036: The cultists' weird regenerative tattoo powers are the crux of the combat mystery."]},{"source":"Tattoos of Osibus","target":"The Living House","weight":1,"sessions":["S036"],"rationales":["S036: The cultists and the house are both employing bizarre undeath rituals against the party."]},{"source":"Temporal Disturbance","target":"Central Mystery","weight":1,"sessions":["S007"],"rationales":["S007: Every action we take in the past, including scaring kids, risks altering the future."]},{"source":"The 'FreIreena' Bowl Cut","target":"Strahd is a 'chill guy'","weight":1,"sessions":["S038"],"rationales":["S038: Dahlia asserts the only thing that would make Strahd bad in her eyes is if he allowed a bride with a terrible haircut near him."]},{"source":"The Archfey Potion Theory","target":"Central Mystery","weight":1,"sessions":["S046"],"rationales":["S046: The ultimate goal of her endgame must involve this powerful Fey component."]},{"source":"The Archmage Cave","target":"Central Mystery","weight":1,"sessions":["S017"],"rationales":["S017: The anchor point for the new timeline."]},{"source":"The BWB","target":"Lord Neverember","weight":1,"sessions":["S045"],"rationales":["S045: Executed"]},{"source":"The BWB","target":"Lord Isteval","weight":1,"sessions":["S045"],"rationales":["S045: Attempted to mind control"]},{"source":"The BWB","target":"Courtyard Riot (9,000 strong)","weight":1,"sessions":["S045"],"rationales":["S045: Fought against"]},{"source":"The BWB","target":"Lieutenant Vane (The Butcher)","weight":1,"sessions":["S045"],"rationales":["S045: Accused of causing"]},{"source":"The BWB","target":"Valerius (Master of Whispers)","weight":1,"sessions":["S045"],"rationales":["S045: Interrogated & amputated"]},{"source":"The Banishment Glyph","target":"Invisible Barrier","weight":1,"sessions":["S006"],"rationales":["S006: The glyph and the wall are part of a coordinated magical defense system."]},{"source":"The Banishment Spell","target":"Universe Implosion Theory","weight":1,"sessions":["S008"],"rationales":["S008: Banishment was explicitly used as a desperate measure to prevent the universe implosion from triggering."]},{"source":"The Barrels","target":"Central Mystery","weight":1,"sessions":["S010"],"rationales":["S010: A failed alternative plan to trap the demon in the cave."]},{"source":"The Binding Brand","target":"Peaceful Druid Contradiction","weight":1,"sessions":["S039"],"rationales":["S039: The brand's origin contradicts the violent nature of the ritual."]},{"source":"The Black Crystal","target":"Queen of the Gloaming Court","weight":1,"sessions":["S005"],"rationales":["S005: The consciousness inside the crystal is likely the Queen of the Gloaming Court, or connected to her."]},{"source":"The Black Rider","target":"The White Dragon","weight":1,"sessions":["S018"],"rationales":["S018: The rider is controlling or allied with the white dragon."]},{"source":"The Bloody Sack","target":"Central Mystery","weight":1,"sessions":["S039"],"rationales":["S039: The sack was the mechanism for the sacrifice."]},{"source":"The Book of Time","target":"Central Mystery","weight":1,"sessions":["S013"],"rationales":["S013: Messing with time and reading forbidden tomes might be exactly what the demon wants them to do."]},{"source":"The Brain in the Jar","target":"The Fleshy Red Wizard","weight":1,"sessions":["S034"],"rationales":["S034: Thayans love weird magical experiments like brains in jars."]},{"source":"The Broken Hood","target":"Contraband Magic","weight":1,"sessions":["S026"],"rationales":["S026: The hood breaking aligns with the contraband theory."]},{"source":"The Butcher","target":"The Butcher's Confession","weight":1,"sessions":["S044"],"rationales":["S044: The Butcher avoided incrimination by technicality or enchantment, forcing the BWB to find another way to prove the object exists."]},{"source":"The Cave Ritual","target":"Central Mystery","weight":1,"sessions":["S010"],"rationales":["S010: The ritual is taking place in the cave guarded by the cult."]},{"source":"The Cloud Kill","target":"Central Mystery","weight":1,"sessions":["S022"],"rationales":["S022: High-level magic implies high-level backing."]},{"source":"The Coven","target":"Fort Caliban Prison Break","weight":1,"sessions":["S017"],"rationales":["S017: The Coven's altered actions resulted in Fort Caliban never being built."]},{"source":"The Crown of Control","target":"Central Mystery","weight":1,"sessions":["S041"],"rationales":["S041: The crown is directly responsible for overriding Ezrella's free will."]},{"source":"The Cursed Dagger & Altar","target":"Central Mystery","weight":1,"sessions":["S029"],"rationales":["S029: The dagger and altar are connected, suggesting the room was built specifically around containing or utilizing this infernal power."]},{"source":"The DM","target":"Dahlia","weight":1,"sessions":["S021"],"rationales":["S021: Bound with boon"]},{"source":"The DM","target":"Ash","weight":1,"sessions":["S021"],"rationales":["S021: Bound with boon"]},{"source":"The DM","target":"Billabong","weight":1,"sessions":["S021"],"rationales":["S021: Bound with boon"]},{"source":"The DM","target":"SavannahBelle","weight":1,"sessions":["S021"],"rationales":["S021: Bound with boon"]},{"source":"The DM","target":"Corras","weight":1,"sessions":["S021"],"rationales":["S021: Bound with boon"]},{"source":"The Deal for Freedom","target":"Central Mystery","weight":1,"sessions":["S038"],"rationales":["S038: The exact terms of the deal with Strahd."]},{"source":"The Death House is Sentient","target":"Central Mystery","weight":1,"sessions":["S035"],"rationales":["S035: The house is trying to eat them, explaining why it keeps throwing creepy tropes at them."]},{"source":"The Dwarvish Blood Trail","target":"Cyril's Ghost","weight":1,"sessions":["S020"],"rationales":["S020: The blood trail Meght belong to whoever killed Cyril, or it's a new threat lurking below."]},{"source":"The Exiled Princess Portal","target":"The Dying Lands","weight":1,"sessions":["S005"],"rationales":["S005: The exiled princess's presence or actions may be the direct cause of the curse causing the lands to die."]},{"source":"The Exiled Princess Portal","target":"Central Mystery","weight":1,"sessions":["S005"],"rationales":["S005: If the princess is the portal and the cause of the curse, she is the key to the entire mystery."]},{"source":"The Fake Eyelash Potion","target":"Spark's Eyelash","weight":1,"sessions":["S007"],"rationales":["S007: Lying about needing it for a potion is the best way to get it without drawing suspicion."]},{"source":"The Fake Rickety Bridge","target":"The Illusion-Cloaked Pit Trap","weight":1,"sessions":["S011"],"rationales":["S011: The bridge's fake poor condition was bait to force cautious travelers onto the magically hidden pit trap."]},{"source":"The Famine Cause","target":"Central Mystery","weight":1,"sessions":["S044"],"rationales":["S044: The BWB uses the object as their primary defense against Lord Isteval's accusations, blaming the famine on it."]},{"source":"The Fates Card","target":"Central Mystery","weight":1,"sessions":["S016"],"rationales":["S016: The Fates card is the only weapon powerful enough to rewrite history without fighting the Time Warden."]},{"source":"The Fleshy Red Wizard","target":"Central Mystery","weight":1,"sessions":["S034"],"rationales":["S034: Red Wizards have a historical vendetta against Corras."]},{"source":"The Future Service","target":"The Magic Amulet","weight":1,"sessions":["S013"],"rationales":["S013: The amulet is the physical hook for the demonic pact."]},{"source":"The Ghost in the Client","target":"Central Mystery","weight":1,"sessions":["S026"],"rationales":["S026: The ghost interference might be causing the magic item malfunction."]},{"source":"The Giant Spectator","target":"Central Mystery","weight":1,"sessions":["S002"],"rationales":["S002: The escaped entity Meght be living at the bottom of the pit or created it."]},{"source":"The Goat Kid","target":"The Bloody Sack","weight":1,"sessions":["S039"],"rationales":["S039: The goat was inside the sack as bait."]},{"source":"The Goat Kid","target":"The Binding Brand","weight":1,"sessions":["S039"],"rationales":["S039: The goat bears the binding brand."]},{"source":"The Golden Chalice","target":"Radiant Purification","weight":1,"sessions":["S041"],"rationales":["S041: Drinking the unholy blood made SavannahBelle a target for radiant purification."]},{"source":"The Goopy Tree Monster","target":"Central Mystery","weight":1,"sessions":["S024"],"rationales":["S024: The monster is actively hunting them on behalf of the Spider Queen and blocking their escape."]},{"source":"The Harbinger","target":"The Soul Forge","weight":1,"sessions":["S030"],"rationales":["S030: Brought the party to"]},{"source":"The Heartbeat Stone","target":"Radoth's Vision","weight":1,"sessions":["S044"],"rationales":["S044: Orla's sighting confirms the object is not a normal rock, but a living 'fey god vain'."]},{"source":"The Laughing Orb","target":"Cannot be Resurrected","weight":1,"sessions":["S031"],"rationales":["S031: The orb physically took the soul, meaning standard resurrection magic will fail without the soul present."]},{"source":"The Laughing Orb","target":"Everlund Cult","weight":1,"sessions":["S031"],"rationales":["S031: The cult in Everlund deals in dark magic and might be the creators or masters of the soul-stealing orb."]},{"source":"The Lead Box & Pulsing Stone","target":"The Matron","weight":1,"sessions":["S046"],"rationales":["S046: She deliberately kept the pulsing stone close, proving she was involved with the Butcher's eco-terrorism."]},{"source":"The Living House","target":"Strahd von Zarovich","weight":1,"sessions":["S036"],"rationales":["S036: The haunted house seems intrinsically connected to Strahd's domain and his illusion within the demi-plane."]},{"source":"The Loot was a Trap","target":"The Crown of Control","weight":1,"sessions":["S041"],"rationales":["S041: The crown was part of the cursed loot pool designed to turn the party against each other."]},{"source":"The Magic Amulet","target":"Morty the Demon","weight":1,"sessions":["S013"],"rationales":["S013: Morty gave them the amulet to ensure their compliance."]},{"source":"The Matron","target":"Central Mystery","weight":1,"sessions":["S046"],"rationales":["S046: She is the primary antagonist holding the dome hostage for her own gains."]},{"source":"The Missing Robe","target":"The Broken Hood","weight":1,"sessions":["S026"],"rationales":["S026: Multiple items failing or disappearing simultaneously is not a coincidence."]},{"source":"The Otyugh (Trash Eater)","target":"Underground Poison","weight":1,"sessions":["S043"],"rationales":["S043: Suspected cause of"]},{"source":"The Pact of Avarice","target":"Central Mystery","weight":1,"sessions":["S029"],"rationales":["S029: The infernal node grants immense fiendish power, corrupting the user's humility and linking directly to the abyss."]},{"source":"The Party","target":"Castle Corras","weight":1,"sessions":["S014"],"rationales":["S014: infiltrating disguised as cleaning crew"]},{"source":"The Party","target":"Fake Spark","weight":1,"sessions":["S014"],"rationales":["S014: created to swap"]},{"source":"The Party","target":"Spark","weight":1,"sessions":["S014"],"rationales":["S014: trying to extract and replace"]},{"source":"The Party","target":"Past Selves","weight":1,"sessions":["S014"],"rationales":["S014: avoiding at all costs"]},{"source":"The Party","target":"Prince Darindale","weight":1,"sessions":["S014"],"rationales":["S014: traveling with and containing"]},{"source":"The Party (Corras, Dahlia, Ash, Orla, SavannahBelle)","target":"Lord Neverember & Paladins","weight":1,"sessions":["S043"],"rationales":["S043: Assassinated and drained essence from"]},{"source":"The Party (Corras, Dahlia, Ash, Orla, SavannahBelle)","target":"The Matron","weight":1,"sessions":["S043"],"rationales":["S043: Framed for the assassination"]},{"source":"The Portals are Glitched","target":"Central Mystery","weight":1,"sessions":["S003"],"rationales":["S003: The castle's magic is unstable, causing weird geographical glitches like Ave's skyship over Baldur's Gate."]},{"source":"The Pregnant Women Sacrifice","target":"Valtor's 'Security'","weight":1,"sessions":["S027"],"rationales":["S027: Valtor left them in an undead-infested area, just like Argentus misled them into a horrific sacrifice. The BWB Federation can't trust anyone."]},{"source":"The Raven Woman","target":"Mother Volna","weight":1,"sessions":["S004"],"rationales":["S004: The Raven Woman claims Mother Volna is spreading lies about Lilith to prevent followers from finding her."]},{"source":"The Remorhaz","target":"The Rift","weight":1,"sessions":["S015"],"rationales":["S015: The Remorhaz emerged directly from the rift, indicating it connects to a frozen timeline or location."]},{"source":"The Restored Mirror","target":"The Brides' Vanity","weight":1,"sessions":["S042"],"rationales":["S042: The restored mirror contains the exact memory of the brides destroying it to protect their secret."]},{"source":"The Rift","target":"Central Mystery","weight":1,"sessions":["S015"],"rationales":["S015: The rift is the physical manifestation of the mystery."]},{"source":"The Ring of Regeneration","target":"The Summer Star Gizmo","weight":1,"sessions":["S020"],"rationales":["S020: The ring fits perfectly onto the orb to stabilize or activate its true power."]},{"source":"The Rod of Seven Parts Piece","target":"The Goopy Tree Monster","weight":1,"sessions":["S024"],"rationales":["S024: The army and the goopy tree monster are between the party and the 225-foot location of the Rod piece."]},{"source":"The Second Strahd","target":"Central Mystery","weight":1,"sessions":["S041"],"rationales":["S041: Strahd orchestrated the entire chaotic scenario by ambushing them from the coffin."]},{"source":"The Sentient Coin","target":"Malchor's Prison","weight":1,"sessions":["S029"],"rationales":["S029: The coin actively tries to possess its wielder but also acts as a safe haven for the entity when threatened."]},{"source":"The Sentient Coin","target":"The Pact of Avarice","weight":1,"sessions":["S029"],"rationales":["S029: Both the coin's entity and the ritual altar rely heavily on infernal magic and themes of corruption/selfishness."]},{"source":"The Six Statues","target":"Shadow Essence","weight":1,"sessions":["S030"],"rationales":["S030: Unlocks the ability to harvest and use"]},{"source":"The Slowing Void","target":"Central Mystery","weight":1,"sessions":["S002"],"rationales":["S002: The void's anti-magic, slowing properties are the core of the pit's mystery."]},{"source":"The Soul Forge","target":"The Six Statues","weight":1,"sessions":["S030"],"rationales":["S030: Contains"]},{"source":"The Soul Forge","target":"Rift Stalker","weight":1,"sessions":["S030"],"rationales":["S030: Holds captive"]},{"source":"The Soul Forge","target":"The Maw","weight":1,"sessions":["S030"],"rationales":["S030: Contains"]},{"source":"The Spectator","target":"Central Mystery","weight":1,"sessions":["S018"],"rationales":["S018: Is the Spectator connected to the overarching powers operating in the tundra and the Soul Forge?"]},{"source":"The Stilted Cabin","target":"The Black Rider","weight":1,"sessions":["S018"],"rationales":["S018: The dragon flew toward the mountain peak where the cabin is located."]},{"source":"The Summer Star Gizmo","target":"Central Mystery","weight":1,"sessions":["S020"],"rationales":["S020: The orb is the source of the explosion and the reason they all died."]},{"source":"The Surrendered Orogs","target":"Demon Summoning","weight":1,"sessions":["S010"],"rationales":["S010: The captive orogs confirmed Lilith's theory about the Balor."]},{"source":"The Umber Hulk's Gaze","target":"Central Mystery","weight":1,"sessions":["S022"],"rationales":["S022: Umber Hulks are usually chaotic beasts, not tactical partners."]},{"source":"The White Dragon","target":"Central Mystery","weight":1,"sessions":["S018"],"rationales":["S018: The dragon's presence is a massive hazard right on the path to their destination."]},{"source":"The Wraith Lord's Warning","target":"Central Mystery","weight":1,"sessions":["S027"],"rationales":["S027: The Fiends node is one of the 7 missing nodes, proving each requires a terrible personal sacrifice."]},{"source":"Triboar","target":"Central Mystery","weight":1,"sessions":["S034"],"rationales":["S034: Multiversal/timeline enemies converging on one person."]},{"source":"Twisted Skull Emblem","target":"Zabriel and Sons","weight":1,"sessions":["S032"],"rationales":["S032: Emblem is hidden inside the company's crates."]},{"source":"Underdark Syndicate","target":"The Cloud Kill","weight":1,"sessions":["S022"],"rationales":["S022: Assassins use area denial like Cloud Kill to ensure mutual destruction."]},{"source":"Undo Spark's Death?","target":"Central Mystery","weight":1,"sessions":["S016"],"rationales":["S016: Spark's death was the inciting incident for the temporal disturbance."]},{"source":"Vampire in Lilith's Basement","target":"Central Mystery","weight":1,"sessions":["S003"],"rationales":["S003: Why is there a vampire in our interdimensional base?"]},{"source":"We can just fireball the house","target":"The Death House is Sentient","weight":1,"sessions":["S035"],"rationales":["S035: Fireballing is the only way to kill a sentient house, but the house traps them inside first."]},{"source":"Wizard Grudge","target":"Central Mystery","weight":1,"sessions":["S040"],"rationales":["S040: Strahd's hatred of wizards is central to the nature of his curse."]},{"source":"Wizards are Everywhere","target":"Strahd von Zarovich","weight":1,"sessions":["S036"],"rationales":["S036: Strahd is the mysterious 'wizard' pulling the strings of SavannahBelle's paranoia."]},{"source":"Zabriel and Sons","target":"Central Mystery","weight":1,"sessions":["S032"],"rationales":["S032: The shipment was directed to Warehouse 17."]},{"source":"Zibblebottom's Letter","target":"Cyril Maldron","weight":1,"sessions":["S019"],"rationales":["S019: The letter is directly addressed to Cyril, proving his involvement."]},{"source":"Zibblebottom's Letter","target":"The Mysterious Third","weight":1,"sessions":["S019"],"rationales":["S019: The letter contains the clue about 'three is better than two'."]}],"central_mysteries":[{"session":"S002","mystery":"WHAT IS AT THE BOTTOM OF THE BOTTOMLESS PIT?","details":"The party found a bottomless pit in an old mine shaft emitting a strange glow. Dropping objects and familiars into it causes them to slow down and eventually sever magical connections completely."},{"session":"S003","mystery":"WHAT IS THE TRUE NATURE OF CASTLE CORRAS AND THE ACID PIT?","details":"The party stumbled into an invisible acid jelly and then retreated to a surreal, interdimensional castle with personalized rooms, vampires, and broken portals. How are these linked?"},{"session":"S004","mystery":"WHO IS THE RAVEN WOMAN AND WHAT IS THE TRUE GOAL OF LILITH'S CULT?","details":"A shapechanging raven-woman tracked the party, claiming her people worship Lilith as Kelemvor's prophet, but the party suspects disinformation from Mother Volna."},{"session":"S005","mystery":"IS THE EXILED PRINCESS CAUSING THE CURSE?","details":"The party discovered a black crystal and learned lore about the Gloaming Court, leading to wild theories about the true cause of the dying lands."},{"session":"S006","mystery":"WHO IS THE INVISIBLE ARCHMAGE AND WHY ARE THEY SUMMONING ZOMBIES?","details":"The party encountered a mysterious, invisible spellcaster who trapped them behind invisible walls and summoned undead bearing the insignia of the Gilded Quill."},{"session":"S007","mystery":"HOW TO CHANGE THE PAST WITHOUT ERASING OURSELVES?","details":"The party has traveled back in time to their own castle and must steal an eyelash from Spark the fairy dragon to create a Simulacrum, all without their past selves noticing."},{"session":"S008","mystery":"HOW DO WE SURVIVE MEETING OUR OWN CLONES?","details":"The party is trapped in a temporal disturbance where they are forced to fight their past selves, raising massive questions about what happens if the universe implodes."},{"session":"S010","mystery":"WHAT IS THE FIRE CULT SUMMONING IN THE CAVE?","details":"The cult is conducting a massive ritual inside a volcanic cavern. They have already opened a gate, but what size and type of fiend will come through?"},{"session":"S011","mystery":"WHO IS DEFILING THE ELEMENTAL NODES?","details":"An Earth Elemental attacked the party at a trapped bridge, claiming that 'bags of flesh' and 'usurpers' are defiling the heart of the earth with an 'evil fire'."},{"session":"S012","mystery":"THE EXPLOSION AND THE NETHERESE RELIC: ARE THEY CONNECTED?","details":"The party caused a massive explosion by casting shatter on Grimsnick's cart, while Corras is dealing with a corrupted Netherese shadow relic and the Master of Whispers. Are these cataclysmic events intertwined?"},{"session":"S013","mystery":"WHAT IS MORTY THE GLABREZU'S TRUE PURPOSE AND PRICE?","details":"Morty, a powerful Glabrezu demon disguised as a prison guard, offered the party a magical amulet that allows them to swap spells without a long rest, in exchange for a vague 'future service' at the time of his choosing. He knows their secrets and claims his presence is part of a grander design."},{"session":"S015","mystery":"WHO CREATED THE TEMPORAL RIFT IN THE TOILET?","details":"Alizar the scholar accidentally activated a ritual in the bathroom, tearing open a void in space-time and unleashing icy monstrosities."},{"session":"S016","mystery":"HOW TO UNDO THE TIMELINE APOCALYPSE WITHOUT LOSING EVERYTHING?","details":"The Time Warden was resetting the entire universe because the party went back in time to save Spark from dying in a celestial slime cube. They needed a way to stop her without wiping their memory, progress, or lives."},{"session":"S017","mystery":"WHAT EXACTLY HAPPENED TO THE TIMELINE?","details":"The DM initiated a 'hard reset' of the timeline, changing events and character trajectories, leaving the players scrambling to figure out what is still canon."},{"session":"S018","mystery":"WHO IS THE BLACK RIDER ON THE WHITE DRAGON?","details":"The party narrowly survived a frozen lake collapsing beneath them, only to witness a massive white dragon erupting from the ice\u2014carrying a stiff, black rider on its back. Is this rider connected to the Soul Forge, the Celestials, or the mysterious stilted cabin?"},{"session":"S019","mystery":"WHO IS THE THIRD PARTNER IN CYRIL AND ZIBBLEBOTTOM'S QUEST?","details":"Zibblebottom's letter explicitly states that 'three is better than two', hinting at a mysterious third figure involved in their doomed project to find the Forge of Spells."},{"session":"S020","mystery":"WHAT WAS THE SUMMER STAR ORB AND WHY DID IT EXPLODE?","details":"The party found a strange glowing orb in a precariously hanging cabin. After tampering with it (and peeing on it), it caused an explosion that killed them all, forcing a divine intervention to bring them back."},{"session":"S022","mystery":"WHY WERE A DROW MAGE AND AN UMBER HULK WORKING TOGETHER?","details":"Drow and Umber Hulks don't typically collaborate without a powerful master pulling the strings. Someone orchestrated this ambush."},{"session":"S024","mystery":"HOW DO WE SURVIVE WEB'S EDGE WITH A STUCK CYCLOPS AND AN ARMY?","details":"The party is trapped in the Underdark with a piece of the Rod of Seven Parts, a newly adopted cyclops sister who is stuck in a doorway, an invisible rogue who just unleashed thousands of spiders, and a Hezrou waiting for them with a druid in its mouth."},{"session":"S026","mystery":"WHY ARE ALL THE MAGIC ITEMS MALFUNCTIONING?","details":"Several adventurers found their prized magical possessions\u2014including the Hood of the Dragon Turtle and Dead Man's Plate\u2014completely non-functional. Is this a cosmic shift or just contraband magic catching up to them?"},{"session":"S027","mystery":"WHAT ARE THE 7 RESONANCE NODES OF THE SOUL FORGE?","details":"The party has discovered that the fabled Forge of Spells is merely the 'arcane node' of seven distinct points of power hidden inside the mountain. What do the other nodes do, and what does the ritual to activate them entail?"},{"session":"S028","mystery":"WHO BARRICADED THEMSELVES IN THE TEMPLE OF DUMATHOIN?","details":"The party found a defiled temple of Dumathoin with six bloody bedrolls but no bodies. The southern doors were barricaded from the inside with broken hinges, leaving no exit."},{"session":"S029","mystery":"THE TRUE NATURE OF MALCHOR AND THE INFERNAL NODE","details":"The party uncovered an ancient Dwarvish coin containing a sentient entity named Malchor, an infernal dagger, and a hidden node of Avarice. What is Malchor's ultimate goal, and how does it tie into the Soulforge?"},{"session":"S031","mystery":"WHO HAS ASH'S SOUL?","details":"Ash was killed by a possessed Billabong, but her soul didn't pass on. SavannahBelle witnessed it being sucked into a laughing black obsidian orb."},{"session":"S032","mystery":"WHAT IS HAPPENING IN WAREHOUSE 17?","details":"Ezrella intercepted crates with twisted skull emblems matching powerful magic, linked to a fake company named 'Zabriel and Sons'."},{"session":"S034","mystery":"WHY IS CORRAS THE CENTER OF A MULTIVERSAL MANHUNT?","details":"Everyone from Triboar to the Red Wizards to the Lord of Terror wants Corras dead or captured, despite his claims of just being a benevolent dock worker."},{"session":"S035","mystery":"WHY DID MORDENKAINEN SEND US TO THIS CREEPY HOUSE?","details":"The players are extremely paranoid about their sudden arrival in Durst Manor, Barovia, and refuse to trust any of the obvious plot hooks."},{"session":"S036","mystery":"HOW DO YOU KILL THE CULTISTS OF OSIBUS?","details":"Every time the party kills a priest of Osibus, the cultist taps their tattoo, regenerates, and gains a new boon of undeath."},{"session":"S038","mystery":"STRAHD'S TRUE INTENTIONS & THE ROD OF VECNA","details":"Why would the Dread Lord of Barovia be so nice to the party, promising to let them leave if they give him the Staff of Kazon and a piece of the Rod of Vecna?"},{"session":"S039","mystery":"THE GOAT SACRIFICE & THE DRUIDIC TREE","details":"The party found a goat kid seeded with offal to attract wolves, branded with a sigil linking its life force to the tree in the town square. Orla recognized the symbol as belonging to a peaceful druid circle, making the bloody sacrifice deeply contradictory."},{"session":"S040","mystery":"THE CURSE OF STRAHD","details":"Is Strahd actually cursed, or is it just a metaphor? And why is he so mad at wizards?"},{"session":"S041","mystery":"WHY DID EZRELLA TRY TO MURDER SAVANNAHBELLE?","details":"Ezrella put on a crown, became zombified, and unleashed massive radiant critical hits on SavannahBelle while she was paralyzed. Was it mind control, a purification ritual, or pure malice?"},{"session":"S042","mystery":"THE MIRROR CONSPIRACY: WHAT ARE THE BRIDES HIDING?","details":"Shrum regained his memories, realizing his soul was split and trapped in a mirror by the Brides of Strahd to hide their true, monstrous forms."},{"session":"S044","mystery":"WHAT IS THE 'BUTCHER' HIDING IN THE WAREHOUSE?","details":"Lord Neverember was secretly transporting lead-lined crates to a makeshift warehouse. The Archdruid Radoth claims the earth's ley lines are being poisoned by it. Orla saw the item and claims it 'has a heartbeat'. The Butcher denies its existence under a Zone of Truth."},{"session":"S046","mystery":"WHAT IS THE MATRON'S TRUE ENDGAME?","details":"The Matron forced the party to make her Regent and demanded a hair from the Queen of the Gloaming Court, while possessing the strange pulsing stone."}],"stats":{"total_nodes":223,"total_edges":209,"sessions_with_data":46,"total_mysteries":35}};
+
+const TYPE_COLORS = {
+  Character:'#4A90D9', NPC:'#FF8A65', Suspect:'#FF8A65', Location:'#81C784',
+  Item:'#ffd700', Evidence:'#4DB6AC', Theory:'#ad6bff', Debunked:'#555570',
+  Entity:'#E57373', Magic:'#BA68C8', Faction:'#FFB74D', Event:'#4FC3F7', Other:'#9494bf'
+};
+const TYPE_ORDER = ['Character','NPC','Suspect','Entity','Faction','Location','Item','Evidence','Theory','Debunked','Magic','Event','Other'];
+
+let tension = 0.85, activeTypes = new Set(Object.keys(TYPE_COLORS)),
+    activeSessions = new Set(), lockedNode = null, minSessionCount = 1;
+
+const allSessions = new Set();
+RAW_DATA.nodes.forEach(n => n.sessions.forEach(s => allSessions.add(s)));
+RAW_DATA.edges.forEach(e => e.sessions.forEach(s => allSessions.add(s)));
+const sortedSessions = [...allSessions].sort();
+sortedSessions.forEach(s => activeSessions.add(s));
+
+function init(){
+  populateStats(); populateTypeFilters(); populateSessionFilters();
+  populateMysteries(); buildVisualization();
+}
+
+function populateStats(){
+  document.getElementById('statNodes').textContent = RAW_DATA.stats.total_nodes;
+  document.getElementById('statEdges').textContent = RAW_DATA.stats.total_edges;
+  document.getElementById('statSessions').textContent = RAW_DATA.stats.sessions_with_data;
+  document.getElementById('statMysteries').textContent = RAW_DATA.stats.total_mysteries;
+  const ec = {};
+  RAW_DATA.edges.forEach(e => {
+    ec[e.source] = (ec[e.source]||0)+1; ec[e.target] = (ec[e.target]||0)+1;
+  });
+  let mn = '', mc = 0;
+  for(const [n,c] of Object.entries(ec)) if(c>mc && n!=='Central Mystery'){mc=c;mn=n;}
+  document.getElementById('mostConnected').textContent = mn;
+  document.getElementById('mostConnectedCount').textContent = mc+' connections';
+  const ebs = {};
+  RAW_DATA.nodes.filter(n=>n.type==='Evidence').forEach(n=>{
+    n.sessions.forEach(s=>{ebs[s]=(ebs[s]||0)+1});
+  });
+  let ms='',me=0;
+  for(const [s,c] of Object.entries(ebs)) if(c>me){me=c;ms=s;}
+  document.getElementById('mostMysterious').textContent = ms+' ('+me+' evidence)';
+}
+
+function populateTypeFilters(){
+  const c = document.getElementById('typeFilters');
+  const tc = {};
+  RAW_DATA.nodes.forEach(n=>{tc[n.type]=(tc[n.type]||0)+1});
+  TYPE_ORDER.forEach(type=>{
+    const cnt = tc[type]||0;
+    if(!cnt) return;
+    const col = TYPE_COLORS[type]||'#9494bf';
+    const lbl = document.createElement('label');
+    lbl.className = 'type-filter';
+    lbl.style.setProperty('--type-color', col);
+    lbl.innerHTML = '<input type="checkbox" checked data-type="'+type+'">'
+      +'<span class="type-dot" style="background:'+col+';box-shadow:0 0 4px '+col+'"></span>'
+      +'<span class="type-name">'+type+'</span>'
+      +'<span class="type-count">'+cnt+'</span>';
+    lbl.querySelector('input').addEventListener('change',function(){
+      if(this.checked) activeTypes.add(type); else activeTypes.delete(type);
+      buildVisualization();
+    });
+    c.appendChild(lbl);
+  });
+}
+
+function populateSessionFilters(){
+  const c = document.getElementById('sessionFilters');
+  sortedSessions.forEach(sid=>{
+    const btn = document.createElement('button');
+    btn.className = 'session-btn active';
+    btn.textContent = sid.replace('S0','S').replace('S','');
+    btn.dataset.sid = sid;
+    btn.addEventListener('click',function(){
+      if(activeSessions.has(sid)){activeSessions.delete(sid);this.classList.remove('active');}
+      else{activeSessions.add(sid);this.classList.add('active');}
+      buildVisualization();
+    });
+    c.appendChild(btn);
+  });
+}
+
+function selectAllSessions(){
+  sortedSessions.forEach(s=>activeSessions.add(s));
+  document.querySelectorAll('.session-btn').forEach(b=>b.classList.add('active'));
+  buildVisualization();
+}
+function clearAllSessions(){
+  activeSessions.clear();
+  document.querySelectorAll('.session-btn').forEach(b=>b.classList.remove('active'));
+  buildVisualization();
+}
+
+function populateMysteries(){
+  const c = document.getElementById('mysteriesList');
+  RAW_DATA.central_mysteries.forEach(m=>{
+    const d = document.createElement('div');
+    d.className = 'mystery-item';
+    d.innerHTML = '<div class="mystery-session">'+m.session+'</div>'
+      +'<div class="mystery-text">'+m.mystery+'</div>';
+    d.title = m.details;
+    c.appendChild(d);
+  });
+}
+
+// ==== HIERARCHICAL EDGE BUNDLING ====
+function radialPoint(angle, r){
+  const a = (angle-90)*Math.PI/180;
+  return [r*Math.cos(a), r*Math.sin(a)];
+}
+
+function buildVisualization(){
+  const svg = d3.select('#bundleChart');
+  svg.selectAll('*').remove();
+
+  const filteredNodes = RAW_DATA.nodes.filter(n=>{
+    if(!activeTypes.has(n.type)) return false;
+    if(!n.sessions.some(s=>activeSessions.has(s))) return false;
+    if(n.session_count < minSessionCount) return false;
+    return true;
+  });
+
+  const nodeLabels = new Set(filteredNodes.map(n=>n.label));
+  const filteredEdges = RAW_DATA.edges.filter(e=>{
+    if(!nodeLabels.has(e.source)||!nodeLabels.has(e.target)) return false;
+    if(!e.sessions.some(s=>activeSessions.has(s))) return false;
+    return true;
+  });
+
+  if(!filteredNodes.length) return;
+
+  // Build hierarchy
+  const typeGroups = {};
+  filteredNodes.forEach(n=>{
+    if(!typeGroups[n.type]) typeGroups[n.type]=[];
+    typeGroups[n.type].push(n);
+  });
+  Object.values(typeGroups).forEach(arr=>arr.sort((a,b)=>a.label.localeCompare(b.label)));
+
+  const hierarchyData = {
+    name:'root',
+    children: TYPE_ORDER.filter(t=>typeGroups[t]).map(type=>({
+      name:type,
+      children: typeGroups[type].map(n=>({name:n.label, data:n}))
+    }))
+  };
+
+  const container = document.querySelector('.viz-container');
+  const w = container.clientWidth;
+  const h = Math.max(container.clientHeight, 850);
+  const dim = Math.min(w,h);
+  const radius = dim/2 - 150;
+  const innerRadius = radius - 30;
+
+  svg.attr('width',w).attr('height',h);
+  const g = svg.append('g').attr('transform','translate('+w/2+','+h/2+')');
+
+  const root = d3.hierarchy(hierarchyData);
+  d3.cluster().size([360, innerRadius])(root);
+
+  // Build leaf map
+  const leafMap = {};
+  root.leaves().forEach(leaf=>{ leafMap[leaf.data.name] = leaf; });
+
+  // Line generator
+  const line = d3.lineRadial()
+    .curve(d3.curveBundle.beta(tension))
+    .radius(d=>d[1])
+    .angle(d=>d[0]*Math.PI/180);
+
+  // --- TYPE GROUP ARCS ---
+  const arcG = g.append('g').attr('class','type-arcs');
+  (root.children||[]).forEach(tg=>{
+    const leaves = tg.leaves();
+    if(!leaves.length) return;
+    const minA = d3.min(leaves,l=>l.x);
+    const maxA = d3.max(leaves,l=>l.x);
+    const midA = (minA+maxA)/2;
+    const color = TYPE_COLORS[tg.data.name]||'#9494bf';
+    const pad = 1.5;
+
+    const arc = d3.arc()
+      .innerRadius(innerRadius+8)
+      .outerRadius(innerRadius+12)
+      .startAngle((minA-pad)*Math.PI/180)
+      .endAngle((maxA+pad)*Math.PI/180);
+
+    arcG.append('path').attr('d',arc).attr('fill',color)
+      .attr('opacity',0).style('filter','drop-shadow(0 0 4px '+color+')');
+
+    // Type label
+    const lr = innerRadius + 28;
+    const [lx,ly] = radialPoint(midA, lr);
+    const flip = midA > 90 && midA < 270;
+
+    arcG.append('text')
+      .attr('x',lx).attr('y',ly)
+      .attr('text-anchor','middle')
+      .attr('dominant-baseline','central')
+      .attr('transform','rotate('+(flip ? midA+180 : midA)+','+lx+','+ly+')')
+      .style('font-family',"'Barlow Condensed',sans-serif")
+      .style('font-weight','600').style('font-size','11px')
+      .style('fill',color).style('letter-spacing','2px')
+      .style('text-transform','uppercase').style('opacity',0)
+      .text(tg.data.name);
+  });
+
+  // --- EDGES ---
+  const defs = svg.append('defs');
+  const edgesG = g.append('g').attr('class','edges');
+
+  const nodeMap = {};
+  filteredNodes.forEach(n=>{nodeMap[n.label]=n});
+
+  let edgeIdx = 0;
+  filteredEdges.forEach(e=>{
+    const sLeaf = leafMap[e.source], tLeaf = leafMap[e.target];
+    if(!sLeaf||!tLeaf) return;
+
+    // Build path through hierarchy
+    const sAnc = sLeaf.ancestors().reverse();
+    const tAnc = tLeaf.ancestors().reverse();
+    let lcaI = 0;
+    while(lcaI < sAnc.length && lcaI < tAnc.length && sAnc[lcaI]===tAnc[lcaI]) lcaI++;
+    lcaI--;
+
+    const pathNodes = [];
+    for(let i=sAnc.length-1;i>=lcaI;i--) pathNodes.push(sAnc[i]);
+    for(let i=lcaI+1;i<tAnc.length;i++) pathNodes.push(tAnc[i]);
+
+    const pathData = pathNodes.map(p=>[p.x, p.y||0]);
+
+    const srcColor = TYPE_COLORS[nodeMap[e.source]?.type]||'#9494bf';
+    const tgtColor = TYPE_COLORS[nodeMap[e.target]?.type]||'#9494bf';
+
+    const gid = 'eg'+edgeIdx++;
+    const grad = defs.append('linearGradient').attr('id',gid).attr('gradientUnits','userSpaceOnUse');
+    grad.append('stop').attr('offset','0%').attr('stop-color',srcColor);
+    grad.append('stop').attr('offset','100%').attr('stop-color',tgtColor);
+
+    edgesG.append('path')
+      .datum(pathData)
+      .attr('class','edge-path')
+      .attr('d',line)
+      .attr('fill','none')
+      .attr('stroke','url(#'+gid+')')
+      .attr('stroke-opacity',0.25)
+      .attr('stroke-width', Math.min(1+e.weight*0.5, 3))
+      .attr('data-source',e.source)
+      .attr('data-target',e.target)
+      .attr('data-rationale',(e.rationales[0]||'').replace(/"/g,'&quot;'))
+      .attr('data-sessions',e.sessions.join(', '))
+      .attr('data-weight',e.weight);
+  });
+
+  // --- NODES ---
+  const nodesG = g.append('g').attr('class','nodes');
+
+  root.leaves().forEach((leaf,i)=>{
+    const d = leaf.data.data;
+    const color = TYPE_COLORS[d.type]||'#9494bf';
+    const [x,y] = radialPoint(leaf.x, innerRadius);
+    const angle = leaf.x;
+
+    const ng = nodesG.append('g').attr('class','node-group').attr('data-label',d.label).style('cursor','pointer');
+
+    ng.append('circle')
+      .attr('cx',x).attr('cy',y)
+      .attr('r', Math.min(2.5+d.session_count*0.8, 7))
+      .attr('fill',color).attr('stroke',color).attr('stroke-width',0.5)
+      .attr('opacity',0.9).style('filter','drop-shadow(0 0 3px '+color+')');
+
+    const lr = innerRadius + 14;
+    const [tx,ty] = radialPoint(angle, lr);
+    const flip = angle > 180;
+
+    const truncLabel = d.label.length > 30 ? d.label.substring(0,28)+'..' : d.label;
+
+    ng.append('text')
+      .attr('x',tx).attr('y',ty)
+      .attr('text-anchor', flip?'end':'start')
+      .attr('dominant-baseline','central')
+      .attr('transform','rotate('+(flip?angle-180:angle)+','+tx+','+ty+')')
+      .style('font-family', d.type==='Character'?"'Cinzel',serif":"'Barlow',sans-serif")
+      .style('font-size', d.session_count>2?'11px':'9px')
+      .style('fill', d.type==='Debunked'?'#555570':'#c8c8e0')
+      .style('text-decoration', d.type==='Debunked'?'line-through':'none')
+      .style('opacity',0.85)
+      .text(truncLabel);
+
+    ng.on('mouseover',function(ev){
+      if(lockedNode) return;
+      highlightNode(d.label); showTooltip(ev,d);
+    })
+    .on('mousemove',function(ev){moveTooltip(ev)})
+    .on('mouseout',function(){
+      if(lockedNode) return;
+      resetHighlight(); hideTooltip();
+    })
+    .on('click',function(ev){
+      ev.stopPropagation();
+      if(lockedNode===d.label){lockedNode=null;resetHighlight();closeDetailPanel();}
+      else{lockedNode=d.label;highlightNode(d.label);showDetailPanel(d);}
+      hideTooltip();
+    });
+  });
+
+  // Edge hover
+  edgesG.selectAll('.edge-path')
+    .on('mouseover',function(ev){
+      const el = d3.select(this);
+      if(!lockedNode) el.attr('stroke-opacity',0.9).attr('stroke-width',3);
+      const tt = document.getElementById('tooltip');
+      tt.style.display='block';
+      tt.innerHTML = '<div class="tt-label">'+el.attr('data-source')+' &rarr; '+el.attr('data-target')+'</div>'
+        +'<div class="tt-type" style="color:#ff8844">Weight: '+el.attr('data-weight')+' | '+el.attr('data-sessions')+'</div>'
+        +(el.attr('data-rationale')?'<div class="tt-desc">'+el.attr('data-rationale')+'</div>':'');
+      tt.style.left=(ev.clientX+15)+'px'; tt.style.top=(ev.clientY-10)+'px';
+    })
+    .on('mousemove',function(ev){moveTooltip(ev)})
+    .on('mouseout',function(){
+      if(!lockedNode){
+        const el=d3.select(this);
+        el.attr('stroke-opacity',0.25).attr('stroke-width',Math.min(1+(+el.attr('data-weight'))*0.5,3));
+      }
+      hideTooltip();
+    });
+
+  svg.on('click',function(){lockedNode=null;resetHighlight();closeDetailPanel()});
+
+  // Animated entrance
+  animateEntrance();
+}
+
+function highlightNode(label){
+  const svg = d3.select('#bundleChart');
+  const connected = new Set([label]);
+  svg.selectAll('.edge-path').each(function(){
+    const el = d3.select(this);
+    const s=el.attr('data-source'), t=el.attr('data-target');
+    if(s===label||t===label){
+      connected.add(s); connected.add(t);
+      el.attr('stroke-opacity',0.85).attr('stroke-width',2.5).raise();
+    } else {
+      el.attr('stroke-opacity',0.03).attr('stroke-width',0.5);
+    }
+  });
+  svg.selectAll('.node-group').each(function(){
+    const el=d3.select(this), nl=el.attr('data-label');
+    if(connected.has(nl)){
+      el.select('circle').attr('opacity',1);
+      if(nl===label) el.select('circle').attr('r',10);
+      el.select('text').style('opacity',1).style('font-weight',nl===label?'700':'400');
+    } else {
+      el.select('circle').attr('opacity',0.1);
+      el.select('text').style('opacity',0.1);
+    }
+  });
+}
+
+function resetHighlight(){
+  const svg = d3.select('#bundleChart');
+  svg.selectAll('.edge-path').each(function(){
+    const el=d3.select(this);
+    el.attr('stroke-opacity',0.25).attr('stroke-width',Math.min(1+(+el.attr('data-weight'))*0.5,3));
+  });
+  svg.selectAll('.node-group').each(function(){
+    const el=d3.select(this);
+    el.select('circle').attr('opacity',0.9);
+    el.select('text').style('opacity',0.85).style('font-weight','400');
+  });
+  // Restore node circle radii
+  svg.selectAll('.node-group').each(function(){
+    const el = d3.select(this);
+    const label = el.attr('data-label');
+    const nd = RAW_DATA.nodes.find(n=>n.label===label);
+    if(nd) el.select('circle').attr('r', Math.min(2.5+nd.session_count*0.8, 7));
+  });
+}
+
+function animateEntrance(){
+  const svg = d3.select('#bundleChart');
+
+  // Radar sweep for nodes
+  svg.selectAll('.node-group')
+    .style('opacity',0)
+    .transition()
+    .delay((d,i)=>100 + i*8)
+    .duration(350)
+    .style('opacity',1);
+
+  // Edges animate stroke-dasharray
+  svg.selectAll('.edge-path').each(function(d,i){
+    const path = d3.select(this);
+    const len = this.getTotalLength();
+    path.attr('stroke-dasharray',len).attr('stroke-dashoffset',len)
+      .transition().delay(500+i*3).duration(1200)
+      .ease(d3.easeCubicInOut).attr('stroke-dashoffset',0);
+  });
+
+  // Type arcs fade in
+  svg.selectAll('.type-arcs path')
+    .transition().delay(200).duration(800).attr('opacity',0.6);
+  svg.selectAll('.type-arcs text')
+    .transition().delay(300).duration(800).style('opacity',0.8);
+}
+
+function showTooltip(ev,d){
+  const tt=document.getElementById('tooltip');
+  const col=TYPE_COLORS[d.type]||'#9494bf';
+  tt.style.display='block';
+  tt.innerHTML='<div class="tt-label">'+d.label+'</div>'
+    +'<div class="tt-type" style="color:'+col+'">'+d.type+' &bull; '+d.session_count+' session'+(d.session_count>1?'s':'')+'</div>'
+    +(d.description?'<div class="tt-desc">'+d.description+'</div>':'');
+  tt.style.left=(ev.clientX+15)+'px';tt.style.top=(ev.clientY-10)+'px';
+}
+function moveTooltip(ev){
+  const tt=document.getElementById('tooltip');
+  tt.style.left=(ev.clientX+15)+'px';tt.style.top=(ev.clientY-10)+'px';
+}
+function hideTooltip(){document.getElementById('tooltip').style.display='none'}
+
+function showDetailPanel(d){
+  const col=TYPE_COLORS[d.type]||'#9494bf';
+  const conns=RAW_DATA.edges.filter(e=>e.source===d.label||e.target===d.label);
+  let ch='';
+  conns.forEach(c=>{
+    const other=c.source===d.label?c.target:c.source;
+    const dir=c.source===d.label?'&rarr;':'&larr;';
+    const rat=c.rationales[0]||'';
+    ch+='<li><span class="conn-target">'+dir+' '+other+'</span>'
+      +'<span style="font-family:\'JetBrains Mono\';font-size:10px;color:#555"> ('+c.sessions.join(', ')+')</span>'
+      +(rat?'<div class="conn-rationale">'+rat+'</div>':'')+'</li>';
+  });
+  document.getElementById('detailContent').innerHTML =
+    '<div class="detail-node-name" style="color:'+col+';text-shadow:0 0 15px '+col+'">'+d.label+'</div>'
+    +'<div class="detail-node-type" style="color:'+col+'">'+d.type+'</div>'
+    +'<div class="detail-description">'+(d.description||'No description available.')+'</div>'
+    +'<div class="detail-section-title">APPEARS IN</div>'
+    +'<div class="detail-sessions">'+d.sessions.map(s=>'<span class="session-tag">'+s+'</span>').join('')+'</div>'
+    +'<div class="detail-section-title">CONNECTIONS ('+conns.length+')</div>'
+    +'<ul class="detail-connections">'+ch+'</ul>';
+  document.getElementById('detailPanel').classList.add('open');
+}
+function closeDetailPanel(){document.getElementById('detailPanel').classList.remove('open')}
+
+document.getElementById('tensionSlider').addEventListener('input',function(){
+  tension=this.value/100;
+  document.getElementById('tensionVal').textContent=tension.toFixed(2);
+  buildVisualization();
+});
+document.getElementById('minSessionSlider').addEventListener('input',function(){
+  minSessionCount=+this.value;
+  document.getElementById('minSessionVal').textContent=minSessionCount;
+  buildVisualization();
+});
+
+window.addEventListener('DOMContentLoaded',init);
+window.addEventListener('resize',()=>{if(!lockedNode) buildVisualization()});
+</script>
+</body>
+</html>

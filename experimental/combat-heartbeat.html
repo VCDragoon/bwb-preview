@@ -1,0 +1,1352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BWB CAMPAIGN HEARTBEAT</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #000000;
+    color: #00ff41;
+    font-family: 'Share Tech Mono', monospace;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+  }
+
+  /* === CRT SCANLINE OVERLAY === */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 255, 65, 0.03) 2px,
+      rgba(0, 255, 65, 0.03) 4px
+    );
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.5) 100%);
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  /* === MAIN MONITOR === */
+  #monitor {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+  }
+
+  #ekg-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* === HEADER BAR === */
+  #header {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 52px;
+    background: transparent;
+    border-bottom: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    z-index: 10;
+  }
+
+  #header .title {
+    font-family: 'Orbitron', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: #00ff41;
+    text-shadow: 0 0 10px #00ff41, 0 0 20px #00ff41;
+  }
+
+  #header .subtitle {
+    font-size: 10px;
+    color: rgba(0,255,65,0.5);
+    letter-spacing: 2px;
+    margin-top: 2px;
+  }
+
+  /* === VITAL SIGNS PANEL === */
+  #vitals {
+    position: absolute;
+    top: 12px;
+    right: 20px;
+    z-index: 20;
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+  }
+
+  .vital-box {
+    text-align: right;
+  }
+
+  .vital-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: rgba(0,255,65,0.5);
+    text-transform: uppercase;
+  }
+
+  .vital-value {
+    font-family: 'Orbitron', monospace;
+    font-size: 28px;
+    font-weight: 900;
+    color: #00ff41;
+    text-shadow: 0 0 15px #00ff41, 0 0 30px rgba(0,255,65,0.5);
+    line-height: 1;
+  }
+
+  .vital-value.danger {
+    color: #ff2020;
+    text-shadow: 0 0 15px #ff2020, 0 0 30px rgba(255,32,32,0.5);
+  }
+
+  .vital-value.warning {
+    color: #ffaa00;
+    text-shadow: 0 0 15px #ffaa00, 0 0 30px rgba(255,170,0,0.5);
+  }
+
+  .vital-unit {
+    font-size: 10px;
+    color: rgba(0,255,65,0.6);
+    margin-left: 2px;
+  }
+
+  /* === BPM with heartbeat animation === */
+  #bpm-value {
+    animation: none;
+  }
+
+  #bpm-value.beating {
+    animation: bpmPulse 0.15s ease-out;
+  }
+
+  @keyframes bpmPulse {
+    0% { transform: scale(1.3); }
+    100% { transform: scale(1); }
+  }
+
+  /* === SESSION INFO PANEL (left side) === */
+  #session-info {
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+    max-width: 500px;
+    text-align: center;
+  }
+
+  #session-id {
+    font-family: 'Orbitron', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    color: #00ff41;
+    text-shadow: 0 0 10px #00ff41;
+  }
+
+  #session-name {
+    font-size: 11px;
+    color: rgba(0,255,65,0.7);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 320px;
+  }
+
+  #encounter-name {
+    font-size: 10px;
+    color: #ffaa00;
+    text-shadow: 0 0 8px rgba(255,170,0,0.5);
+    margin-top: 4px;
+    min-height: 14px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  /* === ENCOUNTER FLASH === */
+  #encounter-flash {
+    position: absolute;
+    top: 33%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 50;
+    font-family: 'Orbitron', monospace;
+    font-size: 28px;
+    font-weight: 900;
+    color: #ff2020;
+    text-shadow: 0 0 20px #ff2020, 0 0 40px #ff2020, 0 0 80px rgba(255,32,32,0.5);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    opacity: 0;
+    pointer-events: none;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  /* === MASS CASUALTY WARNING === */
+  #mass-casualty {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 33vh;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    opacity: 0;
+  }
+
+  #mass-casualty .warning-text {
+    font-family: 'Orbitron', monospace;
+    font-size: 36px;
+    font-weight: 900;
+    color: #ff0000;
+    text-shadow: 0 0 20px #ff0000, 0 0 60px #ff0000, 0 0 120px rgba(255,0,0,0.8);
+    letter-spacing: 8px;
+    animation: warningFlash 0.3s ease-in-out infinite alternate;
+  }
+
+  #mass-casualty .casualty-count {
+    font-family: 'Orbitron', monospace;
+    font-size: 60px;
+    font-weight: 900;
+    color: #ff0000;
+    text-shadow: 0 0 30px #ff0000, 0 0 80px #ff0000;
+    margin-top: 10px;
+  }
+
+  #mass-casualty .casualty-label {
+    font-size: 14px;
+    color: rgba(255,0,0,0.8);
+    letter-spacing: 4px;
+    margin-top: 4px;
+  }
+
+  @keyframes warningFlash {
+    from { opacity: 0.6; }
+    to { opacity: 1; }
+  }
+
+  /* === RED SCREEN FLASH === */
+  #red-flash {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(ellipse at center, rgba(255,0,0,0.4), rgba(100,0,0,0.6));
+    z-index: 90;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* === BOTTOM BAR === */
+  #bottom-bar {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 33vh;
+    background: linear-gradient(0deg, rgba(0,10,0,0.85) 0%, rgba(0,0,0,0.4) 70%, transparent 100%);
+    border-top: 1px solid rgba(0,255,65,0.15);
+    z-index: 10;
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+
+  #session-timeline {
+    display: flex;
+    align-items: flex-end;
+    height: 60%;
+    gap: 2px;
+    margin-top: 2px;
+  }
+
+  .session-tick {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+
+  .session-tick .bar {
+    width: 100%;
+    min-height: 2px;
+    border-radius: 1px 1px 0 0;
+    transition: all 0.2s;
+  }
+
+  .session-tick .label {
+    font-size: 7px;
+    color: rgba(0,255,65,0.3);
+    margin-top: 2px;
+    transform: rotate(-45deg);
+    transform-origin: center;
+    white-space: nowrap;
+  }
+
+  .session-tick.active .label {
+    color: #00ff41;
+    text-shadow: 0 0 5px #00ff41;
+  }
+
+  .session-tick.combat .bar {
+    background: rgba(255,65,65,0.6);
+    box-shadow: 0 0 4px rgba(255,65,65,0.3);
+  }
+
+  .session-tick.rp .bar {
+    background: rgba(0,255,65,0.3);
+  }
+
+  .session-tick.active .bar {
+    background: #00ff41 !important;
+    box-shadow: 0 0 8px #00ff41;
+  }
+
+  /* === SCENE READOUT === */
+  #scene-readout {
+    font-size: 9px;
+    color: rgba(0,255,65,0.4);
+    letter-spacing: 1px;
+    margin-top: 4px;
+    height: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* === PLAYBACK CONTROLS === */
+  #controls {
+    position: absolute;
+    bottom: 100px;
+    right: 20px;
+    z-index: 20;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .ctrl-btn {
+    background: rgba(0,255,65,0.1);
+    border: 1px solid rgba(0,255,65,0.3);
+    color: #00ff41;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    padding: 4px 12px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+  }
+
+  .ctrl-btn:hover {
+    background: rgba(0,255,65,0.2);
+    border-color: #00ff41;
+    box-shadow: 0 0 10px rgba(0,255,65,0.3);
+  }
+
+  .ctrl-btn.active {
+    background: rgba(0,255,65,0.3);
+    border-color: #00ff41;
+  }
+
+  #speed-display {
+    font-size: 9px;
+    color: rgba(0,255,65,0.5);
+    min-width: 30px;
+    text-align: center;
+  }
+
+  /* === LOADING === */
+  #loading {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: #000;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.5s;
+  }
+
+  #loading .boot-text {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: #00ff41;
+    text-shadow: 0 0 10px #00ff41;
+    text-align: left;
+    max-width: 600px;
+    line-height: 1.8;
+  }
+
+  #loading .cursor {
+    display: inline-block;
+    width: 8px;
+    height: 14px;
+    background: #00ff41;
+    animation: blink 0.8s step-end infinite;
+    vertical-align: text-bottom;
+    margin-left: 2px;
+  }
+
+  @keyframes blink {
+    50% { opacity: 0; }
+  }
+
+  /* === STATS CORNER (bottom-left) === */
+  #stats-corner {
+    position: absolute;
+    bottom: 102px;
+    left: 16px;
+    z-index: 20;
+    font-size: 9px;
+    color: rgba(0,255,65,0.4);
+    letter-spacing: 1px;
+  }
+
+  #stats-corner .stat-line {
+    margin-bottom: 1px;
+  }
+
+  #stats-corner .stat-val {
+    color: rgba(0,255,65,0.7);
+  }
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="boot-text" id="boot-log"></div>
+</div>
+
+<div id="monitor">
+  <div id="header">
+    <div>
+      <div class="title">BWB CAMPAIGN HEARTBEAT</div>
+      <div class="subtitle">PATIENT: BROTHERHOOD OF THE WEEPING BLADE &bull; SESSIONS 001-046 &bull; CONTINUOUS MONITORING</div>
+    </div>
+  </div>
+
+  <div id="vitals">
+    <div class="vital-box">
+      <div class="vital-label">BPM</div>
+      <div class="vital-value" id="bpm-value">60</div>
+    </div>
+    <div class="vital-box">
+      <div class="vital-label">DANGER</div>
+      <div class="vital-value" id="danger-value">0<span class="vital-unit">%</span></div>
+    </div>
+    <div class="vital-box">
+      <div class="vital-label">CASUALTIES</div>
+      <div class="vital-value" id="casualty-value">0</div>
+    </div>
+  </div>
+
+  <div id="session-info">
+    <div id="session-id">S001</div>
+    <div id="session-name">--</div>
+    <div id="encounter-name"></div>
+  </div>
+
+  <canvas id="ekg-canvas"></canvas>
+
+  <div id="encounter-flash"></div>
+  <div id="red-flash"></div>
+  <div id="mass-casualty">
+    <div class="warning-text">MASS CASUALTY EVENT</div>
+    <div class="casualty-count">5,103</div>
+    <div class="casualty-label">CONFIRMED DEAD</div>
+  </div>
+
+  <div id="stats-corner">
+    <div class="stat-line">TOTAL ENCOUNTERS: <span class="stat-val" id="stat-encounters">0</span></div>
+    <div class="stat-line">CAMPAIGN ELAPSED: <span class="stat-val" id="stat-elapsed">00:00</span></div>
+    <div class="stat-line">MAX TPK PROXIMITY: <span class="stat-val" id="stat-max-tpk">0%</span></div>
+  </div>
+
+  <div id="controls">
+    <button class="ctrl-btn" id="btn-pause">PAUSE</button>
+    <button class="ctrl-btn" id="btn-slower">-</button>
+    <span id="speed-display">0.5x</span>
+    <button class="ctrl-btn" id="btn-faster">+</button>
+    <button class="ctrl-btn" id="btn-restart">RESTART</button>
+    <button class="ctrl-btn" id="btn-mute">SOUND: ON</button>
+  </div>
+
+  <div id="bottom-bar">
+    <div id="session-timeline"></div>
+    <div id="scene-readout">INITIALIZING...</div>
+  </div>
+</div>
+
+<script>
+// ============================================================================
+// REAL CAMPAIGN DATA — extracted from BWB Campaign datasets
+// ============================================================================
+const SESSIONS = [{"sid":"S001","num":1,"has_combat":false,"encounters":[],"tpk_proximity":0,"scenes":[{"t":"Technical Troubles and Table Talk","ty":"Meta","e":3},{"t":"The Caretaker Who Wouldn't Flush","ty":"Social_Encounter","e":6},{"t":"Origami Gifts and Haunted Real Estate","ty":"Exploration","e":5},{"t":"Spymasters and Surrogate Mothers","ty":"Exposition","e":5},{"t":"Pillows, Palanquins, and Purple Pebbles","ty":"Character_Management","e":6},{"t":"The Etten Who Smashed and Apologized","ty":"Social_Encounter","e":9},{"t":"Long Live the Royal Smasher","ty":"Exploration","e":4}],"label":"The Etten and the Royal Procession","danger_max":0,"times_downed":0},{"sid":"S002","num":2,"has_combat":false,"encounters":[],"tpk_proximity":0,"scenes":[{"t":"Castle Management Crash Course","ty":"Meta","e":3},{"t":"Last Session Recap","ty":"Recap","e":4},{"t":"The Brotherhood Balances Its Books","ty":"Character_Management","e":5},{"t":"What Lies Beneath Castle Corras","ty":"Exposition","e":6},{"t":"Ancient Runes and the Lonely Light","ty":"Exploration","e":8},{"t":"The Great Troll Coin Heist","ty":"Skill_Challenge","e":9},{"t":"Sealed In and Looking Ahead","ty":"Meta","e":6}],"label":"The Mines Beneath Castle Corras","danger_max":0,"times_downed":0},{"sid":"S003","num":3,"has_combat":true,"encounters":[{"name":"Beholder and Shadows","round_count":3,"flags":["boss_present","environmental_hazard"]},{"name":"Eldritch Slime in the Pit","round_count":3,"flags":["timed_pressure","environmental_hazard"]}],"tpk_proximity":0,"scenes":[{"t":"Reuniting Beyond the Barrier","ty":"Exploration","e":5},{"t":"Commune with Kelemvor","ty":"Ritual","e":6},{"t":"Shadows and Shattered Nerves","ty":"Skill_Challenge","e":7},{"t":"The Eye of Midnight Speaks","ty":"Social_Encounter","e":8},{"t":"Ave's Legendary Blade Dance","ty":"Skill_Challenge","e":10},{"t":"Into the Maw of the Eldritch Slime","ty":"Combat","e":8},{"t":"The Light That Chose Billabong","ty":"Ritual","e":9},{"t":"Castle Corras Reborn","ty":"Exposition","e":6}],"label":"The Beholder and the Solarum","danger_max":4,"times_downed":0},{"sid":"S004","num":4,"has_combat":true,"encounters":[{"name":"Goblin Horde Ambush","round_count":8,"flags":["multi_stage","environmental_hazard","boss_present"]}],"tpk_proximity":85,"scenes":[{"t":"Plotting Lilith's False Trail","ty":"Social_Encounter","e":5},{"t":"Splash Page and Session Setup","ty":"Meta","e":4},{"t":"Recap and the Goblin Horde Awaits","ty":"Recap","e":5},{"t":"Blood and Steel at the Goblin Camp","ty":"Combat","e":10},{"t":"Whispers in the Aftermath","ty":"Exploration","e":5},{"t":"The Seedling Song and the Shadow Tree","ty":"Ritual","e":6},{"t":"The Chronicler's Mark","ty":"Exposition","e":7},{"t":"The Raven Who Lied","ty":"Social_Encounter","e":7},{"t":"Bones Beneath Lumin","ty":"Exploration","e":6}],"label":"Blood and Steel at the Goblin Camp","danger_max":5,"times_downed":0},{"sid":"S005","num":5,"has_combat":true,"encounters":[{"name":"Skeletal Crypt Guardian Battle","round_count":3,"flags":["multi_stage","boss_present"]}],"tpk_proximity":20,"scenes":[{"t":"Catching Up on Gloaming Court Revelations","ty":"Recap","e":4},{"t":"The Cult of Lilith Descends","ty":"Social_Encounter","e":7},{"t":"The Great Druidic Review Caper","ty":"Skill_Challenge","e":8},{"t":"Plague Spreads Across the Realm","ty":"Character_Management","e":5},{"t":"Secrets in the Hall of Whispers","ty":"Puzzle","e":7},{"t":"Bone Devil Brawl in the Crypt","ty":"Combat","e":9}],"label":"The Hall of Whispers and the Bone Devil","danger_max":4,"times_downed":0},{"sid":"S006","num":6,"has_combat":true,"encounters":[{"name":"Archmage Simulacrum","round_count":3,"flags":[]}],"tpk_proximity":35,"scenes":[{"t":"Session Resumes Mid-Battle","ty":"Meta","e":3},{"t":"The Archmage's Desperate Last Stand","ty":"Combat","e":9},{"t":"A Well-Earned Breather","ty":"Off_Topic","e":3},{"t":"The Taunting Voice From Beyond","ty":"Exploration","e":6},{"t":"Riddles, Loot, and a Dire Warning","ty":"Puzzle","e":8},{"t":"Escape From the Collapsing Crypt","ty":"Skill_Challenge","e":9},{"t":"Buried Alive and Planning Escape","ty":"Character_Management","e":6}],"label":"Archmage Simulacrum Battle","danger_max":0,"times_downed":0},{"sid":"S007","num":7,"has_combat":false,"encounters":[],"tpk_proximity":0,"scenes":[{"t":"Time Travel Rules and Paradoxes","ty":"Meta","e":5},{"t":"Planning the Spark Rescue Heist","ty":"Exposition","e":6},{"t":"Chronoport Into the Past","ty":"Ritual","e":8},{"t":"Splitting Up at Castle Corras","ty":"Exploration","e":6},{"t":"Infiltrating Their Own Castle","ty":"Skill_Challenge","e":7},{"t":"The Eyelash Heist and Showdown","ty":"Skill_Challenge","e":9},{"t":"Session Wrap-Up and Debrief","ty":"Meta","e":4}],"label":"The Spark Rescue Time Heist","danger_max":0,"times_downed":0},{"sid":"S008","num":8,"has_combat":true,"encounters":[{"name":"Corras vs Past Party","round_count":3,"flags":["multi_stage"]}],"tpk_proximity":20,"scenes":[{"t":"The DM Reveals His AI Workshop","ty":"Meta","e":3},{"t":"Spark Ambushes Corras in the Castle","ty":"Combat","e":8},{"t":"Billabong and Lilith Play Happy Family","ty":"Social_Encounter","e":6},{"t":"Madam Zilara's Tent of Dubious Fortunes","ty":"Social_Encounter","e":6},{"t":"Corras Returns and Spins His Greatest Lie","ty":"Social_Encounter","e":9},{"t":"The Great Heist Beneath Castle Corras","ty":"Skill_Challenge","e":8},{"t":"Simulacrum Ritual at the Lumin Circle","ty":"Character_Management","e":5},{"t":"An Injured Mercenary on the Road","ty":"Exposition","e":7},{"t":"Farewell and Final Coordinates","ty":"Meta","e":3}],"label":"The Great Heist Beneath Castle Corras","danger_max":3,"times_downed":0},{"sid":"S009","num":9,"has_combat":false,"encounters":[],"tpk_proximity":0,"scenes":[{"t":"Picking Up Where We Left Off","ty":"Recap","e":3},{"t":"Inventory Reckoning at Castle Corras","ty":"Character_Management","e":4},{"t":"Return from Break","ty":"Meta","e":4},{"t":"Potato Stew with a Dying Stranger","ty":"Social_Encounter","e":7},{"t":"The Hooded Figure at the Ritual","ty":"Social_Encounter","e":9},{"t":"Whispers from the Latrine Bucket","ty":"Exposition","e":7},{"t":"Grimslick's Caravan and the Mimic Horse","ty":"Exploration","e":7}],"label":"Downtime, Death, and a Mimic Horse","danger_max":0,"times_downed":0},{"sid":"S010","num":10,"has_combat":true,"encounters":[{"name":"Orc Camp Ambush","round_count":3,"flags":["environmental_hazard","multi_stage"]}],"tpk_proximity":15,"scenes":[{"t":"Pre-Game Banter and Session Recap","ty":"Meta","e":4},{"t":"Scouting the Cult Encampment","ty":"Exploration","e":5},{"t":"Botched Stealth and Battle Stations","ty":"Skill_Challenge","e":7},{"t":"Wrath of Nature at the Fire Camp","ty":"Combat","e":9},{"t":"The Demon Gate Revealed","ty":"Exposition","e":7},{"t":"Session Wrap-Up and Scheduling","ty":"Meta","e":3}],"label":"Orc Camp Assault","danger_max":3,"times_downed":0},{"sid":"S011","num":11,"has_combat":false,"encounters":[],"tpk_proximity":0,"scenes":[{"t":"Pre-Game Chatter and Catching Up","ty":"Off_Topic","e":2},{"t":"Recap and Departure From Triboar","ty":"Recap","e":4},{"t":"Introductions on the Road","ty":"Social_Encounter","e":7},{"t":"Trevor's Toll Gate Hustle","ty":"Social_Encounter","e":7},{"t":"Marching Order Through the Hills","ty":"Character_Management","e":4},{"t":"The Bridge Trap and the Earth Elemental","ty":"Skill_Challenge","e":9},{"t":"Bio Break and California Travel Talk","ty":"Off_Topic","e":2}],"label":"Trevor's Toll and the Bridge Trap","danger_max":0,"times_downed":0},{"sid":"S012","num":12,"has_combat":true,"encounters":[{"name":"Grimsnick Caravan Ambush","round_count":1,"flags":["multi_stage","boss_present"]}],"tpk_proximity":95,"scenes":[{"t":"Pre-Game Banter and Setup","ty":"Off_Topic","e":2},{"t":"Recap and Preparing for Battle","ty":"Recap","e":5},{"t":"Grimslick's Caravan Erupts in Chaos","ty":"Combat","e":8},{"t":"Catastrophic Explosion and Desperate Escape","ty":"Skill_Challenge","e":10},{"t":"Herb Merchants Visit the Ritual Site","ty":"Social_Encounter","e":5},{"t":"Sending Messages Across the Realm","ty":"Exposition","e":6},{"t":"Fleshy's Transformation and the Relic","ty":"Exploration","e":7},{"t":"The Book's Curse Deepens","ty":"Exposition","e":8}],"label":"The Catastrophic Wagon and the Book's Curse","danger_max":5,"times_downed":0},{"sid":"S013","num":13,"has_combat":false,"encounters":[],"tpk_proximity":0,"scenes":[{"t":"Pre-Game Banter and Housekeeping","ty":"Off_Topic","e":2},{"t":"Recap of Previous Catastrophic Session","ty":"Recap","e":5},{"t":"Jail Cell Rests and Preparations","ty":"Character_Management","e":4},{"t":"The Dungeons of Berdusk","ty":"Social_Encounter","e":9},{"t":"Reunion at the Ritual Site","ty":"Social_Encounter","e":7},{"t":"Heist Planning at the Castle","ty":"Exploration","e":6},{"t":"Session Wrap and New Year Farewells","ty":"Meta","e":3}],"label":"The Demon's Bargain and the Reunion at Lumin","danger_max":0,"times_downed":0},{"sid":"S014","num":14,"has_combat":true,"encounters":[{"name":"Raging Quaggoth Encounter","round_count":2,"flags":[]}],"tpk_proximity":20,"scenes":[{"t":"Catching Up Before the Heist","ty":"Off_Topic","e":2},{"t":"DM Recap and Spell Preparations","ty":"Recap","e":4},{"t":"Planning the Great Spark Swap","ty":"Social_Encounter","e":6},{"t":"A Scholar Stumbles From the Dark","ty":"Social_Encounter","e":7},{"t":"Darindale Rages Like a Giant Baby","ty":"Combat","e":9},{"t":"Weddings, Ice Baths, and Real Talk","ty":"Off_Topic","e":2},{"t":"Leaving the Scholar With a Quaggoth","ty":"Social_Encounter","e":5},{"t":"Infiltrating Castle Corras","ty":"Exploration","e":8},{"t":"Session Wrap and Cliffhanger","ty":"Meta","e":5}],"label":"The Great Spark Swap","danger_max":3,"times_downed":0},{"sid":"S015","num":15,"has_combat":true,"encounters":[{"name":"Temporal Rift Defense","round_count":3,"flags":["timed_pressure","boss_present","multi_stage"]}],"tpk_proximity":95,"scenes":[{"t":"Pre-Game Banter and Check-Ins","ty":"Off_Topic","e":2},{"t":"New Abilities and Session Recap","ty":"Recap","e":6},{"t":"The Elaborate Spark Heist Plan","ty":"Social_Encounter","e":5},{"t":"Executing the Swap Inside Castle Corras","ty":"Skill_Challenge","e":7},{"t":"The Greenhouse Ambush and Familiar Swap","ty":"Skill_Challenge","e":8},{"t":"The Temporal Sentinel's Ultimatum","ty":"Exposition","e":10},{"t":"Cartoon Network Nostalgia Break","ty":"Off_Topic","e":2},{"t":"Splitting Up to Save the Multiverse","ty":"Exploration","e":8}],"label":"The Temporal Sentinel and the Multiverse Fracture","danger_max":5,"times_downed":0},{"sid":"S016","num":16,"has_combat":true,"encounters":[{"name":"Temporal Rift Defense","round_count":6,"flags":["timed_pressure","environmental_hazard","multi_stage"]}],"tpk_proximity":0,"scenes":[{"t":"Pre-Game Weather Chat","ty":"Off_Topic","e":2},{"t":"Recap and Dual Battlefield Briefing","ty":"Exposition","e":5},{"t":"Desperate Defense at the Rift","ty":"Combat","e":8},{"t":"Navigating the Temporal Vortexes","ty":"Skill_Challenge","e":7},{"t":"Storm and Sacrifice Across Two Fronts","ty":"Combat","e":9},{"t":"Undoing Fate at the Edge of Oblivion","ty":"Social_Encounter","e":8.5},{"t":"A New Dawn in a Changed World","ty":"Exposition","e":7}],"label":"Temporal Rift Crisis","danger_max":0,"times_downed":0},{"sid":"S017","num":17,"has_combat":false,"encounters":[],"tpk_proximity":0,"scenes":[{"t":"Greetings and Character Rebuild","ty":"Meta","e":4},{"t":"Session Feedback and Pacing Review","ty":"Meta","e":3},{"t":"Tooling Demo and Copyright Tangent","ty":"Off_Topic","e":3},{"t":"The Cosmic War Reshapes Faerun","ty":"Exposition","e":7},{"t":"Branching Fates: Round One Choices","ty":"Character_Management","e":7},{"t":"Branching Fates: Empires and Alliances","ty":"Character_Management","e":9},{"t":"The Forge of Souls Beckons","ty":"Exposition","e":6}],"label":"Branching Fates and Empires Rise","danger_max":0,"times_downed":0},{"sid":"S018","num":18,"has_combat":false,"encounters":[],"tpk_proximity":0,"scenes":[{"t":"Gearing Up for the Journey","ty":"Character_Management","e":3},{"t":"Dahlia Joins and Corras Briefs","ty":"Exposition","e":5},{"t":"Triboar Gate and Foehammer's Forge","ty":"Social_Encounter","e":8},{"t":"Marching Into the Storm Mountains","ty":"Exploration","e":5},{"t":"Avalanche on the Mountainside","ty":"Skill_Challenge","e":8.5},{"t":"Dragon on the Frozen Lake","ty":"Skill_Challenge","e":9.5},{"t":"Session Wrap and Next Steps","ty":"Meta","e":6}],"label":"Into the Storm Mountains","danger_max":0,"times_downed":0},{"sid":"S019","num":19,"has_combat":true,"encounters":[{"name":"Frost Giant and Yetis at the Hut","round_count":3,"flags":["environmental_hazard","boss_present"]}],"tpk_proximity":40,"scenes":[{"t":"Recap and Camp Logistics","ty":"Recap","e":4},{"t":"Creatures Circle the Hut","ty":"Exposition","e":5},{"t":"Digging Out of the Snow","ty":"Exploration","e":6},{"t":"Frost Giant Ambush","ty":"Combat","e":9},{"t":"The Alchemist Fire Gambit","ty":"Skill_Challenge","e":10},{"t":"Orphaned Yeti Tykes","ty":"Exploration","e":7},{"t":"The Cabin on the Gorge","ty":"Exploration","e":6}],"label":"Frost Giants and the Alchemist Fire Gambit","danger_max":4,"times_downed":0},{"sid":"S020","num":20,"has_combat":true,"encounters":[{"name":"Cabin Clay Golem","round_count":2,"flags":["environmental_hazard","multi_stage"]}],"tpk_proximity":95,"scenes":[{"t":"Latrine Aftermath and Silent Forest","ty":"Exploration","e":5},{"t":"Scaling the Rickety Cabin","ty":"Skill_Challenge","e":7},{"t":"The Charred Cabin and Glowing Orb","ty":"Exploration","e":6},{"t":"The Summer Star Detonation","ty":"Combat","e":10},{"t":"Ghosts in the Chasm","ty":"Social_Encounter","e":8},{"t":"Billabong's Lonely Vigil","ty":"Puzzle","e":9},{"t":"Descent Into Dwarven Tunnels","ty":"Exploration","e":6}],"label":"Summer Star Detonation and Billabong's Vigil","danger_max":5,"times_downed":0},{"sid":"S021","num":21,"has_combat":true,"encounters":[{"name":"Drow Mage and Umber Hulk","round_count":1,"flags":["boss_present"]}],"tpk_proximity":30,"scenes":[{"t":"Dark Boons From the Binding Ritual","ty":"Character_Management","e":4},{"t":"Webb's Edge Briefing","ty":"Exposition","e":5},{"t":"Into the Underdark's Webbed Tunnels","ty":"Exploration","e":6},{"t":"The Drow Mage's Test of Devotion","ty":"Social_Encounter","e":8},{"t":"Umber Hulk Unleashed in the Dark","ty":"Combat","e":9}],"label":"Into the Underdark","danger_max":4,"times_downed":0},{"sid":"S022","num":22,"has_combat":true,"encounters":[{"name":"Umber Hulk and Drow Mage Battle","round_count":3,"flags":["environmental_hazard"]}],"tpk_proximity":30,"scenes":[{"t":"Assembling the Party Online","ty":"Meta","e":2},{"t":"Recapping the Road to the Underdark","ty":"Recap","e":5},{"t":"Flames and Poison in the Underdark","ty":"Combat","e":9},{"t":"Healing Wounds and Searching the Dead","ty":"Character_Management","e":5},{"t":"Through Webs and Illusions to Web's Edge","ty":"Exploration","e":7},{"t":"Break and Character Sheet Housekeeping","ty":"Meta","e":2}],"label":"Wall of Fire and Web's Edge","danger_max":3,"times_downed":0},{"sid":"S023","num":23,"has_combat":true,"encounters":[{"name":"Web's Edge Prison Escape Battle","round_count":6,"flags":["environmental_hazard","multi_stage"]}],"tpk_proximity":10,"scenes":[{"t":"Settling In and Session Recap","ty":"Recap","e":3},{"t":"Dungeon Battle at the Prison Cells","ty":"Combat","e":8},{"t":"Twin Fireballs Scorch the Prison","ty":"Combat","e":8},{"t":"Rules Discussion and Spell Mechanics","ty":"Meta","e":3},{"t":"Pressing the Attack on the Nalfeshnee","ty":"Combat","e":7},{"t":"Orla Befriends the Demon Toad","ty":"Combat","e":9},{"t":"Dahlia Executes the Nalfeshnee","ty":"Combat","e":10}],"label":"SavannahBelle's First Session","danger_max":0,"times_downed":0},{"sid":"S024","num":24,"has_combat":false,"encounters":[],"tpk_proximity":0,"scenes":[{"t":"Foundry Setup and Housekeeping","ty":"Meta","e":2},{"t":"Recap of Last Session","ty":"Recap","e":4},{"t":"Freeing Gertrude and Taming the Toad","ty":"Social_Encounter","e":6},{"t":"The Spider Dragon's Lair","ty":"Exploration","e":9},{"t":"The Chase Through Web's Edge","ty":"Skill_Challenge","e":8},{"t":"Corras Steals the Rod","ty":"Skill_Challenge","e":9},{"t":"Escape from Web's Edge","ty":"Skill_Challenge","e":10},{"t":"Lolth's Whisper at Castle Corras","ty":"Exposition","e":8}],"label":"Escape from Web's Edge","danger_max":0,"times_downed":0},{"sid":"S025","num":25,"has_combat":false,"encounters":[],"tpk_proximity":0,"scenes":[{"t":"Pre-Session Banter and Podcast Talk","ty":"Off_Topic","e":3},{"t":"Reshaping the Post-War Political Landscape","ty":"Exposition","e":5},{"t":"Forging the Federation's Government","ty":"Exposition","e":6},{"t":"Bastions and Roles Within the Federation","ty":"Character_Management","e":7},{"t":"Future Arcs and the Road Ahead","ty":"Meta","e":7}],"label":"Forging the Federation","danger_max":0,"times_downed":0},{"sid":"S026","num":26,"has_combat":false,"encounters":[],"tpk_proximity":0,"scenes":[{"t":"Foundry Setup and Inventory Housekeeping","ty":"Meta","e":2},{"t":"Recap of the Web's Edge Siege","ty":"Recap","e":4},{"t":"Sisters, Toads, and Sending Stones","ty":"Social_Encounter","e":7},{"t":"The Spider Dragon's Lair","ty":"Exploration","e":9},{"t":"Gertrude's Squeeze and the Army Arrives","ty":"Skill_Challenge","e":6},{"t":"The Chase Through Web's Edge","ty":"Skill_Challenge","e":8.5},{"t":"Reunited Under a Collapsing Mountain","ty":"Skill_Challenge","e":9},{"t":"Crash Landing at Castle Corras","ty":"Social_Encounter","e":7}],"label":"Escape from Web's Edge","danger_max":0,"times_downed":0},{"sid":"S027","num":27,"has_combat":true,"encounters":[{"name":"Revenant Ambush at the Waterfall Pit","round_count":3,"flags":["environmental_hazard","multi_stage","boss_present"]}],"tpk_proximity":35,"scenes":[{"t":"Pre-Session Chatter and Tech Talk","ty":"Off_Topic","e":2},{"t":"State of the World Briefing","ty":"Recap","e":5},{"t":"Character Sheets and Level-Up Fixes","ty":"Character_Management","e":2},{"t":"Descent Into the Soul Forge","ty":"Exploration","e":6},{"t":"Battle of the Bridge Revenants","ty":"Combat","e":9},{"t":"Cliffhanger and Thanksgiving Farewell","ty":"Meta","e":4}],"label":"Soul Forge Descent","danger_max":4,"times_downed":0},{"sid":"S028","num":28,"has_combat":true,"encounters":[{"name":"Revenants and Wraith","round_count":3,"flags":["multi_stage"]},{"name":"Shadow Mastiff Standoff","round_count":3,"flags":[]},{"name":"Flesh Abominations","round_count":3,"flags":["timed_pressure"]}],"tpk_proximity":60,"scenes":[{"t":"Bastions, Foundry, and Battle Recap","ty":"Meta","e":3},{"t":"Revenants Fall and the Desperate Retreat","ty":"Combat","e":7},{"t":"Pies, Puppies, and Pack Dominance","ty":"Social_Encounter","e":9},{"t":"Snacks, Wrestling Lore, and Intermission","ty":"Off_Topic","e":2},{"t":"Curses and Constructs Beneath the Temple","ty":"Exploration","e":7},{"t":"Scheduling and Session Wrap-Up","ty":"Meta","e":2}],"label":"Pies, Puppies, and Curses Below","danger_max":4,"times_downed":0},{"sid":"S029","num":29,"has_combat":true,"encounters":[{"name":"Malchor Possession","round_count":3,"flags":["multi_stage","boss_present"]}],"tpk_proximity":40,"scenes":[{"t":"Pre-Game Chatter and Gen Con Plans","ty":"Off_Topic","e":3},{"t":"Session Recap and Curse Reminders","ty":"Recap","e":4},{"t":"Investigating the Cursed Coin","ty":"Exploration","e":6},{"t":"Malchor Seizes Control of Ash","ty":"Combat","e":9},{"t":"Break and Pacing Discussion","ty":"Meta","e":3},{"t":"Exorcising Malchor","ty":"Skill_Challenge","e":9},{"t":"Completing the Infernal Node Ritual","ty":"Ritual","e":8},{"t":"Session Wrap-Up and Level Thirteen","ty":"Meta","e":5}],"label":"Malchor's Possession","danger_max":4,"times_downed":0},{"sid":"S030","num":30,"has_combat":true,"encounters":[{"name":"The Interdimensional Maw","round_count":3,"flags":["boss_present","environmental_hazard","multi_stage"]}],"tpk_proximity":0,"scenes":[{"t":"The Harbinger's Bastion of Statues","ty":"Ritual","e":8},{"t":"Training on the Chained Rift Stalker","ty":"Skill_Challenge","e":7},{"t":"Tracking the Ceaseless Maw","ty":"Exploration","e":6},{"t":"Break Chatter and Cat Stories","ty":"Off_Topic","e":2},{"t":"Descent Into the Daggerford Tomb","ty":"Exploration","e":6},{"t":"Battle Against the Ceaseless Maw","ty":"Combat","e":8.5},{"t":"Turning the Tide on the Maw","ty":"Combat","e":10}],"label":"Shadow Powers and the Ceaseless Maw","danger_max":0,"times_downed":0},{"sid":"S031","num":31,"has_combat":true,"encounters":[{"name":"Maw Escape and Defeat","round_count":3,"flags":["environmental_hazard","multi_stage"]},{"name":"Vrock Attack at Ash's Bastion","round_count":3,"flags":[]}],"tpk_proximity":85,"scenes":[{"t":"Piecing Together Last Session's Carnage","ty":"Recap","e":5},{"t":"Bringing Down the Maw","ty":"Combat","e":9},{"t":"Escape from the Collapsing Cavern","ty":"Skill_Challenge","e":8},{"t":"Stranded in the Mountains","ty":"Exploration","e":5},{"t":"Grieving Ash and Preserving the Body","ty":"Social_Encounter","e":6},{"t":"Ezrella's Warning of Dark Smugglers","ty":"Exposition","e":6},{"t":"Vrocks on the Front Lawn","ty":"Combat","e":8},{"t":"Level Fourteen and Looking Ahead","ty":"Meta","e":4}],"label":"The Maw Falls and Vrocks Return","danger_max":5,"times_downed":0},{"sid":"S032","num":32,"has_combat":true,"encounters":[{"name":"Red Wizards Ambush","round_count":2,"flags":["multi_stage"]}],"tpk_proximity":0,"scenes":[{"t":"Recap and Ezrella's Mission Briefing","ty":"Recap","e":4},{"t":"Feast and Preparations at the Bastion","ty":"Character_Management","e":4},{"t":"Infiltrating Warehouse Seventeen","ty":"Social_Encounter","e":7},{"t":"Searching the Enchanted Crates","ty":"Exploration","e":6},{"t":"Dahlia Cons the Foreman","ty":"Social_Encounter","e":7},{"t":"Ambush of the Crimson Order","ty":"Combat","e":9},{"t":"Cliffhanger and Strategic Deliberation","ty":"Meta","e":7}],"label":"Warehouse 17 and the Crimson Order","danger_max":0,"times_downed":0},{"sid":"S033","num":33,"has_combat":true,"encounters":[{"name":"Asnar the Crimson and the Red Wizards","round_count":3,"flags":["boss_present","multi_stage","environmental_hazard","timed_pressure"]}],"tpk_proximity":0,"scenes":[{"t":"Catching Up Before the Storm","ty":"Recap","e":5},{"t":"Technical Difficulties Halt the Battle","ty":"Meta","e":3},{"t":"Warehouse Brawl Against the Lich","ty":"Combat","e":8},{"t":"Mid-Session Break and Rulings","ty":"Meta","e":4},{"t":"Diplomacy Unravels Into Betrayal","ty":"Combat","e":9},{"t":"Corras Surrenders to Save His Friends","ty":"Social_Encounter","e":9},{"t":"Prisoners of the Red Wizards","ty":"Exposition","e":7}],"label":"Corras Surrenders to the Lich","danger_max":0,"times_downed":0},{"sid":"S034","num":34,"has_combat":true,"encounters":[{"name":"Wally the Otyug","round_count":1,"flags":[]},{"name":"Asnar the Crimson Ritual","round_count":3,"flags":["timed_pressure","boss_present","multi_stage"]}],"tpk_proximity":75,"scenes":[{"t":"Pre-Game Banter and Health Checks","ty":"Off_Topic","e":3},{"t":"Recap of the Thayan Capture","ty":"Recap","e":5},{"t":"Waking in the Thayan Dungeon","ty":"Exploration","e":7},{"t":"The Chaotic Jailbreak Begins","ty":"Exploration","e":8},{"t":"SavannahBelle's Strange New Friends","ty":"Social_Encounter","e":7},{"t":"Wally the Otyugh's Truth Space","ty":"Social_Encounter","e":9},{"t":"Battle at the Arcane Ritual Chamber","ty":"Combat","e":10},{"t":"Twin Formation and Spoils of War","ty":"Character_Management","e":8}],"label":"The Thayan Jailbreak","danger_max":5,"times_downed":0},{"sid":"S035","num":35,"has_combat":false,"encounters":[],"tpk_proximity":0,"scenes":[{"t":"Pre-Game Planning and House Rules","ty":"Meta","e":4},{"t":"Bastion Preparations and Crafting Orders","ty":"Character_Management","e":4},{"t":"Tense Reunion in Sigil's Sanctum","ty":"Social_Encounter","e":7},{"t":"Interrogating Mordenkainen's Deception","ty":"Exposition","e":7},{"t":"Gathering Scrolls and Stepping Through","ty":"Character_Management","e":5},{"t":"The Children of Durst Manor","ty":"Social_Encounter","e":7},{"t":"Ransacking the Haunted Manor","ty":"Exploration","e":8},{"t":"Post-Session Barovia Speculation","ty":"Meta","e":8}],"label":"Through the Portal to Barovia","danger_max":0,"times_downed":0},{"sid":"S036","num":36,"has_combat":true,"encounters":[{"name":"Death House Wraiths","round_count":6,"flags":["environmental_hazard","multi_stage"]},{"name":"Priests of Osibus","round_count":3,"flags":["boss_present","multi_stage"]}],"tpk_proximity":70,"scenes":[{"t":"Pre-Game Banter and Session Recap","ty":"Recap","e":4},{"t":"Attic Ambush by Invisible Stalkers","ty":"Combat","e":8},{"t":"Spiderwebs and the Marilith Emerges","ty":"Combat","e":9},{"t":"The Inquisitor in the Dark","ty":"Social_Encounter","e":6},{"t":"Descent Into the Bleeding Basement","ty":"Exploration","e":5},{"t":"The Priests Who Would Not Die","ty":"Combat","e":8},{"t":"Session Wrap and Farewells","ty":"Meta","e":3}],"label":"Death House Combat","danger_max":5,"times_downed":0},{"sid":"S037","num":37,"has_combat":true,"encounters":[{"name":"Priests of Osibis & Crimson Abbot","round_count":3,"flags":[]}],"tpk_proximity":40,"scenes":[{"t":"Catching Up in Barovia","ty":"Recap","e":4},{"t":"Slaying the Priests of Osibis","ty":"Combat","e":8},{"t":"Interrogating the Dead Cultist","ty":"Social_Encounter","e":7},{"t":"The Orb's Tempting Whisper","ty":"Exploration","e":7},{"t":"Reliquary and the Shambling Mound","ty":"Exploration","e":7},{"t":"The Crimson Abbot Descends","ty":"Combat","e":9},{"t":"A Deal with Strahd von Zarovich","ty":"Social_Encounter","e":9.5},{"t":"One Must Die, the House Demands","ty":"Skill_Challenge","e":7}],"label":"Death House - The Crimson Abbot","danger_max":0,"times_downed":0},{"sid":"S038","num":38,"has_combat":false,"encounters":[],"tpk_proximity":0,"scenes":[{"t":"Pre-Game Banter","ty":"Off_Topic","e":3},{"t":"Death House Skill Challenge Begins","ty":"Skill_Challenge","e":5},{"t":"Desperate Flight Through Death House","ty":"Skill_Challenge","e":8},{"t":"Crimbo and the Lorax Interlude","ty":"Off_Topic","e":3},{"t":"Escape From the Accursed Manor","ty":"Skill_Challenge","e":9},{"t":"Strahd's Deal and the Ruined Village","ty":"Exposition","e":6}],"label":"Escape from Death House","danger_max":0,"times_downed":0},{"sid":"S039","num":39,"has_combat":false,"encounters":[],"tpk_proximity":0,"scenes":[{"t":"Pre-Game Banter","ty":"Off_Topic","e":2},{"t":"Death House Retrospective and Recap","ty":"Meta","e":4},{"t":"Arrival at the Village of Barovia","ty":"Exposition","e":6},{"t":"Dire Wolf Standoff and Sack Rescue","ty":"Skill_Challenge","e":7},{"t":"Flight Over a Broken Village","ty":"Exploration","e":6},{"t":"Terror at the Tser Pool","ty":"Social_Encounter","e":8},{"t":"Bargaining for Shelter Under Wagons","ty":"Social_Encounter","e":5},{"t":"Zombies at the Door","ty":"Exploration","e":6}],"label":"The Cursed Goat of Barovia","danger_max":0,"times_downed":0},{"sid":"S040","num":40,"has_combat":true,"encounters":[{"name":"Zombie Ambush at Tser Pool","round_count":1,"flags":["environmental_hazard"]}],"tpk_proximity":0,"scenes":[{"t":"Recap of Barovian Misadventures","ty":"Recap","e":4},{"t":"Character Introductions and Campaign Legends","ty":"Meta","e":6},{"t":"Zombie Skirmish at Tser Pool","ty":"Combat","e":7},{"t":"Rest and the Heist Begins","ty":"Exploration","e":5},{"t":"Pilfering Madame Eva's Treasures","ty":"Skill_Challenge","e":8},{"t":"Second Heist and Eva's Reckoning","ty":"Exploration","e":7},{"t":"Madame Eva's Gambit for the Deck","ty":"Social_Encounter","e":9}],"label":"Pilfering Madame Eva's Treasures","danger_max":4,"times_downed":0},{"sid":"S041","num":41,"has_combat":true,"encounters":[{"name":"Madam Eva's Vistani Curse","round_count":4,"flags":["boss_present","multi_stage"]},{"name":"Strahd's Heart Chamber Assault","round_count":3,"flags":["boss_present","environmental_hazard","timed_pressure","multi_stage"]}],"tpk_proximity":70,"scenes":[{"t":"Pre-Game Banter","ty":"Off_Topic","e":3},{"t":"Recap and Resuming the Cliffhanger","ty":"Recap","e":5},{"t":"Showdown With Madam Eva","ty":"Combat","e":8},{"t":"Plundering Madam Eva's Tent","ty":"Exploration","e":6},{"t":"Strahd's Warning and Broken Deal","ty":"Social_Encounter","e":8},{"t":"Planning and the Flight to Ravenloft","ty":"Exploration","e":7},{"t":"The Heart of Castle Ravenloft","ty":"Combat","e":9},{"t":"Cliffhanger and Session Wrap-Up","ty":"Meta","e":8}],"label":"Madam Eva's Curse & Strahd's Heart","danger_max":5,"times_downed":0},{"sid":"S042","num":42,"has_combat":true,"encounters":[{"name":"Rahadin and the Barovian Witches","round_count":8,"flags":["boss_present","timed_pressure"]},{"name":"The Final Battle Against Strahd","round_count":3,"flags":["boss_present","multi_stage","environmental_hazard","rivals_present","timed_pressure"]}],"tpk_proximity":45,"scenes":[{"t":"Pre-Game Banter","ty":"Off_Topic","e":3},{"t":"Campaign Analytics Dashboard Reveal","ty":"Meta","e":6},{"t":"Foundry Setup and Session Recap","ty":"Recap","e":5},{"t":"Rahadin's Last Stand","ty":"Combat","e":9},{"t":"Descent Into the Heart of Sorrow","ty":"Combat","e":9},{"t":"The Final Battle Against Strahd","ty":"Combat","e":10}],"label":"The Final Battle Against Strahd","danger_max":5,"times_downed":0},{"sid":"S043","num":43,"has_combat":false,"encounters":[],"tpk_proximity":0,"scenes":[{"t":"Pre-Game Chatter","ty":"Off_Topic","e":3},{"t":"Fae Invasion Recap and World State","ty":"Recap","e":5},{"t":"Tier Four Rules and Character Setup","ty":"Meta","e":4},{"t":"The Siege Within the Walls","ty":"Exposition","e":6},{"t":"The Council Debate Over Rations","ty":"Social_Encounter","e":7},{"t":"Mass Suggestion and the Matron's Ritual","ty":"Social_Encounter","e":9},{"t":"Aftermath and the Cover-Up","ty":"Social_Encounter","e":8},{"t":"The Druid's Warning at the Dome","ty":"Exploration","e":6}],"label":"The Red Council of Castle Corras","danger_max":0,"times_downed":0},{"sid":"S044","num":44,"has_combat":false,"encounters":[],"tpk_proximity":0,"scenes":[{"t":"Pre-Game Banter and Session Recap","ty":"Recap","e":4},{"t":"Council Room Cleanup and Cover-Up","ty":"Social_Encounter","e":7},{"t":"Orla Communes With the Dying Druid","ty":"Exposition","e":6},{"t":"Waking the Master of Whispers","ty":"Social_Encounter","e":9},{"t":"Propaganda War in the Refugee Camp","ty":"Social_Encounter","e":8},{"t":"Gifts and a Gruesome Farewell","ty":"Character_Management","e":5},{"t":"Ash Hunts for Spark in the Feywild","ty":"Exploration","e":8},{"t":"Rat Infiltration of the Warehouse","ty":"Exploration","e":7},{"t":"BWB Plans a Counter-Offensive","ty":"Character_Management","e":5},{"t":"Trial by Truth in the Courtyard","ty":"Social_Encounter","e":9}],"label":"Propaganda Wars","danger_max":0,"times_downed":0},{"sid":"S045","num":45,"has_combat":true,"encounters":[{"name":"Lord's Alliance Insurrection","round_count":3,"flags":["boss_present","multi_stage"]}],"tpk_proximity":100,"scenes":[{"t":"Pre-Game Banter and Technical Setup","ty":"Off_Topic","e":3},{"t":"The Red Council Recap","ty":"Recap","e":5},{"t":"Trial by Crowd in the Courtyard","ty":"Social_Encounter","e":7},{"t":"Massacre in the Muddy Courtyard","ty":"Combat","e":10},{"t":"Counting the Dead and Spoils","ty":"Character_Management","e":6},{"t":"The Butcher Unmasked as a Construct","ty":"Exploration","e":8},{"t":"The Warehouse Trail Goes Cold","ty":"Exploration","e":5},{"t":"Funeral, Cliffhanger, and the Matron's Smile","ty":"Social_Encounter","e":7}],"label":"The Town Square Massacre","danger_max":5,"times_downed":0,"mass_casualties":5103},{"sid":"S046","num":46,"has_combat":false,"encounters":[],"tpk_proximity":0,"scenes":[{"t":"Pre-Game Politics","ty":"Off_Topic","e":3},{"t":"Session Quiz and Recap","ty":"Recap","e":5},{"t":"Confrontation with the Matron","ty":"Social_Encounter","e":7},{"t":"Sourdough Diplomacy During the Break","ty":"Off_Topic","e":3},{"t":"The Matron's Bargain for Power","ty":"Social_Encounter","e":7},{"t":"Zibblebottom's Revelations","ty":"Exposition","e":7},{"t":"Departure to the Feywild","ty":"Exploration","e":7},{"t":"The Wild Hunt of Cernunnos","ty":"Skill_Challenge","e":9}],"label":"Departure to the Feywild","danger_max":0,"times_downed":0}];
+
+// ============================================================================
+// AUDIO ENGINE — Web Audio API beep generator
+// ============================================================================
+class HeartbeatAudio {
+  constructor() {
+    this.ctx = null;
+    this.muted = false;
+    this.initialized = false;
+  }
+
+  init() {
+    if (this.initialized) return;
+    try {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      this.initialized = true;
+    } catch(e) {
+      console.warn('Web Audio not available');
+    }
+  }
+
+  beep(freq = 880, duration = 0.06, vol = 0.15) {
+    if (!this.ctx || this.muted) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.frequency.value = freq;
+    osc.type = 'sine';
+    gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+    osc.start(this.ctx.currentTime);
+    osc.stop(this.ctx.currentTime + duration);
+  }
+
+  combatBeep() {
+    this.beep(1200, 0.04, 0.2);
+    setTimeout(() => this.beep(800, 0.08, 0.15), 50);
+  }
+
+  flatline(duration = 0.5) {
+    if (!this.ctx || this.muted) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.frequency.value = 440;
+    osc.type = 'sine';
+    gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+    osc.start(this.ctx.currentTime);
+    osc.stop(this.ctx.currentTime + duration);
+  }
+
+  alarm() {
+    if (!this.ctx || this.muted) return;
+    for (let i = 0; i < 6; i++) {
+      setTimeout(() => {
+        this.beep(i % 2 === 0 ? 1500 : 900, 0.1, 0.25);
+      }, i * 120);
+    }
+  }
+}
+
+const audio = new HeartbeatAudio();
+
+// ============================================================================
+// EKG TRACE GENERATOR — converts session data into waveform points
+// ============================================================================
+function buildTraceData() {
+  const points = [];
+  const markers = []; // session start markers
+  const events = [];  // encounter labels, special events
+  let x = 0;
+  const PX_PER_SCENE = 180;
+  const BASELINE = 0.5; // normalized center — yToScreen maps this into the visible band
+
+  for (const session of SESSIONS) {
+    const sessionStartX = x;
+    markers.push({
+      x: sessionStartX,
+      sid: session.sid,
+      num: session.num,
+      label: session.label,
+      has_combat: session.has_combat,
+      tpk: session.tpk_proximity
+    });
+
+    let encIdx = 0;
+
+    for (let si = 0; si < session.scenes.length; si++) {
+      const scene = session.scenes[si];
+      const energy = scene.e;
+      const isCombat = scene.ty === 'Combat';
+      const isS045Combat = session.sid === 'S045' && isCombat;
+      const sceneWidth = PX_PER_SCENE;
+
+      // Find matching encounter for this combat scene
+      let encounter = null;
+      if (isCombat && encIdx < session.encounters.length) {
+        encounter = session.encounters[encIdx];
+        encIdx++;
+      }
+
+      if (isCombat) {
+        // === COMBAT WAVEFORM — QRS complex pattern ===
+        const tpk = session.tpk_proximity || 0;
+        const dangerMultiplier = isS045Combat ? 5.0 : (1.5 + tpk / 40);
+        const rounds = encounter ? encounter.round_count : 3;
+        const spikeHeight = Math.min(energy / 10, 1) * dangerMultiplier;
+
+        // Pre-combat tension ramp
+        const rampPts = 8;
+        for (let r = 0; r < rampPts; r++) {
+          const t = r / rampPts;
+          const y = BASELINE + (Math.sin(t * Math.PI) * 0.05 * energy / 10);
+          points.push({ x: x, y: y, type: 'tension', session: session.sid, scene: scene.t, energy: energy });
+          x += sceneWidth / (rampPts + rounds * 12 + 4);
+        }
+
+        // Generate QRS complexes for each round — with per-round variation
+        for (let round = 0; round < rounds; round++) {
+          const ri = 0.9 + Math.random() * 0.2; // subtle per-round variation (0.9-1.1)
+          const step = sceneWidth / (rampPts + rounds * 12 + 4);
+
+          // P wave
+          points.push({ x: x, y: BASELINE + 0.03 * dangerMultiplier * ri, type: 'combat', session: session.sid, scene: scene.t, energy });
+          x += step;
+
+          // Q dip
+          points.push({ x: x, y: BASELINE - 0.05 * dangerMultiplier * ri, type: 'combat', session: session.sid, scene: scene.t, energy });
+          x += step;
+
+          // R spike (THE BIG ONE)
+          const rHeight = spikeHeight * (0.85 + Math.random() * 0.3) * ri;
+          points.push({ x: x, y: BASELINE + rHeight, type: 'spike', session: session.sid, scene: scene.t, energy,
+            encounter: encounter ? encounter.name : '', tpk: tpk, isS045: isS045Combat });
+          x += step;
+
+          if (isS045Combat && round === 1) {
+            points.push({ x: x, y: BASELINE + rHeight * 1.5, type: 'massacre', session: session.sid, scene: scene.t, energy,
+              encounter: encounter ? encounter.name : '' });
+            x += step;
+          }
+
+          // S dip
+          points.push({ x: x, y: BASELINE - 0.08 * dangerMultiplier * ri, type: 'combat', session: session.sid, scene: scene.t, energy });
+          x += step;
+
+          // T wave recovery
+          points.push({ x: x, y: BASELINE + 0.02 * dangerMultiplier * ri, type: 'combat', session: session.sid, scene: scene.t, energy });
+          x += step;
+
+          // Isoelectric line between beats
+          for (let iso = 0; iso < 5; iso++) {
+            const jitter = (Math.random() - 0.5) * 0.005;
+            points.push({ x: x, y: BASELINE + jitter, type: 'baseline', session: session.sid, scene: scene.t, energy });
+            x += step;
+          }
+        }
+
+        // Post-combat settle
+        for (let p = 0; p < 4; p++) {
+          const t = p / 4;
+          const y = BASELINE + (1 - t) * 0.02 * dangerMultiplier;
+          points.push({ x: x, y: y, type: 'settle', session: session.sid, scene: scene.t, energy });
+          x += sceneWidth / (rampPts + rounds * 12 + 4);
+        }
+
+        // Mark encounter event
+        if (encounter) {
+          events.push({
+            x: sessionStartX + si * PX_PER_SCENE + PX_PER_SCENE * 0.3,
+            name: encounter.name,
+            session: session.sid,
+            tpk: tpk,
+            isS045: isS045Combat,
+            mass_casualties: session.mass_casualties || 0
+          });
+        }
+
+      } else {
+        // === NON-COMBAT WAVEFORM — gentle variation based on energy ===
+        const numPts = 20;
+        const amplitude = (energy / 10) * 0.12;
+
+        for (let p = 0; p < numPts; p++) {
+          const t = p / numPts;
+          const wave = Math.sin(t * Math.PI * 2) * amplitude * 0.3;
+          const noise = (Math.random() - 0.5) * 0.008;
+
+          // Clean resting heartbeat
+          let bump = 0;
+          if (p % 5 === 2) {
+            bump = amplitude * 0.5;
+          } else if (p % 5 === 3) {
+            bump = -amplitude * 0.2;
+          }
+
+          points.push({
+            x: x,
+            y: BASELINE + wave + noise + bump,
+            type: bump > 0.01 ? 'beat' : 'resting',
+            session: session.sid,
+            scene: scene.t,
+            sceneType: scene.ty,
+            energy: energy
+          });
+          x += sceneWidth / numPts;
+        }
+      }
+    }
+
+    // Inter-session gap (brief flatline)
+    for (let g = 0; g < 10; g++) {
+      points.push({ x: x, y: BASELINE, type: 'gap', session: session.sid });
+      x += 3;
+    }
+  }
+
+  return { points, markers, events, totalWidth: x };
+}
+
+// ============================================================================
+// RENDERER
+// ============================================================================
+const canvas = document.getElementById('ekg-canvas');
+const ctx = canvas.getContext('2d');
+
+let traceData;
+let drawHead = 0; // current draw position (in points index)
+let scrollOffset = 0;
+let speed = 0.5;
+let paused = false;
+let looping = false;
+let totalEncountersShown = 0;
+let maxTpkSeen = 0;
+let startTime = 0;
+
+// Visible state
+let currentSession = SESSIONS[0];
+let currentScene = '';
+let currentEncounter = '';
+let currentBPM = 60;
+let currentDanger = 0;
+let currentCasualties = 0;
+
+function resizeCanvas() {
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * window.devicePixelRatio;
+  canvas.height = rect.height * window.devicePixelRatio;
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = rect.height + 'px';
+  ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+}
+
+function drawGrid() {
+  const w = canvas.width / window.devicePixelRatio;
+  const h = canvas.height / window.devicePixelRatio;
+
+  // Major grid
+  ctx.strokeStyle = 'rgba(0, 255, 65, 0.06)';
+  ctx.lineWidth = 1;
+  const gridSize = 40;
+
+  for (let gx = 0; gx < w; gx += gridSize) {
+    ctx.beginPath();
+    ctx.moveTo(gx, 0);
+    ctx.lineTo(gx, h);
+    ctx.stroke();
+  }
+  for (let gy = 0; gy < h; gy += gridSize) {
+    ctx.beginPath();
+    ctx.moveTo(0, gy);
+    ctx.lineTo(w, gy);
+    ctx.stroke();
+  }
+
+  // Minor grid
+  ctx.strokeStyle = 'rgba(0, 255, 65, 0.025)';
+  const minorGrid = 8;
+  for (let gx = 0; gx < w; gx += minorGrid) {
+    ctx.beginPath();
+    ctx.moveTo(gx, 0);
+    ctx.lineTo(gx, h);
+    ctx.stroke();
+  }
+  for (let gy = 0; gy < h; gy += minorGrid) {
+    ctx.beginPath();
+    ctx.moveTo(0, gy);
+    ctx.lineTo(w, gy);
+    ctx.stroke();
+  }
+}
+
+function yToScreen(yNorm, h) {
+  // Map normalized y into the visible band between header and bottom bar
+  // Visible band: 8% from top (below header) to 65% from top (above bottom bar)
+  const TOP_MARGIN = 0.08;
+  const BOT_MARGIN = 0.65;
+  const band = BOT_MARGIN - TOP_MARGIN; // 0.57 of screen height
+  // yNorm 0=low, 1=high; invert so higher values go up on screen
+  return h * (BOT_MARGIN - yNorm * band);
+}
+
+function render(timestamp) {
+  if (!startTime) startTime = timestamp;
+  // Resize every frame to catch layout changes
+  const rect = canvas.getBoundingClientRect();
+  if (Math.abs(canvas.width - rect.width * window.devicePixelRatio) > 1) {
+    resizeCanvas();
+  }
+  const w = canvas.width / window.devicePixelRatio;
+  const h = canvas.height / window.devicePixelRatio;
+
+  // Clear
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(0, 0, w, h);
+
+  drawGrid();
+
+  if (!traceData) {
+    requestAnimationFrame(render);
+    return;
+  }
+
+  const pts = traceData.points;
+
+  // Advance draw head — auto-speed: faster in non-combat, slower in combat
+  if (!paused && drawHead < pts.length) {
+    const curPt = pts[Math.floor(Math.min(drawHead, pts.length - 1))];
+    const isCombatPt = curPt && (curPt.type === 'combat' || curPt.type === 'spike' || curPt.type === 'massacre' || curPt.type === 'tension');
+    const autoSpeed = isCombatPt ? 1.0 : 2.0;
+    drawHead += speed * autoSpeed;
+    if (drawHead > pts.length) drawHead = pts.length;
+  } else if (drawHead >= pts.length && !looping) {
+    looping = true;
+    setTimeout(() => {
+      drawHead = 0;
+      scrollOffset = 0;
+      totalEncountersShown = 0;
+      maxTpkSeen = 0;
+      startTime = 0;
+      looping = false;
+    }, 3000);
+  }
+
+  // Calculate scroll so draw head is at the right edge — trace fills full screen width behind it
+  const headX = drawHead < pts.length ? pts[Math.floor(drawHead)].x : (pts.length > 0 ? pts[pts.length-1].x : 0);
+  const targetScroll = headX - w + 40; // 40px margin from right edge
+  scrollOffset = Math.max(0, targetScroll);
+
+  // Update current session/scene info
+  if (drawHead > 0 && drawHead <= pts.length) {
+    const currentPt = pts[Math.min(Math.floor(drawHead), pts.length - 1)];
+    const sess = SESSIONS.find(s => s.sid === currentPt.session);
+    if (sess && sess !== currentSession) {
+      currentSession = sess;
+      updateSessionDisplay();
+    }
+    currentScene = currentPt.scene || '';
+
+    // BPM based on point type
+    if (currentPt.type === 'spike' || currentPt.type === 'massacre') {
+      currentBPM = 140 + Math.floor(currentPt.energy * 8);
+      currentDanger = currentPt.tpk || currentSession.tpk_proximity;
+    } else if (currentPt.type === 'combat') {
+      currentBPM = 100 + Math.floor(currentPt.energy * 5);
+    } else if (currentPt.type === 'tension') {
+      currentBPM = 80 + Math.floor(currentPt.energy * 3);
+    } else {
+      currentBPM = 55 + Math.floor((currentPt.energy || 5) * 2);
+      if (currentDanger > 0) currentDanger = Math.max(0, currentDanger - 0.5);
+    }
+  }
+
+  // === DRAW THE TRACE ===
+  const trailLength = Math.min(Math.floor(drawHead), pts.length);
+
+  // Phosphor afterglow trail
+  for (let pass = 0; pass < 3; pass++) {
+    ctx.beginPath();
+    let started = false;
+
+    const startIdx = Math.max(0, trailLength - Math.floor(w * 1.5));
+
+    for (let i = startIdx; i < trailLength; i++) {
+      const pt = pts[i];
+      const sx = pt.x - scrollOffset;
+
+      if (sx < -50 || sx > w + 50) continue;
+
+      const sy = yToScreen(pt.y, h);
+
+      if (!started) {
+        ctx.moveTo(sx, sy);
+        started = true;
+      } else {
+        ctx.lineTo(sx, sy);
+      }
+    }
+
+    if (pass === 0) {
+      // Outer glow
+      ctx.strokeStyle = 'rgba(0, 255, 65, 0.08)';
+      ctx.lineWidth = 8;
+      ctx.shadowColor = '#00ff41';
+      ctx.shadowBlur = 20;
+    } else if (pass === 1) {
+      // Mid glow
+      ctx.strokeStyle = 'rgba(0, 255, 65, 0.25)';
+      ctx.lineWidth = 3;
+      ctx.shadowBlur = 10;
+    } else {
+      // Core line
+      ctx.strokeStyle = '#00ff41';
+      ctx.lineWidth = 1.5;
+      ctx.shadowBlur = 5;
+    }
+    ctx.stroke();
+  }
+
+  ctx.shadowBlur = 0;
+
+  // === HIGHLIGHT SPIKES — draw them brighter ===
+  for (let i = Math.max(0, trailLength - Math.floor(w * 1.5)); i < trailLength; i++) {
+    const pt = pts[i];
+    if (pt.type !== 'spike' && pt.type !== 'massacre') continue;
+
+    const sx = pt.x - scrollOffset;
+    if (sx < -50 || sx > w + 50) continue;
+    const sy = yToScreen(pt.y, h);
+
+    // Bright dot at spike peak
+    ctx.beginPath();
+    ctx.arc(sx, sy, pt.type === 'massacre' ? 5 : 3, 0, Math.PI * 2);
+    const color = pt.type === 'massacre' ? '#ff0000' : (pt.tpk > 70 ? '#ff4444' : '#00ff41');
+    ctx.fillStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = pt.type === 'massacre' ? 30 : 15;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+
+  // === DRAW HEAD INDICATOR (bright dot at current position) ===
+  if (trailLength > 0 && trailLength <= pts.length) {
+    const headPt = pts[trailLength - 1];
+    const hx = headPt.x - scrollOffset;
+    const hy = yToScreen(headPt.y, h);
+
+    // Pulsing bright dot
+    const pulse = Math.sin(timestamp / 100) * 0.3 + 0.7;
+
+    ctx.beginPath();
+    ctx.arc(hx, hy, 4 * pulse, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(0, 255, 65, ${pulse})`;
+    ctx.shadowColor = '#00ff41';
+    ctx.shadowBlur = 20;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Trigger beeps on spikes
+    if (headPt.type === 'spike' && !headPt._beeped) {
+      headPt._beeped = true;
+      audio.combatBeep();
+      totalEncountersShown++;
+      if (headPt.tpk > maxTpkSeen) maxTpkSeen = headPt.tpk;
+      flashEncounter(headPt.encounter || headPt.scene);
+    } else if (headPt.type === 'massacre' && !headPt._beeped) {
+      headPt._beeped = true;
+      audio.alarm();
+      triggerMassCasualty();
+    } else if (headPt.type === 'beat' && !headPt._beeped) {
+      headPt._beeped = true;
+      audio.beep(660, 0.03, 0.04);
+    }
+  }
+
+  // === SESSION MARKERS on trace ===
+  ctx.font = '9px "Share Tech Mono"';
+  ctx.textAlign = 'center';
+  for (const m of traceData.markers) {
+    const mx = m.x - scrollOffset;
+    if (mx < -20 || mx > w + 20) continue;
+    if (m.x > headX) continue; // Don't show markers ahead of trace
+
+    // Vertical line
+    ctx.strokeStyle = m.has_combat ? 'rgba(255,65,65,0.15)' : 'rgba(0,255,65,0.08)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 4]);
+    ctx.beginPath();
+    ctx.moveTo(mx, 0);
+    ctx.lineTo(mx, h);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Session label at top
+    ctx.fillStyle = m.has_combat ? 'rgba(255,100,100,0.4)' : 'rgba(0,255,65,0.25)';
+    ctx.fillText(m.sid, mx, 14);
+  }
+
+  // === ENCOUNTER LABELS ===
+  ctx.font = '10px "Share Tech Mono"';
+  for (const ev of traceData.events) {
+    const ex = ev.x - scrollOffset;
+    if (ex < -100 || ex > w + 100) continue;
+    if (ev.x > headX) continue;
+
+    ctx.textAlign = 'left';
+    const isRed = ev.tpk > 50 || ev.isS045;
+    ctx.fillStyle = isRed ? 'rgba(255,65,65,0.6)' : 'rgba(255,200,50,0.5)';
+    ctx.shadowColor = isRed ? '#ff4444' : '#ffcc33';
+    ctx.shadowBlur = 5;
+
+    const label = ev.name.length > 30 ? ev.name.substring(0, 28) + '...' : ev.name;
+    ctx.fillText(label, ex, h - 10);
+    ctx.shadowBlur = 0;
+  }
+
+  // Update HUD
+  updateHUD(timestamp);
+
+  requestAnimationFrame(render);
+}
+
+// ============================================================================
+// HUD UPDATES
+// ============================================================================
+function updateHUD(timestamp) {
+  const bpmEl = document.getElementById('bpm-value');
+  const dangerEl = document.getElementById('danger-value');
+  const casualtyEl = document.getElementById('casualty-value');
+  const sceneEl = document.getElementById('scene-readout');
+  const encEl = document.getElementById('encounter-name');
+
+  // BPM
+  bpmEl.textContent = Math.round(currentBPM);
+  if (currentBPM > 140) {
+    bpmEl.className = 'vital-value danger';
+  } else if (currentBPM > 100) {
+    bpmEl.className = 'vital-value warning';
+  } else {
+    bpmEl.className = 'vital-value';
+  }
+
+  // Danger
+  const dangerPct = Math.round(currentDanger);
+  dangerEl.innerHTML = dangerPct + '<span class="vital-unit">%</span>';
+  if (dangerPct > 70) {
+    dangerEl.className = 'vital-value danger';
+  } else if (dangerPct > 30) {
+    dangerEl.className = 'vital-value warning';
+  } else {
+    dangerEl.className = 'vital-value';
+  }
+
+  // Casualties
+  if (currentSession.mass_casualties) {
+    const shown = Math.min(currentSession.mass_casualties,
+      currentSession.mass_casualties * Math.min(1, (drawHead / traceData.points.length) * 2));
+    casualtyEl.textContent = Math.floor(shown).toLocaleString();
+    casualtyEl.className = 'vital-value danger';
+  } else {
+    casualtyEl.textContent = currentSession.times_downed || 0;
+    casualtyEl.className = 'vital-value';
+  }
+
+  // Scene readout
+  if (currentScene) {
+    sceneEl.textContent = `SCENE: ${currentScene}`;
+  }
+
+  // Encounter
+  if (currentSession.has_combat && currentSession.encounters.length > 0) {
+    const encNames = currentSession.encounters.map(e => e.name).filter(Boolean).join(' / ');
+    encEl.textContent = encNames ? `ENCOUNTER: ${encNames}` : '';
+  } else {
+    encEl.textContent = '';
+  }
+
+  // Stats corner
+  document.getElementById('stat-encounters').textContent = totalEncountersShown;
+  document.getElementById('stat-max-tpk').textContent = maxTpkSeen + '%';
+  if (startTime) {
+    const elapsed = Math.floor((performance.now() - startTime) / 1000);
+    const mm = Math.floor(elapsed / 60).toString().padStart(2, '0');
+    const ss = (elapsed % 60).toString().padStart(2, '0');
+    document.getElementById('stat-elapsed').textContent = `${mm}:${ss}`;
+  }
+}
+
+function updateSessionDisplay() {
+  document.getElementById('session-id').textContent = currentSession.sid;
+  document.getElementById('session-name').textContent = currentSession.label || '--';
+
+  // Update timeline bar
+  const ticks = document.querySelectorAll('.session-tick');
+  ticks.forEach((tick, i) => {
+    tick.classList.toggle('active', i === currentSession.num - 1);
+  });
+}
+
+// ============================================================================
+// ENCOUNTER FLASH
+// ============================================================================
+function flashEncounter(name) {
+  const el = document.getElementById('encounter-flash');
+  el.textContent = name;
+  el.style.opacity = 1;
+  el.style.color = currentSession.tpk_proximity > 70 ? '#ff2020' : '#ffaa00';
+
+  setTimeout(() => { el.style.opacity = 0.7; }, 200);
+  setTimeout(() => { el.style.opacity = 0.4; }, 600);
+  setTimeout(() => { el.style.opacity = 0; }, 1200);
+}
+
+function triggerMassCasualty() {
+  const mc = document.getElementById('mass-casualty');
+  const rf = document.getElementById('red-flash');
+
+  // Red flash
+  rf.style.opacity = 0.6;
+  setTimeout(() => { rf.style.opacity = 0.3; }, 300);
+  setTimeout(() => { rf.style.opacity = 0.5; }, 600);
+  setTimeout(() => { rf.style.opacity = 0.2; }, 1200);
+  setTimeout(() => { rf.style.opacity = 0; }, 2500);
+
+  // Mass casualty overlay
+  mc.style.opacity = 1;
+  setTimeout(() => { mc.style.opacity = 0.8; }, 500);
+  setTimeout(() => { mc.style.opacity = 0.9; }, 1000);
+  setTimeout(() => { mc.style.opacity = 0.5; }, 2000);
+  setTimeout(() => { mc.style.opacity = 0; }, 3500);
+
+  // Flash the entire background red briefly
+  document.body.style.background = '#200000';
+  setTimeout(() => { document.body.style.background = '#100000'; }, 150);
+  setTimeout(() => { document.body.style.background = '#080000'; }, 400);
+  setTimeout(() => { document.body.style.background = '#000000'; }, 1500);
+}
+
+// ============================================================================
+// TIMELINE BAR
+// ============================================================================
+function buildTimeline() {
+  const container = document.getElementById('session-timeline');
+  container.innerHTML = '';
+
+  for (const session of SESSIONS) {
+    const tick = document.createElement('div');
+    tick.className = `session-tick ${session.has_combat ? 'combat' : 'rp'}`;
+    if (session.num === 1) tick.classList.add('active');
+
+    const bar = document.createElement('div');
+    bar.className = 'bar';
+    const barH = session.has_combat ? Math.max(6, session.tpk_proximity / 3 + 5) : 3;
+    bar.style.height = barH + 'px';
+
+    if (session.sid === 'S045') {
+      bar.style.background = '#ff2020';
+      bar.style.boxShadow = '0 0 8px #ff2020, 0 0 16px rgba(255,32,32,0.5)';
+      bar.style.height = '45px';
+    }
+
+    const label = document.createElement('div');
+    label.className = 'label';
+    label.textContent = session.num;
+
+    tick.appendChild(bar);
+    tick.appendChild(label);
+
+    // Click to jump
+    tick.addEventListener('click', () => {
+      const marker = traceData.markers.find(m => m.sid === session.sid);
+      if (marker) {
+        // Find the point index closest to this marker x
+        let closest = 0;
+        for (let i = 0; i < traceData.points.length; i++) {
+          if (traceData.points[i].x >= marker.x) {
+            closest = i;
+            break;
+          }
+        }
+        drawHead = closest;
+        // Reset beeped flags for future points
+        for (let i = closest; i < traceData.points.length; i++) {
+          delete traceData.points[i]._beeped;
+        }
+      }
+    });
+
+    container.appendChild(tick);
+  }
+}
+
+// ============================================================================
+// CONTROLS
+// ============================================================================
+document.getElementById('btn-pause').addEventListener('click', () => {
+  paused = !paused;
+  document.getElementById('btn-pause').textContent = paused ? 'PLAY' : 'PAUSE';
+  document.getElementById('btn-pause').classList.toggle('active', paused);
+});
+
+document.getElementById('btn-slower').addEventListener('click', () => {
+  speed = Math.max(0.25, speed / 2);
+  document.getElementById('speed-display').textContent = speed + 'x';
+});
+
+document.getElementById('btn-faster').addEventListener('click', () => {
+  speed = Math.min(8, speed * 2);
+  document.getElementById('speed-display').textContent = speed + 'x';
+});
+
+document.getElementById('btn-restart').addEventListener('click', () => {
+  drawHead = 0;
+  scrollOffset = 0;
+  totalEncountersShown = 0;
+  maxTpkSeen = 0;
+  startTime = 0;
+  looping = false;
+  currentDanger = 0;
+  // Clear beeped flags
+  for (const pt of traceData.points) {
+    delete pt._beeped;
+  }
+});
+
+document.getElementById('btn-mute').addEventListener('click', () => {
+  audio.muted = !audio.muted;
+  document.getElementById('btn-mute').textContent = audio.muted ? 'SOUND: OFF' : 'SOUND: ON';
+});
+
+// ============================================================================
+// BOOT SEQUENCE
+// ============================================================================
+async function bootSequence() {
+  const logEl = document.getElementById('boot-log');
+  const lines = [
+    'BWB CAMPAIGN HEARTBEAT MONITOR v2.1',
+    '====================================',
+    '',
+    'Initializing cardiac telemetry system...',
+    `Loading session data: ${SESSIONS.length} sessions found`,
+    `Combat sessions detected: ${SESSIONS.filter(s => s.has_combat).length}`,
+    `Total encounters mapped: ${SESSIONS.reduce((a,s) => a + s.encounters.length, 0)}`,
+    '',
+    'Calibrating EKG waveform generator...',
+    'Building trace data from scene energy profiles...',
+    'Mapping TPK proximity to spike amplitude...',
+    '',
+    'WARNING: Session S045 flagged as MASS CASUALTY EVENT',
+    '  > 5,103 confirmed dead',
+    '  > TPK proximity: MAXIMUM',
+    '  > Threat classification: EXTINCTION-LEVEL',
+    '',
+    'Audio subsystem: Web Audio API ready',
+    'Canvas renderer: Hardware accelerated',
+    'CRT overlay: Active',
+    '',
+    'Patient status: ALIVE (barely)',
+    'Campaign heartbeat: DETECTED',
+    '',
+    'Commencing real-time monitoring...'
+  ];
+
+  for (let i = 0; i < lines.length; i++) {
+    logEl.innerHTML += lines[i] + '\n';
+
+    // Color warnings red
+    if (lines[i].includes('WARNING') || lines[i].includes('MASS CASUALTY') || lines[i].includes('EXTINCTION')) {
+      logEl.innerHTML = logEl.innerHTML.replace(
+        lines[i],
+        `<span style="color:#ff2020;text-shadow:0 0 10px #ff2020">${lines[i]}</span>`
+      );
+    }
+
+    logEl.innerHTML = logEl.innerHTML.replace(/<span class="cursor"><\/span>/g, '');
+    logEl.innerHTML += '<span class="cursor"></span>';
+    logEl.scrollTop = logEl.scrollHeight;
+
+    await new Promise(r => setTimeout(r, lines[i] === '' ? 100 : 60 + Math.random() * 80));
+  }
+
+  await new Promise(r => setTimeout(r, 800));
+
+  // Fade out loading
+  document.getElementById('loading').style.opacity = 0;
+  setTimeout(() => {
+    document.getElementById('loading').style.display = 'none';
+    // Init audio on first interaction
+    document.addEventListener('click', () => audio.init(), { once: true });
+    document.addEventListener('keydown', () => audio.init(), { once: true });
+    // Try to init immediately too
+    audio.init();
+  }, 500);
+}
+
+// ============================================================================
+// MAIN
+// ============================================================================
+window.addEventListener('resize', resizeCanvas);
+
+async function main() {
+  resizeCanvas();
+  buildTimeline();
+
+  // Boot sequence
+  await bootSequence();
+
+  // Build trace data
+  traceData = buildTraceData();
+
+  console.log(`Trace: ${traceData.points.length} points, ${traceData.markers.length} markers, ${traceData.events.length} events`);
+  console.log(`Total width: ${traceData.totalWidth}px`);
+
+  // Start render loop
+  requestAnimationFrame(render);
+}
+
+main();
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'Space') {
+    e.preventDefault();
+    document.getElementById('btn-pause').click();
+  } else if (e.code === 'ArrowRight') {
+    document.getElementById('btn-faster').click();
+  } else if (e.code === 'ArrowLeft') {
+    document.getElementById('btn-slower').click();
+  } else if (e.code === 'KeyR') {
+    document.getElementById('btn-restart').click();
+  } else if (e.code === 'KeyM') {
+    document.getElementById('btn-mute').click();
+  }
+});
+</script>
+</body>
+</html>

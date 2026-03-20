@@ -1,0 +1,1682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entity Constellation — BWB Campaign</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@400;500;700&family=JetBrains+Mono:wght@400;700&family=Cinzel:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  /* ── Reset & Base ─────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg-deep:       #06060c;
+    --bg-primary:    #0a0a14;
+    --bg-card:       #0f1020;
+    --bg-card-hover: #141530;
+    --bg-surface:    #1a1a2e;
+    --bg-elevated:   #22223a;
+    --text-primary:  #eef0ff;
+    --text-secondary:#9494bf;
+    --text-muted:    #8a8ab5;
+    --border:        #2a2a4a;
+    --border-glow:   #3a3a6a;
+    --accent-blue:   #00d4ff;
+    --accent-gold:   #ffd700;
+    --accent-red:    #ff4444;
+    --accent-green:  #44ff88;
+    --accent-purple: #ad6bff;
+    --accent-orange: #ff8844;
+  }
+
+  body {
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    font-family: 'Barlow', sans-serif;
+    overflow-x: hidden;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* ── Scanline Overlay ─────────────────────────────── */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    pointer-events: none;
+    background: repeating-linear-gradient(0deg,
+      transparent, transparent 2px,
+      rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+  }
+
+  /* ── Header ───────────────────────────────────────── */
+  .header {
+    text-align: center;
+    padding: 48px 24px 8px;
+    position: relative;
+    width: 100%;
+    max-width: 1400px;
+  }
+
+  .header .section-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--accent-blue);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  .header .section-label::before {
+    content: '';
+    width: 20px;
+    height: 2px;
+    background: var(--accent-blue);
+  }
+
+  .header h1 {
+    font-family: 'Bebas Neue', cursive;
+    font-size: clamp(48px, 7vw, 96px);
+    letter-spacing: 6px;
+    line-height: 1;
+    background: linear-gradient(180deg, #ffffff, #aabbdd);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+    margin-bottom: 4px;
+  }
+
+  .header .subtitle {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  /* ── Legends ──────────────────────────────────────── */
+  .legends-row {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    flex-wrap: wrap;
+    padding: 16px 24px 0;
+    max-width: 1400px;
+  }
+
+  .legend-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .legend-group .legend-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+    margin-bottom: 2px;
+  }
+
+  .legend-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .legend-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .legend-line {
+    width: 20px;
+    height: 3px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  /* ── Chart Container ──────────────────────────────── */
+  .chart-container {
+    position: relative;
+    width: 100%;
+    max-width: 1200px;
+    aspect-ratio: 1;
+    margin: 0 auto;
+  }
+
+  .chart-container canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  .chart-container svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* ── Center Card ──────────────────────────────────── */
+  .center-card {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 260px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 10;
+  }
+
+  .center-card.visible { opacity: 1; }
+
+  .center-card-inner {
+    background: linear-gradient(135deg, var(--bg-card) 0%, rgba(15,16,40,0.95) 100%);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(12px);
+  }
+
+  .center-card-inner::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--accent-blue);
+    transition: background 0.3s;
+  }
+
+  .center-card .entity-name {
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    text-align: center;
+  }
+
+  .center-card .type-badge {
+    display: inline-block;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    padding: 3px 10px;
+    border-radius: 3px;
+    margin-bottom: 10px;
+    background: rgba(0,212,255,0.12);
+    border: 1px solid rgba(0,212,255,0.25);
+    color: var(--accent-blue);
+  }
+
+  .center-card .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 6px;
+  }
+
+  .center-card .stat-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+  }
+
+  .center-card .stat-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--text-primary);
+  }
+
+  .center-card .description {
+    font-family: 'Barlow', sans-serif;
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-top: 10px;
+    border-top: 1px solid var(--border);
+    padding-top: 10px;
+  }
+
+  /* ── Default / idle center state ──────────────────── */
+  .center-idle {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    pointer-events: none;
+    z-index: 5;
+    transition: opacity 0.35s;
+  }
+  .center-idle.hidden { opacity: 0; }
+
+  .center-idle .idle-count {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 52px;
+    letter-spacing: 2px;
+    color: var(--text-primary);
+    text-shadow: 0 0 30px rgba(0,212,255,0.15);
+  }
+  .center-idle .idle-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+  }
+
+  /* ── Tooltip ──────────────────────────────────────── */
+  .tooltip {
+    position: fixed;
+    pointer-events: none;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-glow);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-family: 'Barlow', sans-serif;
+    font-size: 13px;
+    color: var(--text-primary);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+    opacity: 0;
+    z-index: 1000;
+    transition: opacity 0.15s;
+    max-width: 220px;
+  }
+  .tooltip.visible { opacity: 1; }
+  .tooltip .tt-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .tooltip .tt-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  /* ── Footer ───────────────────────────────────────── */
+  .footer {
+    text-align: center;
+    padding: 16px 24px 32px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="section-label">Campaign Analytics</div>
+  <h1>ENTITY CONSTELLATION</h1>
+  <div class="subtitle">35 Entities &times; 46 Sessions &mdash; Radial Relationship Map</div>
+</div>
+
+<div class="legends-row">
+  <div class="legend-group">
+    <div class="legend-title">Entity Types</div>
+    <div class="legend-items" id="legend-entities"></div>
+  </div>
+  <div class="legend-group">
+    <div class="legend-title">Scene Types</div>
+    <div class="legend-items" id="legend-scenes"></div>
+  </div>
+</div>
+
+<div class="chart-container" id="chart">
+  <canvas id="canvas-connections"></canvas>
+  <svg id="svg-structure"></svg>
+  <div class="center-idle" id="center-idle">
+    <div class="idle-count">35</div>
+    <div class="idle-label">Entities Tracked</div>
+    <div class="idle-count" style="font-size:32px; margin-top:8px;">46</div>
+    <div class="idle-label">Sessions</div>
+  </div>
+  <div class="center-card" id="center-card">
+    <div class="center-card-inner">
+      <div class="entity-name" id="cc-name"></div>
+      <div style="text-align:center"><span class="type-badge" id="cc-badge"></span></div>
+      <div class="stat-row"><span class="stat-label">Sessions</span><span class="stat-value" id="cc-sessions"></span></div>
+      <div class="stat-row"><span class="stat-label">Total Mentions</span><span class="stat-value" id="cc-mentions"></span></div>
+      <div class="stat-row"><span class="stat-label">Peak Session</span><span class="stat-value" id="cc-peak"></span></div>
+      <div class="description" id="cc-desc"></div>
+    </div>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip">
+  <div class="tt-name" id="tt-name"></div>
+  <div class="tt-sub" id="tt-sub"></div>
+</div>
+
+<div class="footer">BWB CAMPAIGN &bull; ENTITY CONSTELLATION &bull; D3.js v7</div>
+
+<script>
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  REAL DATA — BWB Campaign (entities_full.json + described/ + Table Energy Peaks)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+const TYPE_COLORS = {
+  PC:           '#4A90D9',
+  NPC:          '#BA68C8',
+  LOCATION:     '#44ff88',
+  'MONSTER/BOSS':'#ff4444',
+  ORGANIZATION: '#ffd700'
+};
+
+const SCENE_COLORS = {
+  Combat:      '#ff4444',
+  Social:      '#4A90D9',
+  Exploration: '#44ff88',
+  Exposition:  '#BA68C8'
+};
+
+const ENERGY_TYPES = ['Combat', 'Comedy', 'Dramatic', 'Dice'];
+
+const ENTITIES = [
+  { name:'Corras', type:'PC', desc:'A rogue (with expertise in stealth, deception, and sleight of hand) who serves as the lord of Castle Corras and the party\'s political leader. He vassalized surrounding towns into a kingdom, uses Mislead and Mage Hand for infiltration, and is a changeling with a twin brother named Sarek whom he later absorbed through a Twin Formation ritual.', sessionCount:46, totalMentions:296, peakSession:{sid:'S008',m:9} },
+  { name:'Orla', type:'PC', desc:'A druid and one of the core BWB main campaign PCs, raised by a green dragon named Thorn. She became Arch Druid of the Moonlit Thicket, specializes in wild shaping (eagle, rat, cat, snow leopard), summoning creatures, and nature magic like Wrath of Nature and Moonbeam. She is known for creative problem-solving, befriending monsters, and her companion squirrel Miss Nibbles.', sessionCount:45, totalMentions:281, peakSession:{sid:'S008',m:8} },
+  { name:'Ash', type:'PC', desc:'A wizard (likely a divination specialist, given her use of Portent dice) and the party\'s primary arcane caster in the BWB main campaign. She is revealed to be the banished Princess of the Shadow Glass, owns a fairy dragon familiar named Spark, wields powerful spells like Counterspell and Dimension Door, and later joins the Keepers (an elite Harper order) to seek three obsidian shards.', sessionCount:45, totalMentions:265, peakSession:{sid:'S008',m:9} },
+  { name:'Dahlia', type:'PC', desc:'An aasimar paladin of vengeance whose hometown was destroyed by celestials. She replaced the retired character Lilith around session 19, wields a flaming greatsword with devastating divine smites, can manifest celestial wings, and serves as the party\'s heavy melee damage dealer and secondary healer. She also appears in the Barovia arc alongside the main BWB campaign.', sessionCount:41, totalMentions:222, peakSession:{sid:'S031',m:8} },
+  { name:'Billabong', type:'PC', desc:'A barbarian and one of the party\'s front-line fighters in the BWB main campaign. She merged with a celestial Solarum entity, gaining celestial powers, and later acquired a devoted following of miniature gnomes called the Dougs. She is characterized by her berserker rage, immense physical strength, and a tendency toward chaotic but loyal behavior.', sessionCount:40, totalMentions:200, peakSession:{sid:'S008',m:8} },
+  { name:'SavannahBelle', type:'PC', desc:'A sorcerer who joined the BWB main campaign around session 23 for the Underdark/Rod of Seven Parts arc. She uses metamagic (twin spell, transmuted spell), devastating fire spells like Wall of Fire and twin Fireballs, and utility magic like Mold Earth and Synaptic Static. Her Sanctuary of Retribution bastion is tied to her aberrant backstory, and she formed a blood oath with a Nothic. She also appears in the Barovia arc\'s final battle against Strahd.', sessionCount:26, totalMentions:171, peakSession:{sid:'S045',m:11} },
+  { name:'Castle Corras', type:'LOCATION', desc:'The party\'s primary home base and seat of King Corras\'s power, serving as the administrative capital of the BWB Federation. The castle features a mysterious sealed basement, hidden tunnels, a greenhouse, and is protected by an obsidian dome during the Gloaming Court\'s Fae invasion; it houses thousands of refugees and is managed through a castle management system with lieutenants, specialists, and political councils.', sessionCount:30, totalMentions:118, peakSession:{sid:'S004',m:9} },
+  { name:'Lilith', type:'PC', desc:'A cleric of Kelemvor and one of the original BWB main campaign PCs. She accumulated a devoted religious cult of followers, was pursued by her former mentor Mother Volna for an ecclesiastical trial, and later pledged loyalty to Myrkul to resurrect her brother, becoming a Death Domain cleric and the Prophetess of Final Judgment. Her player retired the character around session 18 and created Dahlia as a replacement.', sessionCount:25, totalMentions:100, peakSession:{sid:'S014',m:9} },
+  { name:'Spark', type:'NPC', desc:'Ash\'s fairy dragon familiar and one of the campaign\'s most significant companion creatures. The party executed an elaborate multi-session time-travel heist to save Spark from death by swapping him with a simulacrum. Later imprisoned in a Feywild lantern by the green dragon Thorn, Spark was freed when Ash answered three truthful questions.', sessionCount:26, totalMentions:75, peakSession:{sid:'S007',m:6} },
+  { name:'Ezrella', type:'PC', desc:'A bard-fighter multiclass agent of the Master of Whispers who joined the BWB main campaign around session 36. She specializes in Steel Wind Strike and Green-Flame Blade, serves as an intelligence operative delivering mission briefings, and fights in both the main campaign and the final battle against Strahd in the Barovia arc.', sessionCount:14, totalMentions:71, peakSession:{sid:'S035',m:8} },
+  { name:'Ave', type:'PC', desc:'A bard and skilled performer who uses Eldritch Blast, Polymorph, Simulacrum, and Detect Thoughts, suggesting a warlock or bard multiclass. He performed a legendary blade dance for the beholder Xel\'therath, polymorphed into a T-Rex during the goblin battle, and conducted the twelve-hour Simulacrum ritual to create a copy of Spark.', sessionCount:15, totalMentions:69, peakSession:{sid:'S008',m:8} },
+  { name:'Lumin', type:'LOCATION', desc:'The nearest town to Castle Corras, featuring a potion shop, blacksmith-tavern, and town council. It served as a frequent destination for the party\'s civic and archaeological activities, including Corras\'s grand royal procession, Lilith\'s Kelemvor congregation, the Gilded Quill crypt exploration beneath the town, and a ritual circle used for the Simulacrum casting.', sessionCount:12, totalMentions:46, peakSession:{sid:'S008',m:7} },
+  { name:'Brotherhood Without Brothers', type:'ORGANIZATION', desc:'The party\'s own faction and constitutional federation, headquartered at Castle Corras. The BWB Federation governs member states under shared tenets prioritizing individual freedom, with Corras as king and party members holding key leadership roles including intelligence, military, and environmental stewardship.', sessionCount:22, totalMentions:44, peakSession:{sid:'S044',m:5} },
+  { name:'Meijinx', type:'PC', desc:'A PC with only a single mention in a session 14 off-topic/housekeeping scene. No meaningful scene context exists to determine their role or abilities. Likely a minor or guest character.', sessionCount:11, totalMentions:42, peakSession:{sid:'S014',m:6} },
+  { name:'Mortimer von Schatten', type:'NPC', desc:'The ancient, enigmatic caretaker and butler of Castle Corras who renovated the castle with pocket dimension rooms, left personalized origami gifts for each character, and served as a trusted advisor throughout the campaign. Also referred to as Morty, he appears as both a humanoid butler and an imp at various points.', sessionCount:18, totalMentions:40, peakSession:{sid:'S008',m:5} },
+  { name:'Argentus', type:'NPC', desc:'A sentient entity bound to or inhabiting the PC Ash (possibly within her arm or an artifact), capable of seizing control of Ash\'s body, translating languages, communing with Corras, and providing lore. He urged Ash toward the Gilded Quill, stole a tome from Candlekeep, and acted independently at times across 18 sessions.', sessionCount:22, totalMentions:39, peakSession:{sid:'S001',m:3} },
+  { name:'Barovia', type:'LOCATION', desc:'A Dread Domain ruled by the vampire lord Strahd von Zarovich, characterized by oppressive mists, time dilation (one day equals roughly one minute in Faerun), and misty borders that trap those who enter. The BWB party crossed over into Barovia through Mordenkainen\'s portal to retrieve pieces of the Rod of Seven Parts, exploring Death House, the Village of Barovia, and eventually assaulting Castle Ravenloft.', sessionCount:12, totalMentions:39, peakSession:{sid:'S035',m:6} },
+  { name:'Feywild', type:'LOCATION', desc:'A parallel plane of wild magic and fey creatures, ruled by powerful archfey including the Queen of Air and Darkness. It is connected to the material plane through unstable portals, features severe time dilation, and serves as the domain of the Gloaming Court whose invasion of the Sword Coast drives the campaign\'s later arc. Ash was banished there and spent months evading the Wild Hunt.', sessionCount:19, totalMentions:35, peakSession:{sid:'S046',m:5} },
+  { name:'Death House', type:'LOCATION', desc:'A sentient, mimic-like structure in Barovia that reconstructs itself to lure victims and demands blood sacrifices. The party explored it floor by floor, fought cultists of Osibis and the Crimson Abbot in its basement, negotiated with Strahd von Zarovich within, and ultimately escaped via a harrowing skill challenge before fireballing it into ash.', sessionCount:6, totalMentions:33, peakSession:{sid:'S037',m:8} },
+  { name:'Fleshy', type:'NPC', desc:'A companion of the BWB party who was originally cursed by the Spell Forge into a Nothic-like form and gradually transformed back into a Red Wizard of Thay -- one who was genuinely kind. He retrieved the Netherese Relic, appeared on the campaign splash page, and later appeared alongside the Matron in a hidden chamber beneath Castle Corras.', sessionCount:16, totalMentions:32, peakSession:{sid:'S014',m:6} },
+  { name:'Strahd von Zarovich', type:'MONSTER/BOSS', desc:'The vampire lord of Barovia who charmed SavannahBelle, killed the Inquisitor Sarusanda, offered a deal involving the Rod of Seven Parts, and served as the final boss of the Curse of Strahd crossover arc.', sessionCount:13, totalMentions:32, peakSession:{sid:'S036',m:5} },
+  { name:'Lord\'s Alliance', type:'ORGANIZATION', desc:'A major political and military faction in Faerun that was seized by Drakkar (Rhaekar Nightweaver) through brute force after the Coven splintered. They consolidated power in the north, occupied cities like Triboar and Yartar, and later opposed the BWB Federation at Castle Corras under Sir Isteval and Lord Neverember, culminating in a catastrophic courtyard massacre.', sessionCount:15, totalMentions:31, peakSession:{sid:'S044',m:7} },
+  { name:'Archmage', type:'MONSTER/BOSS', desc:'Archmage appears across 2 sessions in the BWB campaign.', sessionCount:2, totalMentions:27, peakSession:{sid:'S006',m:20} },
+  { name:'Web\'s Edge', type:'LOCATION', desc:'A secret safe house and meeting place for the cult of Lolth deep in the Underdark. The party infiltrated it to retrieve a piece of the Rod of Seven Parts, fighting through drow mages, a Nalfeshnee demon, and a massive spider dragon before Corras stole the rod piece and the group escaped as the cavern collapsed around them.', sessionCount:7, totalMentions:26, peakSession:{sid:'S023',m:6} },
+  { name:'The Butcher', type:'NPC', desc:'The Butcher appears across 2 sessions in the BWB campaign.', sessionCount:2, totalMentions:26, peakSession:{sid:'S045',m:17} },
+  { name:'Master of Whispers', type:'NPC', desc:'The BWB Federation\'s spymaster who briefed the party on neighboring factions and ran intelligence operations. His true name is Valerius; he communicates through magical sigils and was later freed from the Matron\'s control after Dahlia severed his leg to destroy a controlling rune.', sessionCount:15, totalMentions:25, peakSession:{sid:'S043',m:4} },
+  { name:'Red Wizards of Thay', type:'ORGANIZATION', desc:'A powerful and persistent antagonist faction of arcane spellcasters. They allied with Drakkar to exploit the Forge of Spells, sent the lich Asnar the Crimson to capture Corras for changeling experimentation, imprisoned the party in a Thayan dungeon, and built the Butcher construct through their Dosacrian Enclave. Fleshy was originally one of their number before being cursed.', sessionCount:10, totalMentions:25, peakSession:{sid:'S033',m:5} },
+  { name:'Underdark', type:'LOCATION', desc:'The vast subterranean realm beneath Faerun, home to drow, umber hulks, and other dangerous creatures. The party ventured here through a portal from Sigil to reach Web\'s Edge and retrieve a piece of the Rod of Seven Parts, fighting through webbed tunnels, drow mages, and umber hulks along the way.', sessionCount:14, totalMentions:24, peakSession:{sid:'S021',m:4} },
+  { name:'Gilded Quill', type:'LOCATION', desc:'The headquarters of the reclusive Order of the Gilded Quill, a scholarly faction near Castle Corras that conducted archaeological excavations beneath Lumin. Their crypt contained a bone devil, a simulacrum archmage, explosive glyph traps, and valuable magical items including a Robe of the Archmagi and Ring of Spell Storing.', sessionCount:11, totalMentions:23, peakSession:{sid:'S006',m:5} },
+  { name:'Lolth', type:'NPC', desc:'The Spider Queen goddess whose cult operates in Web\'s Edge in the Underdark. Her forces guard a piece of the Rod of Seven Parts. She spoke directly into Corras\'s mind demanding to know where her servants had gone after the party escaped.', sessionCount:7, totalMentions:23, peakSession:{sid:'S023',m:7} },
+  { name:'Sarlumon', type:'NPC', desc:'A paladin commander who led an army to rescue the party during the goblin siege, and later served as a replacement character for Corras after his imprisonment in the Deck of Many Things void. He participated in the Cult of Eternal Flame assault and traveled with the party on the Triboar Trail.', sessionCount:8, totalMentions:22, peakSession:{sid:'S010',m:6} },
+  { name:'Triboar', type:'LOCATION', desc:'A town along the Triboar Trail that serves as a recurring hub for the party. They departed from here toward the Cult of Eternal Flame, teleported here to visit the dwarf blacksmith Foehammer, and it later fell under occupation by the hostile Lord\'s Alliance. The BWB Federation\'s geopolitical sessions frequently reference it as a contested territory.', sessionCount:15, totalMentions:22, peakSession:{sid:'S011',m:3} },
+  { name:'The Matron', type:'NPC', desc:'A powerful and manipulative leader of the Shadow Council\'s loyalist faction who allied with the BWB Federation after the Coven splintered. She proposed a mass coma ritual during the Castle Corras rations crisis, was revealed to be planting necrotic curses for obedience, teleported away when confronted, and later bargained for stewardship of Castle Corras in exchange for maintaining the protective dome.', sessionCount:8, totalMentions:21, peakSession:{sid:'S046',m:5} },
+  { name:'Havenbrook', type:'LOCATION', desc:'A trade village near Castle Corras that eventually pledged allegiance to Corras\'s kingdom. It was the site of a major goblin encampment battle and lay along the road from Lumin where the party encountered the mercenary Eoman and tracked the goblin merchant Grimslick.', sessionCount:10, totalMentions:20, peakSession:{sid:'S008',m:4} },
+  { name:'Lord Neverember', type:'NPC', desc:'A political leader at Castle Corras who pushed to expel criminals and refugees during the rations crisis. He was put into a coma by the Matron\'s ritual via Mass Suggestion, had his essence drained by Dahlia, and his signet ring was taken by the party as a tool of political leverage. His funeral was later held at the castle.', sessionCount:5, totalMentions:20, peakSession:{sid:'S044',m:6} }
+];
+
+const SESSIONS = [
+  { sid:'S001', index:0, dominant:'Dramatic' },
+  { sid:'S002', index:1, dominant:'Comedy' },
+  { sid:'S003', index:2, dominant:'Dice' },
+  { sid:'S004', index:3, dominant:'Combat' },
+  { sid:'S005', index:4, dominant:'Comedy' },
+  { sid:'S006', index:5, dominant:'Combat' },
+  { sid:'S007', index:6, dominant:'Comedy' },
+  { sid:'S008', index:7, dominant:'Dice' },
+  { sid:'S009', index:8, dominant:'Comedy' },
+  { sid:'S010', index:9, dominant:'Comedy' },
+  { sid:'S011', index:10, dominant:'Comedy' },
+  { sid:'S012', index:11, dominant:'Dramatic' },
+  { sid:'S013', index:12, dominant:'Dramatic' },
+  { sid:'S014', index:13, dominant:'Comedy' },
+  { sid:'S015', index:14, dominant:'Dramatic' },
+  { sid:'S016', index:15, dominant:'Dramatic' },
+  { sid:'S017', index:16, dominant:'Dramatic' },
+  { sid:'S018', index:17, dominant:'Comedy' },
+  { sid:'S019', index:18, dominant:'Comedy' },
+  { sid:'S020', index:19, dominant:'Comedy' },
+  { sid:'S021', index:20, dominant:'Combat' },
+  { sid:'S022', index:21, dominant:'Comedy' },
+  { sid:'S023', index:22, dominant:'Combat' },
+  { sid:'S024', index:23, dominant:'Comedy' },
+  { sid:'S025', index:24, dominant:'Comedy' },
+  { sid:'S026', index:25, dominant:'Comedy' },
+  { sid:'S027', index:26, dominant:'Combat' },
+  { sid:'S028', index:27, dominant:'Comedy' },
+  { sid:'S029', index:28, dominant:'Dramatic' },
+  { sid:'S030', index:29, dominant:'Combat' },
+  { sid:'S031', index:30, dominant:'Combat' },
+  { sid:'S032', index:31, dominant:'Dramatic' },
+  { sid:'S033', index:32, dominant:'Dramatic' },
+  { sid:'S034', index:33, dominant:'Comedy' },
+  { sid:'S035', index:34, dominant:'Comedy' },
+  { sid:'S036', index:35, dominant:'Combat' },
+  { sid:'S037', index:36, dominant:'Dice' },
+  { sid:'S038', index:37, dominant:'Combat' },
+  { sid:'S039', index:38, dominant:'Combat' },
+  { sid:'S040', index:39, dominant:'Dramatic' },
+  { sid:'S041', index:40, dominant:'Dramatic' },
+  { sid:'S042', index:41, dominant:'Combat' },
+  { sid:'S043', index:42, dominant:'Dramatic' },
+  { sid:'S044', index:43, dominant:'Dramatic' },
+  { sid:'S045', index:44, dominant:'Combat' },
+  { sid:'S046', index:45, dominant:'Dramatic' }
+];
+
+const CONNECTIONS = [
+  { entityIndex:0, sessionIndex:0, mentions:7, sceneType:'Social' },
+  { entityIndex:0, sessionIndex:1, mentions:6, sceneType:'Social' },
+  { entityIndex:0, sessionIndex:2, mentions:8, sceneType:'Social' },
+  { entityIndex:0, sessionIndex:3, mentions:8, sceneType:'Social' },
+  { entityIndex:0, sessionIndex:4, mentions:6, sceneType:'Exposition' },
+  { entityIndex:0, sessionIndex:5, mentions:6, sceneType:'Social' },
+  { entityIndex:0, sessionIndex:6, mentions:7, sceneType:'Social' },
+  { entityIndex:0, sessionIndex:7, mentions:9, sceneType:'Social' },
+  { entityIndex:0, sessionIndex:8, mentions:6, sceneType:'Social' },
+  { entityIndex:0, sessionIndex:9, mentions:2, sceneType:'Social' },
+  { entityIndex:0, sessionIndex:10, mentions:4, sceneType:'Social' },
+  { entityIndex:0, sessionIndex:11, mentions:7, sceneType:'Exposition' },
+  { entityIndex:0, sessionIndex:12, mentions:4, sceneType:'Social' },
+  { entityIndex:0, sessionIndex:13, mentions:8, sceneType:'Social' },
+  { entityIndex:0, sessionIndex:14, mentions:7, sceneType:'Social' },
+  { entityIndex:0, sessionIndex:15, mentions:7, sceneType:'Exposition' },
+  { entityIndex:0, sessionIndex:16, mentions:6, sceneType:'Social' },
+  { entityIndex:0, sessionIndex:17, mentions:7, sceneType:'Social' },
+  { entityIndex:0, sessionIndex:18, mentions:7, sceneType:'Exploration' },
+  { entityIndex:0, sessionIndex:19, mentions:7, sceneType:'Exploration' },
+  { entityIndex:0, sessionIndex:20, mentions:5, sceneType:'Social' },
+  { entityIndex:0, sessionIndex:21, mentions:6, sceneType:'Social' },
+  { entityIndex:0, sessionIndex:22, mentions:6, sceneType:'Combat' },
+  { entityIndex:0, sessionIndex:23, mentions:6, sceneType:'Social' },
+  { entityIndex:0, sessionIndex:24, mentions:5, sceneType:'Exposition' },
+  { entityIndex:0, sessionIndex:25, mentions:5, sceneType:'Social' },
+  { entityIndex:0, sessionIndex:26, mentions:6, sceneType:'Social' },
+  { entityIndex:0, sessionIndex:27, mentions:4, sceneType:'Social' },
+  { entityIndex:0, sessionIndex:28, mentions:7, sceneType:'Social' },
+  { entityIndex:0, sessionIndex:29, mentions:6, sceneType:'Exploration' },
+  { entityIndex:0, sessionIndex:30, mentions:8, sceneType:'Combat' },
+  { entityIndex:0, sessionIndex:31, mentions:7, sceneType:'Social' },
+  { entityIndex:0, sessionIndex:32, mentions:5, sceneType:'Combat' },
+  { entityIndex:0, sessionIndex:33, mentions:8, sceneType:'Exploration' },
+  { entityIndex:0, sessionIndex:34, mentions:8, sceneType:'Social' },
+  { entityIndex:0, sessionIndex:35, mentions:6, sceneType:'Combat' },
+  { entityIndex:0, sessionIndex:36, mentions:8, sceneType:'Combat' },
+  { entityIndex:0, sessionIndex:37, mentions:5, sceneType:'Social' },
+  { entityIndex:0, sessionIndex:38, mentions:8, sceneType:'Exploration' },
+  { entityIndex:0, sessionIndex:39, mentions:7, sceneType:'Exploration' },
+  { entityIndex:0, sessionIndex:40, mentions:8, sceneType:'Combat' },
+  { entityIndex:0, sessionIndex:41, mentions:6, sceneType:'Combat' },
+  { entityIndex:0, sessionIndex:42, mentions:6, sceneType:'Social' },
+  { entityIndex:0, sessionIndex:43, mentions:6, sceneType:'Social' },
+  { entityIndex:0, sessionIndex:44, mentions:8, sceneType:'Social' },
+  { entityIndex:0, sessionIndex:45, mentions:7, sceneType:'Social' },
+  { entityIndex:1, sessionIndex:0, mentions:5, sceneType:'Social' },
+  { entityIndex:1, sessionIndex:1, mentions:4, sceneType:'Social' },
+  { entityIndex:1, sessionIndex:2, mentions:5, sceneType:'Exploration' },
+  { entityIndex:1, sessionIndex:3, mentions:6, sceneType:'Social' },
+  { entityIndex:1, sessionIndex:4, mentions:5, sceneType:'Exposition' },
+  { entityIndex:1, sessionIndex:5, mentions:4, sceneType:'Combat' },
+  { entityIndex:1, sessionIndex:6, mentions:6, sceneType:'Social' },
+  { entityIndex:1, sessionIndex:7, mentions:8, sceneType:'Social' },
+  { entityIndex:1, sessionIndex:8, mentions:5, sceneType:'Exposition' },
+  { entityIndex:1, sessionIndex:9, mentions:6, sceneType:'Social' },
+  { entityIndex:1, sessionIndex:10, mentions:6, sceneType:'Social' },
+  { entityIndex:1, sessionIndex:11, mentions:6, sceneType:'Exposition' },
+  { entityIndex:1, sessionIndex:12, mentions:6, sceneType:'Social' },
+  { entityIndex:1, sessionIndex:13, mentions:8, sceneType:'Social' },
+  { entityIndex:1, sessionIndex:14, mentions:6, sceneType:'Social' },
+  { entityIndex:1, sessionIndex:15, mentions:6, sceneType:'Exposition' },
+  { entityIndex:1, sessionIndex:16, mentions:4, sceneType:'Social' },
+  { entityIndex:1, sessionIndex:17, mentions:7, sceneType:'Social' },
+  { entityIndex:1, sessionIndex:18, mentions:7, sceneType:'Exploration' },
+  { entityIndex:1, sessionIndex:19, mentions:7, sceneType:'Exploration' },
+  { entityIndex:1, sessionIndex:21, mentions:6, sceneType:'Social' },
+  { entityIndex:1, sessionIndex:22, mentions:6, sceneType:'Combat' },
+  { entityIndex:1, sessionIndex:23, mentions:6, sceneType:'Social' },
+  { entityIndex:1, sessionIndex:24, mentions:4, sceneType:'Social' },
+  { entityIndex:1, sessionIndex:25, mentions:7, sceneType:'Social' },
+  { entityIndex:1, sessionIndex:26, mentions:6, sceneType:'Social' },
+  { entityIndex:1, sessionIndex:27, mentions:5, sceneType:'Social' },
+  { entityIndex:1, sessionIndex:28, mentions:6, sceneType:'Social' },
+  { entityIndex:1, sessionIndex:29, mentions:6, sceneType:'Exploration' },
+  { entityIndex:1, sessionIndex:30, mentions:8, sceneType:'Combat' },
+  { entityIndex:1, sessionIndex:31, mentions:7, sceneType:'Social' },
+  { entityIndex:1, sessionIndex:32, mentions:5, sceneType:'Combat' },
+  { entityIndex:1, sessionIndex:33, mentions:8, sceneType:'Exploration' },
+  { entityIndex:1, sessionIndex:34, mentions:8, sceneType:'Social' },
+  { entityIndex:1, sessionIndex:35, mentions:6, sceneType:'Combat' },
+  { entityIndex:1, sessionIndex:36, mentions:8, sceneType:'Combat' },
+  { entityIndex:1, sessionIndex:37, mentions:5, sceneType:'Social' },
+  { entityIndex:1, sessionIndex:38, mentions:8, sceneType:'Exploration' },
+  { entityIndex:1, sessionIndex:39, mentions:7, sceneType:'Exploration' },
+  { entityIndex:1, sessionIndex:40, mentions:8, sceneType:'Combat' },
+  { entityIndex:1, sessionIndex:41, mentions:6, sceneType:'Combat' },
+  { entityIndex:1, sessionIndex:42, mentions:7, sceneType:'Social' },
+  { entityIndex:1, sessionIndex:43, mentions:8, sceneType:'Social' },
+  { entityIndex:1, sessionIndex:44, mentions:7, sceneType:'Social' },
+  { entityIndex:1, sessionIndex:45, mentions:6, sceneType:'Social' },
+  { entityIndex:2, sessionIndex:0, mentions:6, sceneType:'Social' },
+  { entityIndex:2, sessionIndex:1, mentions:7, sceneType:'Social' },
+  { entityIndex:2, sessionIndex:2, mentions:7, sceneType:'Social' },
+  { entityIndex:2, sessionIndex:3, mentions:6, sceneType:'Social' },
+  { entityIndex:2, sessionIndex:4, mentions:6, sceneType:'Exposition' },
+  { entityIndex:2, sessionIndex:5, mentions:6, sceneType:'Social' },
+  { entityIndex:2, sessionIndex:6, mentions:7, sceneType:'Social' },
+  { entityIndex:2, sessionIndex:7, mentions:9, sceneType:'Social' },
+  { entityIndex:2, sessionIndex:8, mentions:6, sceneType:'Social' },
+  { entityIndex:2, sessionIndex:9, mentions:6, sceneType:'Social' },
+  { entityIndex:2, sessionIndex:10, mentions:6, sceneType:'Social' },
+  { entityIndex:2, sessionIndex:11, mentions:7, sceneType:'Exposition' },
+  { entityIndex:2, sessionIndex:12, mentions:7, sceneType:'Social' },
+  { entityIndex:2, sessionIndex:13, mentions:8, sceneType:'Social' },
+  { entityIndex:2, sessionIndex:14, mentions:7, sceneType:'Social' },
+  { entityIndex:2, sessionIndex:15, mentions:7, sceneType:'Exposition' },
+  { entityIndex:2, sessionIndex:16, mentions:6, sceneType:'Social' },
+  { entityIndex:2, sessionIndex:17, mentions:7, sceneType:'Social' },
+  { entityIndex:2, sessionIndex:18, mentions:7, sceneType:'Exploration' },
+  { entityIndex:2, sessionIndex:19, mentions:7, sceneType:'Exploration' },
+  { entityIndex:2, sessionIndex:20, mentions:5, sceneType:'Social' },
+  { entityIndex:2, sessionIndex:21, mentions:6, sceneType:'Social' },
+  { entityIndex:2, sessionIndex:22, mentions:7, sceneType:'Combat' },
+  { entityIndex:2, sessionIndex:23, mentions:7, sceneType:'Social' },
+  { entityIndex:2, sessionIndex:24, mentions:3, sceneType:'Exposition' },
+  { entityIndex:2, sessionIndex:25, mentions:5, sceneType:'Social' },
+  { entityIndex:2, sessionIndex:26, mentions:6, sceneType:'Social' },
+  { entityIndex:2, sessionIndex:27, mentions:4, sceneType:'Social' },
+  { entityIndex:2, sessionIndex:28, mentions:8, sceneType:'Social' },
+  { entityIndex:2, sessionIndex:29, mentions:6, sceneType:'Exploration' },
+  { entityIndex:2, sessionIndex:30, mentions:8, sceneType:'Combat' },
+  { entityIndex:2, sessionIndex:31, mentions:2, sceneType:'Exposition' },
+  { entityIndex:2, sessionIndex:32, mentions:3, sceneType:'Exposition' },
+  { entityIndex:2, sessionIndex:33, mentions:2, sceneType:'Social' },
+  { entityIndex:2, sessionIndex:34, mentions:6, sceneType:'Social' },
+  { entityIndex:2, sessionIndex:35, mentions:2, sceneType:'Exposition' },
+  { entityIndex:2, sessionIndex:37, mentions:4, sceneType:'Social' },
+  { entityIndex:2, sessionIndex:38, mentions:6, sceneType:'Exploration' },
+  { entityIndex:2, sessionIndex:39, mentions:2, sceneType:'Social' },
+  { entityIndex:2, sessionIndex:40, mentions:6, sceneType:'Exploration' },
+  { entityIndex:2, sessionIndex:41, mentions:6, sceneType:'Combat' },
+  { entityIndex:2, sessionIndex:42, mentions:6, sceneType:'Social' },
+  { entityIndex:2, sessionIndex:43, mentions:6, sceneType:'Social' },
+  { entityIndex:2, sessionIndex:44, mentions:7, sceneType:'Social' },
+  { entityIndex:2, sessionIndex:45, mentions:7, sceneType:'Social' },
+  { entityIndex:3, sessionIndex:0, mentions:7, sceneType:'Social' },
+  { entityIndex:3, sessionIndex:1, mentions:4, sceneType:'Social' },
+  { entityIndex:3, sessionIndex:2, mentions:3, sceneType:'Exploration' },
+  { entityIndex:3, sessionIndex:4, mentions:1, sceneType:'Social' },
+  { entityIndex:3, sessionIndex:5, mentions:2, sceneType:'Combat' },
+  { entityIndex:3, sessionIndex:6, mentions:7, sceneType:'Social' },
+  { entityIndex:3, sessionIndex:8, mentions:4, sceneType:'Exposition' },
+  { entityIndex:3, sessionIndex:9, mentions:6, sceneType:'Social' },
+  { entityIndex:3, sessionIndex:11, mentions:4, sceneType:'Social' },
+  { entityIndex:3, sessionIndex:14, mentions:4, sceneType:'Social' },
+  { entityIndex:3, sessionIndex:15, mentions:6, sceneType:'Exposition' },
+  { entityIndex:3, sessionIndex:16, mentions:1, sceneType:'Social' },
+  { entityIndex:3, sessionIndex:17, mentions:7, sceneType:'Social' },
+  { entityIndex:3, sessionIndex:18, mentions:7, sceneType:'Exploration' },
+  { entityIndex:3, sessionIndex:19, mentions:6, sceneType:'Exploration' },
+  { entityIndex:3, sessionIndex:20, mentions:5, sceneType:'Social' },
+  { entityIndex:3, sessionIndex:21, mentions:6, sceneType:'Social' },
+  { entityIndex:3, sessionIndex:22, mentions:6, sceneType:'Combat' },
+  { entityIndex:3, sessionIndex:23, mentions:7, sceneType:'Social' },
+  { entityIndex:3, sessionIndex:24, mentions:4, sceneType:'Social' },
+  { entityIndex:3, sessionIndex:25, mentions:7, sceneType:'Social' },
+  { entityIndex:3, sessionIndex:26, mentions:6, sceneType:'Social' },
+  { entityIndex:3, sessionIndex:27, mentions:5, sceneType:'Social' },
+  { entityIndex:3, sessionIndex:28, mentions:6, sceneType:'Social' },
+  { entityIndex:3, sessionIndex:29, mentions:6, sceneType:'Exploration' },
+  { entityIndex:3, sessionIndex:30, mentions:8, sceneType:'Combat' },
+  { entityIndex:3, sessionIndex:31, mentions:6, sceneType:'Social' },
+  { entityIndex:3, sessionIndex:32, mentions:5, sceneType:'Combat' },
+  { entityIndex:3, sessionIndex:33, mentions:8, sceneType:'Exploration' },
+  { entityIndex:3, sessionIndex:34, mentions:3, sceneType:'Social' },
+  { entityIndex:3, sessionIndex:35, mentions:6, sceneType:'Combat' },
+  { entityIndex:3, sessionIndex:36, mentions:8, sceneType:'Combat' },
+  { entityIndex:3, sessionIndex:37, mentions:5, sceneType:'Social' },
+  { entityIndex:3, sessionIndex:38, mentions:3, sceneType:'Social' },
+  { entityIndex:3, sessionIndex:39, mentions:7, sceneType:'Exploration' },
+  { entityIndex:3, sessionIndex:40, mentions:7, sceneType:'Combat' },
+  { entityIndex:3, sessionIndex:41, mentions:6, sceneType:'Combat' },
+  { entityIndex:3, sessionIndex:42, mentions:6, sceneType:'Social' },
+  { entityIndex:3, sessionIndex:43, mentions:6, sceneType:'Social' },
+  { entityIndex:3, sessionIndex:44, mentions:7, sceneType:'Social' },
+  { entityIndex:3, sessionIndex:45, mentions:4, sceneType:'Exposition' },
+  { entityIndex:4, sessionIndex:0, mentions:4, sceneType:'Social' },
+  { entityIndex:4, sessionIndex:1, mentions:2, sceneType:'Social' },
+  { entityIndex:4, sessionIndex:2, mentions:6, sceneType:'Exploration' },
+  { entityIndex:4, sessionIndex:3, mentions:6, sceneType:'Social' },
+  { entityIndex:4, sessionIndex:4, mentions:6, sceneType:'Exposition' },
+  { entityIndex:4, sessionIndex:5, mentions:7, sceneType:'Social' },
+  { entityIndex:4, sessionIndex:6, mentions:7, sceneType:'Social' },
+  { entityIndex:4, sessionIndex:7, mentions:8, sceneType:'Social' },
+  { entityIndex:4, sessionIndex:8, mentions:5, sceneType:'Exposition' },
+  { entityIndex:4, sessionIndex:11, mentions:7, sceneType:'Exposition' },
+  { entityIndex:4, sessionIndex:12, mentions:6, sceneType:'Social' },
+  { entityIndex:4, sessionIndex:13, mentions:8, sceneType:'Social' },
+  { entityIndex:4, sessionIndex:14, mentions:6, sceneType:'Social' },
+  { entityIndex:4, sessionIndex:15, mentions:6, sceneType:'Exposition' },
+  { entityIndex:4, sessionIndex:16, mentions:3, sceneType:'Social' },
+  { entityIndex:4, sessionIndex:17, mentions:7, sceneType:'Social' },
+  { entityIndex:4, sessionIndex:18, mentions:8, sceneType:'Exploration' },
+  { entityIndex:4, sessionIndex:19, mentions:7, sceneType:'Exploration' },
+  { entityIndex:4, sessionIndex:20, mentions:5, sceneType:'Social' },
+  { entityIndex:4, sessionIndex:21, mentions:6, sceneType:'Social' },
+  { entityIndex:4, sessionIndex:22, mentions:6, sceneType:'Combat' },
+  { entityIndex:4, sessionIndex:23, mentions:6, sceneType:'Social' },
+  { entityIndex:4, sessionIndex:24, mentions:2, sceneType:'Exposition' },
+  { entityIndex:4, sessionIndex:25, mentions:7, sceneType:'Social' },
+  { entityIndex:4, sessionIndex:26, mentions:6, sceneType:'Social' },
+  { entityIndex:4, sessionIndex:27, mentions:5, sceneType:'Social' },
+  { entityIndex:4, sessionIndex:28, mentions:8, sceneType:'Social' },
+  { entityIndex:4, sessionIndex:29, mentions:6, sceneType:'Exploration' },
+  { entityIndex:4, sessionIndex:30, mentions:8, sceneType:'Combat' },
+  { entityIndex:4, sessionIndex:31, mentions:2, sceneType:'Exposition' },
+  { entityIndex:4, sessionIndex:32, mentions:6, sceneType:'Combat' },
+  { entityIndex:4, sessionIndex:33, mentions:5, sceneType:'Social' },
+  { entityIndex:4, sessionIndex:34, mentions:3, sceneType:'Social' },
+  { entityIndex:4, sessionIndex:36, mentions:2, sceneType:'Exploration' },
+  { entityIndex:4, sessionIndex:38, mentions:2, sceneType:'Social' },
+  { entityIndex:4, sessionIndex:39, mentions:1, sceneType:'Social' },
+  { entityIndex:4, sessionIndex:40, mentions:1, sceneType:'Combat' },
+  { entityIndex:4, sessionIndex:41, mentions:2, sceneType:'Social' },
+  { entityIndex:4, sessionIndex:42, mentions:1, sceneType:'Social' },
+  { entityIndex:4, sessionIndex:44, mentions:1, sceneType:'Social' },
+  { entityIndex:5, sessionIndex:20, mentions:5, sceneType:'Social' },
+  { entityIndex:5, sessionIndex:21, mentions:6, sceneType:'Social' },
+  { entityIndex:5, sessionIndex:22, mentions:7, sceneType:'Combat' },
+  { entityIndex:5, sessionIndex:23, mentions:6, sceneType:'Social' },
+  { entityIndex:5, sessionIndex:24, mentions:2, sceneType:'Social' },
+  { entityIndex:5, sessionIndex:25, mentions:7, sceneType:'Social' },
+  { entityIndex:5, sessionIndex:26, mentions:6, sceneType:'Social' },
+  { entityIndex:5, sessionIndex:27, mentions:5, sceneType:'Social' },
+  { entityIndex:5, sessionIndex:28, mentions:6, sceneType:'Social' },
+  { entityIndex:5, sessionIndex:29, mentions:6, sceneType:'Exploration' },
+  { entityIndex:5, sessionIndex:30, mentions:8, sceneType:'Combat' },
+  { entityIndex:5, sessionIndex:31, mentions:7, sceneType:'Social' },
+  { entityIndex:5, sessionIndex:32, mentions:6, sceneType:'Combat' },
+  { entityIndex:5, sessionIndex:33, mentions:8, sceneType:'Exploration' },
+  { entityIndex:5, sessionIndex:34, mentions:8, sceneType:'Social' },
+  { entityIndex:5, sessionIndex:35, mentions:6, sceneType:'Combat' },
+  { entityIndex:5, sessionIndex:36, mentions:8, sceneType:'Combat' },
+  { entityIndex:5, sessionIndex:37, mentions:5, sceneType:'Social' },
+  { entityIndex:5, sessionIndex:38, mentions:8, sceneType:'Exploration' },
+  { entityIndex:5, sessionIndex:39, mentions:7, sceneType:'Exploration' },
+  { entityIndex:5, sessionIndex:40, mentions:8, sceneType:'Combat' },
+  { entityIndex:5, sessionIndex:41, mentions:6, sceneType:'Combat' },
+  { entityIndex:5, sessionIndex:42, mentions:6, sceneType:'Social' },
+  { entityIndex:5, sessionIndex:43, mentions:6, sceneType:'Social' },
+  { entityIndex:5, sessionIndex:44, mentions:11, sceneType:'Social' },
+  { entityIndex:5, sessionIndex:45, mentions:7, sceneType:'Social' },
+  { entityIndex:6, sessionIndex:0, mentions:7, sceneType:'Social' },
+  { entityIndex:6, sessionIndex:1, mentions:7, sceneType:'Social' },
+  { entityIndex:6, sessionIndex:2, mentions:1, sceneType:'Exposition' },
+  { entityIndex:6, sessionIndex:3, mentions:9, sceneType:'Social' },
+  { entityIndex:6, sessionIndex:4, mentions:4, sceneType:'Exposition' },
+  { entityIndex:6, sessionIndex:6, mentions:6, sceneType:'Social' },
+  { entityIndex:6, sessionIndex:7, mentions:7, sceneType:'Social' },
+  { entityIndex:6, sessionIndex:8, mentions:4, sceneType:'Exposition' },
+  { entityIndex:6, sessionIndex:9, mentions:1, sceneType:'Social' },
+  { entityIndex:6, sessionIndex:11, mentions:4, sceneType:'Social' },
+  { entityIndex:6, sessionIndex:12, mentions:3, sceneType:'Social' },
+  { entityIndex:6, sessionIndex:13, mentions:7, sceneType:'Social' },
+  { entityIndex:6, sessionIndex:14, mentions:4, sceneType:'Social' },
+  { entityIndex:6, sessionIndex:15, mentions:2, sceneType:'Social' },
+  { entityIndex:6, sessionIndex:16, mentions:6, sceneType:'Social' },
+  { entityIndex:6, sessionIndex:19, mentions:1, sceneType:'Combat' },
+  { entityIndex:6, sessionIndex:23, mentions:3, sceneType:'Social' },
+  { entityIndex:6, sessionIndex:24, mentions:3, sceneType:'Exposition' },
+  { entityIndex:6, sessionIndex:25, mentions:2, sceneType:'Social' },
+  { entityIndex:6, sessionIndex:26, mentions:2, sceneType:'Exposition' },
+  { entityIndex:6, sessionIndex:27, mentions:2, sceneType:'Social' },
+  { entityIndex:6, sessionIndex:29, mentions:1, sceneType:'Exploration' },
+  { entityIndex:6, sessionIndex:30, mentions:3, sceneType:'Exploration' },
+  { entityIndex:6, sessionIndex:33, mentions:1, sceneType:'Social' },
+  { entityIndex:6, sessionIndex:34, mentions:2, sceneType:'Social' },
+  { entityIndex:6, sessionIndex:39, mentions:2, sceneType:'Social' },
+  { entityIndex:6, sessionIndex:42, mentions:7, sceneType:'Social' },
+  { entityIndex:6, sessionIndex:43, mentions:6, sceneType:'Social' },
+  { entityIndex:6, sessionIndex:44, mentions:7, sceneType:'Social' },
+  { entityIndex:6, sessionIndex:45, mentions:4, sceneType:'Social' },
+  { entityIndex:7, sessionIndex:0, mentions:6, sceneType:'Social' },
+  { entityIndex:7, sessionIndex:1, mentions:4, sceneType:'Social' },
+  { entityIndex:7, sessionIndex:2, mentions:8, sceneType:'Social' },
+  { entityIndex:7, sessionIndex:3, mentions:6, sceneType:'Social' },
+  { entityIndex:7, sessionIndex:4, mentions:7, sceneType:'Social' },
+  { entityIndex:7, sessionIndex:5, mentions:5, sceneType:'Combat' },
+  { entityIndex:7, sessionIndex:6, mentions:2, sceneType:'Social' },
+  { entityIndex:7, sessionIndex:7, mentions:7, sceneType:'Social' },
+  { entityIndex:7, sessionIndex:8, mentions:3, sceneType:'Exposition' },
+  { entityIndex:7, sessionIndex:9, mentions:6, sceneType:'Social' },
+  { entityIndex:7, sessionIndex:10, mentions:5, sceneType:'Social' },
+  { entityIndex:7, sessionIndex:11, mentions:5, sceneType:'Exposition' },
+  { entityIndex:7, sessionIndex:12, mentions:5, sceneType:'Social' },
+  { entityIndex:7, sessionIndex:13, mentions:9, sceneType:'Social' },
+  { entityIndex:7, sessionIndex:14, mentions:6, sceneType:'Social' },
+  { entityIndex:7, sessionIndex:15, mentions:4, sceneType:'Combat' },
+  { entityIndex:7, sessionIndex:16, mentions:3, sceneType:'Social' },
+  { entityIndex:7, sessionIndex:23, mentions:1, sceneType:'Exposition' },
+  { entityIndex:7, sessionIndex:25, mentions:1, sceneType:'Social' },
+  { entityIndex:7, sessionIndex:26, mentions:1, sceneType:'Exposition' },
+  { entityIndex:7, sessionIndex:30, mentions:2, sceneType:'Social' },
+  { entityIndex:7, sessionIndex:34, mentions:1, sceneType:'Social' },
+  { entityIndex:7, sessionIndex:39, mentions:1, sceneType:'Social' },
+  { entityIndex:7, sessionIndex:42, mentions:1, sceneType:'Social' },
+  { entityIndex:7, sessionIndex:45, mentions:1, sceneType:'Social' },
+  { entityIndex:8, sessionIndex:0, mentions:2, sceneType:'Social' },
+  { entityIndex:8, sessionIndex:1, mentions:2, sceneType:'Exploration' },
+  { entityIndex:8, sessionIndex:2, mentions:1, sceneType:'Social' },
+  { entityIndex:8, sessionIndex:3, mentions:1, sceneType:'Social' },
+  { entityIndex:8, sessionIndex:6, mentions:6, sceneType:'Social' },
+  { entityIndex:8, sessionIndex:7, mentions:6, sceneType:'Social' },
+  { entityIndex:8, sessionIndex:9, mentions:3, sceneType:'Exploration' },
+  { entityIndex:8, sessionIndex:10, mentions:3, sceneType:'Exposition' },
+  { entityIndex:8, sessionIndex:11, mentions:5, sceneType:'Exposition' },
+  { entityIndex:8, sessionIndex:12, mentions:4, sceneType:'Social' },
+  { entityIndex:8, sessionIndex:13, mentions:5, sceneType:'Social' },
+  { entityIndex:8, sessionIndex:14, mentions:5, sceneType:'Social' },
+  { entityIndex:8, sessionIndex:15, mentions:2, sceneType:'Social' },
+  { entityIndex:8, sessionIndex:17, mentions:3, sceneType:'Social' },
+  { entityIndex:8, sessionIndex:18, mentions:4, sceneType:'Exploration' },
+  { entityIndex:8, sessionIndex:19, mentions:5, sceneType:'Exploration' },
+  { entityIndex:8, sessionIndex:20, mentions:3, sceneType:'Exposition' },
+  { entityIndex:8, sessionIndex:21, mentions:4, sceneType:'Exposition' },
+  { entityIndex:8, sessionIndex:23, mentions:1, sceneType:'Exploration' },
+  { entityIndex:8, sessionIndex:25, mentions:1, sceneType:'Exploration' },
+  { entityIndex:8, sessionIndex:26, mentions:2, sceneType:'Exploration' },
+  { entityIndex:8, sessionIndex:27, mentions:2, sceneType:'Combat' },
+  { entityIndex:8, sessionIndex:29, mentions:2, sceneType:'Exploration' },
+  { entityIndex:8, sessionIndex:39, mentions:1, sceneType:'Social' },
+  { entityIndex:8, sessionIndex:43, mentions:1, sceneType:'Exploration' },
+  { entityIndex:8, sessionIndex:44, mentions:1, sceneType:'Exposition' },
+  { entityIndex:9, sessionIndex:30, mentions:3, sceneType:'Exposition' },
+  { entityIndex:9, sessionIndex:31, mentions:7, sceneType:'Social' },
+  { entityIndex:9, sessionIndex:32, mentions:6, sceneType:'Combat' },
+  { entityIndex:9, sessionIndex:33, mentions:7, sceneType:'Exploration' },
+  { entityIndex:9, sessionIndex:34, mentions:8, sceneType:'Social' },
+  { entityIndex:9, sessionIndex:35, mentions:6, sceneType:'Combat' },
+  { entityIndex:9, sessionIndex:36, mentions:4, sceneType:'Social' },
+  { entityIndex:9, sessionIndex:37, mentions:3, sceneType:'Social' },
+  { entityIndex:9, sessionIndex:38, mentions:7, sceneType:'Exploration' },
+  { entityIndex:9, sessionIndex:39, mentions:7, sceneType:'Exploration' },
+  { entityIndex:9, sessionIndex:40, mentions:7, sceneType:'Combat' },
+  { entityIndex:9, sessionIndex:41, mentions:3, sceneType:'Combat' },
+  { entityIndex:9, sessionIndex:42, mentions:2, sceneType:'Social' },
+  { entityIndex:9, sessionIndex:43, mentions:1, sceneType:'Social' },
+  { entityIndex:10, sessionIndex:0, mentions:1, sceneType:'Social' },
+  { entityIndex:10, sessionIndex:1, mentions:3, sceneType:'Social' },
+  { entityIndex:10, sessionIndex:2, mentions:7, sceneType:'Social' },
+  { entityIndex:10, sessionIndex:3, mentions:4, sceneType:'Exposition' },
+  { entityIndex:10, sessionIndex:4, mentions:5, sceneType:'Exposition' },
+  { entityIndex:10, sessionIndex:5, mentions:4, sceneType:'Combat' },
+  { entityIndex:10, sessionIndex:6, mentions:7, sceneType:'Social' },
+  { entityIndex:10, sessionIndex:7, mentions:8, sceneType:'Social' },
+  { entityIndex:10, sessionIndex:8, mentions:3, sceneType:'Exposition' },
+  { entityIndex:10, sessionIndex:11, mentions:4, sceneType:'Exposition' },
+  { entityIndex:10, sessionIndex:12, mentions:4, sceneType:'Social' },
+  { entityIndex:10, sessionIndex:13, mentions:8, sceneType:'Social' },
+  { entityIndex:10, sessionIndex:14, mentions:6, sceneType:'Social' },
+  { entityIndex:10, sessionIndex:15, mentions:4, sceneType:'Combat' },
+  { entityIndex:10, sessionIndex:39, mentions:1, sceneType:'Social' },
+  { entityIndex:11, sessionIndex:0, mentions:4, sceneType:'Exposition' },
+  { entityIndex:11, sessionIndex:1, mentions:4, sceneType:'Social' },
+  { entityIndex:11, sessionIndex:3, mentions:5, sceneType:'Social' },
+  { entityIndex:11, sessionIndex:4, mentions:4, sceneType:'Social' },
+  { entityIndex:11, sessionIndex:6, mentions:3, sceneType:'Social' },
+  { entityIndex:11, sessionIndex:7, mentions:7, sceneType:'Social' },
+  { entityIndex:11, sessionIndex:8, mentions:4, sceneType:'Social' },
+  { entityIndex:11, sessionIndex:11, mentions:7, sceneType:'Exposition' },
+  { entityIndex:11, sessionIndex:12, mentions:3, sceneType:'Social' },
+  { entityIndex:11, sessionIndex:16, mentions:2, sceneType:'Social' },
+  { entityIndex:11, sessionIndex:24, mentions:2, sceneType:'Exposition' },
+  { entityIndex:11, sessionIndex:42, mentions:1, sceneType:'Social' },
+  { entityIndex:12, sessionIndex:0, mentions:1, sceneType:'Social' },
+  { entityIndex:12, sessionIndex:1, mentions:1, sceneType:'Social' },
+  { entityIndex:12, sessionIndex:13, mentions:2, sceneType:'Social' },
+  { entityIndex:12, sessionIndex:17, mentions:1, sceneType:'Exposition' },
+  { entityIndex:12, sessionIndex:21, mentions:1, sceneType:'Exposition' },
+  { entityIndex:12, sessionIndex:23, mentions:1, sceneType:'Social' },
+  { entityIndex:12, sessionIndex:24, mentions:4, sceneType:'Exposition' },
+  { entityIndex:12, sessionIndex:26, mentions:1, sceneType:'Exposition' },
+  { entityIndex:12, sessionIndex:27, mentions:1, sceneType:'Social' },
+  { entityIndex:12, sessionIndex:30, mentions:2, sceneType:'Exploration' },
+  { entityIndex:12, sessionIndex:31, mentions:2, sceneType:'Exposition' },
+  { entityIndex:12, sessionIndex:33, mentions:2, sceneType:'Social' },
+  { entityIndex:12, sessionIndex:34, mentions:4, sceneType:'Social' },
+  { entityIndex:12, sessionIndex:35, mentions:1, sceneType:'Exposition' },
+  { entityIndex:12, sessionIndex:36, mentions:1, sceneType:'Exposition' },
+  { entityIndex:12, sessionIndex:37, mentions:2, sceneType:'Social' },
+  { entityIndex:12, sessionIndex:39, mentions:4, sceneType:'Exposition' },
+  { entityIndex:12, sessionIndex:41, mentions:3, sceneType:'Social' },
+  { entityIndex:12, sessionIndex:42, mentions:1, sceneType:'Exposition' },
+  { entityIndex:12, sessionIndex:43, mentions:5, sceneType:'Social' },
+  { entityIndex:12, sessionIndex:44, mentions:2, sceneType:'Exposition' },
+  { entityIndex:12, sessionIndex:45, mentions:2, sceneType:'Exposition' },
+  { entityIndex:13, sessionIndex:1, mentions:4, sceneType:'Social' },
+  { entityIndex:13, sessionIndex:2, mentions:3, sceneType:'Exploration' },
+  { entityIndex:13, sessionIndex:3, mentions:5, sceneType:'Social' },
+  { entityIndex:13, sessionIndex:4, mentions:1, sceneType:'Exposition' },
+  { entityIndex:13, sessionIndex:8, mentions:3, sceneType:'Exposition' },
+  { entityIndex:13, sessionIndex:11, mentions:5, sceneType:'Social' },
+  { entityIndex:13, sessionIndex:12, mentions:3, sceneType:'Social' },
+  { entityIndex:13, sessionIndex:13, mentions:6, sceneType:'Social' },
+  { entityIndex:13, sessionIndex:14, mentions:6, sceneType:'Social' },
+  { entityIndex:13, sessionIndex:15, mentions:5, sceneType:'Combat' },
+  { entityIndex:13, sessionIndex:41, mentions:1, sceneType:'Social' },
+  { entityIndex:14, sessionIndex:0, mentions:4, sceneType:'Social' },
+  { entityIndex:14, sessionIndex:1, mentions:4, sceneType:'Social' },
+  { entityIndex:14, sessionIndex:2, mentions:1, sceneType:'Exposition' },
+  { entityIndex:14, sessionIndex:6, mentions:2, sceneType:'Exploration' },
+  { entityIndex:14, sessionIndex:7, mentions:5, sceneType:'Social' },
+  { entityIndex:14, sessionIndex:12, mentions:1, sceneType:'Exploration' },
+  { entityIndex:14, sessionIndex:13, mentions:1, sceneType:'Social' },
+  { entityIndex:14, sessionIndex:14, mentions:1, sceneType:'Social' },
+  { entityIndex:14, sessionIndex:16, mentions:2, sceneType:'Social' },
+  { entityIndex:14, sessionIndex:23, mentions:2, sceneType:'Social' },
+  { entityIndex:14, sessionIndex:24, mentions:1, sceneType:'Social' },
+  { entityIndex:14, sessionIndex:25, mentions:1, sceneType:'Social' },
+  { entityIndex:14, sessionIndex:29, mentions:1, sceneType:'Exploration' },
+  { entityIndex:14, sessionIndex:30, mentions:1, sceneType:'Exploration' },
+  { entityIndex:14, sessionIndex:42, mentions:4, sceneType:'Social' },
+  { entityIndex:14, sessionIndex:43, mentions:3, sceneType:'Social' },
+  { entityIndex:14, sessionIndex:44, mentions:3, sceneType:'Exposition' },
+  { entityIndex:14, sessionIndex:45, mentions:3, sceneType:'Social' },
+  { entityIndex:15, sessionIndex:0, mentions:3, sceneType:'Social' },
+  { entityIndex:15, sessionIndex:1, mentions:3, sceneType:'Social' },
+  { entityIndex:15, sessionIndex:2, mentions:1, sceneType:'Combat' },
+  { entityIndex:15, sessionIndex:3, mentions:1, sceneType:'Exposition' },
+  { entityIndex:15, sessionIndex:4, mentions:1, sceneType:'Exploration' },
+  { entityIndex:15, sessionIndex:5, mentions:1, sceneType:'Combat' },
+  { entityIndex:15, sessionIndex:6, mentions:2, sceneType:'Social' },
+  { entityIndex:15, sessionIndex:7, mentions:1, sceneType:'Social' },
+  { entityIndex:15, sessionIndex:8, mentions:1, sceneType:'Social' },
+  { entityIndex:15, sessionIndex:9, mentions:2, sceneType:'Social' },
+  { entityIndex:15, sessionIndex:10, mentions:2, sceneType:'Exposition' },
+  { entityIndex:15, sessionIndex:12, mentions:1, sceneType:'Exploration' },
+  { entityIndex:15, sessionIndex:13, mentions:1, sceneType:'Social' },
+  { entityIndex:15, sessionIndex:14, mentions:3, sceneType:'Social' },
+  { entityIndex:15, sessionIndex:15, mentions:2, sceneType:'Combat' },
+  { entityIndex:15, sessionIndex:16, mentions:3, sceneType:'Social' },
+  { entityIndex:15, sessionIndex:20, mentions:2, sceneType:'Exposition' },
+  { entityIndex:15, sessionIndex:24, mentions:2, sceneType:'Social' },
+  { entityIndex:15, sessionIndex:26, mentions:1, sceneType:'Exposition' },
+  { entityIndex:15, sessionIndex:27, mentions:1, sceneType:'Exploration' },
+  { entityIndex:15, sessionIndex:28, mentions:3, sceneType:'Exposition' },
+  { entityIndex:15, sessionIndex:29, mentions:2, sceneType:'Social' },
+  { entityIndex:16, sessionIndex:24, mentions:1, sceneType:'Social' },
+  { entityIndex:16, sessionIndex:28, mentions:1, sceneType:'Social' },
+  { entityIndex:16, sessionIndex:34, mentions:6, sceneType:'Social' },
+  { entityIndex:16, sessionIndex:35, mentions:2, sceneType:'Exposition' },
+  { entityIndex:16, sessionIndex:36, mentions:4, sceneType:'Social' },
+  { entityIndex:16, sessionIndex:37, mentions:2, sceneType:'Social' },
+  { entityIndex:16, sessionIndex:38, mentions:5, sceneType:'Exploration' },
+  { entityIndex:16, sessionIndex:39, mentions:6, sceneType:'Exposition' },
+  { entityIndex:16, sessionIndex:40, mentions:2, sceneType:'Social' },
+  { entityIndex:16, sessionIndex:41, mentions:4, sceneType:'Combat' },
+  { entityIndex:16, sessionIndex:42, mentions:4, sceneType:'Exposition' },
+  { entityIndex:16, sessionIndex:45, mentions:2, sceneType:'Social' },
+  { entityIndex:17, sessionIndex:0, mentions:2, sceneType:'Exposition' },
+  { entityIndex:17, sessionIndex:1, mentions:2, sceneType:'Social' },
+  { entityIndex:17, sessionIndex:2, mentions:1, sceneType:'Exposition' },
+  { entityIndex:17, sessionIndex:3, mentions:3, sceneType:'Exploration' },
+  { entityIndex:17, sessionIndex:4, mentions:1, sceneType:'Social' },
+  { entityIndex:17, sessionIndex:5, mentions:1, sceneType:'Combat' },
+  { entityIndex:17, sessionIndex:6, mentions:1, sceneType:'Exploration' },
+  { entityIndex:17, sessionIndex:7, mentions:2, sceneType:'Combat' },
+  { entityIndex:17, sessionIndex:10, mentions:1, sceneType:'Social' },
+  { entityIndex:17, sessionIndex:11, mentions:1, sceneType:'Social' },
+  { entityIndex:17, sessionIndex:13, mentions:1, sceneType:'Social' },
+  { entityIndex:17, sessionIndex:16, mentions:2, sceneType:'Social' },
+  { entityIndex:17, sessionIndex:24, mentions:2, sceneType:'Social' },
+  { entityIndex:17, sessionIndex:26, mentions:1, sceneType:'Exposition' },
+  { entityIndex:17, sessionIndex:28, mentions:2, sceneType:'Social' },
+  { entityIndex:17, sessionIndex:42, mentions:2, sceneType:'Exposition' },
+  { entityIndex:17, sessionIndex:43, mentions:3, sceneType:'Social' },
+  { entityIndex:17, sessionIndex:44, mentions:2, sceneType:'Exposition' },
+  { entityIndex:17, sessionIndex:45, mentions:5, sceneType:'Social' },
+  { entityIndex:18, sessionIndex:34, mentions:7, sceneType:'Social' },
+  { entityIndex:18, sessionIndex:35, mentions:6, sceneType:'Combat' },
+  { entityIndex:18, sessionIndex:36, mentions:8, sceneType:'Combat' },
+  { entityIndex:18, sessionIndex:37, mentions:5, sceneType:'Social' },
+  { entityIndex:18, sessionIndex:38, mentions:3, sceneType:'Social' },
+  { entityIndex:18, sessionIndex:39, mentions:4, sceneType:'Exploration' },
+  { entityIndex:19, sessionIndex:0, mentions:3, sceneType:'Social' },
+  { entityIndex:19, sessionIndex:1, mentions:2, sceneType:'Social' },
+  { entityIndex:19, sessionIndex:3, mentions:1, sceneType:'Social' },
+  { entityIndex:19, sessionIndex:8, mentions:2, sceneType:'Social' },
+  { entityIndex:19, sessionIndex:9, mentions:1, sceneType:'Exposition' },
+  { entityIndex:19, sessionIndex:10, mentions:2, sceneType:'Exposition' },
+  { entityIndex:19, sessionIndex:11, mentions:1, sceneType:'Exploration' },
+  { entityIndex:19, sessionIndex:12, mentions:3, sceneType:'Exposition' },
+  { entityIndex:19, sessionIndex:13, mentions:6, sceneType:'Social' },
+  { entityIndex:19, sessionIndex:14, mentions:2, sceneType:'Social' },
+  { entityIndex:19, sessionIndex:15, mentions:1, sceneType:'Combat' },
+  { entityIndex:19, sessionIndex:16, mentions:2, sceneType:'Social' },
+  { entityIndex:19, sessionIndex:26, mentions:1, sceneType:'Combat' },
+  { entityIndex:19, sessionIndex:30, mentions:1, sceneType:'Exposition' },
+  { entityIndex:19, sessionIndex:44, mentions:2, sceneType:'Social' },
+  { entityIndex:19, sessionIndex:45, mentions:2, sceneType:'Social' },
+  { entityIndex:20, sessionIndex:22, mentions:1, sceneType:'Combat' },
+  { entityIndex:20, sessionIndex:24, mentions:1, sceneType:'Social' },
+  { entityIndex:20, sessionIndex:27, mentions:1, sceneType:'Social' },
+  { entityIndex:20, sessionIndex:28, mentions:1, sceneType:'Social' },
+  { entityIndex:20, sessionIndex:30, mentions:1, sceneType:'Social' },
+  { entityIndex:20, sessionIndex:34, mentions:4, sceneType:'Exposition' },
+  { entityIndex:20, sessionIndex:35, mentions:5, sceneType:'Exposition' },
+  { entityIndex:20, sessionIndex:36, mentions:4, sceneType:'Exposition' },
+  { entityIndex:20, sessionIndex:37, mentions:1, sceneType:'Exposition' },
+  { entityIndex:20, sessionIndex:38, mentions:3, sceneType:'Exploration' },
+  { entityIndex:20, sessionIndex:39, mentions:3, sceneType:'Exposition' },
+  { entityIndex:20, sessionIndex:40, mentions:4, sceneType:'Social' },
+  { entityIndex:20, sessionIndex:41, mentions:3, sceneType:'Combat' },
+  { entityIndex:21, sessionIndex:0, mentions:1, sceneType:'Exposition' },
+  { entityIndex:21, sessionIndex:10, mentions:1, sceneType:'Social' },
+  { entityIndex:21, sessionIndex:11, mentions:2, sceneType:'Social' },
+  { entityIndex:21, sessionIndex:12, mentions:3, sceneType:'Exposition' },
+  { entityIndex:21, sessionIndex:16, mentions:2, sceneType:'Exposition' },
+  { entityIndex:21, sessionIndex:17, mentions:1, sceneType:'Exposition' },
+  { entityIndex:21, sessionIndex:24, mentions:3, sceneType:'Exposition' },
+  { entityIndex:21, sessionIndex:26, mentions:1, sceneType:'Exposition' },
+  { entityIndex:21, sessionIndex:31, mentions:1, sceneType:'Exposition' },
+  { entityIndex:21, sessionIndex:33, mentions:1, sceneType:'Combat' },
+  { entityIndex:21, sessionIndex:34, mentions:1, sceneType:'Social' },
+  { entityIndex:21, sessionIndex:42, mentions:2, sceneType:'Exposition' },
+  { entityIndex:21, sessionIndex:43, mentions:7, sceneType:'Social' },
+  { entityIndex:21, sessionIndex:44, mentions:3, sceneType:'Social' },
+  { entityIndex:21, sessionIndex:45, mentions:2, sceneType:'Social' },
+  { entityIndex:22, sessionIndex:4, mentions:7, sceneType:'Combat' },
+  { entityIndex:22, sessionIndex:5, mentions:20, sceneType:'Combat' },
+  { entityIndex:23, sessionIndex:20, mentions:3, sceneType:'Exposition' },
+  { entityIndex:23, sessionIndex:21, mentions:3, sceneType:'Exposition' },
+  { entityIndex:23, sessionIndex:22, mentions:6, sceneType:'Combat' },
+  { entityIndex:23, sessionIndex:23, mentions:6, sceneType:'Social' },
+  { entityIndex:23, sessionIndex:25, mentions:6, sceneType:'Social' },
+  { entityIndex:23, sessionIndex:34, mentions:1, sceneType:'Social' },
+  { entityIndex:23, sessionIndex:41, mentions:1, sceneType:'Social' },
+  { entityIndex:24, sessionIndex:44, mentions:17, sceneType:'Combat' },
+  { entityIndex:24, sessionIndex:45, mentions:9, sceneType:'Exposition' },
+  { entityIndex:25, sessionIndex:0, mentions:2, sceneType:'Exposition' },
+  { entityIndex:25, sessionIndex:1, mentions:2, sceneType:'Social' },
+  { entityIndex:25, sessionIndex:2, mentions:1, sceneType:'Exposition' },
+  { entityIndex:25, sessionIndex:3, mentions:1, sceneType:'Social' },
+  { entityIndex:25, sessionIndex:8, mentions:1, sceneType:'Exposition' },
+  { entityIndex:25, sessionIndex:11, mentions:2, sceneType:'Exposition' },
+  { entityIndex:25, sessionIndex:16, mentions:1, sceneType:'Social' },
+  { entityIndex:25, sessionIndex:24, mentions:2, sceneType:'Exposition' },
+  { entityIndex:25, sessionIndex:29, mentions:1, sceneType:'Exploration' },
+  { entityIndex:25, sessionIndex:30, mentions:1, sceneType:'Exposition' },
+  { entityIndex:25, sessionIndex:31, mentions:1, sceneType:'Exposition' },
+  { entityIndex:25, sessionIndex:33, mentions:1, sceneType:'Social' },
+  { entityIndex:25, sessionIndex:42, mentions:4, sceneType:'Social' },
+  { entityIndex:25, sessionIndex:43, mentions:4, sceneType:'Social' },
+  { entityIndex:25, sessionIndex:44, mentions:1, sceneType:'Exposition' },
+  { entityIndex:26, sessionIndex:10, mentions:1, sceneType:'Exposition' },
+  { entityIndex:26, sessionIndex:11, mentions:1, sceneType:'Exploration' },
+  { entityIndex:26, sessionIndex:24, mentions:4, sceneType:'Exposition' },
+  { entityIndex:26, sessionIndex:26, mentions:2, sceneType:'Exposition' },
+  { entityIndex:26, sessionIndex:30, mentions:2, sceneType:'Exposition' },
+  { entityIndex:26, sessionIndex:31, mentions:2, sceneType:'Exposition' },
+  { entityIndex:26, sessionIndex:32, mentions:5, sceneType:'Combat' },
+  { entityIndex:26, sessionIndex:33, mentions:4, sceneType:'Exposition' },
+  { entityIndex:26, sessionIndex:39, mentions:1, sceneType:'Social' },
+  { entityIndex:26, sessionIndex:45, mentions:3, sceneType:'Exposition' },
+  { entityIndex:27, sessionIndex:0, mentions:1, sceneType:'Social' },
+  { entityIndex:27, sessionIndex:1, mentions:1, sceneType:'Social' },
+  { entityIndex:27, sessionIndex:3, mentions:1, sceneType:'Exploration' },
+  { entityIndex:27, sessionIndex:5, mentions:1, sceneType:'Social' },
+  { entityIndex:27, sessionIndex:6, mentions:1, sceneType:'Exposition' },
+  { entityIndex:27, sessionIndex:7, mentions:1, sceneType:'Exposition' },
+  { entityIndex:27, sessionIndex:13, mentions:1, sceneType:'Combat' },
+  { entityIndex:27, sessionIndex:14, mentions:1, sceneType:'Social' },
+  { entityIndex:27, sessionIndex:20, mentions:4, sceneType:'Exposition' },
+  { entityIndex:27, sessionIndex:21, mentions:4, sceneType:'Exposition' },
+  { entityIndex:27, sessionIndex:22, mentions:2, sceneType:'Exposition' },
+  { entityIndex:27, sessionIndex:23, mentions:2, sceneType:'Social' },
+  { entityIndex:27, sessionIndex:25, mentions:3, sceneType:'Social' },
+  { entityIndex:27, sessionIndex:42, mentions:1, sceneType:'Social' },
+  { entityIndex:28, sessionIndex:0, mentions:1, sceneType:'Exposition' },
+  { entityIndex:28, sessionIndex:1, mentions:3, sceneType:'Social' },
+  { entityIndex:28, sessionIndex:3, mentions:2, sceneType:'Exposition' },
+  { entityIndex:28, sessionIndex:4, mentions:2, sceneType:'Social' },
+  { entityIndex:28, sessionIndex:5, mentions:5, sceneType:'Combat' },
+  { entityIndex:28, sessionIndex:6, mentions:2, sceneType:'Exposition' },
+  { entityIndex:28, sessionIndex:7, mentions:3, sceneType:'Social' },
+  { entityIndex:28, sessionIndex:8, mentions:1, sceneType:'Social' },
+  { entityIndex:28, sessionIndex:11, mentions:1, sceneType:'Social' },
+  { entityIndex:28, sessionIndex:12, mentions:1, sceneType:'Exploration' },
+  { entityIndex:28, sessionIndex:16, mentions:2, sceneType:'Social' },
+  { entityIndex:29, sessionIndex:20, mentions:4, sceneType:'Social' },
+  { entityIndex:29, sessionIndex:21, mentions:3, sceneType:'Exposition' },
+  { entityIndex:29, sessionIndex:22, mentions:7, sceneType:'Combat' },
+  { entityIndex:29, sessionIndex:23, mentions:3, sceneType:'Exploration' },
+  { entityIndex:29, sessionIndex:24, mentions:1, sceneType:'Social' },
+  { entityIndex:29, sessionIndex:25, mentions:4, sceneType:'Exposition' },
+  { entityIndex:29, sessionIndex:39, mentions:1, sceneType:'Social' },
+  { entityIndex:30, sessionIndex:0, mentions:2, sceneType:'Social' },
+  { entityIndex:30, sessionIndex:1, mentions:2, sceneType:'Social' },
+  { entityIndex:30, sessionIndex:3, mentions:4, sceneType:'Exploration' },
+  { entityIndex:30, sessionIndex:9, mentions:6, sceneType:'Social' },
+  { entityIndex:30, sessionIndex:10, mentions:5, sceneType:'Social' },
+  { entityIndex:30, sessionIndex:14, mentions:1, sceneType:'Social' },
+  { entityIndex:30, sessionIndex:16, mentions:1, sceneType:'Social' },
+  { entityIndex:30, sessionIndex:17, mentions:1, sceneType:'Exposition' },
+  { entityIndex:31, sessionIndex:0, mentions:1, sceneType:'Social' },
+  { entityIndex:31, sessionIndex:1, mentions:1, sceneType:'Social' },
+  { entityIndex:31, sessionIndex:3, mentions:1, sceneType:'Social' },
+  { entityIndex:31, sessionIndex:9, mentions:1, sceneType:'Social' },
+  { entityIndex:31, sessionIndex:10, mentions:3, sceneType:'Social' },
+  { entityIndex:31, sessionIndex:11, mentions:1, sceneType:'Exploration' },
+  { entityIndex:31, sessionIndex:15, mentions:2, sceneType:'Combat' },
+  { entityIndex:31, sessionIndex:16, mentions:1, sceneType:'Social' },
+  { entityIndex:31, sessionIndex:17, mentions:3, sceneType:'Exposition' },
+  { entityIndex:31, sessionIndex:24, mentions:2, sceneType:'Exposition' },
+  { entityIndex:31, sessionIndex:26, mentions:1, sceneType:'Exposition' },
+  { entityIndex:31, sessionIndex:27, mentions:1, sceneType:'Social' },
+  { entityIndex:31, sessionIndex:29, mentions:1, sceneType:'Exploration' },
+  { entityIndex:31, sessionIndex:33, mentions:2, sceneType:'Exposition' },
+  { entityIndex:31, sessionIndex:39, mentions:1, sceneType:'Social' },
+  { entityIndex:32, sessionIndex:8, mentions:1, sceneType:'Exposition' },
+  { entityIndex:32, sessionIndex:16, mentions:1, sceneType:'Exposition' },
+  { entityIndex:32, sessionIndex:24, mentions:3, sceneType:'Exposition' },
+  { entityIndex:32, sessionIndex:26, mentions:1, sceneType:'Exposition' },
+  { entityIndex:32, sessionIndex:42, mentions:4, sceneType:'Social' },
+  { entityIndex:32, sessionIndex:43, mentions:4, sceneType:'Social' },
+  { entityIndex:32, sessionIndex:44, mentions:2, sceneType:'Exposition' },
+  { entityIndex:32, sessionIndex:45, mentions:5, sceneType:'Social' },
+  { entityIndex:33, sessionIndex:0, mentions:1, sceneType:'Exposition' },
+  { entityIndex:33, sessionIndex:1, mentions:1, sceneType:'Social' },
+  { entityIndex:33, sessionIndex:3, mentions:3, sceneType:'Exposition' },
+  { entityIndex:33, sessionIndex:4, mentions:2, sceneType:'Social' },
+  { entityIndex:33, sessionIndex:6, mentions:1, sceneType:'Social' },
+  { entityIndex:33, sessionIndex:7, mentions:4, sceneType:'Social' },
+  { entityIndex:33, sessionIndex:8, mentions:4, sceneType:'Exposition' },
+  { entityIndex:33, sessionIndex:11, mentions:1, sceneType:'Social' },
+  { entityIndex:33, sessionIndex:16, mentions:2, sceneType:'Social' },
+  { entityIndex:33, sessionIndex:24, mentions:1, sceneType:'Social' },
+  { entityIndex:34, sessionIndex:16, mentions:1, sceneType:'Exposition' },
+  { entityIndex:34, sessionIndex:42, mentions:4, sceneType:'Social' },
+  { entityIndex:34, sessionIndex:43, mentions:6, sceneType:'Social' },
+  { entityIndex:34, sessionIndex:44, mentions:6, sceneType:'Social' },
+  { entityIndex:34, sessionIndex:45, mentions:3, sceneType:'Social' }
+];
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  LEGENDS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+const legendEntities = document.getElementById('legend-entities');
+Object.entries(TYPE_COLORS).forEach(([type, color]) => {
+  const el = document.createElement('div');
+  el.className = 'legend-item';
+  el.innerHTML = `<span class="legend-swatch" style="background:${color};box-shadow:0 0 6px ${color}"></span>${type}`;
+  legendEntities.appendChild(el);
+});
+
+const legendScenes = document.getElementById('legend-scenes');
+Object.entries(SCENE_COLORS).forEach(([type, color]) => {
+  const el = document.createElement('div');
+  el.className = 'legend-item';
+  el.innerHTML = `<span class="legend-line" style="background:${color};box-shadow:0 0 6px ${color}"></span>${type}`;
+  legendScenes.appendChild(el);
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  LAYOUT CALCULATIONS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+const container = document.getElementById('chart');
+let W, H, cx, cy, innerR, outerR, dpr;
+
+function calcDimensions() {
+  const rect = container.getBoundingClientRect();
+  W = rect.width;
+  H = rect.height;
+  cx = W / 2;
+  cy = H / 2;
+  innerR = Math.min(W, H) * 0.30;
+  outerR = Math.min(W, H) * 0.44;
+  dpr = window.devicePixelRatio || 1;
+}
+calcDimensions();
+
+// Group entities by type for arc segments
+const typeOrder = ['PC', 'NPC', 'LOCATION', 'MONSTER/BOSS', 'ORGANIZATION'];
+const typeGroups = typeOrder.map(type => ({
+  type,
+  entities: ENTITIES.map((e, i) => ({ ...e, globalIndex: i })).filter(e => e.type === type)
+}));
+
+// Gap between type groups (in radians)
+const groupGap = 0.06;
+const totalGap = groupGap * typeGroups.length;
+const availableAngle = 2 * Math.PI - totalGap;
+const totalEntities = ENTITIES.length;
+const anglePerEntity = availableAngle / totalEntities;
+
+// Compute entity angles
+let currentAngle = -Math.PI / 2; // start from top
+const entityAngles = new Array(ENTITIES.length);
+
+typeGroups.forEach(group => {
+  group.startAngle = currentAngle;
+  group.entities.forEach((e, i) => {
+    entityAngles[e.globalIndex] = currentAngle + anglePerEntity / 2;
+    currentAngle += anglePerEntity;
+  });
+  group.endAngle = currentAngle;
+  currentAngle += groupGap;
+});
+
+// Session angles (equally spaced on outer ring)
+const sessionAngles = SESSIONS.map((s, i) => {
+  return -Math.PI / 2 + (2 * Math.PI * i) / SESSIONS.length;
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  SVG STRUCTURE
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+const svg = d3.select('#svg-structure')
+  .attr('viewBox', `0 0 ${W} ${H}`)
+  .attr('preserveAspectRatio', 'xMidYMid meet');
+
+// Defs for glow filters
+const defs = svg.append('defs');
+
+// Glow filter for entity nodes
+const glowFilter = defs.append('filter').attr('id', 'glow');
+glowFilter.append('feGaussianBlur').attr('stdDeviation', '3').attr('result', 'blur');
+const merge = glowFilter.append('feMerge');
+merge.append('feMergeNode').attr('in', 'blur');
+merge.append('feMergeNode').attr('in', 'SourceGraphic');
+
+// Intense glow for active states
+const glowHot = defs.append('filter').attr('id', 'glow-hot');
+glowHot.append('feGaussianBlur').attr('stdDeviation', '6').attr('result', 'blur');
+const mergeHot = glowHot.append('feMerge');
+mergeHot.append('feMergeNode').attr('in', 'blur');
+mergeHot.append('feMergeNode').attr('in', 'SourceGraphic');
+
+const g = svg.append('g').attr('transform', `translate(${cx},${cy})`);
+
+// ── Arc Segments for type groups ───────────────────
+const arcGen = d3.arc().innerRadius(innerR - 12).outerRadius(innerR - 4);
+
+typeGroups.forEach(group => {
+  g.append('path')
+    .attr('d', arcGen({ startAngle: group.startAngle + Math.PI / 2, endAngle: group.endAngle + Math.PI / 2 }))
+    .attr('fill', TYPE_COLORS[group.type])
+    .attr('opacity', 0.12)
+    .attr('stroke', TYPE_COLORS[group.type])
+    .attr('stroke-width', 0.5)
+    .attr('stroke-opacity', 0.3);
+});
+
+// ── Inner Ring: Entity Nodes ───────────────────────
+const entityNodes = g.selectAll('.entity-node')
+  .data(ENTITIES)
+  .join('g')
+  .attr('class', 'entity-node')
+  .attr('transform', (d, i) => {
+    const a = entityAngles[i];
+    return `translate(${Math.cos(a) * innerR}, ${Math.sin(a) * innerR})`;
+  })
+  .style('cursor', 'pointer');
+
+entityNodes.append('circle')
+  .attr('r', (d) => {
+    if (d.type === 'PC') return 7;
+    if (d.type === 'MONSTER/BOSS') return 6;
+    return 5;
+  })
+  .attr('fill', d => TYPE_COLORS[d.type])
+  .attr('stroke', d => TYPE_COLORS[d.type])
+  .attr('stroke-width', 1.5)
+  .attr('stroke-opacity', 0.6)
+  .attr('filter', 'url(#glow)')
+  .attr('class', 'entity-dot');
+
+// Entity labels
+entityNodes.append('text')
+  .attr('text-anchor', (d, i) => {
+    const a = entityAngles[i];
+    return (a > -Math.PI / 2 && a < Math.PI / 2) ? 'start' : 'end';
+  })
+  .attr('dx', (d, i) => {
+    const a = entityAngles[i];
+    return (a > -Math.PI / 2 && a < Math.PI / 2) ? 12 : -12;
+  })
+  .attr('dy', '0.35em')
+  .attr('transform', (d, i) => {
+    const a = entityAngles[i] * (180 / Math.PI);
+    let rot = a;
+    if (a > 90 || a < -90) rot += 180;
+    return `rotate(${rot})`;
+  })
+  .text(d => d.name)
+  .attr('fill', d => TYPE_COLORS[d.type])
+  .attr('font-family', "'Barlow Condensed', sans-serif")
+  .attr('font-weight', 600)
+  .attr('font-size', '11px')
+  .attr('letter-spacing', '0.5px')
+  .attr('opacity', 0.85)
+  .attr('class', 'entity-label');
+
+// ── Outer Ring: Session Nodes ──────────────────────
+
+// Outer ring track
+g.append('circle')
+  .attr('r', outerR)
+  .attr('fill', 'none')
+  .attr('stroke', '#1a1a2e')
+  .attr('stroke-width', 12)
+  .attr('opacity', 0.5);
+
+// Inner ring track
+g.append('circle')
+  .attr('r', innerR)
+  .attr('fill', 'none')
+  .attr('stroke', '#1a1a2e')
+  .attr('stroke-width', 4)
+  .attr('opacity', 0.3);
+
+const sessionNodes = g.selectAll('.session-node')
+  .data(SESSIONS)
+  .join('g')
+  .attr('class', 'session-node')
+  .attr('transform', (d, i) => {
+    const a = sessionAngles[i];
+    return `translate(${Math.cos(a) * outerR}, ${Math.sin(a) * outerR})`;
+  })
+  .style('cursor', 'pointer');
+
+// Energy type color mapping for dots
+const energyDotColors = { Combat: '#ff4444', Comedy: '#ffd700', Dramatic: '#ad6bff', Dice: '#00d4ff' };
+
+sessionNodes.append('circle')
+  .attr('r', 5)
+  .attr('fill', d => energyDotColors[d.dominant])
+  .attr('stroke', d => energyDotColors[d.dominant])
+  .attr('stroke-width', 1)
+  .attr('stroke-opacity', 0.5)
+  .attr('filter', 'url(#glow)')
+  .attr('class', 'session-dot');
+
+// Session labels
+sessionNodes.append('text')
+  .attr('text-anchor', (d, i) => {
+    const a = sessionAngles[i];
+    return (a > -Math.PI / 2 && a < Math.PI / 2) ? 'start' : 'end';
+  })
+  .attr('dx', (d, i) => {
+    const a = sessionAngles[i];
+    return (a > -Math.PI / 2 && a < Math.PI / 2) ? 10 : -10;
+  })
+  .attr('dy', '0.35em')
+  .attr('transform', (d, i) => {
+    const a = sessionAngles[i] * (180 / Math.PI);
+    let rot = a;
+    if (a > 90 || a < -90) rot += 180;
+    return `rotate(${rot})`;
+  })
+  .text(d => d.sid)
+  .attr('fill', '#9494bf')
+  .attr('font-family', "'JetBrains Mono', monospace")
+  .attr('font-weight', 400)
+  .attr('font-size', '9px')
+  .attr('letter-spacing', '0.5px')
+  .attr('opacity', 0.7)
+  .attr('class', 'session-label');
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  CANVAS CONNECTIONS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+const canvas = document.getElementById('canvas-connections');
+let ctx;
+
+function setupCanvas() {
+  calcDimensions();
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+}
+setupCanvas();
+
+function drawConnections(highlightEntity, highlightSession) {
+  ctx.clearRect(-W, -H, W * 3, H * 3);
+  ctx.save();
+  ctx.translate(cx, cy);
+
+  const isHighlighting = (highlightEntity !== null && highlightEntity !== undefined) ||
+                         (highlightSession !== null && highlightSession !== undefined);
+
+  CONNECTIONS.forEach(conn => {
+    const ea = entityAngles[conn.entityIndex];
+    const sa = sessionAngles[conn.sessionIndex];
+    const color = SCENE_COLORS[conn.sceneType] || '#4A90D9';
+
+    let isActive = false;
+    if (highlightEntity !== null && highlightEntity !== undefined) {
+      isActive = conn.entityIndex === highlightEntity;
+    } else if (highlightSession !== null && highlightSession !== undefined) {
+      isActive = conn.sessionIndex === highlightSession;
+    }
+
+    const alpha = isHighlighting ? (isActive ? 0.7 : 0.03) : 0.12;
+    const lineWidth = isActive ? (0.5 + conn.mentions * 0.7) : (0.3 + conn.mentions * 0.3);
+
+    // Start point on inner ring
+    const x0 = Math.cos(ea) * innerR;
+    const y0 = Math.sin(ea) * innerR;
+
+    // End point on outer ring
+    const x1 = Math.cos(sa) * outerR;
+    const y1 = Math.sin(sa) * outerR;
+
+    // Control point: pull toward center for curved paths
+    const midAngle = (ea + sa) / 2;
+    // Offset to avoid straight lines when angles are similar
+    const angleDiff = Math.abs(ea - sa);
+    const pullRadius = (innerR + outerR) / 2 * (0.15 + 0.35 * Math.sin(angleDiff / 2));
+    const cpx = Math.cos(midAngle) * pullRadius;
+    const cpy = Math.sin(midAngle) * pullRadius;
+
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.quadraticCurveTo(cpx, cpy, x1, y1);
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = alpha;
+    ctx.lineWidth = lineWidth;
+    ctx.stroke();
+
+    // Glow effect for active connections
+    if (isActive && isHighlighting) {
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.quadraticCurveTo(cpx, cpy, x1, y1);
+      ctx.strokeStyle = color;
+      ctx.globalAlpha = 0.15;
+      ctx.lineWidth = lineWidth + 4;
+      ctx.stroke();
+    }
+  });
+
+  ctx.restore();
+}
+
+// Initial draw
+drawConnections(null, null);
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  INTERACTIONS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+const tooltip = document.getElementById('tooltip');
+const ttName = document.getElementById('tt-name');
+const ttSub = document.getElementById('tt-sub');
+const centerCard = document.getElementById('center-card');
+const centerIdle = document.getElementById('center-idle');
+
+function showTooltip(evt, nameStr, subStr, color) {
+  ttName.textContent = nameStr;
+  ttName.style.color = color || '#eef0ff';
+  ttSub.textContent = subStr;
+  tooltip.classList.add('visible');
+  const x = evt.clientX + 14;
+  const y = evt.clientY - 10;
+  tooltip.style.left = x + 'px';
+  tooltip.style.top = y + 'px';
+}
+
+function hideTooltip() {
+  tooltip.classList.remove('visible');
+}
+
+function showCenterCard(entity) {
+  const color = TYPE_COLORS[entity.type];
+  document.getElementById('cc-name').textContent = entity.name;
+  document.getElementById('cc-name').style.color = color;
+
+  const badge = document.getElementById('cc-badge');
+  badge.textContent = entity.type;
+  badge.style.color = color;
+  badge.style.borderColor = color + '40';
+  badge.style.background = color + '18';
+
+  document.getElementById('cc-sessions').textContent = entity.sessionCount;
+  document.getElementById('cc-sessions').style.color = color;
+  document.getElementById('cc-mentions').textContent = entity.totalMentions;
+  document.getElementById('cc-peak').textContent = entity.peakSession.sid + ' (' + entity.peakSession.m + ')';
+  document.getElementById('cc-desc').textContent = entity.desc;
+
+  // Force the ::before accent bar color via dynamic style
+  let styleEl = document.getElementById('cc-accent-style');
+  if (!styleEl) {
+    styleEl = document.createElement('style');
+    styleEl.id = 'cc-accent-style';
+    document.head.appendChild(styleEl);
+  }
+  styleEl.textContent = `.center-card-inner::before { background: ${color} !important; box-shadow: 0 0 12px ${color}80; }`;
+
+  centerCard.classList.add('visible');
+  centerIdle.classList.add('hidden');
+}
+
+function hideCenterCard() {
+  centerCard.classList.remove('visible');
+  centerIdle.classList.remove('hidden');
+}
+
+function highlightEntity(entityIndex) {
+  drawConnections(entityIndex, null);
+
+  // Connected sessions
+  const connSessions = new Set(CONNECTIONS.filter(c => c.entityIndex === entityIndex).map(c => c.sessionIndex));
+
+  // Dim non-connected sessions
+  sessionNodes.selectAll('.session-dot')
+    .transition().duration(200)
+    .attr('opacity', (d, i) => connSessions.has(i) ? 1 : 0.08);
+  sessionNodes.selectAll('.session-label')
+    .transition().duration(200)
+    .attr('opacity', (d, i) => connSessions.has(i) ? 1 : 0.06);
+
+  // Dim non-active entities
+  entityNodes.selectAll('.entity-dot')
+    .transition().duration(200)
+    .attr('opacity', (d, i) => i === entityIndex ? 1 : 0.1)
+    .attr('filter', (d, i) => i === entityIndex ? 'url(#glow-hot)' : 'url(#glow)');
+  entityNodes.selectAll('.entity-label')
+    .transition().duration(200)
+    .attr('opacity', (d, i) => i === entityIndex ? 1 : 0.06);
+
+  showCenterCard(ENTITIES[entityIndex]);
+}
+
+function highlightSession(sessionIndex) {
+  drawConnections(null, sessionIndex);
+
+  // Connected entities
+  const connEntities = new Set(CONNECTIONS.filter(c => c.sessionIndex === sessionIndex).map(c => c.entityIndex));
+
+  // Dim non-connected entities
+  entityNodes.selectAll('.entity-dot')
+    .transition().duration(200)
+    .attr('opacity', (d, i) => connEntities.has(i) ? 1 : 0.08);
+  entityNodes.selectAll('.entity-label')
+    .transition().duration(200)
+    .attr('opacity', (d, i) => connEntities.has(i) ? 1 : 0.06);
+
+  // Dim non-active sessions
+  sessionNodes.selectAll('.session-dot')
+    .transition().duration(200)
+    .attr('opacity', (d, i) => i === sessionIndex ? 1 : 0.1);
+  sessionNodes.selectAll('.session-label')
+    .transition().duration(200)
+    .attr('opacity', (d, i) => i === sessionIndex ? 1 : 0.06);
+
+  hideCenterCard();
+}
+
+function resetHighlight() {
+  drawConnections(null, null);
+
+  entityNodes.selectAll('.entity-dot')
+    .transition().duration(300)
+    .attr('opacity', 1)
+    .attr('filter', 'url(#glow)');
+  entityNodes.selectAll('.entity-label')
+    .transition().duration(300)
+    .attr('opacity', 0.85);
+
+  sessionNodes.selectAll('.session-dot')
+    .transition().duration(300)
+    .attr('opacity', 1);
+  sessionNodes.selectAll('.session-label')
+    .transition().duration(300)
+    .attr('opacity', 0.7);
+
+  hideCenterCard();
+  hideTooltip();
+}
+
+// Entity hover
+entityNodes
+  .on('mouseenter', function(evt, d) {
+    const i = ENTITIES.indexOf(d);
+    highlightEntity(i);
+    showTooltip(evt, d.name, `${d.type} · ${d.sessionCount} sessions · ${d.totalMentions} mentions`, TYPE_COLORS[d.type]);
+  })
+  .on('mousemove', function(evt, d) {
+    const x = evt.clientX + 14;
+    const y = evt.clientY - 10;
+    tooltip.style.left = x + 'px';
+    tooltip.style.top = y + 'px';
+  })
+  .on('mouseleave', function() {
+    resetHighlight();
+  });
+
+// Session hover
+sessionNodes
+  .on('mouseenter', function(evt, d) {
+    const i = SESSIONS.indexOf(d);
+    highlightSession(i);
+    const entityCount = new Set(CONNECTIONS.filter(c => c.sessionIndex === i).map(c => c.entityIndex)).size;
+    showTooltip(evt, d.sid, `${entityCount} entities · ${d.dominant} peak`, energyDotColors[d.dominant]);
+  })
+  .on('mousemove', function(evt, d) {
+    const x = evt.clientX + 14;
+    const y = evt.clientY - 10;
+    tooltip.style.left = x + 'px';
+    tooltip.style.top = y + 'px';
+  })
+  .on('mouseleave', function() {
+    resetHighlight();
+  });
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  RESIZE HANDLER
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+let resizeTimeout;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimeout);
+  resizeTimeout = setTimeout(() => {
+    calcDimensions();
+    setupCanvas();
+    svg.attr('viewBox', `0 0 ${W} ${H}`);
+    g.attr('transform', `translate(${cx},${cy})`);
+
+    // Update entity positions
+    entityNodes.attr('transform', (d, i) => {
+      const a = entityAngles[i];
+      return `translate(${Math.cos(a) * innerR}, ${Math.sin(a) * innerR})`;
+    });
+
+    // Update session positions
+    sessionNodes.attr('transform', (d, i) => {
+      const a = sessionAngles[i];
+      return `translate(${Math.cos(a) * outerR}, ${Math.sin(a) * outerR})`;
+    });
+
+    // Redraw connections
+    drawConnections(null, null);
+  }, 150);
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  ENTRANCE ANIMATION
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// Fade in entity nodes with stagger
+entityNodes
+  .attr('opacity', 0)
+  .transition()
+  .delay((d, i) => i * 30)
+  .duration(600)
+  .attr('opacity', 1);
+
+// Fade in session nodes with stagger
+sessionNodes
+  .attr('opacity', 0)
+  .transition()
+  .delay((d, i) => 400 + i * 20)
+  .duration(600)
+  .attr('opacity', 1);
+
+// Redraw connections after nodes have faded in
+setTimeout(() => drawConnections(null, null), 1800);
+
+</script>
+</body>
+</html>
