@@ -921,8 +921,9 @@ function go(num) {
 
 function toggleCard(el) {
   const header = el;
-  const body = header.nextElementSibling;
-  const isOpen = body.classList.contains('open');
+  const card = header.closest('.news-card');
+  const body = card.querySelector('.card-body');
+  if (!body) return;
   body.classList.toggle('open');
   header.classList.toggle('open');
 }
