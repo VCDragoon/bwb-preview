@@ -729,7 +729,7 @@ body {
 
   <!-- Central map: Material Plane -->
   <div class="central-map" id="central-map">
-    <img src="../../ref_images/Sword Coast.png" alt="Sword Coast — Material Plane">
+    <img src="../ref_images/Sword Coast.png" alt="Sword Coast — Material Plane">
     <div class="map-label">
       <h2>Material Plane</h2>
       <div class="session-range">S001-S020, S025, S031-S034, S043-S044</div>
@@ -739,7 +739,7 @@ body {
   <!-- Pocket dimension: Feywild (top-right) -->
   <div class="pocket-dimension" id="dim-feywild">
     <div class="fragment-inner">
-      <img src="../../ref_images/Sword Coast.png" alt="Feywild">
+      <img src="../ref_images/Sword Coast.png" alt="Feywild">
       <canvas class="sparkle-canvas" id="sparkle-canvas"></canvas>
       <div class="fragment-label">
         <h3>Feywild</h3>
@@ -751,7 +751,7 @@ body {
   <!-- Pocket dimension: Barovia (bottom-right) -->
   <div class="pocket-dimension" id="dim-barovia">
     <div class="fragment-inner">
-      <img src="../../ref_images/Sword Coast.png" alt="Barovia">
+      <img src="../ref_images/Sword Coast.png" alt="Barovia">
       <div class="fog-overlay"></div>
       <div class="fragment-label">
         <h3>Barovia</h3>
@@ -763,7 +763,7 @@ body {
   <!-- Pocket dimension: Underdark (bottom-left) -->
   <div class="pocket-dimension" id="dim-underdark">
     <div class="fragment-inner">
-      <img src="../../ref_images/Sword Coast.png" alt="Underdark / Web's Edge">
+      <img src="../ref_images/Sword Coast.png" alt="Underdark / Web's Edge">
       <div class="fragment-label">
         <h3>Underdark</h3>
         <div class="session-range">Sessions 21-24, 26</div>
@@ -774,7 +774,7 @@ body {
   <!-- Pocket dimension: Soul Forge (top-left) -->
   <div class="pocket-dimension" id="dim-soulforge">
     <div class="fragment-inner">
-      <img src="../../ref_images/Sword Coast.png" alt="Soul Forge">
+      <img src="../ref_images/Sword Coast.png" alt="Soul Forge">
       <div class="fragment-label">
         <h3>Soul Forge</h3>
         <div class="session-range">Sessions 27-30</div>
@@ -1300,7 +1300,7 @@ function openDimension(dimKey) {
       <div class="zoom-sessions">${sessionsLabel} &mdash; ${evs.length} Key Events</div>
     </div>
     <div class="zoom-map" style="border: 2px solid ${borderColor}40; box-shadow: 0 0 40px ${borderColor}20;">
-      <img src="../../ref_images/Sword Coast.png" style="filter: ${dimFilterCSS[dimKey]};" alt="${cfg.name}">
+      <img src="../ref_images/Sword Coast.png" style="filter: ${dimFilterCSS[dimKey]};" alt="${cfg.name}">
     </div>
     <ul class="zoom-events-list">
       ${evs.map(ev => `
