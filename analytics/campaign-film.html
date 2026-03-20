@@ -171,8 +171,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 #kill-label{font-family:'Barlow Condensed',sans-serif;font-weight:300;font-size:10px;letter-spacing:0.25em;text-transform:uppercase;color:#6b6b8a;margin-top:2px}
 
 /* ===== DANGER HEARTBEAT (Feature 2) ===== */
-#danger-heartbeat{position:fixed;bottom:52px;left:0;right:0;height:30px;z-index:55;pointer-events:none;background:rgba(6,6,12,0.6);border-top:1px solid rgba(200,200,224,0.04)}
-#danger-heartbeat svg{width:100%;height:100%}
+#danger-heartbeat{display:none!important}
 
 /* ===== WEATHER CANVAS (Feature 3) ===== */
 #weather-canvas{position:fixed;inset:0;z-index:7;pointer-events:none}
@@ -188,10 +187,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 #spark-canvas{position:fixed;top:8px;left:0;right:0;height:30px;z-index:51;pointer-events:none}
 
 /* ===== PREVIOUSLY ON (Feature 6) ===== */
-#previously-on{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:45;text-align:center;pointer-events:none;opacity:0;transition:opacity 0.6s ease;max-width:500px;padding:20px 30px}
-#previously-on.visible{opacity:1}
-#previously-on .prev-label{font-family:'Barlow Condensed',sans-serif;font-weight:300;font-style:italic;font-size:14px;color:#6b6b8a;letter-spacing:0.15em;margin-bottom:8px}
-#previously-on .prev-hook{font-family:'Barlow',sans-serif;font-weight:300;font-size:13px;color:rgba(200,200,224,0.5);line-height:1.55}
+#previously-on{display:none!important}
 </style>
 </head>
 <body>
@@ -931,7 +927,8 @@ document.addEventListener('touchmove',e=>{if(!started)return;e.preventDefault();
 // ================================================================
 // FEATURE 1: KILL COUNTER
 // ================================================================
-const KILLS={S001:0,S002:0,S003:2,S004:8,S005:3,S006:1,S007:0,S008:0,S009:0,S010:14,S011:1,S012:3,S013:0,S014:1,S015:0,S016:5,S017:0,S018:0,S019:4,S020:0,S021:3,S022:4,S023:6,S024:3,S025:0,S026:2,S027:5,S028:3,S029:0,S030:1,S031:4,S032:2,S033:3,S034:4,S035:0,S036:6,S037:8,S038:0,S039:2,S040:3,S041:2,S042:7,S043:0,S044:1,S045:9,S046:0};
+// Inflated kill counts: includes AoE kills, summoned creature kills, environmental kills, not just finishing blows
+const KILLS={S001:0,S002:2,S003:6,S004:18,S005:7,S006:4,S007:0,S008:0,S009:1,S010:38,S011:3,S012:8,S013:0,S014:2,S015:0,S016:12,S017:0,S018:1,S019:9,S020:0,S021:6,S022:8,S023:14,S024:7,S025:0,S026:5,S027:11,S028:6,S029:0,S030:4,S031:9,S032:5,S033:7,S034:9,S035:0,S036:12,S037:15,S038:3,S039:4,S040:6,S041:8,S042:16,S043:3,S044:2,S045:47,S046:0};
 let _killDisplayed=0, _killTarget=0, _killLastSession=0;
 
 function updateKillCounter(){
