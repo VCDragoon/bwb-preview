@@ -155,7 +155,7 @@
       border-radius: 8px;
       padding: 14px 18px;
       font-family: 'Barlow', sans-serif;
-      font-size: 13px;
+      font-size: 15px;
       color: var(--text-primary);
       box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 20px rgba(0,0,0,0.3);
       backdrop-filter: blur(12px);
@@ -174,13 +174,13 @@
     .tooltip-type {
       font-family: 'Barlow Condensed', sans-serif;
       font-weight: 600;
-      font-size: 12px;
+      font-size: 14px;
       text-transform: uppercase;
       letter-spacing: 2px;
       margin-bottom: 8px;
     }
     .tooltip-detail {
-      font-size: 12px;
+      font-size: 14px;
       color: var(--text-secondary);
     }
     .tooltip-detail strong {
@@ -189,7 +189,7 @@
     }
     .tooltip-sessions {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
+      font-size: 14px;
       color: var(--text-muted);
       margin-top: 6px;
     }
@@ -197,7 +197,7 @@
       display: inline-block;
       font-family: 'Barlow Condensed', sans-serif;
       font-weight: 700;
-      font-size: 11px;
+      font-size: 14px;
       text-transform: uppercase;
       letter-spacing: 1.5px;
       padding: 2px 8px;
@@ -222,7 +222,7 @@
     .legend-group-title {
       font-family: 'Barlow Condensed', sans-serif;
       font-weight: 700;
-      font-size: 11px;
+      font-size: 14px;
       text-transform: uppercase;
       letter-spacing: 2px;
       color: var(--text-muted);
@@ -258,7 +258,7 @@
     .legend-label {
       font-family: 'Barlow Condensed', sans-serif;
       font-weight: 500;
-      font-size: 13px;
+      font-size: 15px;
       letter-spacing: 0.5px;
       color: var(--text-secondary);
     }
@@ -283,7 +283,7 @@
     .stat-label {
       font-family: 'Barlow Condensed', sans-serif;
       font-weight: 600;
-      font-size: 12px;
+      font-size: 14px;
       text-transform: uppercase;
       letter-spacing: 2px;
       color: var(--text-muted);
@@ -294,7 +294,7 @@
       padding: 16px 0 32px;
       text-align: center;
       font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
+      font-size: 14px;
       color: var(--text-muted);
       letter-spacing: 1px;
       opacity: 0.5;
@@ -865,7 +865,7 @@
           .text(d.label);
       })
       .style('font-family', "'JetBrains Mono', monospace")
-      .style('font-size', '8px')
+      .style('font-size', '12px')
       .style('font-weight', '400')
       .style('fill', '#8a8ab5')
       .style('letter-spacing', '0.5px')
@@ -940,7 +940,7 @@
             return name;
           })
           .style('font-family', "'Barlow Condensed', sans-serif")
-          .style('font-size', '9px')
+          .style('font-size', '12px')
           .style('font-weight', '600')
           .style('fill', '#9494bf')
           .style('letter-spacing', '0.3px')
@@ -1079,7 +1079,7 @@
           <div class="tooltip-detail">
             <strong>${activeThreads.length}</strong> active thread${activeThreads.length !== 1 ? 's' : ''}
           </div>
-          <div style="margin-top:8px;font-size:12px;">
+          <div style="margin-top:8px;font-size:14px;">
             ${threadList || '<span style="color:#8a8ab5">No threads active</span>'}
           </div>
         `, event);
@@ -1277,7 +1277,7 @@
       .attr('text-anchor', 'middle')
       .text('CAMPAIGN')
       .style('font-family', "'Barlow Condensed', sans-serif")
-      .style('font-size', '11px')
+      .style('font-size', '14px')
       .style('font-weight', '600')
       .style('fill', '#8a8ab5')
       .style('letter-spacing', '3px')

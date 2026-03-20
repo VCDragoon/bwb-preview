@@ -81,7 +81,7 @@
 
   .stat-item .stat-label {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 11px;
+    font-size: 14px;
     letter-spacing: 2px;
     text-transform: uppercase;
     color: #7a7a90;
@@ -100,7 +100,7 @@
 
   .axis text {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
+    font-size: 14px;
     fill: #7a7a90;
   }
 
@@ -149,7 +149,7 @@
 
   .tooltip .tt-label {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 12px;
+    font-size: 14px;
     letter-spacing: 1px;
     text-transform: uppercase;
     color: #7a7a90;
@@ -157,7 +157,7 @@
 
   .tooltip .tt-value {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 13px;
+    font-size: 15px;
     font-weight: 700;
   }
 
@@ -169,7 +169,7 @@
 
   .tooltip .tt-moment {
     font-family: 'Barlow', sans-serif;
-    font-size: 12px;
+    font-size: 14px;
     color: #b0b0c8;
     line-height: 1.4;
     margin-top: 4px;
@@ -179,7 +179,7 @@
 
   .tooltip .tt-enc-header {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 11px;
+    font-size: 14px;
     letter-spacing: 1.5px;
     text-transform: uppercase;
     color: #9898b0;
@@ -189,7 +189,7 @@
 
   .tooltip .tt-enc-item {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
+    font-size: 14px;
     color: #c0c0d8;
     margin: 3px 0;
     padding-left: 8px;
@@ -252,13 +252,13 @@
 
   .encounter-panel .ep-enc-tpk {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 13px;
+    font-size: 15px;
     font-weight: 700;
   }
 
   .encounter-panel .ep-enc-detail {
     font-family: 'Barlow', sans-serif;
-    font-size: 12px;
+    font-size: 14px;
     color: #9898b0;
     line-height: 1.4;
     margin-top: 4px;
@@ -282,7 +282,7 @@
     align-items: center;
     gap: 8px;
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 12px;
+    font-size: 14px;
     letter-spacing: 1px;
     text-transform: uppercase;
     color: #7a7a90;
@@ -296,7 +296,7 @@
 
   .classification-label {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 10px;
+    font-size: 13px;
     letter-spacing: 1px;
     text-transform: uppercase;
     fill: #7a7a90;
@@ -563,7 +563,7 @@ xAxis.selectAll('text')
   .attr('text-anchor', 'end')
   .attr('dx', '-4px')
   .attr('dy', '4px')
-  .style('font-size', '9px');
+  .style('font-size', '12px');
 
 // Y Axis
 svg.append('g')
@@ -581,7 +581,7 @@ svg.append('text')
   .attr('text-anchor', 'middle')
   .attr('fill', '#7a7a90')
   .style('font-family', 'Barlow Condensed')
-  .style('font-size', '12px')
+  .style('font-size', '14px')
   .style('letter-spacing', '2px')
   .text('TPK PROXIMITY');
 
@@ -627,7 +627,7 @@ peakSessions.forEach(d => {
     .attr('text-anchor', 'middle')
     .attr('class', 'classification-label')
     .attr('fill', d.tpk >= 60 ? 'rgba(255, 107, 107, 0.7)' : 'rgba(255, 183, 77, 0.7)')
-    .style('font-size', '9px')
+    .style('font-size', '12px')
     .text(label);
 });
 
@@ -708,7 +708,7 @@ svg.selectAll('.session-dot')
         const encColor = getColor(enc.tpk);
         html += `<div class="tt-enc-item" style="color:${encColor}">${enc.id}: TPK ${enc.tpk}% &bull; ${enc.downed} downed &bull; ${enc.enemies} enemies</div>`;
       });
-      html += `<div style="margin-top:6px; font-family:'Barlow Condensed'; font-size:10px; letter-spacing:1px; text-transform:uppercase; color:#7a7a90; text-align:center">Click for encounter details</div>`;
+      html += `<div style="margin-top:6px; font-family:'Barlow Condensed'; font-size:13px; letter-spacing:1px; text-transform:uppercase; color:#7a7a90; text-align:center">Click for encounter details</div>`;
     }
 
     tooltip.innerHTML = html;
@@ -758,10 +758,10 @@ svg.selectAll('.session-dot')
     });
 
     if (d.ohShit.length > 0) {
-      html += `<div style="margin-top:8px; font-family:'Barlow Condensed'; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:#9898b0; margin-bottom:4px">OH SH*T MOMENTS</div>`;
+      html += `<div style="margin-top:8px; font-family:'Barlow Condensed'; font-size:14px; letter-spacing:1.5px; text-transform:uppercase; color:#9898b0; margin-bottom:4px">OH SH*T MOMENTS</div>`;
       d.ohShit.forEach(m => {
         const text = typeof m === 'string' ? m : m.description;
-        html += `<div style="font-family:'Barlow'; font-size:12px; color:#b0b0c8; line-height:1.4; margin:4px 0; padding-left:10px; border-left:2px solid #ff444480">${text}</div>`;
+        html += `<div style="font-family:'Barlow'; font-size:14px; color:#b0b0c8; line-height:1.4; margin:4px 0; padding-left:10px; border-left:2px solid #ff444480">${text}</div>`;
       });
     }
 

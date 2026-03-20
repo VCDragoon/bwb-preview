@@ -38,7 +38,7 @@
     margin-bottom:2px;
   }
   .subtitle{
-    font-family:'Barlow Condensed',sans-serif;font-weight:300;font-size:13px;
+    font-family:'Barlow Condensed',sans-serif;font-weight:300;font-size:15px;
     letter-spacing:6px;text-transform:uppercase;color:#8888aa;
   }
 
@@ -63,7 +63,7 @@
   .stat-card:first-child::before{border-radius:6px 0 0 0}
   .stat-card:last-child::before{border-radius:0 6px 0 0}
   .stat-label{
-    font-family:'Barlow Condensed',sans-serif;font-weight:400;font-size:10px;
+    font-family:'Barlow Condensed',sans-serif;font-weight:400;font-size:14px;
     letter-spacing:3px;text-transform:uppercase;color:#6a6a88;margin-bottom:2px;
   }
   .stat-value{
@@ -79,7 +79,7 @@
     justify-content:center;
   }
   .type-bar-label{
-    font-family:'Barlow Condensed',sans-serif;font-weight:400;font-size:10px;
+    font-family:'Barlow Condensed',sans-serif;font-weight:400;font-size:14px;
     letter-spacing:3px;text-transform:uppercase;color:#6a6a88;white-space:nowrap;
   }
   .type-bar{
@@ -101,7 +101,7 @@
   }
   .legend-item{
     display:flex;align-items:center;gap:5px;
-    font-family:'Barlow Condensed',sans-serif;font-size:12px;
+    font-family:'Barlow Condensed',sans-serif;font-size:14px;
     color:#8888aa;letter-spacing:1px;
   }
   .legend-swatch{
@@ -112,7 +112,7 @@
   /* Breadcrumb */
   .breadcrumb{
     padding:6px 24px;display:flex;align-items:center;gap:6px;
-    font-family:'Barlow Condensed',sans-serif;font-size:13px;
+    font-family:'Barlow Condensed',sans-serif;font-size:15px;
     letter-spacing:2px;color:#6a6a88;min-height:30px;
   }
   .breadcrumb span{cursor:pointer;transition:color .2s}
@@ -154,19 +154,19 @@
     text-shadow:0 1px 4px rgba(0,0,0,.8);
   }
   .tile-label-name{
-    font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:300;
+    font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:300;
     color:rgba(255,255,255,.55);line-height:1.1;margin-top:1px;
     text-shadow:0 1px 3px rgba(0,0,0,.8);
     max-height:22px;overflow:hidden;
   }
   .tile-label-scene{
-    font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:400;
+    font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:400;
     color:rgba(255,255,255,.8);line-height:1.15;
     text-shadow:0 1px 4px rgba(0,0,0,.9);
     max-height:80%;overflow:hidden;
   }
   .tile-label-type{
-    font-family:'JetBrains Mono',monospace;font-size:8px;
+    font-family:'JetBrains Mono',monospace;font-size:14px;
     color:rgba(255,255,255,.45);letter-spacing:1px;text-transform:uppercase;
     margin-top:2px;
     text-shadow:0 1px 3px rgba(0,0,0,.8);
@@ -181,7 +181,7 @@
     backdrop-filter:blur(10px);
     box-shadow:0 4px 20px rgba(0,0,0,.6);
     opacity:0;transition:opacity .15s;
-    font-size:13px;
+    font-size:15px;
   }
   .tooltip.visible{opacity:1}
   .tooltip-title{
@@ -190,15 +190,15 @@
   }
   .tooltip-row{
     display:flex;justify-content:space-between;gap:16px;
-    font-family:'Barlow',sans-serif;font-size:12px;color:#8888aa;
+    font-family:'Barlow',sans-serif;font-size:14px;color:#8888aa;
     line-height:1.6;
   }
   .tooltip-row .val{
-    font-family:'JetBrains Mono',monospace;color:#c8c8e0;font-size:11px;
+    font-family:'JetBrains Mono',monospace;color:#c8c8e0;font-size:14px;
   }
   .tooltip-type{
     display:inline-block;padding:1px 6px;border-radius:3px;
-    font-family:'JetBrains Mono',monospace;font-size:10px;
+    font-family:'JetBrains Mono',monospace;font-size:14px;
     margin-top:4px;
   }
   .tooltip-energy-bar{
@@ -215,7 +215,7 @@
     position:absolute;top:8px;left:8px;z-index:100;
     background:rgba(10,10,20,.8);border:1px solid #2a2a44;
     color:#8888aa;font-family:'Barlow Condensed',sans-serif;
-    font-size:12px;letter-spacing:2px;text-transform:uppercase;
+    font-size:14px;letter-spacing:2px;text-transform:uppercase;
     padding:4px 12px;border-radius:4px;cursor:pointer;
     transition:all .2s;display:none;
     backdrop-filter:blur(6px);
@@ -552,7 +552,7 @@ function showTooltip(e, level, data, session) {
       <div class="tooltip-row"><span>Energy Avg</span><span class="val">${s.overall_energy_average}/10</span></div>
       <div class="tooltip-row"><span>Total Lines</span><span class="val">${s.total_lines.toLocaleString()}</span></div>
       <div class="tooltip-energy-bar"><div class="tooltip-energy-fill" style="width:${s.overall_energy_average * 10}%;background:${TYPE_COLORS[dominant]}"></div></div>
-      <div style="margin-top:6px;font-size:10px;color:#555;font-style:italic">Click to zoom in</div>
+      <div style="margin-top:6px;font-size:14px;color:#555;font-style:italic">Click to zoom in</div>
     `;
   } else {
     const sc = data;

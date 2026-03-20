@@ -90,7 +90,7 @@
     align-items: center;
     gap: 6px;
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 13px;
+    font-size: 15px;
     letter-spacing: 1.5px;
     text-transform: uppercase;
     color: var(--text-muted);
@@ -109,7 +109,7 @@
   }
   .legend-meaning {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
+    font-size: 13px;
     color: #555;
     letter-spacing: 1px;
   }
@@ -124,7 +124,7 @@
   }
   #sort-controls .sort-label {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 11px;
+    font-size: 14px;
     letter-spacing: 2px;
     text-transform: uppercase;
     color: #555;
@@ -137,7 +137,7 @@
     color: #777;
     padding: 4px 12px;
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 12px;
+    font-size: 14px;
     letter-spacing: 1px;
     text-transform: uppercase;
     cursor: pointer;
@@ -174,7 +174,7 @@
     border-radius: 10px;
     padding: 14px 18px;
     font-family: 'Barlow', sans-serif;
-    font-size: 13px;
+    font-size: 15px;
     color: var(--text-primary);
     z-index: 9998;
     max-width: 300px;
@@ -221,7 +221,7 @@
 
   #detail-sid {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
+    font-size: 14px;
     color: #555;
     letter-spacing: 2px;
   }
@@ -236,7 +236,7 @@
   }
   #detail-date {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
+    font-size: 13px;
     color: #888;
     letter-spacing: 1px;
     margin-bottom: 20px;
@@ -266,7 +266,7 @@
   }
   .axis-label {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 13px;
+    font-size: 15px;
     color: #888;
     letter-spacing: 1px;
     text-transform: uppercase;
@@ -286,7 +286,7 @@
   }
   .axis-value {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 13px;
+    font-size: 15px;
     font-weight: 500;
     width: 40px;
     text-align: right;
@@ -303,7 +303,7 @@
     line-height: 1.6;
   }
   #detail-quote-speaker {
-    font-size: 11px;
+    font-size: 14px;
     color: var(--text-muted);
     margin-top: 6px;
   }
@@ -311,7 +311,7 @@
     margin-top: 12px;
     display: flex;
     gap: 12px;
-    font-size: 11px;
+    font-size: 14px;
     color: var(--text-muted);
     font-family: 'Barlow Condensed', sans-serif;
     letter-spacing: 1px;
@@ -585,14 +585,14 @@ function renderGrid() {
 
     // Date
     const dateEl = document.createElement('div');
-    dateEl.style.cssText = `text-align:center;font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--text-muted);margin-top:3px;line-height:1`;
+    dateEl.style.cssText = `text-align:center;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-muted);margin-top:3px;line-height:1`;
     dateEl.textContent = sess.date ? sess.date.slice(0, 7) : '';
     card.appendChild(dateEl);
 
     // Dominant metric badge
     const domBadge = document.createElement('div');
     const domLabel = FP_LABELS[domAxis] || '';
-    domBadge.style.cssText = `text-align:center;margin-top:4px;font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:${FP_COLORS[domAxis]};opacity:0.6`;
+    domBadge.style.cssText = `text-align:center;margin-top:4px;font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:${FP_COLORS[domAxis]};opacity:0.6`;
     domBadge.textContent = domV > 0.5 ? domLabel : '';
     card.appendChild(domBadge);
 
@@ -605,23 +605,23 @@ function renderGrid() {
       const metricRows = FP_AXES.map(ax => `
         <div style="display:flex;align-items:center;gap:8px;margin:3px 0">
           <span style="width:7px;height:7px;border-radius:50%;background:${FP_COLORS[ax]};flex-shrink:0;display:inline-block"></span>
-          <span style="font-family:'Barlow Condensed',sans-serif;font-size:12px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;width:60px">${FP_LABELS[ax]}</span>
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:14px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;width:60px">${FP_LABELS[ax]}</span>
           <div style="flex:1;height:4px;background:var(--bg-surface);border-radius:2px;overflow:hidden">
             <div style="width:${Math.round((metrics[ax]||0)*100)}%;height:100%;background:${FP_COLORS[ax]};border-radius:2px"></div>
           </div>
-          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:${FP_COLORS[ax]};width:32px;text-align:right">${Math.round((metrics[ax]||0)*100)}%</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:${FP_COLORS[ax]};width:32px;text-align:right">${Math.round((metrics[ax]||0)*100)}%</span>
         </div>`).join('');
 
       tip.innerHTML = `
         <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;color:${theme.stroke};line-height:1">${sess.session_id}</div>
-        <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--text-muted);letter-spacing:1px;margin-bottom:10px">${sess.date || ''} &mdash; ${escHtml(sess.label || '')}</div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;color:var(--text-muted);letter-spacing:1px;margin-bottom:10px">${sess.date || ''} &mdash; ${escHtml(sess.label || '')}</div>
         ${metricRows}
         ${raw.top_quote ? `
           <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px">
-            <div style="font-style:italic;font-size:12px;color:var(--text-secondary);line-height:1.5">&ldquo;${escHtml(raw.top_quote)}&rdquo;</div>
-            <div style="font-size:10px;color:var(--text-muted);margin-top:4px">&mdash; ${escHtml(raw.top_speaker || '')}</div>
+            <div style="font-style:italic;font-size:14px;color:var(--text-secondary);line-height:1.5">&ldquo;${escHtml(raw.top_quote)}&rdquo;</div>
+            <div style="font-size:13px;color:var(--text-muted);margin-top:4px">&mdash; ${escHtml(raw.top_speaker || '')}</div>
           </div>` : ''}
-        <div style="margin-top:8px;display:flex;gap:10px;font-size:11px;color:var(--text-muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;flex-wrap:wrap">
+        <div style="margin-top:8px;display:flex;gap:10px;font-size:14px;color:var(--text-muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;flex-wrap:wrap">
           <span>${(raw.total_words || 0).toLocaleString()} words</span>
           <span>${raw.leeroy_count || 0} leeroy moments</span>
           ${raw.has_combat ? `<span style="color:#ff4444">${raw.lethality_class || 'combat'}</span>` : '<span>no combat</span>'}
@@ -725,7 +725,7 @@ function openOverlay(sess) {
     lbl.setAttribute('text-anchor', 'middle');
     lbl.setAttribute('dominant-baseline', 'middle');
     lbl.setAttribute('fill', FP_COLORS[ax]);
-    lbl.setAttribute('font-size', '11');
+    lbl.setAttribute('font-size', '12');
     lbl.setAttribute('font-family', "'Barlow Condensed',sans-serif");
     lbl.setAttribute('letter-spacing', '1');
     lbl.textContent = FP_LABELS[ax];

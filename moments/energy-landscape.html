@@ -90,7 +90,7 @@
     align-items: center;
     gap: 6px;
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 12px;
+    font-size: 14px;
     color: #9898b0;
     letter-spacing: 1px;
     text-transform: uppercase;
@@ -129,7 +129,7 @@
     border-radius: 6px;
     padding: 12px 16px;
     font-family: 'Barlow', sans-serif;
-    font-size: 13px;
+    font-size: 15px;
     color: #e0e0e8;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 12px rgba(255, 68, 68, 0.1);
     z-index: 10000;
@@ -151,7 +151,7 @@
 
   .tooltip .tt-label {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 12px;
+    font-size: 14px;
     color: #9898b0;
     margin-bottom: 6px;
   }
@@ -165,7 +165,7 @@
 
   .tooltip .tt-key {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 12px;
+    font-size: 14px;
     color: #7878a0;
     text-transform: uppercase;
     letter-spacing: 1px;
@@ -173,7 +173,7 @@
 
   .tooltip .tt-val {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 13px;
+    font-size: 15px;
     color: #e0e0e8;
   }
 
@@ -192,7 +192,7 @@
 
   .energy-scale .scale-label {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 10px;
+    font-size: 13px;
     color: #5858780;
     letter-spacing: 1px;
     text-transform: uppercase;
@@ -462,7 +462,7 @@ sessions.forEach((session, idx) => {
         <div class="tt-row"><span class="tt-key">Scenes</span><span class="tt-val">${session.scene_count}</span></div>
         <div class="tt-row"><span class="tt-key">Avg Energy</span><span class="tt-val" style="color:${energyColor(session.overall_energy_average)}">${session.overall_energy_average.toFixed(1)}</span></div>
         <div class="tt-row"><span class="tt-key">Classification</span><span class="tt-val">${session.pace_classification}</span></div>
-        <div class="tt-row"><span class="tt-key">Types</span><span class="tt-val" style="font-size:11px">${scenes.map(s => s.scene_type.replace(/_/g,' ')).join(' > ')}</span></div>
+        <div class="tt-row"><span class="tt-key">Types</span><span class="tt-val" style="font-size:14px">${scenes.map(s => s.scene_type.replace(/_/g,' ')).join(' > ')}</span></div>
       `;
       tooltip.classList.add('visible');
     })

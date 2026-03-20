@@ -40,7 +40,7 @@
     margin-bottom:2px;
   }
   .subtitle{
-    font-family:'Barlow Condensed',sans-serif;font-weight:300;font-size:13px;
+    font-family:'Barlow Condensed',sans-serif;font-weight:300;font-size:15px;
     letter-spacing:6px;text-transform:uppercase;color:#8888aa;
   }
 
@@ -69,10 +69,10 @@
     color:#ff6644;margin-bottom:8px;border-bottom:1px solid #2a2a40;padding-bottom:4px;
   }
 
-  .stat-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:13px}
+  .stat-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:15px}
   .stat-label{
     font-family:'Barlow Condensed',sans-serif;font-weight:400;color:#8888aa;
-    text-transform:uppercase;letter-spacing:1px;font-size:11px;
+    text-transform:uppercase;letter-spacing:1px;font-size:14px;
   }
   .stat-value{
     font-family:'JetBrains Mono',monospace;font-weight:500;color:#e0e0f0;font-size:15px;
@@ -81,17 +81,17 @@
 
   .most-connected{margin-top:6px;padding-top:6px;border-top:1px solid #1a1a2e}
   .most-connected .node-name{
-    font-family:'Cinzel',serif;color:#ffd700;font-size:13px;
+    font-family:'Cinzel',serif;color:#ffd700;font-size:15px;
     text-shadow:0 0 10px rgba(255,215,0,.3);
   }
   .most-connected .edge-count{
-    font-family:'JetBrains Mono',monospace;color:#ff8844;font-size:11px;
+    font-family:'JetBrains Mono',monospace;color:#ff8844;font-size:14px;
   }
 
   .type-filters{display:flex;flex-direction:column;gap:3px}
   .type-filter{
     display:flex;align-items:center;gap:7px;padding:3px 5px;border-radius:4px;
-    cursor:pointer;transition:background .2s;font-size:12px;
+    cursor:pointer;transition:background .2s;font-size:14px;
   }
   .type-filter:hover{background:rgba(255,255,255,.05)}
   .type-filter input[type="checkbox"]{
@@ -103,22 +103,22 @@
     box-shadow:0 0 6px var(--type-color);
   }
   .type-filter input[type="checkbox"]:checked::after{
-    content:'\2713';position:absolute;top:-1px;left:2px;color:#fff;font-size:11px;font-weight:bold;
+    content:'\2713';position:absolute;top:-1px;left:2px;color:#fff;font-size:14px;font-weight:bold;
   }
   .type-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
   .type-name{
     font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;
     letter-spacing:1px;color:#c8c8e0;flex:1;
   }
-  .type-count{font-family:'JetBrains Mono',monospace;color:#666;font-size:11px}
+  .type-count{font-family:'JetBrains Mono',monospace;color:#666;font-size:14px}
 
   .slider-control{margin-bottom:12px}
   .slider-control label{
     font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;
-    letter-spacing:1px;color:#8888aa;font-size:11px;
+    letter-spacing:1px;color:#8888aa;font-size:14px;
     display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;
   }
-  .slider-control label span{font-family:'JetBrains Mono',monospace;color:#ff8844;font-size:12px}
+  .slider-control label span{font-family:'JetBrains Mono',monospace;color:#ff8844;font-size:14px}
 
   input[type="range"]{
     -webkit-appearance:none;width:100%;height:4px;background:#1a1a2e;
@@ -135,9 +135,9 @@
   }
   .mystery-item:hover{background:rgba(255,68,68,.05)}
   .mystery-item:last-child{border-bottom:none}
-  .mystery-session{font-family:'JetBrains Mono',monospace;font-size:10px;color:#ff8844;margin-bottom:1px}
+  .mystery-session{font-family:'JetBrains Mono',monospace;font-size:14px;color:#ff8844;margin-bottom:1px}
   .mystery-text{
-    font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#c8c8e0;
+    font-family:'Barlow Condensed',sans-serif;font-size:14px;color:#c8c8e0;
     letter-spacing:.3px;line-height:1.3;
   }
 
@@ -160,10 +160,10 @@
   .detail-node-name{font-family:'Cinzel',serif;font-size:20px;font-weight:600;margin-bottom:4px;padding-right:40px}
   .detail-node-type{
     font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;
-    letter-spacing:2px;font-size:12px;margin-bottom:10px;opacity:.7;
+    letter-spacing:2px;font-size:14px;margin-bottom:10px;opacity:.7;
   }
   .detail-description{
-    font-size:13px;line-height:1.5;color:#9999bb;margin-bottom:14px;
+    font-size:15px;line-height:1.5;color:#9999bb;margin-bottom:14px;
     padding-bottom:14px;border-bottom:1px solid #1a1a2e;
   }
   .detail-section-title{
@@ -172,30 +172,30 @@
   }
   .detail-sessions{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:14px}
   .session-tag{
-    font-family:'JetBrains Mono',monospace;font-size:10px;padding:2px 6px;
+    font-family:'JetBrains Mono',monospace;font-size:14px;padding:2px 6px;
     background:rgba(255,136,68,.15);border:1px solid rgba(255,136,68,.3);
     border-radius:3px;color:#ff8844;
   }
   .detail-connections{list-style:none}
-  .detail-connections li{padding:5px 0;border-bottom:1px solid #111122;font-size:12px}
-  .detail-connections .conn-target{font-family:'Cinzel',serif;color:#e0e0f0;font-size:12px}
-  .detail-connections .conn-rationale{color:#777799;font-size:11px;margin-top:2px;font-style:italic}
+  .detail-connections li{padding:5px 0;border-bottom:1px solid #111122;font-size:14px}
+  .detail-connections .conn-target{font-family:'Cinzel',serif;color:#e0e0f0;font-size:14px}
+  .detail-connections .conn-rationale{color:#777799;font-size:14px;margin-top:2px;font-style:italic}
 
   .tooltip{
     position:fixed;pointer-events:none;background:rgba(10,10,24,.95);
-    border:1px solid #2a2a40;border-radius:6px;padding:10px 14px;font-size:12px;
+    border:1px solid #2a2a40;border-radius:6px;padding:10px 14px;font-size:14px;
     max-width:320px;z-index:2000;display:none;box-shadow:0 4px 20px rgba(0,0,0,.6);
   }
   .tooltip .tt-label{font-family:'Cinzel',serif;font-size:14px;color:#e0e0f0;margin-bottom:3px}
   .tooltip .tt-type{
     font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;
-    letter-spacing:1px;font-size:10px;margin-bottom:5px;
+    letter-spacing:1px;font-size:14px;margin-bottom:5px;
   }
-  .tooltip .tt-desc{color:#8888aa;line-height:1.4;font-size:11px}
+  .tooltip .tt-desc{color:#8888aa;line-height:1.4;font-size:14px}
 
   .session-filter-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:2px}
   .session-btn{
-    font-family:'JetBrains Mono',monospace;font-size:9px;padding:3px 2px;
+    font-family:'JetBrains Mono',monospace;font-size:12px;padding:3px 2px;
     background:rgba(255,255,255,.03);border:1px solid #1a1a2e;border-radius:3px;
     color:#555;cursor:pointer;text-align:center;transition:all .2s;
   }
@@ -205,7 +205,7 @@
   .session-controls{display:flex;gap:6px;margin-bottom:5px}
   .session-ctrl-btn{
     font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;
-    letter-spacing:1px;font-size:10px;padding:3px 8px;
+    letter-spacing:1px;font-size:14px;padding:3px 8px;
     background:rgba(255,102,68,.1);border:1px solid rgba(255,102,68,.3);
     border-radius:3px;color:#ff6644;cursor:pointer;transition:all .2s;
   }
@@ -488,7 +488,7 @@ function buildVisualization(){
       .attr('dominant-baseline','central')
       .attr('transform','rotate('+(flip ? midA+180 : midA)+','+lx+','+ly+')')
       .style('font-family',"'Barlow Condensed',sans-serif")
-      .style('font-weight','600').style('font-size','11px')
+      .style('font-weight','600').style('font-size','12px')
       .style('fill',color).style('letter-spacing','2px')
       .style('text-transform','uppercase').style('opacity',0)
       .text(tg.data.name);
@@ -571,7 +571,7 @@ function buildVisualization(){
       .attr('dominant-baseline','central')
       .attr('transform','rotate('+(flip?angle-180:angle)+','+tx+','+ty+')')
       .style('font-family', d.type==='Character'?"'Cinzel',serif":"'Barlow',sans-serif")
-      .style('font-size', d.session_count>2?'11px':'9px')
+      .style('font-size', d.session_count>2?'12px':'10px')
       .style('fill', d.type==='Debunked'?'#555570':'#c8c8e0')
       .style('text-decoration', d.type==='Debunked'?'line-through':'none')
       .style('opacity',0.85)
@@ -718,7 +718,7 @@ function showDetailPanel(d){
     const dir=c.source===d.label?'&rarr;':'&larr;';
     const rat=c.rationales[0]||'';
     ch+='<li><span class="conn-target">'+dir+' '+other+'</span>'
-      +'<span style="font-family:\'JetBrains Mono\';font-size:10px;color:#555"> ('+c.sessions.join(', ')+')</span>'
+      +'<span style="font-family:\'JetBrains Mono\';font-size:14px;color:#555"> ('+c.sessions.join(', ')+')</span>'
       +(rat?'<div class="conn-rationale">'+rat+'</div>':'')+'</li>';
   });
   document.getElementById('detailContent').innerHTML =

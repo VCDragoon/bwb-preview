@@ -73,7 +73,7 @@
   .page-subtitle {
     font-family: 'Barlow Condensed', sans-serif;
     font-weight: 300;
-    font-size: 13px;
+    font-size: 15px;
     color: #8888aa;
     letter-spacing: 3px;
     text-transform: uppercase;
@@ -102,7 +102,7 @@
   .control-group-title {
     font-family: 'Barlow Condensed', sans-serif;
     font-weight: 600;
-    font-size: 11px;
+    font-size: 14px;
     letter-spacing: 2px;
     text-transform: uppercase;
     color: #6666aa;
@@ -120,7 +120,7 @@
     border-radius: 4px;
     color: #c8c8e0;
     font-family: 'Barlow', sans-serif;
-    font-size: 12px;
+    font-size: 14px;
     cursor: pointer;
     transition: all 0.2s;
     width: 100%;
@@ -149,7 +149,7 @@
     border-radius: 4px;
     color: #c8c8e0;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
+    font-size: 14px;
     cursor: pointer;
     transition: all 0.2s;
     margin-right: 6px;
@@ -192,7 +192,7 @@
   .stat-label {
     font-family: 'Barlow Condensed', sans-serif;
     font-weight: 400;
-    font-size: 12px;
+    font-size: 14px;
     color: #8888aa;
     letter-spacing: 1px;
     text-transform: uppercase;
@@ -251,14 +251,14 @@
 
   .detail-session {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
+    font-size: 14px;
     color: #6666aa;
     margin-bottom: 10px;
   }
 
   .detail-desc {
     font-family: 'Barlow', sans-serif;
-    font-size: 13px;
+    font-size: 15px;
     font-weight: 300;
     line-height: 1.6;
     color: #b0b0cc;
@@ -268,7 +268,7 @@
   .detail-section-label {
     font-family: 'Barlow Condensed', sans-serif;
     font-weight: 600;
-    font-size: 10px;
+    font-size: 14px;
     letter-spacing: 2px;
     text-transform: uppercase;
     color: #6666aa;
@@ -284,7 +284,7 @@
     border: 1px solid #2a2a40;
     border-radius: 3px;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
+    font-size: 14px;
     color: #aaaacc;
   }
 
@@ -306,7 +306,7 @@
   .chain-label {
     font-family: 'Barlow Condensed', sans-serif;
     font-weight: 300;
-    font-size: 11px;
+    font-size: 14px;
     color: #8888aa;
     padding: 3px 0;
     cursor: pointer;
@@ -328,7 +328,7 @@
     padding: 1px 6px;
     border-radius: 3px;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 9px;
+    font-size: 14px;
     letter-spacing: 1px;
     text-transform: uppercase;
     margin-left: 6px;
@@ -363,21 +363,21 @@
   .tooltip-title {
     font-family: 'Cinzel', serif;
     font-weight: 600;
-    font-size: 13px;
+    font-size: 15px;
     margin-bottom: 4px;
   }
 
   .tooltip-desc {
     font-family: 'Barlow', sans-serif;
     font-weight: 300;
-    font-size: 11px;
+    font-size: 14px;
     color: #9999bb;
     line-height: 1.4;
   }
 
   .tooltip-session {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
+    font-size: 14px;
     color: #6666aa;
     margin-bottom: 3px;
   }
@@ -405,7 +405,7 @@
     right: 20px;
     z-index: 100;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
+    font-size: 14px;
     color: #555577;
     letter-spacing: 1px;
     transition: opacity 0.5s;
@@ -590,7 +590,7 @@ function computeStats() {
       </div>
     `).join('')}
     <div class="stat-row"><span class="stat-label">Longest Chain</span><span class="stat-value">${longestChain + 1} events</span></div>
-    <div class="stat-row"><span class="stat-label">Most Consequential</span><span class="stat-value" style="font-size:11px;max-width:140px;text-align:right;">${mostConseqEvt ? mostConseqEvt.title.substring(0,22) : 'N/A'}</span></div>
+    <div class="stat-row"><span class="stat-label">Most Consequential</span><span class="stat-value" style="font-size:14px;max-width:140px;text-align:right;">${mostConseqEvt ? mostConseqEvt.title.substring(0,22) : 'N/A'}</span></div>
   `;
 }
 computeStats();
@@ -831,7 +831,7 @@ nodeGroups.append('text')
   .attr('text-anchor', 'middle')
   .attr('fill', d => ARC_COLORS[d.arc_name])
   .attr('font-family', "'Barlow Condensed', sans-serif")
-  .attr('font-size', '10px')
+  .attr('font-size', '12px')
   .attr('font-weight', 400)
   .attr('opacity', 0)
   .style('text-shadow', d => `0 0 6px ${ARC_COLORS[d.arc_name]}44`);
@@ -936,7 +936,7 @@ function showDetail(d) {
     <div style="padding:4px 0;">
       ${upstream.map(e => `<span class="chain-label" data-eid="${e.event_id}" style="color:${ARC_COLORS[e.arc_name]}">${e.title}</span>`).join('<span class="chain-arrow">&darr;</span><br>')}
       ${upstream.length > 0 ? '<span class="chain-arrow">&darr;</span><br>' : ''}
-      <span class="chain-label" style="color:${color};font-weight:600;font-size:12px;">&raquo; ${d.title}</span>
+      <span class="chain-label" style="color:${color};font-weight:600;font-size:14px;">&raquo; ${d.title}</span>
       ${downstream.length > 0 ? '<br><span class="chain-arrow">&darr;</span><br>' : ''}
       ${downstream.map(e => `<span class="chain-label" data-eid="${e.event_id}" style="color:${ARC_COLORS[e.arc_name]}">${e.title}</span>`).join('<br><span class="chain-arrow">&darr;</span><br>')}
     </div>

@@ -115,7 +115,7 @@
 
   .stat-label {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 0.78rem;
+    font-size: 0.88rem;
     color: #9898b0;
     text-transform: uppercase;
     letter-spacing: 1px;
@@ -124,7 +124,7 @@
 
   .stat-value {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.8rem;
+    font-size: 0.94rem;
     color: #e0e0f0;
     text-align: right;
     text-shadow: 0 0 6px rgba(255,255,255,0.1);
@@ -147,14 +147,14 @@
 
   .player-legend-name {
     font-family: 'Cinzel', serif;
-    font-size: 0.8rem;
+    font-size: 0.94rem;
     color: #e0e0f0;
     flex: 1;
   }
 
   .player-legend-avg {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.72rem;
+    font-size: 0.88rem;
     color: #9898b0;
   }
 
@@ -164,7 +164,7 @@
 
   .color-scale-label {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 0.7rem;
+    font-size: 0.88rem;
     color: #666;
     text-transform: uppercase;
     letter-spacing: 1px;
@@ -185,7 +185,7 @@
 
   .color-scale-tick {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.6rem;
+    font-size: 0.94rem;
     color: #666;
   }
 
@@ -195,7 +195,7 @@
 
   .session-detail-panel .session-title {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.85rem;
+    font-size: 0.88rem;
     color: #4A90D9;
     margin-bottom: 10px;
   }
@@ -209,7 +209,7 @@
 
   .session-player-bar .bar-name {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 0.72rem;
+    font-size: 0.88rem;
     color: #9898b0;
     width: 80px;
     text-align: right;
@@ -233,7 +233,7 @@
 
   .session-player-bar .bar-pct {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.65rem;
+    font-size: 0.94rem;
     color: #9898b0;
     width: 36px;
     text-align: right;
@@ -280,7 +280,7 @@
 
   .tooltip .tt-label {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 0.75rem;
+    font-size: 0.88rem;
     color: #9898b0;
     text-transform: uppercase;
     letter-spacing: 1px;
@@ -288,7 +288,7 @@
 
   .tooltip .tt-val {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.78rem;
+    font-size: 0.88rem;
     color: #e0e0f0;
   }
 
@@ -333,7 +333,7 @@
     </div>
     <div class="panel-card session-detail-panel">
       <h3>SESSION DETAIL</h3>
-      <div id="session-detail"><span class="stat-label" style="font-size:0.72rem">Click a column to inspect</span></div>
+      <div id="session-detail"><span class="stat-label" style="font-size:0.88rem">Click a column to inspect</span></div>
     </div>
   </div>
 </div>
@@ -491,7 +491,7 @@ ALL_PLAYERS.forEach((player, i) => {
     .attr("dy", "0.35em")
     .attr("text-anchor", "end")
     .attr("font-family", "'Cinzel', serif")
-    .attr("font-size", "11px")
+    .attr("font-size", "12px")
     .attr("font-weight", "600")
     .attr("fill", color)
     .text(charName);
@@ -506,7 +506,7 @@ SESSIONS.forEach((session, i) => {
       .attr("y", -8)
       .attr("text-anchor", "middle")
       .attr("font-family", "'JetBrains Mono', monospace")
-      .attr("font-size", "8px")
+      .attr("font-size", "10px")
       .attr("fill", "#666")
       .text(num);
   }
@@ -518,7 +518,7 @@ g.append("text")
   .attr("y", -28)
   .attr("text-anchor", "middle")
   .attr("font-family", "'Barlow Condensed', sans-serif")
-  .attr("font-size", "10px")
+  .attr("font-size", "11px")
   .attr("fill", "#555")
   .attr("letter-spacing", "3px")
   .text("SESSION");
@@ -627,7 +627,7 @@ function selectSession(idx) {
     }
   });
 
-  html += `<div style="margin-top:8px;font-family:'Barlow Condensed',sans-serif;font-size:0.65rem;color:#555;letter-spacing:1px">WHITE LINE = FAIR SHARE (${fairShare.toFixed(1)}%)</div>`;
+  html += `<div style="margin-top:8px;font-family:'Barlow Condensed',sans-serif;font-size:0.94rem;color:#555;letter-spacing:1px">WHITE LINE = FAIR SHARE (${fairShare.toFixed(1)}%)</div>`;
 
   detailDiv.innerHTML = html;
 }

@@ -140,7 +140,7 @@
 
   .legend-label {
     font-family: 'Cinzel', serif;
-    font-size: 0.8rem;
+    font-size: 0.875rem;
     font-weight: 600;
     letter-spacing: 1px;
     transition: opacity 0.3s ease;
@@ -165,7 +165,7 @@
   .group-header {
     font-family: 'Barlow Condensed', sans-serif;
     font-weight: 600;
-    font-size: 11px;
+    font-size: 12px;
     letter-spacing: 2px;
     text-transform: uppercase;
   }
@@ -174,7 +174,7 @@
   .axis-label {
     font-family: 'Barlow Condensed', sans-serif;
     font-weight: 400;
-    font-size: 11px;
+    font-size: 12px;
     fill: #8888aa;
     cursor: grab;
     transition: fill 0.2s ease;
@@ -193,7 +193,7 @@
   /* Tick labels */
   .tick-label {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 9px;
+    font-size: 11px;
     fill: #555570;
   }
 
@@ -223,7 +223,7 @@
   .axis-tooltip .tip-title {
     font-family: 'Barlow Condensed', sans-serif;
     font-weight: 600;
-    font-size: 0.85rem;
+    font-size: 0.94rem;
     color: #aaaacc;
     letter-spacing: 1px;
     text-transform: uppercase;
@@ -241,13 +241,13 @@
 
   .axis-tooltip .tip-name {
     font-family: 'Cinzel', serif;
-    font-size: 0.72rem;
+    font-size: 0.875rem;
     font-weight: 600;
   }
 
   .axis-tooltip .tip-val {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.75rem;
+    font-size: 0.875rem;
     font-weight: 500;
   }
 
@@ -321,7 +321,7 @@
 
   .profile-meta {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 0.8rem;
+    font-size: 0.875rem;
     color: #666688;
     font-weight: 300;
     margin-left: auto;
@@ -354,20 +354,20 @@
 
   .trait-name {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 0.78rem;
+    font-size: 0.875rem;
     color: #8888aa;
     letter-spacing: 0.5px;
   }
 
   .trait-value {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.8rem;
+    font-size: 0.875rem;
     font-weight: 500;
   }
 
   .trait-delta {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.68rem;
+    font-size: 0.875rem;
     margin-left: 4px;
   }
 
@@ -397,7 +397,7 @@
 
   .callout-label {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 0.7rem;
+    font-size: 0.875rem;
     color: #666688;
     letter-spacing: 1.5px;
     text-transform: uppercase;
@@ -421,7 +421,7 @@
 
   .stat-label {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 0.75rem;
+    font-size: 0.875rem;
     color: #666688;
     letter-spacing: 1.5px;
     text-transform: uppercase;
@@ -436,7 +436,7 @@
 
   .stat-detail {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.72rem;
+    font-size: 0.875rem;
     color: #666688;
     margin-top: 3px;
   }
@@ -444,7 +444,7 @@
   /* Sort indicator hint */
   .sort-hint {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 0.72rem;
+    font-size: 0.875rem;
     color: #444466;
     text-align: center;
     letter-spacing: 1px;
@@ -778,7 +778,7 @@ function showAxisTooltip(event, di) {
     const color = PLAYER_COLORS[p];
     rows += `<div class="tip-row">
       <span class="tip-name" style="color:${color}">${PLAYER_CHARS[p]}</span>
-      <span class="tip-val" style="color:${color}">${raw} <span style="color:#555570;font-size:0.65rem">(${norm.toFixed(2)})</span></span>
+      <span class="tip-val" style="color:${color}">${raw} <span style="color:#555570;font-size:0.875rem">(${norm.toFixed(2)})</span></span>
     </div>`;
   });
 
@@ -889,7 +889,7 @@ function drawSortDots() {
     dotsG.append("text")
       .attr("x", x + 10).attr("y", y + 4)
       .attr("font-family", "JetBrains Mono")
-      .attr("font-size", "10px")
+      .attr("font-size", "12px")
       .attr("fill", PLAYER_COLORS[r.player])
       .text(`#${i + 1} ${PLAYER_CHARS[r.player]} (${r.raw})`);
   });
@@ -1032,11 +1032,11 @@ function showProfile(player) {
     <div class="profile-callout">
       <div class="callout-box">
         <div class="callout-label">Strongest Trait</div>
-        <div class="callout-value" style="color:#4CAF50">${maxDim} <span style="color:#555570;font-size:0.75rem">(${maxNorm.toFixed(2)})</span></div>
+        <div class="callout-value" style="color:#4CAF50">${maxDim} <span style="color:#555570;font-size:0.875rem">(${maxNorm.toFixed(2)})</span></div>
       </div>
       <div class="callout-box">
         <div class="callout-label">Weakest Trait</div>
-        <div class="callout-value" style="color:#f44336">${minDim} <span style="color:#555570;font-size:0.75rem">(${minNorm.toFixed(2)})</span></div>
+        <div class="callout-value" style="color:#f44336">${minDim} <span style="color:#555570;font-size:0.875rem">(${minNorm.toFixed(2)})</span></div>
       </div>
     </div>
   `;

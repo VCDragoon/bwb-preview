@@ -91,7 +91,7 @@
     border-radius:50%;margin-right:8px;vertical-align:middle;
   }
   .filter-btn .char-name{
-    font-family:'Cinzel',serif;font-size:11px;
+    font-family:'Cinzel',serif;font-size:14px;
     color:#888;margin-left:4px;font-weight:400;
   }
   /* Stats panel */
@@ -112,7 +112,7 @@
   }
   .stat-card .card-title{
     font-family:'Barlow Condensed',sans-serif;
-    font-size:12px;font-weight:600;
+    font-size:14px;font-weight:600;
     color:#8888aa;letter-spacing:2px;
     text-transform:uppercase;margin-bottom:12px;
   }
@@ -126,7 +126,7 @@
   }
   .stat-card .archetype-label{
     font-family:'JetBrains Mono',monospace;
-    font-size:12px;padding:2px 8px;
+    font-size:14px;padding:2px 8px;
     border-radius:3px;display:inline-block;
     margin:2px 0;
   }
@@ -171,7 +171,7 @@
   }
   .detail-panel .journey-step .session-label{
     font-family:'JetBrains Mono',monospace;
-    font-size:11px;color:#8888aa;min-width:40px;
+    font-size:14px;color:#8888aa;min-width:40px;
   }
   .detail-panel .journey-step .arch-badge{
     font-family:'Barlow Condensed',sans-serif;
@@ -180,7 +180,7 @@
     letter-spacing:0.5px;
   }
   .detail-panel .journey-step .change-marker{
-    font-size:10px;color:#fbbf24;margin-left:auto;
+    font-size:14px;color:#fbbf24;margin-left:auto;
   }
   /* Tooltip */
   .tooltip{
@@ -210,7 +210,7 @@
     width:8px;height:8px;border-radius:50%;flex-shrink:0;
   }
   .tooltip .tt-player{
-    font-family:'Cinzel',serif;font-size:12px;
+    font-family:'Cinzel',serif;font-size:14px;
   }
   /* Legend */
   .legend-bar{
@@ -220,14 +220,14 @@
   .legend-item{
     display:flex;align-items:center;gap:6px;
     font-family:'Barlow Condensed',sans-serif;
-    font-size:13px;color:#aaa;letter-spacing:0.5px;
+    font-size:15px;color:#aaa;letter-spacing:0.5px;
   }
   .legend-swatch{
     width:14px;height:14px;border-radius:3px;
   }
   .section-label{
     font-family:'Barlow Condensed',sans-serif;
-    font-size:11px;font-weight:600;color:#666;
+    font-size:14px;font-weight:600;color:#666;
     letter-spacing:3px;text-transform:uppercase;
     text-align:center;margin:20px 0 8px;
   }
@@ -635,19 +635,19 @@ function render() {
       tooltip.classed('show', true)
         .html(`
           <div class="tt-title">${d.player}</div>
-          <div style="font-family:'Cinzel',serif;font-size:12px;color:#aaa;margin-bottom:6px">${[...chars].join(' / ')}</div>
+          <div style="font-family:'Cinzel',serif;font-size:14px;color:#aaa;margin-bottom:6px">${[...chars].join(' / ')}</div>
           <div class="tt-row">
             <span class="tt-dot" style="background:${ARCHETYPE_COLORS[d.fromArch]}"></span>
             <span>${d.fromSession}: ${d.fromArch}</span>
           </div>
-          <div style="color:#666;padding-left:16px;font-size:11px">&#8595;</div>
+          <div style="color:#666;padding-left:16px;font-size:14px">&#8595;</div>
           <div class="tt-row">
             <span class="tt-dot" style="background:${ARCHETYPE_COLORS[d.toArch]}"></span>
             <span>${d.toSession}: ${d.toArch}</span>
           </div>
           ${d.fromArch !== d.toArch
-            ? '<div style="color:#fbbf24;font-size:11px;margin-top:6px;font-family:JetBrains Mono,monospace">ARCHETYPE SHIFT</div>'
-            : '<div style="color:#81C784;font-size:11px;margin-top:6px;font-family:JetBrains Mono,monospace">STABLE</div>'}
+            ? '<div style="color:#fbbf24;font-size:14px;margin-top:6px;font-family:JetBrains Mono,monospace">ARCHETYPE SHIFT</div>'
+            : '<div style="color:#81C784;font-size:14px;margin-top:6px;font-family:JetBrains Mono,monospace">STABLE</div>'}
         `);
     })
     .on('mousemove', function(event) {
@@ -688,12 +688,12 @@ function render() {
       tooltip.classed('show', true)
         .html(`
           <div class="tt-title">${d.name}</div>
-          <div style="font-size:11px;color:#8888aa;margin-bottom:8px">${d.session} &mdash; ${d.playerCount} player${d.playerCount !== 1 ? 's' : ''}</div>
+          <div style="font-size:14px;color:#8888aa;margin-bottom:8px">${d.session} &mdash; ${d.playerCount} player${d.playerCount !== 1 ? 's' : ''}</div>
           ${d.players.map(p => `
             <div class="tt-row">
               <span class="tt-dot" style="background:${PLAYER_COLORS[p]}"></span>
               <span class="tt-player">${p}</span>
-              <span style="color:#666;font-size:11px;margin-left:auto">${PLAYER_CHARS[p] || ''}</span>
+              <span style="color:#666;font-size:14px;margin-left:auto">${PLAYER_CHARS[p] || ''}</span>
             </div>
           `).join('')}
         `);
@@ -722,27 +722,27 @@ function showDetail(player) {
 
   document.getElementById('detail-summary').innerHTML = `
     <div style="margin-bottom:16px">
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#8888aa;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px">Primary Archetype</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;color:#8888aa;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px">Primary Archetype</div>
       <span class="archetype-label" style="background:${ARCHETYPE_COLORS[stats.topArchetype]}22;color:${ARCHETYPE_COLORS[stats.topArchetype]};border:1px solid ${ARCHETYPE_COLORS[stats.topArchetype]}44;font-size:14px">${stats.topArchetype}</span>
       <span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#aaa;margin-left:8px">${stats.topCount}/${stats.totalSessions} sessions</span>
     </div>
     <div style="display:flex;gap:20px;margin-bottom:16px">
       <div>
-        <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#8888aa;letter-spacing:2px;text-transform:uppercase">Changes</div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;color:#8888aa;letter-spacing:2px;text-transform:uppercase">Changes</div>
         <div style="font-family:'JetBrains Mono',monospace;font-size:22px;color:${PLAYER_COLORS[player]}">${stats.changes}</div>
       </div>
       <div>
-        <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#8888aa;letter-spacing:2px;text-transform:uppercase">Volatility</div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;color:#8888aa;letter-spacing:2px;text-transform:uppercase">Volatility</div>
         <div style="font-family:'JetBrains Mono',monospace;font-size:22px;color:${PLAYER_COLORS[player]}">${stats.changeRate}%</div>
       </div>
     </div>
-    <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#8888aa;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px">Distribution</div>
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;color:#8888aa;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px">Distribution</div>
     ${stats.distribution.map(([arch, count]) => {
       const pct = (count / stats.totalSessions * 100).toFixed(0);
       return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
         <div style="width:12px;height:12px;border-radius:2px;background:${ARCHETYPE_COLORS[arch]};flex-shrink:0"></div>
-        <div style="flex:1;font-size:12px">${arch.replace('The ', '')}</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#aaa">${count}</div>
+        <div style="flex:1;font-size:14px">${arch.replace('The ', '')}</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#aaa">${count}</div>
         <div style="width:80px;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden">
           <div style="width:${pct}%;height:100%;background:${ARCHETYPE_COLORS[arch]};border-radius:3px"></div>
         </div>
@@ -752,7 +752,7 @@ function showDetail(player) {
 
   // Journey timeline (show sampled sessions)
   const journey = document.getElementById('detail-journey');
-  journey.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#8888aa;letter-spacing:2px;text-transform:uppercase;margin:16px 0 8px">Full Journey</div>';
+  journey.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:14px;color:#8888aa;letter-spacing:2px;text-transform:uppercase;margin:16px 0 8px">Full Journey</div>';
 
   let prev = null;
   entries.forEach(e => {
@@ -831,7 +831,7 @@ function buildStats() {
         <span style="width:10px;height:10px;border-radius:50%;background:${PLAYER_COLORS[p]};flex-shrink:0;box-shadow:0 0 6px ${PLAYER_COLORS[p]}66"></span>
         <span class="player-label" style="color:${PLAYER_COLORS[p]};min-width:90px">${p}</span>
         <span class="archetype-label" style="background:${ARCHETYPE_COLORS[s.topArchetype]}22;color:${ARCHETYPE_COLORS[s.topArchetype]};border:1px solid ${ARCHETYPE_COLORS[s.topArchetype]}33">${s.topArchetype.replace('The ','')}</span>
-        <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#8888aa;margin-left:auto">${s.topCount}/${s.totalSessions}</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#8888aa;margin-left:auto">${s.topCount}/${s.totalSessions}</span>
       </div>
     `;
   });
@@ -852,7 +852,7 @@ function buildStats() {
         <div style="margin:12px 0">
           <span class="archetype-label" style="background:${ARCHETYPE_COLORS[stats[stable].topArchetype]}22;color:${ARCHETYPE_COLORS[stats[stable].topArchetype]};border:1px solid ${ARCHETYPE_COLORS[stats[stable].topArchetype]}33;font-size:16px">${stats[stable].topArchetype}</span>
         </div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#8888aa">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#8888aa">
           ${stats[stable].topCount}/${stats[stable].totalSessions} sessions &mdash; ${stats[stable].changes} changes &mdash; ${stats[stable].changeRate}% volatility
         </div>
       </div>
@@ -865,7 +865,7 @@ function buildStats() {
         <div style="margin:12px 0">
           <span class="archetype-label" style="background:${ARCHETYPE_COLORS[stats[volatile].topArchetype]}22;color:${ARCHETYPE_COLORS[stats[volatile].topArchetype]};border:1px solid ${ARCHETYPE_COLORS[stats[volatile].topArchetype]}33;font-size:16px">${stats[volatile].topArchetype}</span>
         </div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#8888aa">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#8888aa">
           ${stats[volatile].topCount}/${stats[volatile].totalSessions} sessions &mdash; ${stats[volatile].changes} changes &mdash; ${stats[volatile].changeRate}% volatility
         </div>
       </div>

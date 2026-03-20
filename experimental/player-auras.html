@@ -100,7 +100,7 @@
 
   #tooltip .tt-player {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 12px;
+    font-size: 14px;
     letter-spacing: 2px;
     text-transform: uppercase;
     color: rgba(255,255,255,0.4);
@@ -109,7 +109,7 @@
 
   #tooltip .tt-section {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 11px;
+    font-size: 14px;
     letter-spacing: 2px;
     text-transform: uppercase;
     color: rgba(255,255,255,0.35);
@@ -125,7 +125,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 13px;
+    font-size: 15px;
     padding: 2px 0;
   }
 
@@ -136,7 +136,7 @@
 
   #tooltip .tt-value {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 500;
   }
 
@@ -196,7 +196,7 @@
 
   .dp-player {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 13px;
+    font-size: 15px;
     letter-spacing: 3px;
     text-transform: uppercase;
     color: rgba(255,255,255,0.35);
@@ -220,7 +220,7 @@
     display: flex;
     justify-content: space-between;
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 13px;
+    font-size: 15px;
     letter-spacing: 1px;
     margin-bottom: 3px;
   }
@@ -228,7 +228,7 @@
   .dp-bar-label span:first-child { color: rgba(255,255,255,0.55); }
   .dp-bar-label span:last-child {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
+    font-size: 14px;
   }
 
   .dp-bar {
@@ -267,7 +267,7 @@
 
   .dp-stat-label {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 11px;
+    font-size: 14px;
     letter-spacing: 2px;
     text-transform: uppercase;
     color: rgba(255,255,255,0.35);
@@ -288,7 +288,7 @@
 
   .dp-growth-row span:last-child {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 13px;
+    font-size: 15px;
   }
 
   /* Legend */
@@ -316,7 +316,7 @@
 
   .legend-group .legend-title {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 10px;
+    font-size: 13px;
     letter-spacing: 2px;
     text-transform: uppercase;
     color: rgba(255,255,255,0.3);
@@ -328,7 +328,7 @@
     align-items: center;
     gap: 4px;
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 11px;
+    font-size: 14px;
     color: rgba(255,255,255,0.5);
   }
 
@@ -363,7 +363,7 @@
     transform: translateX(-50%);
     z-index: 10;
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 12px;
+    font-size: 14px;
     letter-spacing: 2px;
     text-transform: uppercase;
     color: rgba(255,255,255,0.2);
@@ -602,7 +602,7 @@ function updateLabels() {
     .attr('fill', 'rgba(255,255,255,0.25)')
     .attr('dy', '16px')
     .style('font-family', "'Barlow Condensed', sans-serif")
-    .style('font-size', '10px')
+    .style('font-size', '13px')
     .style('letter-spacing', '2px')
     .style('pointer-events', 'none')
     .text(d => d.player.toUpperCase());
@@ -931,7 +931,7 @@ function openDetail(node) {
   const darkestTrait = DT_KEYS.reduce((a, b) => d.darkTriad[a] > d.darkTriad[b] ? a : b);
   const compositeScore = (d.darkTriad.machiavellianism + d.darkTriad.narcissism + d.darkTriad.psychopathy) / 3;
 
-  html += `<div style="font-size:13px;line-height:1.6;color:rgba(255,255,255,0.55);margin-top:8px;">`;
+  html += `<div style="font-size:15px;line-height:1.6;color:rgba(255,255,255,0.55);margin-top:8px;">`;
   html += `<strong style="color:${d.color}">${d.character}</strong>'s aura radiates with dominant <strong style="color:${OCEAN_COLORS[OCEAN_KEYS.indexOf(dominantOcean)]}">${oceanLabels[dominantOcean]}</strong> energy (${d.ocean[dominantOcean]}/100). `;
 
   if (compositeScore > 30) {

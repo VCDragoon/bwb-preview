@@ -60,7 +60,7 @@ body::after {
 
 #title-bar .subtitle {
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 13px;
+  font-size: 15px;
   color: #666;
   letter-spacing: 2px;
   text-transform: uppercase;
@@ -90,7 +90,7 @@ body::after {
   backdrop-filter: blur(8px);
   cursor: pointer;
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
   letter-spacing: 1.5px;
   text-transform: uppercase;
@@ -141,7 +141,7 @@ body::after {
 
 #session-filter label {
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 12px;
+  font-size: 14px;
   letter-spacing: 2px;
   text-transform: uppercase;
   color: #64ffda;
@@ -183,7 +183,7 @@ body::after {
 
 #session-filter .range-val {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 13px;
+  font-size: 15px;
   color: #a78bfa;
   font-weight: 500;
   min-width: 36px;
@@ -213,7 +213,7 @@ body::after {
 
 .stat-item .stat-label {
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 11px;
+  font-size: 14px;
   letter-spacing: 1.5px;
   text-transform: uppercase;
   color: #555;
@@ -292,7 +292,7 @@ body::after {
 
 #detail-panel .panel-subtitle {
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 12px;
+  font-size: 14px;
   color: #666;
   letter-spacing: 1.5px;
   text-transform: uppercase;
@@ -305,7 +305,7 @@ body::after {
 
 .panel-section h3 {
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
   letter-spacing: 2px;
   text-transform: uppercase;
@@ -318,13 +318,13 @@ body::after {
 .panel-section .panel-item {
   padding: 6px 0;
   border-bottom: 1px solid rgba(255,255,255,0.04);
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.5;
 }
 
 .panel-section .panel-item .item-session {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
+  font-size: 14px;
   color: #64ffda;
   margin-right: 6px;
 }
@@ -335,7 +335,7 @@ body::after {
 
 .panel-section .panel-item .item-type {
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 11px;
+  font-size: 14px;
   letter-spacing: 1px;
   padding: 1px 6px;
   border-radius: 3px;
@@ -349,13 +349,13 @@ body::after {
 }
 
 .panel-stat-row .ps-label {
-  font-size: 12px;
+  font-size: 14px;
   color: #666;
 }
 
 .panel-stat-row .ps-value {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 13px;
+  font-size: 15px;
   color: #64ffda;
 }
 
@@ -368,7 +368,7 @@ body::after {
   border: 1px solid rgba(100,255,218,0.25);
   border-radius: 6px;
   padding: 8px 12px;
-  font-size: 12px;
+  font-size: 14px;
   max-width: 250px;
   opacity: 0;
   transition: opacity 0.15s;
@@ -391,7 +391,7 @@ body::after {
 
 #tooltip .tt-session {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
+  font-size: 14px;
   color: #a78bfa;
 }
 
@@ -413,7 +413,7 @@ body::after {
 
 #legend .legend-title {
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
   letter-spacing: 2.5px;
   color: #64ffda;
@@ -428,7 +428,7 @@ body::after {
 
 #legend .legend-group-title {
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 600;
   letter-spacing: 2px;
   color: #555;
@@ -441,7 +441,7 @@ body::after {
   align-items: center;
   gap: 7px;
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 11px;
+  font-size: 14px;
   color: #999;
   padding: 2px 0;
   letter-spacing: 0.5px;
@@ -502,7 +502,7 @@ body::after {
   left: 50%;
   transform: translateX(-50%);
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 11px;
+  font-size: 14px;
   color: #444;
   letter-spacing: 1px;
   z-index: 100;
@@ -546,7 +546,7 @@ body::after {
 
 /* Reset view button */
 .reset-btn {
-  font-size: 11px !important;
+  font-size: 14px !important;
   font-family: 'Barlow Condensed', sans-serif;
   letter-spacing: 1px;
 }
@@ -1218,7 +1218,7 @@ function renderJourney() {
     .attr('y', d => d.y - 8)
     .text(d => padSession(d.sn))
     .attr('font-family', 'JetBrains Mono')
-    .attr('font-size', 9)
+    .attr('font-size', 11)
     .attr('fill', '#a78bfa')
     .attr('fill-opacity', 0.7)
     .style('pointer-events', 'none');
@@ -1565,7 +1565,7 @@ function renderCombat() {
         .attr('x', r * 0.7).attr('y', -r * 0.7 + 3.5)
         .text(d.count)
         .attr('font-family', 'JetBrains Mono')
-        .attr('font-size', 9)
+        .attr('font-size', 11)
         .attr('font-weight', 700)
         .attr('fill', '#fff')
         .attr('text-anchor', 'middle')
@@ -1583,7 +1583,7 @@ function renderCombat() {
     showTooltip(event, `
       <div class="tt-title">${d.location}</div>
       <div class="tt-body">${d.count} encounter${d.count > 1 ? 's' : ''}</div>
-      <div class="tt-body" style="margin-top:4px;font-size:11px;">${names}</div>
+      <div class="tt-body" style="margin-top:4px;font-size:14px;">${names}</div>
     `);
   }).on('mouseout', (event, d) => {
     d3.select(event.currentTarget)
@@ -1663,8 +1663,8 @@ function openLocationPanel(locName) {
     html += `<div class="panel-section"><h3>NPCs (${locNPCs.length})</h3>`;
     locNPCs.forEach(n => {
       html += `<div class="panel-item">
-        <span class="item-title" style="font-family:'Cinzel',serif;font-size:12px;color:#ffd700">${n.name}</span>
-        <span style="font-family:'JetBrains Mono';font-size:10px;color:#666;margin-left:8px">${n.mentions} mentions</span>
+        <span class="item-title" style="font-family:'Cinzel',serif;font-size:14px;color:#ffd700">${n.name}</span>
+        <span style="font-family:'JetBrains Mono';font-size:14px;color:#666;margin-left:8px">${n.mentions} mentions</span>
       </div>`;
     });
     html += `</div>`;
@@ -1697,7 +1697,7 @@ function openLocationPanel(locName) {
   }
 
   if (locEvents.length === 0 && locNPCs.length === 0 && locThreads.length === 0 && locCombat.length === 0) {
-    html += `<div class="panel-section"><p style="color:#555;font-size:13px;">No detailed data for this location in current filter range.</p></div>`;
+    html += `<div class="panel-section"><p style="color:#555;font-size:15px;">No detailed data for this location in current filter range.</p></div>`;
   }
 
   content.innerHTML = html;
