@@ -4,464 +4,174 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>THE BROADSHEET &mdash; Campaign Newspaper Archive</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,600;1,700&family=Barlow:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&family=Cinzel:wght@400;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Special+Elite&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,600;1,700&family=Barlow:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&family=Cinzel:wght@400;600;700;800;900&family=Cinzel+Decorative:wght@400;700;900&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Special+Elite&display=swap" rel="stylesheet">
 <style>
-/* ===== RESET & BASE ===== */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-:root {
-  --bg-deep: #0e0d0a;
-  --bg-card: #161410;
-  --text-cream: #d4c9a8;
-  --text-headline: #e8d5a0;
-  --text-dim: #8a7f68;
-  --text-byline: #a09478;
-  --border-warm: #3a3428;
-  --border-light: #4a4232;
-  --accent-primary: #d4a843;
-  --herald: #d4a843;
-  --tribune: #c44030;
-  --watcher: #a8a8c0;
-  --sentinel: #7898c8;
-  --ledger: #c47a3a;
-  --dispatch: #5a6a9a;
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg-deep:#0e0d0a;--bg-card:#161410;--bg-parchment:#1a1812;
+  --text-cream:#d4c9a8;--text-headline:#e8d5a0;--text-dim:#8a7f68;--text-byline:#a09478;--text-body:#b8ad94;
+  --border-warm:#3a3428;--border-light:#4a4232;--accent-primary:#d4a843;
+  --herald:#d4a843;--tribune:#c44030;--watcher:#a8a8c0;--sentinel:#7898c8;--ledger:#c47a3a;--dispatch:#5a6a9a;
 }
+html{font-size:16px;scroll-behavior:smooth}
+body{background:var(--bg-deep);color:var(--text-cream);font-family:'Barlow',Georgia,serif;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;
+  background-image:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(255,245,220,.008) 2px,rgba(255,245,220,.008) 4px),
+  repeating-linear-gradient(90deg,transparent,transparent 2px,rgba(255,245,220,.005) 2px,rgba(255,245,220,.005) 4px);
+  pointer-events:none;z-index:9999}
 
-html { font-size: 16px; scroll-behavior: smooth; }
+.archive-header{text-align:center;padding:14px 20px 10px;border-bottom:1px solid var(--border-warm);
+  background:linear-gradient(180deg,#12100a,var(--bg-deep));position:sticky;top:0;z-index:100;backdrop-filter:blur(12px)}
+.archive-header h1{font-family:'Cinzel',serif;font-weight:900;font-size:22px;letter-spacing:8px;text-transform:uppercase;color:var(--accent-primary);margin-bottom:2px}
+.archive-header .subtitle{font-family:'Barlow Condensed',sans-serif;font-weight:300;font-size:14px;letter-spacing:4px;text-transform:uppercase;color:var(--text-dim)}
 
-body {
-  background: var(--bg-deep);
-  color: var(--text-cream);
-  font-family: 'Barlow', Georgia, serif;
-  min-height: 100vh;
-  overflow-x: hidden;
-}
+.paper-tabs{display:flex;align-items:center;justify-content:center;gap:4px;padding:8px 16px;
+  background:rgba(10,9,6,.97);border-bottom:1px solid var(--border-warm);position:sticky;top:52px;z-index:99;flex-wrap:wrap}
+.paper-tab{padding:6px 14px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:600;letter-spacing:1px;
+  text-transform:uppercase;color:var(--text-dim);background:none;border:1px solid transparent;border-radius:3px;cursor:pointer;transition:all .2s;white-space:nowrap}
+.paper-tab:hover{color:var(--text-cream);border-color:var(--border-warm)}
+.paper-tab.active{font-weight:700;border-color:var(--accent-primary);background:rgba(212,168,67,.08)}
+.paper-tab.active.herald{color:var(--herald);border-color:var(--herald)}
+.paper-tab.active.tribune{color:var(--tribune);border-color:var(--tribune)}
+.paper-tab.active.watcher{color:var(--watcher);border-color:var(--watcher)}
+.paper-tab.active.sentinel{color:var(--sentinel);border-color:var(--sentinel)}
+.paper-tab.active.ledger{color:var(--ledger);border-color:var(--ledger)}
+.paper-tab.active.dispatch{color:var(--dispatch);border-color:var(--dispatch)}
 
-/* Paper grain overlay */
-body::before {
-  content: '';
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background-image:
-    repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,245,220,0.008) 2px, rgba(255,245,220,0.008) 4px),
-    repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(255,245,220,0.005) 2px, rgba(255,245,220,0.005) 4px);
-  pointer-events: none;
-  z-index: 9999;
-}
+.session-nav{display:flex;align-items:center;justify-content:center;gap:3px;padding:6px 20px;
+  background:rgba(10,9,6,.95);border-bottom:1px solid var(--border-warm);flex-wrap:wrap;position:sticky;top:92px;z-index:98}
+.session-tab{width:30px;height:26px;display:flex;align-items:center;justify-content:center;background:none;
+  border:1px solid transparent;color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;transition:all .2s;border-radius:2px}
+.session-tab:hover{border-color:var(--accent-primary);color:var(--text-cream)}
+.session-tab.active{font-weight:700;color:var(--accent-primary);border-color:var(--accent-primary);background:rgba(212,168,67,.12)}
 
-/* ===== ARCHIVE HEADER ===== */
-.archive-header {
-  text-align: center;
-  padding: 24px 20px 12px;
-  border-bottom: 1px solid var(--border-warm);
-  background: linear-gradient(180deg, #12100a 0%, var(--bg-deep) 100%);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
+.newspaper{max-width:860px;margin:24px auto;padding:0 12px;animation:fadeIn .4s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
-.archive-header h1 {
-  font-family: 'Cinzel', serif;
-  font-weight: 900;
-  font-size: 22px;
-  letter-spacing: 8px;
-  text-transform: uppercase;
-  color: var(--accent-primary);
-  margin-bottom: 2px;
-}
+.np-parchment{background:linear-gradient(135deg,rgba(255,248,230,.03) 0%,rgba(255,240,200,.01) 50%,rgba(255,248,230,.03) 100%),var(--bg-parchment);
+  border:1px solid var(--border-warm);border-radius:4px;position:relative;overflow:hidden;
+  box-shadow:0 4px 30px rgba(0,0,0,.4),inset 0 0 80px rgba(0,0,0,.15)}
+.np-parchment::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 28px,rgba(255,255,255,.008) 28px,rgba(255,255,255,.008) 29px);pointer-events:none;z-index:0}
+.np-parchment>*{position:relative;z-index:1}
 
-.archive-header .subtitle {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-weight: 300;
-  font-size: 14px;
-  letter-spacing: 4px;
-  text-transform: uppercase;
-  color: var(--text-dim);
-}
+.np-masthead{text-align:center;padding:24px 32px 16px;border-bottom:3px double var(--accent-primary);position:relative}
+.np-masthead::before,.np-masthead::after{content:'';position:absolute;top:10px;width:60px;height:1px;background:var(--accent-primary);opacity:.4}
+.np-masthead::before{left:28px}.np-masthead::after{right:28px}
+.np-title{font-family:'Cinzel Decorative',Cinzel,serif;font-size:2.4rem;font-weight:900;letter-spacing:.06em;line-height:1.1;text-shadow:0 2px 8px rgba(0,0,0,.3);margin-bottom:4px}
+.np-motto{font-family:'Crimson Text',Georgia,serif;font-size:1rem;font-style:italic;color:var(--text-dim);letter-spacing:.02em;margin-bottom:10px}
+.np-dateline{display:flex;justify-content:center;align-items:center;gap:14px;flex-wrap:wrap;padding-top:10px;border-top:1px solid var(--border-warm);
+  font-family:'Barlow Condensed',sans-serif;font-size:.9rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim)}
+.np-dateline-sep{color:var(--accent-primary);font-size:.85rem}
 
-/* ===== SESSION NAVIGATOR ===== */
-.session-nav {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  padding: 8px 20px;
-  background: rgba(10,9,6,0.97);
-  border-bottom: 1px solid var(--border-warm);
-  flex-wrap: wrap;
-  position: sticky;
-  top: 62px;
-  z-index: 99;
-}
+.paper-herald .np-title{color:var(--herald);text-shadow:0 2px 12px rgba(212,168,67,.2)}
+.paper-herald .np-masthead{border-bottom-color:var(--herald)}
+.paper-herald .np-masthead::before,.paper-herald .np-masthead::after{background:var(--herald)}
 
-.session-tab {
-  width: 30px;
-  height: 26px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: 1px solid transparent;
-  color: var(--text-dim);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.2s;
-  border-radius: 2px;
-}
+.paper-tribune .np-title{color:var(--tribune);font-family:'Bebas Neue',sans-serif;font-size:2.8rem;letter-spacing:.12em;text-shadow:0 2px 12px rgba(196,64,48,.25)}
+.paper-tribune .np-masthead{border-bottom-color:var(--tribune)}
+.paper-tribune .np-masthead::before,.paper-tribune .np-masthead::after{background:var(--tribune)}
+.paper-tribune .np-parchment{border-color:rgba(196,64,48,.3)}
 
-.session-tab:hover {
-  border-color: var(--accent-primary);
-  color: var(--text-cream);
-  background: rgba(212,168,67,0.06);
-}
+.paper-watcher .np-title{color:var(--watcher);font-family:'Playfair Display',serif;font-size:2.2rem;font-style:italic;text-shadow:0 2px 12px rgba(168,168,192,.15)}
+.paper-watcher .np-masthead{border-bottom-color:var(--watcher)}
+.paper-watcher .np-masthead::before,.paper-watcher .np-masthead::after{background:var(--watcher)}
 
-.session-tab.active {
-  font-weight: 700;
-  color: var(--accent-primary);
-  border-color: var(--accent-primary);
-  background: rgba(212,168,67,0.12);
-}
+.paper-sentinel .np-title{color:var(--sentinel);text-shadow:0 2px 12px rgba(120,152,200,.15)}
+.paper-sentinel .np-masthead{border-bottom:2px solid var(--sentinel)}
+.paper-sentinel .np-masthead::before,.paper-sentinel .np-masthead::after{background:var(--sentinel)}
 
-/* ===== CARD STACK ===== */
-.card-stack {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 16px 16px 80px;
-  display: none;
-}
+.paper-ledger .np-title{color:var(--ledger);font-family:'Special Elite',monospace;font-size:2rem;letter-spacing:.04em;text-shadow:0 2px 12px rgba(196,122,58,.2)}
+.paper-ledger .np-masthead{border-bottom:2px dashed var(--ledger)}
+.paper-ledger .np-masthead::before,.paper-ledger .np-masthead::after{background:var(--ledger)}
+.paper-ledger .np-parchment{background:linear-gradient(135deg,rgba(40,30,15,.5),rgba(20,18,10,.8));border-color:rgba(196,122,58,.25)}
 
-.card-stack.active { display: block; animation: fadeIn 0.4s ease; }
+.paper-dispatch .np-title{color:var(--dispatch);font-family:'JetBrains Mono',monospace;font-size:1.6rem;letter-spacing:.15em;text-transform:uppercase}
+.paper-dispatch .np-masthead{border-bottom:2px solid var(--dispatch)}
+.paper-dispatch .np-masthead::before,.paper-dispatch .np-masthead::after{background:var(--dispatch)}
+.paper-dispatch .np-parchment{background:linear-gradient(180deg,rgba(15,15,22,.9),rgba(12,12,18,.95));border-color:rgba(90,106,154,.3)}
+.paper-dispatch .np-parchment::before{background:none}
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
-}
+.np-headline{font-family:Cinzel,'Times New Roman',serif;font-weight:700;color:var(--text-headline);line-height:1.2;margin-bottom:6px}
+.np-headline-lead{font-size:1.6rem;border-bottom:2px solid var(--accent-primary);padding:16px 32px 12px;text-align:center}
+.paper-tribune .np-headline{font-family:'Bebas Neue',sans-serif;letter-spacing:2px;text-transform:uppercase}
+.paper-tribune .np-headline-lead{font-size:2rem;color:var(--tribune);border-bottom-color:var(--tribune)}
+.paper-watcher .np-headline{font-family:'Playfair Display',serif;font-style:italic}
+.paper-watcher .np-headline-lead{font-size:1.5rem;color:var(--watcher);border-bottom-color:var(--watcher)}
+.paper-dispatch .np-headline{font-family:'JetBrains Mono',monospace;font-size:1.3rem;text-transform:uppercase;letter-spacing:2px}
+.paper-dispatch .np-headline-lead{color:var(--dispatch);border-bottom-color:var(--dispatch);font-size:1.3rem}
+.paper-ledger .np-headline{font-family:'Special Elite',monospace}
+.paper-ledger .np-headline-lead{color:var(--ledger);border-bottom-color:var(--ledger)}
+.paper-sentinel .np-headline-lead{color:var(--sentinel);border-bottom-color:var(--sentinel)}
 
-.session-header {
-  text-align: center;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border-warm);
-}
+.np-lede{font-family:'Crimson Text',Georgia,serif;font-size:1.15rem;font-style:italic;color:var(--text-cream);opacity:.85;line-height:1.5;padding:12px 32px;text-align:center}
+.paper-dispatch .np-lede{font-family:'Barlow',sans-serif;font-style:normal;text-align:left;padding:10px 32px;font-size:1rem}
 
-.session-header .session-id {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 14px;
-  letter-spacing: 3px;
-  color: var(--text-dim);
-  text-transform: uppercase;
-}
+.np-byline{font-family:'Barlow Condensed',sans-serif;font-size:.9rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-byline);text-align:center;padding:0 32px 12px}
 
-.session-header .session-title {
-  font-family: 'Cinzel', serif;
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--text-headline);
-  margin-top: 4px;
-  line-height: 1.3;
-}
+.np-body{column-count:2;column-gap:28px;column-rule:1px solid var(--border-warm);padding:16px 32px 20px}
+.np-body p{font-family:'Crimson Text',Georgia,serif;font-size:1.05rem;line-height:1.75;color:var(--text-body);text-align:justify;margin:0 0 .8em;hyphens:auto;text-indent:1.2em}
+.np-body p:first-child{text-indent:0}
+.paper-dispatch .np-body{column-count:1}
+.paper-dispatch .np-body p{font-family:'Barlow',sans-serif;font-size:1rem;text-align:left;line-height:1.7}
 
-/* ===== NEWSPAPER CARD ===== */
-.news-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-warm);
-  border-left: 4px solid var(--accent-primary);
-  margin-bottom: 12px;
-  border-radius: 2px;
-  transition: border-color 0.3s, box-shadow 0.3s;
-  overflow: hidden;
-}
+.np-ad{background:linear-gradient(180deg,rgba(255,215,0,.04) 0%,transparent 100%),rgba(26,24,18,.8);
+  border:1px dashed var(--border-light);border-radius:4px;padding:14px 18px;margin:0 32px 16px;text-align:center;break-inside:avoid}
+.np-ad-title{font-family:Cinzel,serif;font-size:1rem;font-weight:700;color:var(--accent-primary);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
+.np-ad-body{font-family:'Crimson Text',Georgia,serif;font-size:.95rem;font-style:italic;color:var(--text-dim);line-height:1.5}
+.paper-tribune .np-ad{border-color:rgba(196,64,48,.3)}.paper-tribune .np-ad-title{color:var(--tribune)}
+.paper-watcher .np-ad{border-color:rgba(168,168,192,.2)}.paper-watcher .np-ad-title{color:var(--watcher)}
+.paper-sentinel .np-ad{border-color:rgba(120,152,200,.2)}.paper-sentinel .np-ad-title{color:var(--sentinel)}
+.paper-ledger .np-ad{border-color:rgba(196,122,58,.25);border-style:solid}.paper-ledger .np-ad-title{color:var(--ledger)}
+.paper-dispatch .np-ad{border-color:rgba(90,106,154,.3);border-style:solid}
+.paper-dispatch .np-ad-title{color:var(--dispatch);font-family:'JetBrains Mono',monospace;font-size:.85rem;letter-spacing:2px}
 
-.news-card:hover {
-  box-shadow: 0 2px 20px rgba(0,0,0,0.4);
-}
+.np-footer{text-align:center;padding:12px 32px;border-top:1px solid var(--border-warm);font-family:'Crimson Text',Georgia,serif;font-size:.9rem;font-style:italic;color:var(--text-dim);line-height:1.5}
+.paper-dispatch .np-footer{font-family:'JetBrains Mono',monospace;font-size:.8rem;font-style:normal;letter-spacing:1px;text-transform:uppercase}
 
-.news-card.herald { border-left-color: var(--herald); }
-.news-card.tribune { border-left-color: var(--tribune); }
-.news-card.watcher { border-left-color: var(--watcher); }
-.news-card.sentinel { border-left-color: var(--sentinel); }
-.news-card.ledger { border-left-color: var(--ledger); }
-.news-card.dispatch { border-left-color: var(--dispatch); }
+.dispatch-class{font-family:'JetBrains Mono',monospace;font-size:.8rem;letter-spacing:3px;text-transform:uppercase;color:var(--dispatch);text-align:center;padding:8px 32px;border-bottom:1px solid rgba(90,106,154,.2);opacity:.7}
+.redacted{background:var(--dispatch);color:var(--dispatch);padding:0 4px;border-radius:2px;cursor:pointer;transition:all .3s}
+.redacted:hover{color:#ff4444;background:transparent}
 
-.card-header {
-  padding: 14px 18px 10px;
-  cursor: pointer;
-  user-select: none;
-}
+.np-tag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:.7rem;letter-spacing:2px;text-transform:uppercase;padding:3px 10px;border-radius:2px;margin-bottom:6px}
+.paper-herald .np-tag{background:rgba(212,168,67,.12);color:var(--herald);border:1px solid rgba(212,168,67,.25)}
+.paper-tribune .np-tag{background:rgba(196,64,48,.12);color:var(--tribune);border:1px solid rgba(196,64,48,.25)}
+.paper-watcher .np-tag{background:rgba(168,168,192,.08);color:var(--watcher);border:1px solid rgba(168,168,192,.2)}
+.paper-sentinel .np-tag{background:rgba(120,152,200,.08);color:var(--sentinel);border:1px solid rgba(120,152,200,.2)}
+.paper-ledger .np-tag{background:rgba(196,122,58,.1);color:var(--ledger);border:1px solid rgba(196,122,58,.2)}
+.paper-dispatch .np-tag{background:rgba(90,106,154,.1);color:var(--dispatch);border:1px solid rgba(90,106,154,.25)}
 
-.card-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 6px;
-}
+.np-divider{text-align:center;color:var(--accent-primary);font-size:1rem;padding:4px 0;opacity:.4}
 
-.paper-name {
-  font-family: 'Cinzel', serif;
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: 1px;
-}
+.mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:200;background:rgba(14,13,10,.97);
+  border-top:1px solid var(--border-warm);padding:8px 16px;justify-content:space-between;align-items:center;backdrop-filter:blur(12px)}
+.mobile-nav-btn{width:52px;height:44px;background:rgba(212,168,67,.08);border:1px solid var(--border-warm);color:var(--accent-primary);font-size:20px;border-radius:4px;cursor:pointer}
+.mobile-nav-center{text-align:center;font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--text-cream)}
+.mobile-nav-paper{font-family:'Barlow Condensed',sans-serif;font-size:12px;color:var(--text-dim);margin-top:2px}
 
-.paper-name.herald { color: var(--herald); }
-.paper-name.tribune { color: var(--tribune); font-family: 'Bebas Neue', sans-serif; font-size: 17px; letter-spacing: 2px; }
-.paper-name.watcher { color: var(--watcher); font-family: 'Cormorant Garamond', serif; font-size: 16px; font-style: italic; }
-.paper-name.sentinel { color: var(--sentinel); font-family: 'Cormorant Garamond', serif; }
-.paper-name.ledger { color: var(--ledger); font-family: 'Special Elite', monospace; font-size: 14px; }
-.paper-name.dispatch { color: var(--dispatch); font-family: 'JetBrains Mono', monospace; font-size: 14px; letter-spacing: 2px; text-transform: uppercase; }
-
-.tag-badge {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
-  letter-spacing: 1px;
-  padding: 2px 8px;
-  border-radius: 2px;
-  white-space: nowrap;
-}
-
-.tag-badge.herald { background: rgba(212,168,67,0.12); color: var(--herald); border: 1px solid rgba(212,168,67,0.25); }
-.tag-badge.tribune { background: rgba(196,64,48,0.12); color: var(--tribune); border: 1px solid rgba(196,64,48,0.25); }
-.tag-badge.watcher { background: rgba(168,168,192,0.1); color: var(--watcher); border: 1px solid rgba(168,168,192,0.2); }
-.tag-badge.sentinel { background: rgba(120,152,200,0.1); color: var(--sentinel); border: 1px solid rgba(120,152,200,0.2); }
-.tag-badge.ledger { background: rgba(196,122,58,0.1); color: var(--ledger); border: 1px solid rgba(196,122,58,0.2); }
-.tag-badge.dispatch { background: rgba(90,106,154,0.1); color: var(--dispatch); border: 1px solid rgba(90,106,154,0.2); }
-
-.card-headline {
-  font-family: 'Cinzel', serif;
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text-headline);
-  line-height: 1.25;
-  margin-bottom: 4px;
-  transition: color 0.2s;
-}
-
-.card-header:hover .card-headline { color: #f0e0b0; }
-
-.news-card.tribune .card-headline {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 19px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: #e8594a;
-}
-
-.news-card.watcher .card-headline {
-  font-family: 'Cormorant Garamond', serif;
-  font-style: italic;
-  font-size: 17px;
-}
-
-.news-card.dispatch .card-headline {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 15px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: #8898c0;
-}
-
-.news-card.ledger .card-headline {
-  font-family: 'Special Elite', monospace;
-  font-size: 15px;
-}
-
-.card-byline {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-size: 14px;
-  font-style: italic;
-  color: var(--text-byline);
-  letter-spacing: 1px;
-}
-
-.card-editorial {
-  font-style: italic;
-  font-size: 15px;
-  color: var(--text-cream);
-  opacity: 0.85;
-  line-height: 1.5;
-  padding: 0 18px;
-  margin-bottom: 0;
-  border-left: 2px solid var(--border-warm);
-  margin-left: 18px;
-}
-
-.news-card.herald .card-editorial { border-left-color: rgba(212,168,67,0.4); }
-.news-card.tribune .card-editorial { border-left-color: rgba(196,64,48,0.4); }
-.news-card.watcher .card-editorial { border-left-color: rgba(168,168,192,0.3); }
-.news-card.sentinel .card-editorial { border-left-color: rgba(120,152,200,0.3); }
-.news-card.ledger .card-editorial { border-left-color: rgba(196,122,58,0.3); }
-.news-card.dispatch .card-editorial { border-left-color: rgba(90,106,154,0.3); }
-
-.card-body {
-  padding: 0 18px 16px;
-  font-size: 15px;
-  line-height: 1.65;
-  color: var(--text-cream);
-  display: none;
-  animation: expandBody 0.3s ease;
-}
-
-.card-body.open { display: block; }
-
-@keyframes expandBody {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-.card-body p {
-  margin-bottom: 8px;
-}
-
-.news-card.dispatch .card-body {
-  font-family: 'Barlow', sans-serif;
-  font-size: 15px;
-}
-
-.expand-indicator {
-  float: right;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 14px;
-  color: var(--text-dim);
-  transition: transform 0.3s;
-}
-
-.card-header.open .expand-indicator { transform: rotate(180deg); }
-
-/* Redacted text for Dispatch */
-.redacted {
-  background: #5a6a9a;
-  color: #5a6a9a;
-  padding: 0 4px;
-  border-radius: 1px;
-  cursor: default;
-  user-select: none;
-}
-
-/* ===== MOBILE NAV ===== */
-.mobile-nav {
-  display: none;
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 200;
-  background: rgba(10,8,6,0.97);
-  backdrop-filter: blur(12px);
-  border-top: 1px solid var(--border-warm);
-  padding: 8px 16px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.mobile-nav-btn {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  border: 2px solid var(--accent-primary);
-  background: rgba(212,168,67,0.08);
-  color: var(--accent-primary);
-  font-size: 20px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: all 0.2s;
-}
-
-.mobile-nav-btn:active { transform: scale(0.9); background: rgba(212,168,67,0.2); }
-
-.mobile-nav-info {
-  flex: 1;
-  text-align: center;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 14px;
-  color: var(--text-dim);
-}
-
-.mobile-nav-info .mobile-session {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--accent-primary);
-}
-
-.mobile-nav-info .mobile-paper {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-size: 14px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-/* Keyboard hint */
-.keyboard-hint {
-  position: fixed;
-  bottom: 16px;
-  right: 16px;
-  background: rgba(14,12,10,0.9);
-  border: 1px solid var(--border-warm);
-  padding: 6px 12px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 14px;
-  color: var(--text-dim);
-  z-index: 200;
-  pointer-events: none;
-  opacity: 0.5;
-}
-
-.keyboard-hint kbd {
-  display: inline-block;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid var(--border-light);
-  padding: 1px 5px;
-  border-radius: 2px;
-}
-
-/* ===== RESPONSIVE ===== */
-@media (max-width: 640px) {
-  .session-nav { display: none; }
-  .mobile-nav { display: flex !important; }
-  .keyboard-hint { display: none; }
-  .card-headline { font-size: 16px; }
-  .news-card.tribune .card-headline { font-size: 18px; }
-  .news-card.dispatch .card-headline { font-size: 14px; }
-  .card-stack { padding: 12px 8px 80px; }
-  .archive-header { padding: 14px 14px 8px; }
-  .archive-header h1 { font-size: 18px; letter-spacing: 5px; }
-}
-
-@media print {
-  .archive-header, .session-nav, .keyboard-hint, .mobile-nav { display: none; }
-  .card-stack { display: block !important; page-break-after: always; }
-  .card-body { display: block !important; }
+@media(max-width:700px){
+  .session-nav{display:none}.mobile-nav{display:flex}
+  .newspaper{margin:16px 8px 80px}
+  .paper-tabs{top:52px;gap:2px;padding:6px 8px}.paper-tab{padding:4px 8px;font-size:11px}
+  .np-body{column-count:1}.np-headline-lead{font-size:1.3rem;padding:12px 18px 10px}
+  .np-lede{padding:10px 18px;font-size:1.05rem}.np-byline{padding:0 18px 10px}.np-body{padding:12px 18px 16px}.np-masthead{padding:18px 18px 12px}
+  .np-ad{margin:0 18px 12px}
 }
 </style>
 </head>
 <body>
-
 <div class="archive-header">
-  <h1>The Broadsheet</h1>
-  <div class="subtitle">Campaign Newspaper Archive &mdash; 46 Sessions &mdash; 276 Articles &mdash; 6 Publications</div>
+  <h1>THE BROADSHEET</h1>
+  <div class="subtitle">Campaign Newspaper Archive &mdash; 46 Sessions &times; 6 Newspapers</div>
 </div>
-
+<div class="paper-tabs" id="paperTabs"></div>
 <div class="session-nav" id="sessionNav"></div>
-
-<div id="cardContainer"></div>
-
-<div class="keyboard-hint">
-  <kbd>&larr;</kbd> <kbd>&rarr;</kbd> Navigate sessions
+<div id="newspaper"></div>
+<div class="mobile-nav">
+  <button class="mobile-nav-btn" id="mPrev">&larr;</button>
+  <div class="mobile-nav-center"><div id="mSid">S001</div><div class="mobile-nav-paper" id="mPaper"></div></div>
+  <button class="mobile-nav-btn" id="mNext">&rarr;</button>
 </div>
-
-<div class="mobile-nav" id="mobileNav">
-  <button class="mobile-nav-btn" onclick="go(currentSession-1)">&larr;</button>
-  <div class="mobile-nav-info">
-    <div class="mobile-session" id="mobileSessionNum">S001</div>
-    <div class="mobile-paper" id="mobilePaperName">6 Newspapers</div>
-  </div>
-  <button class="mobile-nav-btn" onclick="go(currentSession+1)">&rarr;</button>
-</div>
-
 <script>
 // ============================================================
 // THE BROADSHEET v4 — 276 Articles (46 sessions x 6 newspapers)
@@ -879,128 +589,151 @@ const ARTICLES = {
 };
 
 // ============================================================
-// BUILD THE UI
-// ============================================================
-let currentSession = 1;
 
-function buildSessionNav() {
-  const nav = document.getElementById('sessionNav');
-  let html = '';
-  for (let i = 1; i <= 46; i++) {
-    html += `<button class="session-tab" data-s="${i}" onclick="go(${i})">${i}</button>`;
+const PAPER_FULL = {
+  herald: {
+    name: 'The Castle Corras Herald',
+    motto: '\u201CThe Voice of the Federation\u201D',
+    location: 'Castle Corras',
+    price: '2 copper (subsidized)',
+    footer: 'Published by Royal Decree of His Majesty King Corras. The Herald is the official newspaper of the BWB Federation. All content verified by the Crown.'
+  },
+  tribune: {
+    name: 'THE TRIBOAR TRIBUNE',
+    motto: '\u201CTruth From the Crossroads\u201D',
+    location: 'Triboar',
+    price: '1 silver',
+    footer: 'The Triboar Tribune is an independent publication. The editorial board takes no responsibility for the emotional wellbeing of self-appointed kings who read their own press coverage.'
+  },
+  watcher: {
+    name: 'The Waterdeep Watcher',
+    motto: '\u201CAll the News That\u2019s Fit to Print\u201D',
+    location: 'Waterdeep',
+    price: '5 silver',
+    footer: 'The Waterdeep Watcher has served the Lords of Waterdeep since 1032 DR. Subscription enquiries may be directed to our offices in the Castle Ward.'
+  },
+  sentinel: {
+    name: 'The Silver Marches Sentinel',
+    motto: '\u201CLight in the North\u201D',
+    location: 'Silverymoon',
+    price: '3 silver',
+    footer: 'The Silver Marches Sentinel is published under the auspices of the Silverymoon Academy of Letters. We strive for truth, even when it is uncomfortable.'
+  },
+  ledger: {
+    name: 'The Luskan Ledger',
+    motto: '\u201CSharp News for Sharp People\u201D',
+    location: 'Luskan',
+    price: '1 silver (or barter)',
+    footer: 'The Luskan Ledger is distributed through channels best left unspecified. The editors deny everything and admit nothing.'
+  },
+  dispatch: {
+    name: "HARPER\u2019S DISPATCH",
+    motto: '\u201CFor Those Who Harp\u201D',
+    location: 'Distributed via dead drops',
+    price: 'CLASSIFIED',
+    footer: 'THIS DOCUMENT IS THE PROPERTY OF THE HARPERS. DESTROY AFTER READING. IF YOU ARE NOT AN AUTHORIZED RECIPIENT, FORGET WHAT YOU HAVE SEEN.'
   }
-  nav.innerHTML = html;
+};
+
+const ADS={1:{t:"MORTY\u2019S RELIABLE WHISPERS",b:"Need intelligence? The Master of Whispers offers discreet information services. Competitive rates. Absolutely no paralysis guaranteed. Castle Corras, Lower Offices."},2:{t:"TROLL LOINCLOTH REMOVAL SERVICES",b:"Has a troll taken up residence in YOUR basement? Our experienced team will remove it \u2014 loincloth and all. Contact Shago\u2019s Adventurer Referrals, Dock Ward."},3:{t:"CELESTIAL TRANSFORMATION INSURANCE",b:"One never knows when a party member might absorb a dying cosmic entity. Protect yourself with Silverymoon Mutual\u2019s new Unexpected Ascension Policy. Covers celestial mergers, divine possession, and involuntary lichdom."},4:{t:"SYLVAN TATTOO PARLOR",b:"Tired of ORDINARY tattoos? Visit the Chronicler\u2019s Mark for authentic Sylvan script! Side effects may include: shadow loss, reflection absence, immunity to charm. Havenbrook Market District."},5:{t:"CASTLE CORRAS GUIDED TOURS",b:"Visit the legendary Hall of Whispers! Marvel at the warded door that paralyzed a wizard! See the basement where the familiar died! Tours depart hourly. Protective wards NOT included."},6:{t:"COUNTERSPELL TUTORING",b:"Learn to say NO to magic! Master Ash\u2019s Counterspell Academy now accepting students. Located wherever the BWB happens to be camping this week."},7:{t:"DISCOUNT EYELASH ACCESSORIES",b:"The finest fake eyelashes north of Waterdeep! As worn by the most fashionable adventurers. Warning: may attract unwanted attention from magic users. Lumin\u2019s Beauty Emporium."},8:{t:"PROPHECY FULFILLMENT SERVICES",b:"Is destiny weighing you down? We specialize in fulfilling prophecies so you don\u2019t have to! Our team of trained oracles will handle the cosmic implications while you relax."},9:{t:"MIMIC DETECTION KITS",b:"After recent events, is YOUR furniture really furniture? Our patented kit includes: one ten-foot pole, one bag of flour, and the courage to poke everything in your house. Only 5 gold!"},10:{t:"NATURE\u2019S WRATH CLEANUP CREW",b:"Scorched forest? Animated trees attacking your village? We handle the aftermath of druidic rage incidents with discretion and speed. Greenfield Restoration Co."},11:{t:"TRUST ISSUES COUNSELING",b:"Has your ancient magical advisor recently betrayed your entire party? The Silverymoon Betrayal Recovery Center offers group therapy for adventurers dealing with NPC treachery. First session free."},12:{t:"DEMON WARD INSTALLATION",b:"After the Balor incident, Castle Corras Security Solutions now offers premium demon warding for homes and businesses. Money-back guarantee if any demon above CR 10 breaches your perimeter."},13:{t:"BLOOD PACT LEGAL SERVICES",b:"Did you sign a blood pact with a demon lord without reading the fine print? Malachar & Associates (no relation) specializes in infernal contract review. Consultations by appointment. Bring your own blood."},14:{t:"HAMSTER BALL ARENA",b:"Inspired by recent Quaggoth containment techniques! The Triboar Arena now offers HAMSTER BALL COMBAT every Tenday evening. Watch warriors roll! Watch them bounce! Ale included with admission."},15:{t:"FAMILIAR RESURRECTION SERVICES",b:"Lost your magical companion? Our specialist wizards can reunite you with your bonded familiar. Success rate: 73%. Side effects may vary. Conjuration Corner, Wizard\u2019s Row."},16:{t:"FATE CARD READINGS",b:"Curious about your destiny? Madame Fortuna\u2019s Fate Card Readings now available! Warning: cards may contain actual fate-altering magic. Not responsible for wars, deaths, or dimensional rifts."},17:{t:"CASTLE CORRAS RECRUITMENT OFFICE",b:"His Majesty King Corras is hiring! The Federation needs soldiers, spies, scribes, and someone to fix the basement. Competitive pay. Dental included. Mortality rate: classified."},18:{t:"DRAGON NEGOTIATION WORKSHOP",b:"Learn to say \u2018no\u2019 to a dragon \u2014 and survive! Taught by someone who definitely did NOT anger a dragon recently. Three-day intensive. Bring fireproof clothing."},19:{t:"ALCHEMIST\u2019S FIRE INSURANCE",b:"One keg of Alchemist\u2019s Fire can ruin your whole day. Protect your business with our comprehensive Explosive Incident Coverage. Now covering: fireballs, lightning bolts, and \u2018creative problem solving.\u2019"},20:{t:"LATHANDER\u2019S HEALING SERVICES",b:"Died recently? It happens! The Church of Lathander offers resurrection services at competitive rates. Group discounts available for total party kills. Temple of the Morning, Waterdeep."},21:{t:"UNDERDARK SURVIVAL SUPPLIES",b:"Heading underground? Darkvision potions, spider repellent, drow phrase books, and moral compasses (for when yours stops working). Silverymoon Outfitters, Lower Market."},22:{t:"WEBB\u2019S EDGE GUIDED EXPEDITIONS",b:"Visit the legendary spider fortress! (From a safe distance.) Our guides carry enough antivenom for a party of six. Torches and screaming are complimentary."},23:{t:"SECRETS BROKERAGE",b:"Information is currency. We buy, sell, and trade secrets of all kinds. Discretion guaranteed. Violence discouraged but understood. Dead drops available throughout Luskan."},24:{t:"ILLUSION DETECTION CHARMS",b:"In a world where bards can trick spider dragons, how do you know what\u2019s real? Our patented True Sight Amulets cut through even the most convincing illusions. Only 50gp."},25:{t:"BWB FEDERATION MEMBERSHIP",b:"Join the Federation today! Benefits include: protection from most threats, access to Castle Corras facilities, and the warm feeling of being on the winning side. Loyalty oaths mandatory."},26:{t:"EMERGENCY CASTLE REPAIR",b:"Castle damaged by crash landing? Our team of dwarven engineers specializes in rapid fortress restoration. \u2018We\u2019ve rebuilt Castle Corras three times this year alone.\u2019 Stone & Sons."},27:{t:"SOUL FORGE EXPEDITION INSURANCE",b:"Descending into a Soul Forge? Our policy covers: soul extraction, possession, undead transformation, and existential dread. Premiums vary based on party alignment."},28:{t:"PACK DOMINANCE TRAINING",b:"Assert yourself in any social situation! Our three-day workshop covers: intimidation techniques, territorial displays, and how to establish dominance without resorting to violence."},29:{t:"INFERNAL CONTRACT DISSOLUTION",b:"Trapped in a contract with a fiend? Our celestial lawyers specialize in breaking infernal agreements. No contract too binding, no demon too powerful. Fees payable in advance."},30:{t:"APPETITE SUPPRESSION TONICS",b:"Encountering entities with ceaseless hunger? Our alchemical tonics suppress even the most insatiable appetites. Warning: may cause drowsiness, existential emptiness, and mild undeath."},31:{t:"RESURRECTION RUSH DELIVERY",b:"When your party member kills another party member (it happens), time is of the essence. Our clerics offer same-day resurrection with no judgment. Diamond surcharge applies."},32:{t:"LICH DETECTION SERVICES",b:"Think your local authority figure might be a lich? Our investigators will find out! Package includes: phylactery search, undead aura scan, and a diplomatic briefing."},33:{t:"SURRENDER NEGOTIATION",b:"Sometimes the wise choice is to lay down your arms. Our experienced diplomats will negotiate your surrender on the best possible terms. Escape plan consultation sold separately."},34:{t:"LUCKY DICE EMPORIUM",b:"After recent events proving that even a Nat-1 can kill a lich, we offer our Premium Loaded Dice collection. \u2018When fate needs a little help.\u2019 Use in licensed gaming establishments at your own risk."},35:{t:"HAUNTED HOUSE INSPECTION",b:"Entering a Death House? Our certified inspectors identify all traps, ghosts, and animated furniture BEFORE you step inside. \u2018Because the house always wins \u2014 unless you hire us first.\u2019"},36:{t:"FINE WINES OF BAROVIA",b:"A surprisingly excellent vintage! Notes of despair, fog, and the faint taste of vampire. Perfect for toasting with ancient evil. \u2018In Barovia, the wine drinks you.\u2019 Import duties may apply."},37:{t:"CHARM RESISTANCE AMULETS",b:"The Master\u2019s influence is everywhere. Protect your free will with our Enchantment Ward Amulets, blessed by the Church of Tymora. Currently on sale due to high demand in the Barovia region."},38:{t:"EMERGENCY EXIT PLANNING",b:"Trapped in a Death House? Extradimensional space? Cursed demiplane? Our escape specialists have extracted adventurers from every kind of magical imprisonment. Rush rates apply."},39:{t:"BAROVIAN TOURISM BOARD",b:"Visit beautiful Barovia! Enjoy our: perpetual fog, charming villages, friendly locals (mostly), and the complete absence of sunlight! Return trip not guaranteed."},40:{t:"FORTUNE TELLING SERVICES",b:"Madam Eva sees all! Past, present, and multiple possible futures! Card readings by appointment. \u2018The cards never lie \u2014 but they do sometimes laugh.\u2019 Vistani Camp, Barovia."},41:{t:"VAMPIRE SPAWN CONTAINMENT",b:"Recent spawn outbreak? Our certified hunters offer humane (well, as humane as possible) vampire spawn removal. Includes: garlic installation, holy water sprinklers, and dawn alarm services."},42:{t:"MIRROR REPAIR & RESTORATION",b:"Cursed mirror? Shattered phylactery? Our expert artificers restore magical items to original condition. \u2018We fixed Shrum\u2019s Mirror and we can fix yours.\u2019 Satisfaction guaranteed."},43:{t:"NOBLE ESTATE SECURITY",b:"After the Neverember incident, demand for noble estate security has never been higher. Guards trained to identify: poison, charm effects, and adventurers who want to \u2018just talk.\u2019"},44:{t:"PROSTHETIC LIMBS BY GOND",b:"Lost a limb to interrogation, combat, or \u2018creative questioning\u2019? The Church of Gond offers state-of-the-art prosthetics! Mechanical, magical, or combination models available."},45:{t:"DISGUISE KIT CLEARANCE SALE",b:"Premium disguise kits, skin suits, and identity alteration supplies now 50% off! Perfect for: infiltration, espionage, or escaping the consequences of your actions. No returns accepted."},46:{t:"FEYWILD EXTRACTION SERVICES",b:"Lost someone to the Wild Hunt? Our specialized agents navigate the Courts of the Feywild to retrieve lost souls. Success rate varies. Payment accepted in memories, years, or gold."}};
+
+const MONTHS=['Hammer','Alturiak','Ches','Tarsakh','Mirtul','Kythorn','Flamerule','Eleasis','Eleint','Marpenoth','Uktar','Nightal'];
+function faerunDate(s){var m=Math.floor((s-1)/4)%12,d=((s-1)%28)+1,y=1492+Math.floor((s-1)/46);return'The '+d+getSuffix(d)+' of '+MONTHS[m]+', '+y+' DR'}
+function getSuffix(n){if(n>=11&&n<=13)return'th';switch(n%10){case 1:return'st';case 2:return'nd';case 3:return'rd';default:return'th'}}
+
+let currentPaper='herald',currentSession=1;
+
+function buildPaperTabs(){
+  var el=document.getElementById('paperTabs'),html='';
+  PAPERS.forEach(function(p){
+    var meta=PAPER_META[p];
+    html+='<button class="paper-tab '+p+(p===currentPaper?' active':'')+'" onclick="selectPaper(\''+p+'\')">'+meta.name+'</button>';
+  });
+  el.innerHTML=html;
 }
 
-function go(num) {
-  if (num < 1 || num > 46) return;
-  currentSession = num;
-
-  // Update tabs
-  document.querySelectorAll('.session-tab').forEach(t => t.classList.remove('active'));
-  const activeTab = document.querySelector(`.session-tab[data-s="${num}"]`);
-  if (activeTab) {
-    activeTab.classList.add('active');
-    activeTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+function buildSessionNav(){
+  var el=document.getElementById('sessionNav'),html='';
+  for(var i=1;i<=46;i++){
+    html+='<button class="session-tab'+(i===currentSession?' active':'')+'" data-s="'+i+'" onclick="go('+i+')">'+i+'</button>';
   }
-
-  // Update card stacks
-  document.querySelectorAll('.card-stack').forEach(s => s.classList.remove('active'));
-  const stack = document.getElementById('session-' + num);
-  if (stack) stack.classList.add('active');
-
-  // Update mobile nav
-  const mNum = document.getElementById('mobileSessionNum');
-  const mPaper = document.getElementById('mobilePaperName');
-  if (mNum) mNum.textContent = 'S' + String(num).padStart(3, '0');
-  if (mPaper) mPaper.textContent = SESSION_LABELS[num] || '';
-
-  // Scroll to top
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  el.innerHTML=html;
 }
 
-function toggleCard(el) {
-  const header = el;
-  const card = header.closest('.news-card');
-  const body = card.querySelector('.card-body');
-  if (!body) return;
-  body.classList.toggle('open');
-  header.classList.toggle('open');
+function selectPaper(p){currentPaper=p;buildPaperTabs();renderNewspaper()}
+
+function go(num){
+  if(num<1||num>46)return;
+  currentSession=num;
+  document.querySelectorAll('.session-tab').forEach(function(t){t.classList.remove('active')});
+  var tab=document.querySelector('.session-tab[data-s="'+num+'"]');
+  if(tab){tab.classList.add('active');tab.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'})}
+  renderNewspaper();
 }
 
-function buildAllCards() {
-  const container = document.getElementById('cardContainer');
-  let html = '';
-
-  for (let s = 1; s <= 46; s++) {
-    const articles = ARTICLES[s];
-    if (!articles) continue;
-
-    html += `<div class="card-stack" id="session-${s}">`;
-    html += `<div class="session-header">`;
-    html += `<div class="session-id">Session ${String(s).padStart(3, '0')}</div>`;
-    html += `<div class="session-title">${SESSION_LABELS[s] || ''}</div>`;
-    html += `</div>`;
-
-    PAPERS.forEach((paper, idx) => {
-      const a = articles[idx];
-      if (!a) return;
-      const meta = PAPER_META[paper];
-
-      html += `<div class="news-card ${paper}">`;
-      html += `<div class="card-header" onclick="toggleCard(this)">`;
-      html += `<div class="card-meta">`;
-      html += `<span class="paper-name ${paper}">${meta.name}</span>`;
-      html += `<span class="tag-badge ${paper}">${meta.tag}</span>`;
-      html += `</div>`;
-      html += `<div class="card-headline">${a.h}</div>`;
-      html += `<div class="card-byline">${a.b}</div>`;
-      html += `<span class="expand-indicator">&#9660;</span>`;
-      html += `</div>`;
-      html += `<div class="card-editorial">${a.e}</div>`;
-      html += `<div class="card-body"><p>${a.t}</p></div>`;
-      html += `</div>`;
-    });
-
-    html += `</div>`;
-  }
-
-  container.innerHTML = html;
+function splitIntoParagraphs(text){
+  if(!text)return[''];
+  var sentences=text.match(/[^.!?]+[.!?]+/g)||[text];
+  if(sentences.length<=3)return[text];
+  var mid=Math.ceil(sentences.length/2);
+  return[sentences.slice(0,mid).join(''),sentences.slice(mid).join('')];
 }
 
-// ============================================================
-// KEYBOARD & TOUCH NAVIGATION
-// ============================================================
-document.addEventListener('keydown', function(e) {
-  if (e.target.tagName === 'INPUT') return;
-  if (e.key === 'ArrowRight') { e.preventDefault(); go(currentSession + 1); }
-  else if (e.key === 'ArrowLeft') { e.preventDefault(); go(currentSession - 1); }
+function renderNewspaper(){
+  var el=document.getElementById('newspaper');
+  var articles=ARTICLES[currentSession];
+  if(!articles){el.innerHTML='<div style="text-align:center;padding:60px;color:var(--text-dim)">No articles for this session.</div>';return}
+  var pidx=PAPERS.indexOf(currentPaper);
+  var a=articles[pidx];
+  if(!a){el.innerHTML='<div style="text-align:center;padding:60px;color:var(--text-dim)">No article found.</div>';return}
+  var pf=PAPER_FULL[currentPaper],meta=PAPER_META[currentPaper];
+  var ad=ADS[currentSession]||ADS[1];
+  var sid='S'+String(currentSession).padStart(3,'0');
+  var label=SESSION_LABELS[currentSession]||'';
+  var date=faerunDate(currentSession);
+  var paras=splitIntoParagraphs(a.t);
+  var h='<div class="newspaper paper-'+currentPaper+'">';
+  h+='<div class="np-parchment">';
+  if(currentPaper==='dispatch')h+='<div class="dispatch-class">CLASSIFICATION: SENSITIVE // DISTRIBUTION: NEED-TO-KNOW // REF: BWB-'+sid+'</div>';
+  h+='<div class="np-masthead">';
+  h+='<div class="np-title">'+pf.name+'</div>';
+  h+='<div class="np-motto">'+pf.motto+'</div>';
+  h+='<div class="np-dateline"><span>'+date+'</span><span class="np-dateline-sep">&#9830;</span><span>'+pf.location+'</span><span class="np-dateline-sep">&#9830;</span><span>Price: '+pf.price+'</span></div></div>';
+  h+='<div style="text-align:center;padding:12px 0 0"><span class="np-tag">'+meta.tag+'</span></div>';
+  h+='<div class="np-headline np-headline-lead">'+a.h+'</div>';
+  h+='<div class="np-lede">'+a.e+'</div>';
+  h+='<div class="np-byline">'+a.b+' &mdash; '+sid+': '+label+'</div>';
+  h+='<div class="np-divider">&#9830; &#9830; &#9830;</div>';
+  h+='<div class="np-body">';
+  paras.forEach(function(p){h+='<p>'+p+'</p>'});
+  h+='</div>';
+  h+='<div class="np-divider">&#9830;</div>';
+  h+='<div class="np-ad"><div class="np-ad-title">'+ad.t+'</div><div class="np-ad-body">'+ad.b+'</div></div>';
+  h+='<div class="np-footer">'+pf.footer+'</div>';
+  h+='</div></div>';
+  el.innerHTML=h;
+  document.getElementById('mSid').textContent=sid;
+  document.getElementById('mPaper').textContent=meta.name;
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+document.addEventListener('keydown',function(e){
+  if(e.target.tagName==='INPUT')return;
+  if(e.key==='ArrowRight'){e.preventDefault();go(currentSession+1)}
+  else if(e.key==='ArrowLeft'){e.preventDefault();go(currentSession-1)}
 });
 
-let touchStartX = 0, touchStartY = 0, touchStartTime = 0;
-document.addEventListener('touchstart', function(e) {
-  touchStartX = e.changedTouches[0].clientX;
-  touchStartY = e.changedTouches[0].clientY;
-  touchStartTime = Date.now();
-}, {passive: true});
+var touchStartX=0,touchStartY=0,touchStartTime=0;
+document.addEventListener('touchstart',function(e){touchStartX=e.changedTouches[0].clientX;touchStartY=e.changedTouches[0].clientY;touchStartTime=Date.now()},{passive:true});
+document.addEventListener('touchend',function(e){
+  var dx=e.changedTouches[0].clientX-touchStartX,dy=e.changedTouches[0].clientY-touchStartY,dt=Date.now()-touchStartTime;
+  if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.5&&dt<500){if(dx<0)go(currentSession+1);else go(currentSession-1)}
+},{passive:true});
 
-document.addEventListener('touchend', function(e) {
-  const dx = e.changedTouches[0].clientX - touchStartX;
-  const dy = e.changedTouches[0].clientY - touchStartY;
-  const dt = Date.now() - touchStartTime;
-  if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5 && dt < 500) {
-    if (dx < 0) go(currentSession + 1);
-    else go(currentSession - 1);
-  }
-}, {passive: true});
+document.getElementById('mPrev').onclick=function(){go(currentSession-1)};
+document.getElementById('mNext').onclick=function(){go(currentSession+1)};
 
-// ============================================================
-// INIT
-// ============================================================
-buildSessionNav();
-buildAllCards();
-go(1);
+buildPaperTabs();buildSessionNav();renderNewspaper();
 </script>
-
 </body>
 </html>
